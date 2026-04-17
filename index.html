@@ -77,6 +77,7 @@
     🔔 Approvals<span class="notif-badge" id="notif-badge" style="display:none">0</span>
   </div>
   <div class="nav-tab" onclick="showScreen('inventory')" id="tab-inventory">📦 Inventory</div>
+  <div class="nav-tab" onclick="showScreen('kb')" id="tab-kb">📚 Knowledge Base</div>
 </div>
 
 <!-- BACKUP REMINDER BANNER (manager only) -->
@@ -169,7 +170,7 @@
       </div>
       <div id="sessions-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div class="table-wrap" id="sessions-table" style="display:none">
-        <table><thead><tr><th>#</th><th>Employee</th><th>Activity</th><th>Date</th><th class="hide-mobile">Start</th><th class="hide-mobile">End</th><th>Hrs</th><th>Band</th><th>Rate</th><th>Credited</th><th></th></tr></thead>
+        <table><thead><tr><th>#</th><th>Employee</th><th>Activity</th><th>Date</th><th class="hide-mobile">Start</th><th class="hide-mobile">End</th><th>Hrs</th><th>Band</th><th>Rate</th><th>Credited</th><th>Status</th><th></th></tr></thead>
         <tbody id="sessions-tbody"></tbody></table>
       </div>
       <div id="sessions-empty" class="empty-state" style="display:none"><div class="empty-icon">📭</div><div class="empty-title">No sessions yet</div></div>
@@ -491,9 +492,10 @@
 
 <!-- ══ APPROVALS SCREEN (manager only) ══ -->
 <div class="screen" id="screen-approvals">
-  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border)">
+  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
     <div class="leave-sub active" id="appsub-compoff" onclick="showApprovalsTab('compoff')">🗓 Comp Off Requests</div>
     <div class="leave-sub"        id="appsub-leave"   onclick="showApprovalsTab('leave')">📅 Leave Requests</div>
+    <div class="leave-sub"        id="appsub-ot"      onclick="showApprovalsTab('ot')">⏱ OT Sessions</div>
   </div>
   <div id="apptab-compoff">
     <div id="co-approvals-load" class="loading"><div class="spinner"></div>Loading...</div>
@@ -502,6 +504,10 @@
   <div id="apptab-leave" style="display:none">
     <div id="lv-approvals-load" class="loading"><div class="spinner"></div>Loading...</div>
     <div id="lv-approvals-content"></div>
+  </div>
+  <div id="apptab-ot" style="display:none">
+    <div id="ot-approvals-load" class="loading"><div class="spinner"></div>Loading...</div>
+    <div id="ot-approvals-content"></div>
   </div>
 </div>
 
@@ -671,9 +677,166 @@
 
 </div><!-- /screen-inventory -->
 
+<!-- ══ KNOWLEDGE BASE SCREEN ══ -->
+<div class="screen" id="screen-kb">
+
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
+    <div class="leave-sub active" id="kbsub-browse" onclick="showKBTab('browse')">🔍 Browse</div>
+    <div class="leave-sub" id="kbsub-submit" onclick="showKBTab('submit')">📝 Submit Article</div>
+    <div class="leave-sub" id="kbsub-mine" onclick="showKBTab('mine')">📄 My Articles</div>
+  </div>
+
+  <!-- ── BROWSE TAB ── -->
+  <div id="kbtab-browse">
+    <div class="kb-filter-bar">
+      <div class="form-group" style="flex:2;min-width:200px">
+        <label>Search</label>
+        <input type="text" id="kb-search" placeholder="Search title, content, tags..." oninput="applyKBFilters()">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="kb-filter-cat" onchange="applyKBFilters()">
+          <option value="">All Categories</option>
+          <option>Network</option>
+          <option>Security</option>
+          <option>Configuration</option>
+          <option>Troubleshooting</option>
+          <option>General</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn btn-sm btn-ghost" onclick="loadKBArticles()">↻ Refresh</button>
+      </div>
+    </div>
+    <div id="kb-articles-wrap">
+      <div class="loading"><div class="spinner"></div>Loading articles...</div>
+    </div>
+  </div>
+
+  <!-- ── SUBMIT ARTICLE TAB ── -->
+  <div id="kbtab-submit" style="display:none">
+    <div class="alert alert-success" id="kb-submit-success">✅ Article published!</div>
+    <div class="card">
+      <div class="card-title">Submit New Article</div>
+      <div class="form-grid mb-4">
+        <div class="form-group full">
+          <label>Title *</label>
+          <input type="text" id="kb-title" placeholder="e.g. How to configure VLAN trunking on Cisco switches">
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select id="kb-category">
+            <option value="">-- Select --</option>
+            <option>Network</option>
+            <option>Security</option>
+            <option>Configuration</option>
+            <option>Troubleshooting</option>
+            <option>General</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tags</label>
+          <input type="text" id="kb-tags" placeholder="cisco, vlan, switch (comma separated)">
+        </div>
+        <div class="form-group full">
+          <label>Content *</label>
+          <textarea id="kb-content" rows="10" placeholder="Write your article here. Include steps, commands, screenshots descriptions, tips..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Document / Reference URL (optional)</label>
+          <input type="url" id="kb-url" placeholder="https://sharepoint.com/... or any external link">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" id="kb-submit-btn" onclick="submitKBArticle()">📤 Publish Article</button>
+        <button class="btn btn-ghost" onclick="resetKBForm()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MY ARTICLES TAB ── -->
+  <div id="kbtab-mine" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">My Published Articles</div>
+        <button class="btn btn-sm btn-ghost" onclick="loadMyKBArticles()">↻ Refresh</button>
+      </div>
+      <div id="kb-mine-wrap">
+        <div class="loading"><div class="spinner"></div>Loading...</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /screen-kb -->
+
 </div><!-- /main -->
 </div><!-- /app -->
 
+
+<!-- KB ARTICLE VIEW MODAL -->
+<div class="modal-overlay" id="kb-view-modal">
+  <div class="modal" style="max-width:640px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:12px">
+      <div>
+        <div id="kb-view-cat" style="margin-bottom:8px"></div>
+        <div id="kb-view-title" class="modal-title" style="margin-bottom:4px"></div>
+        <div id="kb-view-meta" class="kb-author"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeKBModal()" style="flex-shrink:0">✕ Close</button>
+    </div>
+    <div id="kb-view-tags" class="kb-tags" style="margin-bottom:16px"></div>
+    <div id="kb-view-body" class="kb-article-body"></div>
+    <div id="kb-view-url" style="margin-top:16px;display:none">
+      <a id="kb-view-url-link" href="#" target="_blank" class="btn btn-ghost btn-sm">🔗 Open Reference Document</a>
+    </div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn btn-ghost" onclick="closeKBModal()">Close</button>
+      <div id="kb-view-edit-btns"></div>
+    </div>
+  </div>
+</div>
+
+<!-- KB EDIT ARTICLE MODAL -->
+<div class="modal-overlay" id="kb-edit-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-title">✏️ Edit Article</div>
+    <input type="hidden" id="kb-edit-id">
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Title *</label>
+        <input type="text" id="kb-edit-title">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="kb-edit-category">
+          <option value="">-- Select --</option>
+          <option>Network</option>
+          <option>Security</option>
+          <option>Configuration</option>
+          <option>Troubleshooting</option>
+          <option>General</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tags</label>
+        <input type="text" id="kb-edit-tags">
+      </div>
+      <div class="form-group full">
+        <label>Content *</label>
+        <textarea id="kb-edit-content" rows="10"></textarea>
+      </div>
+      <div class="form-group full">
+        <label>Reference URL</label>
+        <input type="url" id="kb-edit-url">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeKBEditModal()">Cancel</button>
+      <button class="btn btn-primary" id="kb-edit-save-btn" onclick="saveKBEdit()">💾 Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- EDIT DEVICE MODAL -->
 <div class="modal-overlay" id="inv-edit-modal">

@@ -163,7 +163,8 @@ function calcOT(dateStr, startStr, endStr, employee) {
 
 // ══ SUMMARY CALC ═════════════════════════════════════════════════
 function calcSummary(sessions, compoffs, employee) {
-  const s = sessions.filter(function(x){ return x.employee===employee; });
+  // Only approved sessions count toward CO
+  const s = sessions.filter(function(x){ return x.employee===employee && (x.status==='approved' || x.status===null || x.status===undefined); });
   const c = compoffs.filter(function(x){ return x.employee===employee; });
   var eveCred=0,earlyCred=0,mid11=0,mid12=0,wk11=0,wk12=0;
   s.forEach(function(x){ var cr=parseFloat(x.credited_hours)||0;
@@ -213,7 +214,8 @@ async function saveSession() {
   btn.disabled=true; btn.textContent='⏳ Saving...';
   const {error}=await sb.from('ot_sessions').insert({
     employee:currentUser,activity:act,ot_date:date,start_time:start,end_time:end,
-    day_name:res.dayName,band:res.band,rate:res.rate,duration_hours:res.duration,credited_hours:res.credited
+    day_name:res.dayName,band:res.band,rate:res.rate,duration_hours:res.duration,credited_hours:res.credited,
+    status:'pending'
   });
   btn.disabled=false; btn.innerHTML='💾 Save Session';
   if (error){alert('Save failed: '+error.message);return;}
@@ -241,17 +243,22 @@ async function renderSessions() {
   if (!data||!data.length){document.getElementById('sessions-empty').style.display='block';return;}
   document.getElementById('sessions-table').style.display='block';
   document.getElementById('sessions-tbody').innerHTML=data.map(function(s,i){
-    return '<tr><td style="color:var(--muted);font-family:\'DM Mono\',monospace">'+(i+1)+'</td>'+
+    var st=s.status||'approved';
+    var stBadge='<span class="badge badge-'+st+'" style="font-size:10px">'+statusIcon(st)+' '+cap(st)+'</span>';
+    var creditedDisplay = st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.credited_hours+'h</strong>' : '<span style="color:var(--muted);font-size:12px">'+s.credited_hours+'h</span>';
+    return '<tr style="'+(st==='rejected'?'opacity:0.6':'')+'">'+
+    '<td style="color:var(--muted);font-family:\'DM Mono\',monospace">'+(i+1)+'</td>'+
     '<td><strong>'+s.employee+'</strong></td>'+
     '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+s.activity+'">'+s.activity+'</td>'+
-    '<td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fmtDate(s.ot_date)+'<br><span style="font-size:11px;color:var(--muted)">'+( s.day_name||'')+'</span></td>'+
+    '<td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fmtDate(s.ot_date)+'<br><span style="font-size:11px;color:var(--muted)">'+(s.day_name||'')+'</span></td>'+
     '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+s.start_time+'</td>'+
     '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+s.end_time+'</td>'+
     '<td style="font-family:\'DM Mono\',monospace">'+s.duration_hours+'h</td>'+
     '<td><span class="badge badge-'+s.band+'">'+s.band+'</span></td>'+
     '<td><span class="badge '+(s.rate==='1:2'?'badge-12':'badge-11')+'">'+s.rate+'</span></td>'+
-    '<td><strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.credited_hours+'h</strong></td>'+
-    '<td>'+'<td style="white-space:nowrap">'+((isManager||s.employee===currentUser)?'<button class="btn btn-sm btn-ghost" onclick="openEditOT('+s.id+',\''+s.employee+'\',\''+esc2(s.activity)+'\',\''+s.ot_date+'\',\''+s.start_time+'\',\''+s.end_time+'\')" style="margin-right:4px">✏️</button>':'')+(isManager?'<button class="btn btn-sm btn-danger" onclick="deleteSession('+s.id+')">✕</button>':'')+'</td></tr>';
+    '<td>'+creditedDisplay+'</td>'+
+    '<td>'+stBadge+'</td>'+
+    '<td style="white-space:nowrap">'+((isManager||s.employee===currentUser)?'<button class="btn btn-sm btn-ghost" onclick="openEditOT('+s.id+',\''+s.employee+'\',\''+esc2(s.activity)+'\',\''+s.ot_date+'\',\''+s.start_time+'\',\''+s.end_time+'\')" style="margin-right:4px">✏️</button>':'')+(isManager?'<button class="btn btn-sm btn-danger" onclick="deleteSession('+s.id+')">✕</button>':'')+'</td></tr>';
   }).join('');
   window._sessionsData=data;
 }
@@ -513,11 +520,12 @@ async function renderManager() {
 
 // ══ APPROVALS (MANAGER) ══════════════════════════════════════════
 async function updateNotifBadge() {
-  const [{data:coReqs},{data:lvReqs}]=await Promise.all([
+  const [{data:coReqs},{data:lvReqs},{data:otReqs}]=await Promise.all([
     sb.from('comp_off_requests').select('id').eq('status','pending'),
-    sb.from('leave_requests').select('id').eq('status','pending')
+    sb.from('leave_requests').select('id').eq('status','pending'),
+    sb.from('ot_sessions').select('id').eq('status','pending')
   ]);
-  const total=(coReqs||[]).length+(lvReqs||[]).length;
+  const total=(coReqs||[]).length+(lvReqs||[]).length+(otReqs||[]).length;
   const badge=document.getElementById('notif-badge');
   if (total>0){badge.textContent=total;badge.style.display='inline-block';}
   else {badge.style.display='none';}
@@ -612,6 +620,16 @@ async function processRequest(decision) {
   if (!approveTarget) return;
   const {type,id,employee}=approveTarget;
   const comment=document.getElementById('approve-comment').value.trim();
+
+  // OT sessions live in their own table — just update status
+  if (type==='ot') {
+    const {error}=await sb.from('ot_sessions').update({
+      status:decision,manager_comment:comment,reviewed_by:currentUser,reviewed_at:new Date().toISOString()
+    }).eq('id',id);
+    if (error){alert('Error: '+error.message);return;}
+    closeApproveModal(); updateNotifBadge(); renderOTApprovals(); return;
+  }
+
   const table=type==='compoff'?'comp_off_requests':'leave_requests';
   const {error}=await sb.from(table).update({
     status:decision,manager_comment:comment,reviewed_by:currentUser,reviewed_at:new Date().toISOString()
@@ -673,16 +691,17 @@ async function renderDashboard() {
   var s = calcSummary(sessions||[], compoffs||[], currentUser);
   var leaveUsed = (alData||[]).reduce(function(a,r){return a+parseFloat(r.working_days||0);},0);
   var leaveBalance = LEAVE_ALLOWANCE - leaveUsed;
-  var otThisMonth = (sessions||[]).filter(function(x){return (x.ot_date||'').startsWith(month);}).length;
+  var otThisMonth = (sessions||[]).filter(function(x){return (x.ot_date||'').startsWith(month) && (x.status==='approved'||!x.status);}).length;
   var pjHrsMonth = 0;
   (pjSess||[]).forEach(function(r){
     var fn = currentUser.split(' ')[0].toLowerCase();
     if((r.team_members||'').toLowerCase().includes(fn)) pjHrsMonth += parseFloat(r.duration_hours||0);
   });
 
-  var recent = (sessions||[]).slice().sort(function(a,b){return a.ot_date>b.ot_date?-1:1;}).slice(0,5);
+  var recent = (sessions||[]).filter(function(x){return x.status==='approved'||!x.status;}).sort(function(a,b){return a.ot_date>b.ot_date?-1:1;}).slice(0,5);
   var pendingCO = (coReqs||[]).filter(function(r){return r.status==='pending';});
   var pendingLV = (lvReqs||[]).filter(function(r){return r.status==='pending';});
+  var pendingOT = (sessions||[]).filter(function(r){return r.status==='pending';});
   var balColor  = s.balance>0?'var(--success)':s.balance<0?'var(--danger)':'var(--navy)';
   var lvColor   = leaveBalance<=5?'var(--danger)':leaveBalance<=10?'var(--gold)':'var(--success)';
   var hr = new Date().getHours();
@@ -708,8 +727,9 @@ async function renderDashboard() {
     (isManager?'<button class="btn btn-ghost" onclick="showScreen(\'approvals\')">🔔 Approvals</button>':'')+
     '</div></div>';
 
-  if (pendingCO.length || pendingLV.length) {
+  if (pendingCO.length || pendingLV.length || pendingOT.length) {
     html += '<div class="card" style="margin-bottom:20px;border-left:4px solid var(--gold)"><div class="card-title">⏳ My Pending Requests</div>';
+    pendingOT.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">⏱ OT Session — '+r.activity+' on '+fmtDate(r.ot_date)+' ('+r.band+' '+r.duration_hours+'h)<span class="badge badge-pending" style="margin-left:8px">Awaiting Approval</span></div>'; });
     pendingCO.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">🗓 Comp Off — '+r.type+' on '+fmtDate(r.request_date)+'<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
     pendingLV.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">🏖️ Leave — '+fmtDate(r.start_date)+' → '+fmtDate(r.end_date)+' ('+r.working_days+' days)<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
     html += '</div>';
@@ -918,14 +938,15 @@ function showLeaveTab(tab) {
 }
 
 function showApprovalsTab(tab) {
-  ['compoff','leave'].forEach(function(t) {
+  ['compoff','leave','ot'].forEach(function(t) {
     document.getElementById('apptab-'+t).style.display=t===tab?'block':'none';
     const sub=document.getElementById('appsub-'+t);
     if (t===tab){sub.classList.add('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--teal);color:var(--navy);white-space:nowrap';}
     else{sub.classList.remove('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap';}
   });
   if (tab==='compoff') renderCompOffApprovals();
-  else renderLeaveApprovals();
+  else if (tab==='leave') renderLeaveApprovals();
+  else if (tab==='ot') renderOTApprovals();
 }
 
 function showScreen(name) {
@@ -939,6 +960,7 @@ function showScreen(name) {
   if (name==='projects')  { initProjectTab(); showProjectTab('log'); };
   if (name==='approvals')  showApprovalsTab('compoff');
   if (name==='inventory')  showInventoryTab('devices');
+  if (name==='kb')         showKBTab('browse');
 }
 
 // ══ HELPERS ═══════════════════════════════════════════════════════
@@ -1956,6 +1978,256 @@ function exportInventoryCSV() {
   a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
   a.download = 'GulfIT_Inventory_'+new Date().toLocaleDateString('en-GB').replace(/\//g,'-')+'.csv';
   a.click();
+}
+
+// ══ OT APPROVALS ══════════════════════════════════════════════════
+
+async function renderOTApprovals() {
+  document.getElementById('ot-approvals-load').style.display='flex';
+  document.getElementById('ot-approvals-content').innerHTML='';
+  const {data,error}=await sb.from('ot_sessions').select('*').order('ot_date',{ascending:false});
+  document.getElementById('ot-approvals-load').style.display='none';
+  if (error||!data||!data.length){
+    document.getElementById('ot-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">⏱</div><div class="empty-title">No OT sessions</div></div>';
+    return;
+  }
+  const pending=data.filter(function(r){return r.status==='pending';});
+  const others =data.filter(function(r){return r.status!=='pending';});
+  let html='';
+  if (pending.length){
+    html+='<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">🟡 Pending Approval ('+pending.length+')</h3>';
+    html+=pending.map(function(r){return otApprovalCard(r);}).join('');
+  }
+  if (others.length){
+    html+='<h3 style="font-size:14px;font-weight:600;color:var(--muted);margin:20px 0 12px">History</h3>';
+    html+=others.map(function(r){return otApprovalCard(r);}).join('');
+  }
+  document.getElementById('ot-approvals-content').innerHTML=html;
+}
+
+function otApprovalCard(r) {
+  var isPending=r.status==='pending';
+  var st=r.status||'approved';
+  var info='<strong>'+r.employee+'</strong> — '+esc2(r.activity)+'<br>'+
+    '<span style="font-size:12px;color:var(--muted)">'+fmtDate(r.ot_date)+' ('+r.day_name+') &nbsp;·&nbsp; '+
+    r.start_time+'–'+r.end_time+' &nbsp;·&nbsp; '+r.duration_hours+'h &nbsp;·&nbsp; '+
+    '<span class="badge badge-'+r.band+'">'+r.band+'</span> &nbsp; '+r.rate+' &nbsp;·&nbsp; Credited: <strong>'+r.credited_hours+'h</strong></span>';
+  return '<div class="request-card '+st+'" style="margin-bottom:10px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'+
+    '<div style="font-size:13px;line-height:1.6">'+info+
+    '<br><span style="font-size:11px;color:var(--muted)">Submitted: '+fmtDate(r.created_at)+'</span></div>'+
+    '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'+
+    '<span class="badge badge-'+st+'">'+statusIcon(st)+' '+cap(st)+'</span>'+
+    (isPending?'<button class="btn btn-sm btn-primary" onclick="openApproveModal(\'ot\','+r.id+',\''+r.employee+'\')">Review</button>':'')+
+    '</div></div>'+
+    (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:8px">💬 '+esc2(r.manager_comment)+'</div>':'')+
+    '</div>';
+}
+
+// ══ KNOWLEDGE BASE MODULE ══════════════════════════════════════════
+
+var _kbData = [];
+var _kbViewId = null;
+
+function showKBTab(tab) {
+  ['browse','submit','mine'].forEach(function(t) {
+    var el  = document.getElementById('kbtab-'+t);
+    var sub = document.getElementById('kbsub-'+t);
+    if (!el) return;
+    el.style.display = t===tab ? 'block' : 'none';
+    if (!sub) return;
+    if (t===tab) { sub.classList.add('active'); sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--teal);color:var(--navy);white-space:nowrap'; }
+    else         { sub.classList.remove('active'); sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap'; }
+  });
+  if (tab==='browse') loadKBArticles();
+  if (tab==='submit') resetKBForm();
+  if (tab==='mine')   loadMyKBArticles();
+}
+
+async function loadKBArticles() {
+  var wrap = document.getElementById('kb-articles-wrap');
+  wrap.innerHTML = '<div class="loading"><div class="spinner"></div>Loading articles...</div>';
+  var {data,error} = await sb.from('kb_articles').select('*').order('created_at',{ascending:false});
+  if (error) { wrap.innerHTML='<div class="alert alert-error show">Error: '+error.message+'</div>'; return; }
+  _kbData = data || [];
+  renderKBArticles(_kbData);
+}
+
+function applyKBFilters() {
+  var search = (document.getElementById('kb-search').value||'').toLowerCase();
+  var catF   = document.getElementById('kb-filter-cat').value;
+  var filtered = _kbData.filter(function(a) {
+    var matchSearch = !search ||
+      (a.title||'').toLowerCase().includes(search) ||
+      (a.content||'').toLowerCase().includes(search) ||
+      (a.tags||'').toLowerCase().includes(search) ||
+      (a.submitted_by||'').toLowerCase().includes(search);
+    var matchCat = !catF || a.category===catF;
+    return matchSearch && matchCat;
+  });
+  renderKBArticles(filtered);
+}
+
+function kbCatClass(cat) {
+  var map={'Network':'kb-cat-Network','Security':'kb-cat-Security','Configuration':'kb-cat-Configuration','Troubleshooting':'kb-cat-Troubleshooting','General':'kb-cat-General'};
+  return map[cat]||'kb-cat-General';
+}
+
+function renderKBArticles(data) {
+  var wrap = document.getElementById('kb-articles-wrap');
+  if (!data.length) {
+    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📚</div><div class="empty-title">No articles found</div><div>Be the first to submit one!</div></div>';
+    return;
+  }
+  var cards = data.map(function(a) {
+    var tags = (a.tags||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
+    var tagHtml = tags.map(function(t){return '<span class="kb-tag">'+esc2(t)+'</span>';}).join('');
+    var excerpt = (a.content||'').slice(0,180).trim() + ((a.content||'').length>180?'…':'');
+    return '<div class="kb-card">'+
+      '<div class="kb-card-meta">'+
+      '<span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'General')+'</span>'+
+      '<span class="kb-author">by <strong>'+esc2(a.submitted_by)+'</strong> · '+fmtDate(a.created_at)+'</span>'+
+      '</div>'+
+      '<div class="kb-title">'+esc2(a.title)+'</div>'+
+      '<div class="kb-excerpt">'+esc2(excerpt)+'</div>'+
+      (tagHtml?'<div class="kb-tags">'+tagHtml+'</div>':'')+
+      '<div style="display:flex;gap:8px;margin-top:4px">'+
+      '<button class="btn btn-sm btn-primary" onclick="openKBArticle('+a.id+')">Read More</button>'+
+      (a.file_url?'<a href="'+esc2(a.file_url)+'" target="_blank" class="btn btn-sm btn-ghost">🔗 Reference</a>':'')+
+      '</div>'+
+      '</div>';
+  }).join('');
+  wrap.innerHTML = '<div class="kb-grid">'+cards+'</div>';
+}
+
+function openKBArticle(id) {
+  var a = _kbData.find(function(x){return x.id===id;});
+  if (!a) return;
+  _kbViewId = id;
+  var tags = (a.tags||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
+  document.getElementById('kb-view-cat').innerHTML='<span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'General')+'</span>';
+  document.getElementById('kb-view-title').textContent=a.title;
+  document.getElementById('kb-view-meta').innerHTML='Submitted by <strong>'+esc2(a.submitted_by)+'</strong> &nbsp;·&nbsp; '+fmtDate(a.created_at);
+  document.getElementById('kb-view-tags').innerHTML=tags.map(function(t){return '<span class="kb-tag">'+esc2(t)+'</span>';}).join('');
+  document.getElementById('kb-view-body').textContent=a.content;
+  var urlEl=document.getElementById('kb-view-url');
+  if (a.file_url){urlEl.style.display='block';document.getElementById('kb-view-url-link').href=a.file_url;}
+  else{urlEl.style.display='none';}
+  // show edit/delete for own articles or manager
+  var editBtns=document.getElementById('kb-view-edit-btns');
+  if (a.submitted_by===currentUser||isManager){
+    editBtns.innerHTML='<button class="btn btn-ghost" onclick="openKBEditModal('+id+')">✏️ Edit</button>'+
+      (isManager||a.submitted_by===currentUser?'<button class="btn btn-danger" onclick="deleteKBArticle('+id+')" style="margin-left:8px">🗑 Delete</button>':'');
+  } else { editBtns.innerHTML=''; }
+  document.getElementById('kb-view-modal').classList.add('show');
+}
+
+function closeKBModal() {
+  document.getElementById('kb-view-modal').classList.remove('show');
+  _kbViewId=null;
+}
+
+function resetKBForm() {
+  ['kb-title','kb-category','kb-tags','kb-content','kb-url'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+}
+
+async function submitKBArticle() {
+  var title   = (document.getElementById('kb-title').value||'').trim();
+  var category= document.getElementById('kb-category').value;
+  var content = (document.getElementById('kb-content').value||'').trim();
+  if (!title||!category||!content){alert('Title, Category and Content are required.');return;}
+  var btn=document.getElementById('kb-submit-btn');
+  btn.disabled=true; btn.textContent='⏳ Publishing...';
+  var {error}=await sb.from('kb_articles').insert({
+    title:title, category:category,
+    tags:document.getElementById('kb-tags').value.trim(),
+    content:content,
+    file_url:document.getElementById('kb-url').value.trim()||null,
+    submitted_by:currentUser
+  });
+  btn.disabled=false; btn.textContent='📤 Publish Article';
+  if (error){alert('Error: '+error.message);return;}
+  showAlert('kb-submit-success');
+  resetKBForm();
+  showKBTab('browse');
+}
+
+async function loadMyKBArticles() {
+  var wrap=document.getElementById('kb-mine-wrap');
+  wrap.innerHTML='<div class="loading"><div class="spinner"></div>Loading...</div>';
+  var {data,error}=await sb.from('kb_articles').select('*').eq('submitted_by',currentUser).order('created_at',{ascending:false});
+  if (error){wrap.innerHTML='<div class="alert alert-error show">Error: '+error.message+'</div>';return;}
+  if (!data||!data.length){
+    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-title">No articles yet</div><div>Submit your first article!</div></div>';
+    return;
+  }
+  // Update _kbData so openKBArticle works from My Articles tab
+  data.forEach(function(a){if(!_kbData.find(function(x){return x.id===a.id;}))_kbData.push(a);});
+  var rows=data.map(function(a){
+    return '<tr>'+
+      '<td style="font-weight:600">'+esc2(a.title)+'</td>'+
+      '<td><span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'—')+'</span></td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+fmtDate(a.created_at)+'</td>'+
+      '<td style="white-space:nowrap">'+
+        '<button class="btn btn-sm btn-ghost" onclick="openKBArticle('+a.id+')" style="margin-right:6px">👁 View</button>'+
+        '<button class="btn btn-sm btn-ghost" onclick="openKBEditModal('+a.id+')" style="margin-right:6px">✏️ Edit</button>'+
+        '<button class="btn btn-sm btn-danger" onclick="deleteKBArticle('+a.id+')">🗑</button>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+  wrap.innerHTML='<div class="table-wrap"><table><thead><tr><th>Title</th><th>Category</th><th>Date</th><th>Actions</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+function openKBEditModal(id) {
+  var a=_kbData.find(function(x){return x.id===id;});
+  if (!a) return;
+  if (a.submitted_by!==currentUser && !isManager){alert('You can only edit your own articles.');return;}
+  document.getElementById('kb-edit-id').value=id;
+  document.getElementById('kb-edit-title').value=a.title||'';
+  document.getElementById('kb-edit-category').value=a.category||'';
+  document.getElementById('kb-edit-tags').value=a.tags||'';
+  document.getElementById('kb-edit-content').value=a.content||'';
+  document.getElementById('kb-edit-url').value=a.file_url||'';
+  closeKBModal();
+  document.getElementById('kb-edit-modal').classList.add('show');
+}
+
+function closeKBEditModal() {
+  document.getElementById('kb-edit-modal').classList.remove('show');
+}
+
+async function saveKBEdit() {
+  var id=parseInt(document.getElementById('kb-edit-id').value);
+  var title=(document.getElementById('kb-edit-title').value||'').trim();
+  var content=(document.getElementById('kb-edit-content').value||'').trim();
+  if (!title||!content){alert('Title and Content are required.');return;}
+  var btn=document.getElementById('kb-edit-save-btn');
+  btn.disabled=true; btn.textContent='⏳ Saving...';
+  var {error}=await sb.from('kb_articles').update({
+    title:title,
+    category:document.getElementById('kb-edit-category').value,
+    tags:document.getElementById('kb-edit-tags').value.trim(),
+    content:content,
+    file_url:document.getElementById('kb-edit-url').value.trim()||null,
+    updated_at:new Date().toISOString()
+  }).eq('id',id);
+  btn.disabled=false; btn.textContent='💾 Save';
+  if (error){alert('Error: '+error.message);return;}
+  closeKBEditModal();
+  loadKBArticles();
+}
+
+async function deleteKBArticle(id) {
+  var a=_kbData.find(function(x){return x.id===id;});
+  if (!a) return;
+  if (a.submitted_by!==currentUser && !isManager){alert('You can only delete your own articles.');return;}
+  if (!confirm('Delete "'+a.title+'"? This cannot be undone.')) return;
+  closeKBModal();
+  var {error}=await sb.from('kb_articles').delete().eq('id',id);
+  if (error){alert('Error: '+error.message);return;}
+  loadKBArticles();
 }
 
 // ══ INIT ══════════════════════════════════════════════════════════

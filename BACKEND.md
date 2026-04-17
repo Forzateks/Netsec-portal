@@ -3,7 +3,8 @@
 **Database:** Supabase (Postgres)  
 **Project URL:** `https://rxxcrlobbtlvjgcqgjjm.supabase.co`  
 **Auth:** Anon key in `js/app.js` — all table access goes through this key  
-**Last verified:** 2026-04-17
+**Last verified:** 2026-04-17  
+**Last updated:** 2026-04-17 — added OT approval columns, kb_articles table
 
 > This file is the source of truth for the Supabase schema.  
 > Before requesting any DB change, read this file first to avoid duplicating tables or columns.
@@ -28,7 +29,20 @@ Stores individual overtime session logs.
 | rate | text | 1:1 / 1:2 / Split |
 | duration_hours | numeric | Raw duration |
 | credited_hours | numeric | After rate applied |
+| status | text | **pending** / approved / rejected — added 2026-04-17 |
+| manager_comment | text | Manager's note on review — added 2026-04-17 |
+| reviewed_by | text | Manager name — added 2026-04-17 |
+| reviewed_at | timestamptz | When reviewed — added 2026-04-17 |
 | created_at | timestamptz | DEFAULT NOW() |
+
+> **SQL already run** (2026-04-17):
+> ```sql
+> ALTER TABLE ot_sessions ADD COLUMN status TEXT DEFAULT 'approved';
+> ALTER TABLE ot_sessions ADD COLUMN manager_comment TEXT;
+> ALTER TABLE ot_sessions ADD COLUMN reviewed_by TEXT;
+> ALTER TABLE ot_sessions ADD COLUMN reviewed_at TIMESTAMPTZ;
+> UPDATE ot_sessions SET status = 'approved' WHERE status IS NULL;
+> ```
 
 ---
 
@@ -168,6 +182,40 @@ Audit trail for every add / edit / delete on the inventory table.
 | action | text | created / updated / deleted |
 | field_changes | jsonb | `{ "Field Label": { "from": "old", "to": "new" } }` for updates |
 | changed_at | timestamptz | DEFAULT NOW() |
+
+---
+
+### 10. `kb_articles`
+Knowledge Base — articles and notes submitted by employees.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | bigserial PK | |
+| title | text NOT NULL | Article heading |
+| category | text | Network / Security / Configuration / Troubleshooting / General |
+| tags | text | Comma-separated e.g. "cisco,vlan,switch" |
+| content | text NOT NULL | Full article body (plain text) |
+| file_url | text | Optional external link (SharePoint, Drive, etc.) |
+| submitted_by | text NOT NULL | Employee name |
+| created_at | timestamptz | DEFAULT NOW() |
+| updated_at | timestamptz | DEFAULT NOW() |
+
+> **SQL to run** (if not yet done):
+> ```sql
+> CREATE TABLE kb_articles (
+>   id           BIGSERIAL PRIMARY KEY,
+>   title        TEXT NOT NULL,
+>   category     TEXT,
+>   tags         TEXT,
+>   content      TEXT NOT NULL,
+>   file_url     TEXT,
+>   submitted_by TEXT NOT NULL,
+>   created_at   TIMESTAMPTZ DEFAULT NOW(),
+>   updated_at   TIMESTAMPTZ DEFAULT NOW()
+> );
+> ALTER TABLE kb_articles ENABLE ROW LEVEL SECURITY;
+> CREATE POLICY "kb_all" ON kb_articles FOR ALL USING (true);
+> ```
 
 ---
 
