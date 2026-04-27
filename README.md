@@ -50,11 +50,13 @@ netsec-portal/
 
 | Band | Trigger | Rate | Comp Off |
 |---|---|---|---|
-| Eve | Weekday 8PM–midnight (no cross) | 1:1 | 8 hrs = 1 day |
-| Early | Weekday 5AM–9AM | 1:1 | 8 hrs = 1 day (pools with Eve) |
-| Midnight | Crosses midnight before 8PM or starts <5AM | <4h = 1:1, ≥4h = 1:2 | 8 hrs (1:2 only) = 1 day |
-| Weekend | Sat/Sun (UAE) or Fri/Sat (KSA) | <4h = 1:1, ≥4h = 1:2 | 8 hrs (1:2 only) = 1 day |
+| Eve | Weekday 6:30PM–midnight (no cross) | 1:1 | 8 hrs = 1 day |
+| Early | Weekday start 5:00AM–7:29AM | 1:1 | 8 hrs = 1 day (pools with Eve) |
+| Midnight | Crosses midnight before 6:30PM or starts <5AM | <4h = 1:1, ≥4h = 1:2 | 8 credited hrs (cap 8h) = 1 day |
+| Weekend | Sat/Sun (UAE) or Fri/Sat (KSA) | 1:1 always | 8 credited hrs = 1 day (credited = raw hrs, no cap) |
 | Day | Everything else | 1:1 | No CO |
+
+> **Weekday OT block:** Sessions cannot start between **7:30 AM and 6:30 PM** on weekdays (regular working hours). Form rejects with error.
 
 ---
 

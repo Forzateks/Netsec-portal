@@ -3,8 +3,8 @@
 **Database:** Supabase (Postgres)  
 **Project URL:** `https://rxxcrlobbtlvjgcqgjjm.supabase.co`  
 **Auth:** Anon key in `js/app.js` — all table access goes through this key  
-**Last verified:** 2026-04-17  
-**Last updated:** 2026-04-17 — added OT approval columns, kb_articles table
+**Last verified:** 2026-04-27  
+**Last updated:** 2026-04-27 — Weekend policy changed to 1:1 (recomputed historical Wknd records)
 
 > This file is the source of truth for the Supabase schema.  
 > Before requesting any DB change, read this file first to avoid duplicating tables or columns.
@@ -42,6 +42,15 @@ Stores individual overtime session logs.
 > ALTER TABLE ot_sessions ADD COLUMN reviewed_by TEXT;
 > ALTER TABLE ot_sessions ADD COLUMN reviewed_at TIMESTAMPTZ;
 > UPDATE ot_sessions SET status = 'approved' WHERE status IS NULL;
+> ```
+>
+> **SQL to run** (2026-04-27 — Weekend policy change to 1:1):
+> ```sql
+> -- Recompute historical Weekend records: 1:1 raw hours (no cap, no doubling)
+> UPDATE ot_sessions
+> SET credited_hours = duration_hours,
+>     rate = '1:1'
+> WHERE band = 'Wknd';
 > ```
 
 ---

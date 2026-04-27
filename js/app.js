@@ -133,6 +133,19 @@ function isWeekend(wd, employee) {
   return KSA_EMP.includes(employee) ? (wd===5||wd===6) : (wd===0||wd===6);
 }
 
+// Returns null if valid, or error message string
+function validateOTStart(dateStr, startStr, employee) {
+  if (!dateStr || !startStr) return null;
+  var d = new Date(dateStr); var wd = d.getDay();
+  if (isWeekend(wd, employee)) return null;
+  var sp = startStr.split(':').map(Number);
+  var startHour = sp[0] + sp[1]/60;
+  if (startHour >= 7.5 && startHour < 18.5) {
+    return 'OT cannot start between 7:30 AM and 6:30 PM on weekdays — these are regular working hours. OT must begin before 7:30 AM or after 6:30 PM.';
+  }
+  return null;
+}
+
 function calcOT(dateStr, startStr, endStr, employee) {
   employee = employee || '';
   if (!dateStr||!startStr||!endStr) return null;
@@ -144,16 +157,16 @@ function calcOT(dateStr, startStr, endStr, employee) {
   const rawDur = ef<sf ? ef+24-sf : ef-sf;
   let band,rate,cred;
   if (isWknd) {
-    band='Wknd'; rate=rawDur>=4?'1:2':'1:1';
-    cred=rate==='1:2'?Math.min(rawDur*2,8):rawDur;
+    band='Wknd'; rate='1:1';
+    cred=rawDur;
   } else {
     const crossesMidnight=ef<=sf;
-    const isEve=sf>=20&&ef>sf; const isEveCross=sf>=20&&crossesMidnight;
-    const isMid=crossesMidnight&&sf<20; const isMidStart=!crossesMidnight&&sf<5;
+    const isEve=sf>=18.5&&ef>sf; const isEveCross=sf>=18.5&&crossesMidnight;
+    const isMid=crossesMidnight&&sf<18.5; const isMidStart=!crossesMidnight&&sf<5;
     const isEarly=sf>=5&&sf<9&&!crossesMidnight;
     if (isEve)       { band='Eve';   rate='1:1'; cred=rawDur; }
     else if (isEveCross) { band='Eve'; rate='Split'; cred=Math.min((24-sf)+(ef*2),8); }
-    else if (isMid||isMidStart) { band='Mid'; rate=rawDur>=4?'1:2':'1:1'; cred=rate==='1:2'?Math.min(rawDur*2,8):rawDur; }
+    else if (isMid||isMidStart) { band='Mid'; rate=rawDur>=4?'1:2':'1:1'; cred=rawDur; }
     else if (isEarly) { band='Early'; rate='1:1'; cred=Math.min(ef,9)-sf; }
     else              { band='Day';   rate='1:1'; cred=rawDur; }
   }
@@ -174,7 +187,8 @@ function calcSummary(sessions, compoffs, employee) {
   });
   // Eve + Early pool together (both 1:1) — 8 combined hrs = 1 CO day
   var combined=eveCred+earlyCred;
-  var coEarlyEve=Math.floor(combined/8),coMid=Math.floor(mid12/8),coWknd=Math.floor(wk12/8);
+  var wkTotal=wk11+wk12;
+  var coEarlyEve=Math.floor(combined/8),coMid=Math.floor(mid12/8),coWknd=Math.floor(wkTotal/8);
   var totalCO=coEarlyEve+coMid+coWknd;
   var used=0; c.forEach(function(x){ used+=parseFloat(x.days)||0; });
   var remEve=combined===0?8:(combined%8===0?0:8-(combined%8));
@@ -209,6 +223,8 @@ async function saveSession() {
   const start=document.getElementById('log-start').value;
   const end=document.getElementById('log-end').value;
   if (!act||!date||!start||!end){ showAlert('log-error'); return; }
+  var vErr = validateOTStart(date, start, currentUser);
+  if (vErr) { alert(vErr); return; }
   const res=calcOT(date,start,end,currentUser);
   const btn=document.getElementById('save-btn');
   btn.disabled=true; btn.textContent='⏳ Saving...';
@@ -804,6 +820,8 @@ async function saveEditOT() {
   var start=document.getElementById('edit-ot-start').value;
   var end=document.getElementById('edit-ot-end').value;
   if (!activity||!date||!start||!end){alert('Please fill all required fields.');return;}
+  var vErr = validateOTStart(date, start, _editEmp);
+  if (vErr) { alert(vErr); return; }
   var res=calcOT(date,start,end,_editEmp);
   var {error}=await sb.from('ot_sessions').update({
     activity:activity,ot_date:date,start_time:start,end_time:end,
