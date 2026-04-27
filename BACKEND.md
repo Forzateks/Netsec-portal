@@ -4,7 +4,7 @@
 **Project URL:** `https://rxxcrlobbtlvjgcqgjjm.supabase.co`  
 **Auth:** Anon key in `js/app.js` — all table access goes through this key  
 **Last verified:** 2026-04-27  
-**Last updated:** 2026-04-27 — Weekend policy changed to 1:1 (recomputed historical Wknd records)
+**Last updated:** 2026-04-27 — Customers table, customer/project links on OT + project sessions, activity_type standardization
 
 > This file is the source of truth for the Supabase schema.  
 > Before requesting any DB change, read this file first to avoid duplicating tables or columns.
@@ -33,6 +33,9 @@ Stores individual overtime session logs.
 | manager_comment | text | Manager's note on review — added 2026-04-17 |
 | reviewed_by | text | Manager name — added 2026-04-17 |
 | reviewed_at | timestamptz | When reviewed — added 2026-04-17 |
+| customer_name | text | Selected customer (text snapshot) — added 2026-04-27 |
+| project_name | text | Selected project (text snapshot) — added 2026-04-27 |
+| activity_type | text | Standardized activity type — added 2026-04-27 |
 | created_at | timestamptz | DEFAULT NOW() |
 
 > **SQL already run** (2026-04-17):
@@ -44,13 +47,25 @@ Stores individual overtime session logs.
 > UPDATE ot_sessions SET status = 'approved' WHERE status IS NULL;
 > ```
 >
-> **SQL to run** (2026-04-27 — Weekend policy change to 1:1):
+> **SQL already run** (2026-04-27 — Weekend policy change to 1:1):
 > ```sql
-> -- Recompute historical Weekend records: 1:1 raw hours (no cap, no doubling)
-> UPDATE ot_sessions
-> SET credited_hours = duration_hours,
->     rate = '1:1'
-> WHERE band = 'Wknd';
+> UPDATE ot_sessions SET credited_hours = duration_hours, rate = '1:1' WHERE band = 'Wknd';
+> ```
+>
+> **SQL already run** (2026-04-27 — Customers, project links, activity types):
+> ```sql
+> CREATE TABLE customers (id BIGSERIAL PK, name TEXT UNIQUE, status TEXT, created_at TIMESTAMPTZ);
+> -- + RLS open policy, seed (Mashreq, Landmark, Dubai Holding, Naivas, DFM, ABK, ASTER)
+> ALTER TABLE projects ADD COLUMN customer_id BIGINT REFERENCES customers(id);
+> ALTER TABLE project_sessions ADD COLUMN customer_name TEXT;
+> ALTER TABLE ot_sessions ADD COLUMN customer_name TEXT;
+> ALTER TABLE ot_sessions ADD COLUMN project_name TEXT;
+> -- Standardize activity_type values in project_sessions
+> ```
+>
+> **SQL still to run** (2026-04-27 — activity_type on OT):
+> ```sql
+> ALTER TABLE ot_sessions ADD COLUMN activity_type TEXT;
 > ```
 
 ---
@@ -127,8 +142,9 @@ Project work session logs.
 |---|---|---|
 | id | bigserial PK | |
 | project_name | text | |
+| customer_name | text | Selected customer — added 2026-04-27 |
 | session_date | date | |
-| activity_type | text | Configuration / Meeting / Migration etc. |
+| activity_type | text | HLD/LLD Discussion or Doc, Pilot Sites Rollout, As-Built Doc, KT/Training, Migration, Troubleshooting, Initial Configuration |
 | session_info | text | |
 | start_time | time | |
 | end_time | time | |
@@ -150,7 +166,22 @@ Project name registry (used to populate dropdowns).
 | id | bigserial PK | |
 | name | text | Project name |
 | status | text | active / archived |
+| customer_id | bigint | FK to customers.id — added 2026-04-27 |
 | created_at | timestamptz | |
+
+---
+
+### 7b. `customers`
+Predefined customer registry. Each project belongs to one customer.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | bigserial PK | |
+| name | text UNIQUE NOT NULL | |
+| status | text | active / archived (default active) |
+| created_at | timestamptz | |
+
+Seed values: Mashreq, Landmark, Dubai Holding, Naivas, DFM, ABK, ASTER.
 
 ---
 

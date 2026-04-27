@@ -120,9 +120,27 @@
           <label>Employee</label>
           <input type="text" id="log-employee" readonly style="background:#f0f4ff;font-weight:600">
         </div>
-        <div class="form-group full">
-          <label>Activity / Project *</label>
-          <input type="text" id="log-activity" placeholder="e.g. LMG-BAHRAIN-WAREHOUSE-MIGRATION" oninput="updatePreview()">
+        <div class="form-group">
+          <label>Customer *</label>
+          <select id="log-customer" onchange="onLogCustomerChange()">
+            <option value="">-- Select Customer --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Project *</label>
+          <select id="log-project">
+            <option value="">-- Select Project --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Activity Type *</label>
+          <select id="log-activity-type">
+            <option value="">-- Select --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Activity / Description *</label>
+          <input type="text" id="log-activity" placeholder="e.g. Switch upgrade post-cutover" oninput="updatePreview()">
         </div>
         <div class="form-group">
           <label>Date *</label>
@@ -334,7 +352,13 @@
     <div class="card">
       <div class="card-title">Log Project Session</div>
       <div class="form-grid mb-4">
-        <div class="form-group full">
+        <div class="form-group">
+          <label>Customer *</label>
+          <select id="pj-customer" onchange="onPjCustomerChange()">
+            <option value="">-- Select Customer --</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Project *</label>
           <select id="pj-project">
             <option value="">-- Select Project --</option>
@@ -348,9 +372,6 @@
           <label>Activity Type *</label>
           <select id="pj-activity">
             <option value="">-- Select --</option>
-            <option>Configuration</option><option>Documentation</option><option>Meeting</option>
-            <option>Migration</option><option>Troubleshooting</option><option>Training</option>
-            <option>Workshop</option><option>Kick-off</option><option>Discussion</option><option>Other</option>
           </select>
         </div>
         <div class="form-group full">
@@ -399,6 +420,9 @@
       <div class="flex-between mb-4">
         <div class="card-title" style="margin-bottom:0">Project Sessions</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select id="pj-filter-customer" onchange="onPjFilterCustomerChange()" style="width:auto;padding:7px 12px">
+            <option value="">All Customers</option>
+          </select>
           <select id="pj-filter-project" onchange="renderPjSessions()" style="width:auto;padding:7px 12px">
             <option value="">All Projects</option>
           </select>
@@ -407,14 +431,19 @@
             <option>Ahmed Ali</option><option>Venkatesan</option><option>Prasanth</option>
             <option>Salman Aziz</option><option>Mohammed Afsal</option><option>Mohammed Nasif</option>
           </select>
+          <input type="date" id="pj-filter-from" onchange="renderPjSessions()" title="From date" style="width:auto;padding:7px 10px">
+          <input type="date" id="pj-filter-to" onchange="renderPjSessions()" title="To date" style="width:auto;padding:7px 10px">
+          <button class="btn btn-sm btn-ghost" onclick="clearPjFilters()" title="Clear all filters">✕ Clear</button>
           <button class="btn btn-sm btn-ghost" onclick="exportPjCSV()">⬇ Export CSV</button>
         </div>
       </div>
       <div id="pj-sessions-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <!-- Top scroll mirror — synced with the table below -->
+      <div id="pj-scroll-top" style="overflow-x:auto;overflow-y:hidden;display:none;margin-bottom:6px"><div id="pj-scroll-top-inner" style="height:1px"></div></div>
       <div class="table-wrap" id="pj-sessions-table" style="display:none">
         <table>
           <thead><tr>
-            <th>#</th><th>Project</th><th>Date</th><th>Activity</th><th>Session Info</th>
+            <th>#</th><th>Customer</th><th>Project</th><th>Date</th><th>Activity</th><th>Session Info</th>
             <th>Duration</th><th>Mode</th><th>Team</th><th>Stake Holders</th><th></th>
           </tr></thead>
           <tbody id="pj-sessions-tbody"></tbody>
@@ -460,6 +489,12 @@
     <div class="card" style="margin-bottom:20px">
       <div class="card-title">➕ Add New Project</div>
       <div class="form-grid mb-4">
+        <div class="form-group">
+          <label>Customer *</label>
+          <select id="pj-new-customer">
+            <option value="">-- Select Customer --</option>
+          </select>
+        </div>
         <div class="form-group">
           <label>Project Name *</label>
           <input type="text" id="pj-new-name" placeholder="e.g. ENBD-PHASE3" style="text-transform:uppercase">
@@ -593,7 +628,10 @@
           <select id="inv-add-model">
             <option value="">-- Select --</option>
             <option>EC-XS</option>
-            <option>EC-XS NFR</option>
+            <option>EC-SP</option>
+            <option>EC-M</option>
+            <option>EC-10104</option>
+            <option>EC-10106</option>
           </select>
         </div>
         <div class="form-group full">
@@ -644,10 +682,14 @@
         </div>
         <div class="form-group">
           <label>Version</label>
-          <select id="inv-add-version">
-            <option value="">—</option>
-            <option>IDS Capable</option>
-          </select>
+          <input type="text" id="inv-add-version" list="device-versions" placeholder="e.g. v9.0.1">
+          <datalist id="device-versions">
+            <option value="v9.0.1"></option>
+            <option value="v9.0.0"></option>
+            <option value="v8.5.0"></option>
+            <option value="Standard"></option>
+            <option value="IDS Capable"></option>
+          </datalist>
         </div>
         <div class="form-group">
           <label>Audit Date</label>
@@ -851,7 +893,10 @@
         <select id="inv-edit-model">
           <option value="">-- Select --</option>
           <option>EC-XS</option>
-          <option>EC-XS NFR</option>
+          <option>EC-SP</option>
+          <option>EC-M</option>
+          <option>EC-10104</option>
+          <option>EC-10106</option>
         </select>
       </div>
       <div class="form-group">
@@ -902,10 +947,11 @@
       </div>
       <div class="form-group">
         <label>Version</label>
-        <select id="inv-edit-version">
-          <option value="">—</option>
-          <option>IDS Capable</option>
-        </select>
+        <input type="text" id="inv-edit-version" list="device-versions" placeholder="e.g. v9.0.1">
+      </div>
+      <div class="form-group">
+        <label>Last Updated</label>
+        <input type="text" id="inv-edit-lastupdated" readonly style="background:#f0f4ff;font-size:12px;font-family:'DM Mono',monospace">
       </div>
       <div class="form-group">
         <label>Audit Date</label>
@@ -929,8 +975,20 @@
     <div class="modal-title">✏️ Edit OT Session</div>
     <input type="hidden" id="edit-ot-id">
     <div class="form-grid mb-4">
-      <div class="form-group full">
-        <label>Activity / Project *</label>
+      <div class="form-group">
+        <label>Customer</label>
+        <select id="edit-ot-customer" onchange="onEditOTCustomerChange()"></select>
+      </div>
+      <div class="form-group">
+        <label>Project</label>
+        <select id="edit-ot-project"></select>
+      </div>
+      <div class="form-group">
+        <label>Activity Type</label>
+        <select id="edit-ot-activity-type"></select>
+      </div>
+      <div class="form-group">
+        <label>Activity / Description *</label>
         <input type="text" id="edit-ot-activity">
       </div>
       <div class="form-group">
@@ -969,7 +1027,11 @@
     <div class="modal-title">✏️ Edit Project Session</div>
     <input type="hidden" id="edit-pj-id">
     <div class="form-grid mb-4">
-      <div class="form-group full">
+      <div class="form-group">
+        <label>Customer</label>
+        <select id="edit-pj-customer" onchange="onEditPjCustomerChange()"></select>
+      </div>
+      <div class="form-group">
         <label>Project</label>
         <select id="edit-pj-project"></select>
       </div>
@@ -979,11 +1041,7 @@
       </div>
       <div class="form-group">
         <label>Activity Type</label>
-        <select id="edit-pj-activity">
-          <option>Configuration</option><option>Documentation</option><option>Meeting</option>
-          <option>Migration</option><option>Troubleshooting</option><option>Training</option>
-          <option>Workshop</option><option>Kick-off</option><option>Discussion</option><option>Other</option>
-        </select>
+        <select id="edit-pj-activity"></select>
       </div>
       <div class="form-group full">
         <label>Session Info</label>

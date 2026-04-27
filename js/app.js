@@ -218,11 +218,14 @@ function updatePreview() {
 
 // ══ SAVE SESSION ═════════════════════════════════════════════════
 async function saveSession() {
+  const customer = document.getElementById('log-customer').value;
+  const project  = document.getElementById('log-project').value;
+  const actType  = document.getElementById('log-activity-type').value;
   const act=document.getElementById('log-activity').value.trim();
   const date=document.getElementById('log-date').value;
   const start=document.getElementById('log-start').value;
   const end=document.getElementById('log-end').value;
-  if (!act||!date||!start||!end){ showAlert('log-error'); return; }
+  if (!customer||!project||!actType||!act||!date||!start||!end){ showAlert('log-error'); return; }
   var vErr = validateOTStart(date, start, currentUser);
   if (vErr) { alert(vErr); return; }
   const res=calcOT(date,start,end,currentUser);
@@ -231,6 +234,7 @@ async function saveSession() {
   const {error}=await sb.from('ot_sessions').insert({
     employee:currentUser,activity:act,ot_date:date,start_time:start,end_time:end,
     day_name:res.dayName,band:res.band,rate:res.rate,duration_hours:res.duration,credited_hours:res.credited,
+    customer_name:customer,project_name:project,activity_type:actType,
     status:'pending'
   });
   btn.disabled=false; btn.innerHTML='💾 Save Session';
@@ -239,8 +243,12 @@ async function saveSession() {
 }
 
 function clearForm() {
-  ['log-activity','log-start','log-end'].forEach(function(id){document.getElementById(id).value='';});
+  ['log-activity','log-start','log-end','log-customer','log-project','log-activity-type'].forEach(function(id){
+    var el=document.getElementById(id); if (el) el.value='';
+  });
   document.getElementById('log-day').value='';
+  // Reset project dropdown back to full list
+  fillProjectSelect('log-project', '', false);
   ['prev-band','prev-dur','prev-rate','prev-cred'].forEach(function(id){
     const el=document.getElementById(id); el.textContent='—'; el.className='preview-value';
   });
@@ -274,7 +282,7 @@ async function renderSessions() {
     '<td><span class="badge '+(s.rate==='1:2'?'badge-12':'badge-11')+'">'+s.rate+'</span></td>'+
     '<td>'+creditedDisplay+'</td>'+
     '<td>'+stBadge+'</td>'+
-    '<td style="white-space:nowrap">'+((isManager||s.employee===currentUser)?'<button class="btn btn-sm btn-ghost" onclick="openEditOT('+s.id+',\''+s.employee+'\',\''+esc2(s.activity)+'\',\''+s.ot_date+'\',\''+s.start_time+'\',\''+s.end_time+'\')" style="margin-right:4px">✏️</button>':'')+(isManager?'<button class="btn btn-sm btn-danger" onclick="deleteSession('+s.id+')">✕</button>':'')+'</td></tr>';
+    '<td style="white-space:nowrap">'+((isManager||s.employee===currentUser)?'<button class="btn btn-sm btn-ghost" onclick="openEditOT('+s.id+',\''+s.employee+'\',\''+esc2(s.activity)+'\',\''+s.ot_date+'\',\''+s.start_time+'\',\''+s.end_time+'\',\''+esc2(s.customer_name||'')+'\',\''+esc2(s.project_name||'')+'\',\''+esc2(s.activity_type||'')+'\')" style="margin-right:4px">✏️</button>':'')+(isManager?'<button class="btn btn-sm btn-danger" onclick="deleteSession('+s.id+')">✕</button>':'')+'</td></tr>';
   }).join('');
   window._sessionsData=data;
 }
@@ -786,13 +794,20 @@ async function renderDashboard() {
 
 // ══ EDIT OT SESSION ══════════════════════════════════════════════
 var _editEmp = '';
-function openEditOT(id,emp,activity,date,start,end) {
+function openEditOT(id,emp,activity,date,start,end,customer,project,actType) {
   _editEmp = emp;
   document.getElementById('edit-ot-id').value      = id;
   document.getElementById('edit-ot-activity').value = activity;
   document.getElementById('edit-ot-date').value     = date;
   document.getElementById('edit-ot-start').value    = start;
   document.getElementById('edit-ot-end').value      = end;
+  // Refresh selects in case data has changed
+  fillCustomerSelect('edit-ot-customer', false);
+  fillActivitySelect('edit-ot-activity-type');
+  document.getElementById('edit-ot-customer').value = customer || '';
+  fillProjectSelect('edit-ot-project', customer || '', false);
+  document.getElementById('edit-ot-project').value = project || '';
+  document.getElementById('edit-ot-activity-type').value = actType || '';
   updateEditPreview();
   document.getElementById('edit-ot-modal').classList.add('show');
 }
@@ -815,6 +830,9 @@ function updateEditPreview() {
 }
 async function saveEditOT() {
   var id=document.getElementById('edit-ot-id').value;
+  var customer=document.getElementById('edit-ot-customer').value;
+  var project=document.getElementById('edit-ot-project').value;
+  var actType=document.getElementById('edit-ot-activity-type').value;
   var activity=document.getElementById('edit-ot-activity').value.trim();
   var date=document.getElementById('edit-ot-date').value;
   var start=document.getElementById('edit-ot-start').value;
@@ -826,14 +844,15 @@ async function saveEditOT() {
   var {error}=await sb.from('ot_sessions').update({
     activity:activity,ot_date:date,start_time:start,end_time:end,
     day_name:res.dayName,band:res.band,rate:res.rate,
-    duration_hours:res.duration,credited_hours:res.credited
+    duration_hours:res.duration,credited_hours:res.credited,
+    customer_name:customer||null,project_name:project||null,activity_type:actType||null
   }).eq('id',id);
   if (error){alert('Error: '+error.message);return;}
   closeEditOT(); renderSessions();
 }
 
 // ══ EDIT PROJECT SESSION ═════════════════════════════════════════
-function openEditPJ(id,proj,date,act,info,start,end,mode,stk,team) {
+function openEditPJ(id,proj,date,act,info,start,end,mode,stk,team,customer) {
   document.getElementById('edit-pj-id').value=id;
   document.getElementById('edit-pj-date').value=date;
   document.getElementById('edit-pj-info').value=info||'';
@@ -842,10 +861,15 @@ function openEditPJ(id,proj,date,act,info,start,end,mode,stk,team) {
   document.getElementById('edit-pj-mode').value=mode||'';
   document.getElementById('edit-pj-stakeholders').value=stk||'';
   document.getElementById('edit-pj-team').value=team||'';
-  var sel=document.getElementById('edit-pj-project');
-  if (sel.options.length<=1) { PROJECTS.forEach(function(p){var o=document.createElement('option');o.value=o.textContent=p;sel.appendChild(o);}); }
-  sel.value=proj;
-  document.getElementById('edit-pj-activity').value=act||'Meeting';
+  // Customer + project (filtered by customer)
+  var custVal = customer || PROJECT_CUSTOMER[proj] || '';
+  fillCustomerSelect('edit-pj-customer', false);
+  document.getElementById('edit-pj-customer').value = custVal;
+  fillProjectSelect('edit-pj-project', custVal, false);
+  document.getElementById('edit-pj-project').value = proj;
+  // Activity type
+  fillActivitySelect('edit-pj-activity');
+  document.getElementById('edit-pj-activity').value = act || '';
   calcEditPjDuration();
   document.getElementById('edit-pj-modal').classList.add('show');
 }
@@ -860,6 +884,7 @@ function calcEditPjDuration() {
 }
 async function saveEditPJ() {
   var id=document.getElementById('edit-pj-id').value;
+  var customer=document.getElementById('edit-pj-customer').value;
   var proj=document.getElementById('edit-pj-project').value;
   var date=document.getElementById('edit-pj-date').value;
   var act=document.getElementById('edit-pj-activity').value;
@@ -872,7 +897,7 @@ async function saveEditPJ() {
   var dur=0;
   if (start&&end){var sp=start.split(':').map(Number);var ep=end.split(':').map(Number);var sf=sp[0]+sp[1]/60;var ef=ep[0]+ep[1]/60;dur=r2(ef<sf?ef+24-sf:ef-sf);}
   var {error}=await sb.from('project_sessions').update({
-    project_name:proj,session_date:date,activity_type:act,session_info:info,
+    project_name:proj,customer_name:customer||null,session_date:date,activity_type:act,session_info:info,
     start_time:start||null,end_time:end||null,duration_hours:dur,
     onsite_remote:mode||null,stake_holders:stk||null,team_members:team
   }).eq('id',id);
@@ -935,6 +960,7 @@ function showOTTab(tab) {
     if (t===tab){sub.classList.add('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--teal);color:var(--navy);white-space:nowrap';}
     else{sub.classList.remove('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap';}
   });
+  if (tab==='log')      populateProjectDropdowns();
   if (tab==='summary')  buildSummaryFilters();
   if (tab==='sessions') renderSessions();
   if (tab==='compoff')  { renderMyCompOffRequests(); }
@@ -1104,20 +1130,64 @@ let PROJECTS = [
 
 let _projectsLoaded = false;
 
+// Customer & project lookup
+let CUSTOMERS = []; // [{id, name}]
+let PROJECT_CUSTOMER = {}; // { projectName: customerName }
+
 async function loadProjects() {
-  const {data, error} = await sb.from('projects').select('name,status').order('name');
+  const cRes = await sb.from('customers').select('id,name,status').order('name');
+  if (!cRes.error && cRes.data) {
+    CUSTOMERS = cRes.data.filter(function(c){ return c.status !== 'archived'; });
+  }
+  const {data, error} = await sb.from('projects').select('name,status,customer_id').order('name');
   if (!error && data && data.length) {
     PROJECTS = data.filter(function(p){ return p.status !== 'archived'; })
                    .map(function(p){ return p.name; });
+    PROJECT_CUSTOMER = {};
+    var byId = {}; CUSTOMERS.forEach(function(c){ byId[c.id] = c.name; });
+    data.forEach(function(p){ if (p.customer_id) PROJECT_CUSTOMER[p.name] = byId[p.customer_id]; });
     _projectsLoaded = true;
   }
 }
 
+// Get projects under a given customer (by name). Empty customer -> all.
+function projectsForCustomer(customerName) {
+  if (!customerName) return PROJECTS.slice();
+  return PROJECTS.filter(function(p){ return PROJECT_CUSTOMER[p] === customerName; });
+}
+
+// Populate a customer <select> by id
+function fillCustomerSelect(selectId, includeAll) {
+  var el = document.getElementById(selectId); if (!el) return;
+  var cur = el.value;
+  el.innerHTML = (includeAll ? '<option value="">All Customers</option>' : '<option value="">-- Select Customer --</option>')
+    + CUSTOMERS.map(function(c){ return '<option>'+c.name+'</option>'; }).join('');
+  if (cur) el.value = cur;
+}
+
+// Populate a project <select> filtered by a customer name
+function fillProjectSelect(selectId, customerName, includeAll) {
+  var el = document.getElementById(selectId); if (!el) return;
+  var cur = el.value;
+  var list = projectsForCustomer(customerName);
+  el.innerHTML = (includeAll ? '<option value="">All Projects</option>' : '<option value="">-- Select Project --</option>')
+    + list.map(function(p){ return '<option>'+p+'</option>'; }).join('');
+  if (cur && list.indexOf(cur) >= 0) el.value = cur;
+}
+
 // ── ADD PROJECT ──────────────────────────────────────────────────
 async function addProject() {
+  const customer = document.getElementById('pj-new-customer').value;
   const name   = (document.getElementById('pj-new-name').value||'').trim().toUpperCase();
   const status = document.getElementById('pj-new-status').value;
-  if (!name) { showAlert('pj-manage-error'); return; }
+  if (!customer) {
+    document.getElementById('pj-manage-error').textContent = '⚠️ Please select a customer.';
+    showAlert('pj-manage-error'); return;
+  }
+  if (!name) {
+    document.getElementById('pj-manage-error').textContent = '⚠️ Please enter a project name.';
+    showAlert('pj-manage-error'); return;
+  }
 
   // Check duplicate
   if (PROJECTS.includes(name)) {
@@ -1125,13 +1195,16 @@ async function addProject() {
     showAlert('pj-manage-error'); return;
   }
 
-  const {error} = await sb.from('projects').insert({name:name, status:status});
+  // Look up customer id
+  var custRow = CUSTOMERS.find(function(c){ return c.name === customer; });
+  var customer_id = custRow ? custRow.id : null;
+
+  const {error} = await sb.from('projects').insert({name:name, status:status, customer_id:customer_id});
   if (error) { alert('Error: '+error.message); return; }
 
-  // Update local list
-  PROJECTS.push(name); PROJECTS.sort();
   document.getElementById('pj-new-name').value = '';
   document.getElementById('pj-new-status').value = 'active';
+  document.getElementById('pj-new-customer').value = '';
   showAlert('pj-manage-success');
   // Refresh dropdowns and list
   _projectsLoaded = false;
@@ -1202,25 +1275,61 @@ async function renderManageProjects() {
 
 // ── POPULATE ALL PROJECT DROPDOWNS ───────────────────────────────
 function populateProjectDropdowns() {
-  const selects = ['pj-project','pj-filter-project'];
-  selects.forEach(function(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const cur = el.value;
-    while (el.options.length > 1) el.remove(1);
-    PROJECTS.forEach(function(p) {
-      const o = document.createElement('option');
-      o.value = o.textContent = p;
-      el.appendChild(o);
-    });
-    if (cur) el.value = cur;
-  });
+  // Customer selects (forms + filters)
+  fillCustomerSelect('pj-customer', false);
+  fillCustomerSelect('pj-new-customer', false);
+  fillCustomerSelect('log-customer', false);
+  fillCustomerSelect('edit-ot-customer', false);
+  fillCustomerSelect('edit-pj-customer', false);
+  fillCustomerSelect('pj-filter-customer', true);
+
+  // Project selects — log/OT forms start unfiltered (until user picks customer)
+  fillProjectSelect('pj-project', '', false);
+  fillProjectSelect('log-project', '', false);
+  fillProjectSelect('edit-ot-project', '', false);
+  fillProjectSelect('edit-pj-project', '', false);
+  fillProjectSelect('pj-filter-project', '', true);
+
+  // Activity type selects
+  fillActivitySelect('pj-activity');
+  fillActivitySelect('log-activity-type');
+  fillActivitySelect('edit-pj-activity');
+  fillActivitySelect('edit-ot-activity-type');
+}
+
+// Customer-change handlers — re-filter project dropdown to only that customer
+function onPjCustomerChange() {
+  fillProjectSelect('pj-project', document.getElementById('pj-customer').value, false);
+}
+function onLogCustomerChange() {
+  fillProjectSelect('log-project', document.getElementById('log-customer').value, false);
+}
+function onEditOTCustomerChange() {
+  fillProjectSelect('edit-ot-project', document.getElementById('edit-ot-customer').value, false);
+}
+function onEditPjCustomerChange() {
+  fillProjectSelect('edit-pj-project', document.getElementById('edit-pj-customer').value, false);
+}
+function onPjFilterCustomerChange() {
+  fillProjectSelect('pj-filter-project', document.getElementById('pj-filter-customer').value, true);
+  renderPjSessions();
 }
 
 const ACTIVITY_TYPES = [
-  'Configuration','Documentation','Meeting','Migration','Troubleshooting',
-  'Training','Workshop','Kick-off','Discussion','Other'
+  'HLD Discussion','HLD Documentation','LLD Discussion','LLD Documentation',
+  'Pilot Sites Rollout','As-Built Documentation','KT / Training','Migration',
+  'Troubleshooting','Initial Configuration'
 ];
+
+const DEVICE_MODELS = ['EC-XS','EC-SP','EC-M','EC-10104','EC-10106'];
+
+function fillActivitySelect(selectId) {
+  var el = document.getElementById(selectId); if (!el) return;
+  var cur = el.value;
+  el.innerHTML = '<option value="">-- Select --</option>'
+    + ACTIVITY_TYPES.map(function(a){ return '<option>'+a+'</option>'; }).join('');
+  if (cur) el.value = cur;
+}
 
 function initProjectTab() {
   // Show Manage Projects tab for manager only
@@ -1294,6 +1403,7 @@ function calcPjDuration() {
 }
 
 async function savePjSession() {
+  const customer = document.getElementById('pj-customer').value;
   const proj     = document.getElementById('pj-project').value;
   const date     = document.getElementById('pj-date').value;
   const activity = document.getElementById('pj-activity').value;
@@ -1307,7 +1417,7 @@ async function savePjSession() {
   const teamChecks = document.querySelectorAll('#pj-team-checkboxes input[type=checkbox]:checked');
   const teamMembers = Array.from(teamChecks).map(function(c){return c.value;}).join(', ');
 
-  if (!proj || !date || !activity || !info || !teamMembers) {
+  if (!customer || !proj || !date || !activity || !info || !teamMembers) {
     showAlert('pj-error'); return;
   }
 
@@ -1325,6 +1435,7 @@ async function savePjSession() {
 
   const {error} = await sb.from('project_sessions').insert({
     project_name: proj,
+    customer_name: customer,
     session_date: date,
     activity_type: activity,
     session_info: info,
@@ -1343,8 +1454,9 @@ async function savePjSession() {
   showAlert('pj-success');
 
   // Reset form
-  ['pj-project','pj-activity','pj-mode'].forEach(function(id){document.getElementById(id).value='';});
+  ['pj-customer','pj-project','pj-activity','pj-mode'].forEach(function(id){document.getElementById(id).value='';});
   ['pj-info','pj-start','pj-end','pj-duration','pj-stakeholders','pj-remarks'].forEach(function(id){document.getElementById(id).value='';});
+  fillProjectSelect('pj-project', '', false);
   document.querySelectorAll('#pj-team-checkboxes input').forEach(function(cb){
     cb.checked = cb.value===currentUser;
     const lbl = cb.parentElement;
@@ -1357,17 +1469,31 @@ async function renderPjSessions() {
   document.getElementById('pj-sessions-loading').style.display='flex';
   document.getElementById('pj-sessions-table').style.display='none';
   document.getElementById('pj-sessions-empty').style.display='none';
+  var topScroll = document.getElementById('pj-scroll-top');
+  if (topScroll) topScroll.style.display='none';
 
+  const custFilter   = document.getElementById('pj-filter-customer').value;
   const projFilter   = document.getElementById('pj-filter-project').value;
   const memberFilter = document.getElementById('pj-filter-member').value;
+  const fromDate     = document.getElementById('pj-filter-from').value;
+  const toDate       = document.getElementById('pj-filter-to').value;
 
   let q = sb.from('project_sessions').select('*').order('session_date',{ascending:false});
   if (projFilter) q = q.eq('project_name', projFilter);
+  if (fromDate)   q = q.gte('session_date', fromDate);
+  if (toDate)     q = q.lte('session_date', toDate);
 
   const {data} = await q;
   document.getElementById('pj-sessions-loading').style.display='none';
 
   let rows = data || [];
+  // Customer filter (client-side: matches customer_name OR by mapped project_name)
+  if (custFilter) {
+    rows = rows.filter(function(r){
+      if (r.customer_name) return r.customer_name === custFilter;
+      return PROJECT_CUSTOMER[r.project_name] === custFilter;
+    });
+  }
   // Filter by team member (client-side since it's free text)
   if (memberFilter) {
     const firstName = memberFilter.split(' ')[0].toLowerCase();
@@ -1380,8 +1506,10 @@ async function renderPjSessions() {
 
   document.getElementById('pj-sessions-tbody').innerHTML = rows.map(function(r,i){
     const canEdit = isManager || (r.logged_by===currentUser);
+    var custDisplay = r.customer_name || PROJECT_CUSTOMER[r.project_name] || '—';
     return '<tr>' +
       '<td style="color:var(--muted)">'+(i+1)+'</td>'+
+      '<td style="font-size:12px;color:var(--navy);font-weight:600">'+esc2(custDisplay)+'</td>'+
       '<td><strong style="color:var(--navy)">'+r.project_name+'</strong></td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtDate(r.session_date)+'</td>'+
       '<td><span class="badge" style="background:#f0f4ff;color:var(--navy)">'+(r.activity_type||'—')+'</span></td>'+
@@ -1390,9 +1518,38 @@ async function renderPjSessions() {
       '<td style="font-size:12px;color:var(--muted)">'+(r.onsite_remote||'—')+'</td>'+
       '<td style="font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(r.team_members||'')+'">'+( r.team_members||'—')+'</td>'+
       '<td style="font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+( r.stake_holders||'—')+'</td>'+
-      '<td>'+(canEdit ? '<button class="btn btn-sm btn-ghost" onclick="openEditPJ('+r.id+',\''+esc2(r.project_name)+'\',\''+r.session_date+'\',\''+esc2(r.activity_type)+'\',\''+esc2(r.session_info)+'\',\''+(r.start_time||'')+'\',\''+(r.end_time||'')+'\',\''+esc2(r.onsite_remote||'')+'\',\''+esc2(r.stake_holders||'')+'\',\''+esc2(r.team_members||'')+'\')" style="margin-right:4px">✏️</button><button class="btn btn-sm btn-danger" onclick="deletePjSession('+r.id+')">✕</button>' : '')+'</td>'+
+      '<td>'+(canEdit ? '<button class="btn btn-sm btn-ghost" onclick="openEditPJ('+r.id+',\''+esc2(r.project_name)+'\',\''+r.session_date+'\',\''+esc2(r.activity_type)+'\',\''+esc2(r.session_info)+'\',\''+(r.start_time||'')+'\',\''+(r.end_time||'')+'\',\''+esc2(r.onsite_remote||'')+'\',\''+esc2(r.stake_holders||'')+'\',\''+esc2(r.team_members||'')+'\',\''+esc2(custDisplay==='—'?'':custDisplay)+'\')" style="margin-right:4px">✏️</button><button class="btn btn-sm btn-danger" onclick="deletePjSession('+r.id+')">✕</button>' : '')+'</td>'+
     '</tr>';
   }).join('');
+
+  // Wire up top scroll mirror
+  setTimeout(syncPjTopScroll, 50);
+}
+
+function syncPjTopScroll() {
+  var top = document.getElementById('pj-scroll-top');
+  var topInner = document.getElementById('pj-scroll-top-inner');
+  var bottomWrap = document.querySelector('#pj-sessions-table');
+  if (!top || !topInner || !bottomWrap) return;
+  var table = bottomWrap.querySelector('table');
+  if (!table) return;
+  // Mirror the table width into the top scroller's inner div
+  topInner.style.width = table.scrollWidth + 'px';
+  top.style.display = 'block';
+  // Two-way scroll sync (set up once)
+  if (!top._wired) {
+    top.addEventListener('scroll', function(){ bottomWrap.scrollLeft = top.scrollLeft; });
+    bottomWrap.addEventListener('scroll', function(){ top.scrollLeft = bottomWrap.scrollLeft; });
+    top._wired = true;
+  }
+}
+
+function clearPjFilters() {
+  ['pj-filter-customer','pj-filter-project','pj-filter-member','pj-filter-from','pj-filter-to'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  fillProjectSelect('pj-filter-project', '', true);
+  renderPjSessions();
 }
 
 async function deletePjSession(id) {
@@ -1651,7 +1808,7 @@ function showProjectTab(tab) {
   if (tab==='sessions') { initProjectTab(); renderPjSessions(); }
   if (tab==='project')  { initProjectTab(); renderPjProjectSummary(); }
   if (tab==='employee') { initProjectTab(); renderPjEmployeeSummary(); }
-  if (tab==='manage')   { renderManageProjects(); }
+  if (tab==='manage')   { populateProjectDropdowns(); renderManageProjects(); }
 }
 
 // ══ INVENTORY MODULE ══════════════════════════════════════════════
@@ -1755,7 +1912,7 @@ function renderInventoryTable(data) {
       '<td class="hide-mobile">'+esc2(d.current_partner||'—')+'</td>'+
       '<td class="hide-mobile">'+esc2(d.current_end_user||'—')+'</td>'+
       '<td class="hide-mobile">'+esc2(d.ids_ps||'—')+'</td>'+
-      '<td class="hide-mobile" style="font-size:11px;color:var(--muted)">'+esc2(d.last_updated_by||'—')+'</td>'+
+      '<td class="hide-mobile" style="font-size:11px;color:var(--muted);line-height:1.3">'+esc2(d.last_updated_by||'—')+'<br><span style="font-size:10px">'+(d.updated_at?new Date(d.updated_at).toLocaleDateString():'')+'</span></td>'+
       '<td>'+
         '<div style="display:flex;gap:6px">'+
         '<button class="btn btn-sm btn-ghost" onclick="openEditDeviceModal('+d.id+')">✏️ Edit</button>'+
@@ -1771,7 +1928,7 @@ function renderInventoryTable(data) {
     '<th>#</th><th>Serial No.</th><th>Model</th><th>Status</th>'+
     '<th class="hide-mobile">Location</th><th class="hide-mobile">Partner</th>'+
     '<th class="hide-mobile">End User</th><th class="hide-mobile">IDS/PS</th>'+
-    '<th class="hide-mobile">Last Updated By</th><th>Actions</th>'+
+    '<th class="hide-mobile">Last Updated</th><th>Actions</th>'+
     '</tr></thead>'+
     '<tbody>'+rows+'</tbody>'+
     '</table></div>';
@@ -1789,6 +1946,14 @@ function resetAddDeviceForm() {
 async function saveNewDevice() {
   var serial = document.getElementById('inv-add-serial').value.trim();
   if (!serial) { alert('Serial number is required.'); return; }
+
+  // Pre-check: serial already in our loaded inventory?
+  var dupe = (_invData||[]).find(function(x){ return (x.serial_number||'').toLowerCase() === serial.toLowerCase(); });
+  if (dupe) {
+    alert('Serial number "'+serial+'" is already in inventory.\n\nExisting device:\n  Model: '+(dupe.model_no||'—')+'\n  Location: '+(dupe.current_location||'—')+'\n  Partner: '+(dupe.current_partner||'—')+'\n\nUse the Edit button on that device instead of adding a duplicate.');
+    return;
+  }
+
   var btn = document.getElementById('inv-add-save-btn');
   btn.disabled = true; btn.textContent = '⏳ Saving...';
 
@@ -1811,7 +1976,12 @@ async function saveNewDevice() {
 
   var res = await sb.from('inventory').insert(payload).select().single();
   if (res.error) {
-    alert('Error saving device: ' + res.error.message);
+    // Friendly message for unique-violation (race condition fallback)
+    if (res.error.code === '23505' || /duplicate key|unique/i.test(res.error.message)) {
+      alert('Serial number "'+serial+'" is already in inventory. Please check the device list — it may have been added by someone else.');
+    } else {
+      alert('Error saving device: ' + res.error.message);
+    }
     btn.disabled = false; btn.textContent = '💾 Save Device'; return;
   }
 
@@ -1845,6 +2015,13 @@ function openEditDeviceModal(id) {
   document.getElementById('inv-edit-version').value          = d.version || '';
   document.getElementById('inv-edit-remarks').value          = d.remarks || '';
   document.getElementById('inv-edit-auditdate').value        = d.audit_date ? d.audit_date.split('T')[0] : '';
+  // Last updated info — read-only display
+  var lu = document.getElementById('inv-edit-lastupdated');
+  if (lu) {
+    var by = d.last_updated_by || '—';
+    var when = d.updated_at ? new Date(d.updated_at).toLocaleString() : (d.created_at ? new Date(d.created_at).toLocaleString() : '—');
+    lu.value = by + '  •  ' + when;
+  }
   document.getElementById('inv-edit-modal').classList.add('show');
 }
 
