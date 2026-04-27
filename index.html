@@ -102,7 +102,7 @@
 <div id="backup-banner" style="display:none;background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-bottom:1px solid #F59E0B;padding:10px 16px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
   <div style="font-size:13px;color:#92400E;font-weight:500">⚠️ Weekly backup is due — last backup was over 7 days ago.</div>
   <div style="display:flex;gap:8px">
-    <button class="btn btn-sm" style="background:#F59E0B;color:white;border:none" onclick="downloadBackup()">💾 Download Backup Now</button>
+    <button class="btn btn-sm" style="background:#F59E0B;color:white;border:none" onclick="downloadBackup(this)">💾 Download Backup Now</button>
     <button class="btn btn-sm btn-ghost" onclick="dismissBackup()" style="font-size:12px">Dismiss</button>
   </div>
 </div>
@@ -223,6 +223,7 @@
   <!-- COMP OFF -->
   <div id="ottab-compoff" style="display:none">
     <div class="alert alert-success" id="co-success">✅ Comp off request submitted! Awaiting manager approval.</div>
+    <div class="alert alert-error" id="co-error">⚠️ Please select the date and request type.</div>
     <div class="card">
       <div class="card-title">Request Comp Off</div>
       <div class="form-grid mb-4">
@@ -1117,6 +1118,18 @@
   </div>
 </div>
 
-<script src="js/app.js"></script>
+<script src="js/core/state.js"></script>
+<script src="js/core/auth.js"></script>
+<script src="js/features/overtime.js"></script>
+<script src="js/features/leave.js"></script>
+<script src="js/features/dashboard.js"></script>
+<script src="js/features/editors.js"></script>
+<script src="js/core/navigation.js"></script>
+<script src="js/core/helpers.js"></script>
+<script src="js/features/projects.js"></script>
+<script src="js/features/inventory.js"></script>
+<script src="js/features/approvals.js"></script>
+<script src="js/features/knowledge-base.js"></script>
+<script src="js/core/init.js"></script>
 </body>
 </html>

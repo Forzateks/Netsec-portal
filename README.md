@@ -9,15 +9,47 @@ Built by Mohammed Nasif. Deployed via Netlify (static site, no build step).
 
 ```
 netsec-portal/
-├── index.html          # App shell — HTML structure only
+├── index.html                # App shell — HTML structure only
 ├── css/
-│   └── styles.css      # All CSS (design tokens, components, responsive)
+│   └── styles.css            # All CSS (design tokens, components, responsive)
 ├── js/
-│   └── app.js          # All JavaScript (auth, OT, leave, projects, inventory, approvals)
-├── README.md           # This file — project overview and dev guide
-├── BACKEND.md          # Supabase schema, tables, RLS policies — READ BEFORE ANY DB CHANGES
-└── V1.3-04-04-2026/    # Archived version snapshot
+│   ├── core/
+│   │   ├── state.js          # Shared config and global state
+│   │   ├── auth.js           # Auth bootstrap and app entry flow
+│   │   ├── navigation.js     # Screen and tab switching
+│   │   ├── helpers.js        # Shared UI/data helpers and backup export
+│   │   └── init.js           # Session restore and initial page boot
+│   └── features/
+│       ├── overtime.js       # OT logging, summaries, comp off
+│       ├── leave.js          # Leave flows and manager approvals
+│       ├── dashboard.js      # Dashboard and OT CSV export
+│       ├── editors.js        # OT and project edit modals, monthly OT report
+│       ├── projects.js       # Projects, sessions, summaries, dropdown data
+│       ├── inventory.js      # Inventory and activity log
+│       ├── approvals.js      # OT approvals
+│       └── knowledge-base.js # KB browse, submit, edit, delete
+├── docs/
+│   ├── features/
+│   │   ├── README.md         # Feature map and product-area overview
+│   │   └── GulfitOT_Technical_Reference.docx
+│   ├── security/
+│   │   └── README.md         # Security posture and hardening notes
+│   ├── testing/
+│   │   └── README.md         # Manual regression checklist
+│   └── archive/
+│       ├── README.md
+│       └── V1.3-04-04-2026/  # Archived version snapshot and import artifacts
+├── README.md                 # This file — project overview and dev guide
+└── BACKEND.md                # Supabase schema, tables, RLS policies — READ BEFORE ANY DB CHANGES
 ```
+
+## Organization Rules
+
+- Keep runtime entry files at the repo root: `index.html`, `css/`, `js/`
+- Put feature references and business documents under `docs/features/`
+- Put security posture, auth notes, and hardening work under `docs/security/`
+- Put manual test plans and future QA assets under `docs/testing/`
+- Put historical snapshots and import artifacts under `docs/archive/`
 
 ---
 
@@ -27,7 +59,7 @@ netsec-portal/
 |---|---|
 | Frontend | Vanilla HTML + CSS + JavaScript (no framework, no build) |
 | Backend | Supabase (Postgres + REST via supabase-js v2) |
-| Auth | PIN-based login (client-side, no Supabase Auth) |
+| Auth | Supabase Auth (email/password + password reset) |
 | Hosting | Netlify — auto-deploys on push to `master` |
 | Fonts | Google Fonts (DM Sans + DM Mono) |
 
@@ -43,6 +75,7 @@ netsec-portal/
 | Projects | 📁 | Project session logging and summaries |
 | Approvals | 🔔 | Manager-only — approve/reject comp off and leave requests |
 | Inventory | 📦 | Device tracking with activity log (UAE/Oman/Bahrain/KDM/Qatar) |
+| Knowledge Base | 📚 | Internal article library for notes, troubleshooting, and configuration knowledge |
 
 ---
 
@@ -72,7 +105,7 @@ netsec-portal/
 ## Local Development
 
 No build step — just open `index.html` in a browser.  
-Supabase anon key is embedded in `js/app.js` — do not commit new keys publicly.
+Supabase anon key is embedded in `js/core/state.js` — do not commit new keys publicly.
 
 ---
 
@@ -86,3 +119,10 @@ Push to `master` → GitHub → Netlify auto-deploys (usually < 60 seconds).
 
 > **Always read `BACKEND.md` before asking for or making any Supabase changes.**  
 > It contains the full current schema, table definitions, and RLS policies.
+
+## Supporting Docs
+
+- Feature reference: [docs/features/README.md](/d:/Netsec-portal/docs/features/README.md)
+- Security notes: [docs/security/README.md](/d:/Netsec-portal/docs/security/README.md)
+- Testing checklist: [docs/testing/README.md](/d:/Netsec-portal/docs/testing/README.md)
+- Archive notes: [docs/archive/README.md](/d:/Netsec-portal/docs/archive/README.md)

@@ -2,7 +2,7 @@
 
 **Database:** Supabase (Postgres)  
 **Project URL:** `https://rxxcrlobbtlvjgcqgjjm.supabase.co`  
-**Auth:** Supabase Auth (email + password). Anon key still embedded in `js/app.js` for unauthenticated reads/writes; signed-in users get a JWT that travels alongside it. Manager invites users via Supabase dashboard (Authentication → Users → Invite). Profile-to-employee mapping lives in `user_profiles`.  
+**Auth:** Supabase Auth (email + password). Anon key still embedded in `js/core/state.js` for unauthenticated reads/writes; signed-in users get a JWT that travels alongside it. Manager invites users via Supabase dashboard (Authentication → Users → Invite). Profile-to-employee mapping lives in `user_profiles`.  
 **Last verified:** 2026-04-27  
 **Last updated:** 2026-04-27 — Auth migrated to Supabase Auth; new user_profiles table
 
