@@ -3,88 +3,142 @@ const SUPABASE_URL = 'https://rxxcrlobbtlvjgcqgjjm.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4eGNybG9iYnRsdmpnY3FnamptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MzczNzEsImV4cCI6MjA5MDUxMzM3MX0.egC7GkqozxJ8IUbsL3RaHcyE4spGVOwmt2t9s082QSE';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const EMPLOYEES = ['Ahmed Ali','Venkatesan','Prasanth','Salman Aziz','Mohammed Afsal','Mohammed Nasif'];
-const MANAGER   = 'Venkatesan';
+// EMPLOYEES list is now derived from user_profiles at login (manager filters etc.)
+// Fallback used until profiles load — ordered to match historical data.
+let EMPLOYEES = ['Ahmed Ali','Venkatesan','Prasanth','Salman Aziz','Mohammed Afsal','Mohammed Nasif'];
 const KSA_EMP   = ['Salman Aziz','Mohammed Afsal'];
 const LEAVE_ALLOWANCE = 22;
 const SICK_ALLOWANCE  = 15;
-const SESSION_DAYS = 30;
-
-// PINs — change via memory update
-const PINS = {
-  'Ahmed Ali':      '3842',
-  'Venkatesan':     '9171',
-  'Prasanth':       '2784',
-  'Salman Aziz':    '5063',
-  'Mohammed Afsal': '7326',
-  'Mohammed Nasif': '6519',
-};
 
 let currentUser = '';
+let currentEmail = '';
 let isManager   = false;
-let pinEntry    = '';
 let approveTarget = null;
+let USER_PROFILES = []; // [{user_id, email, employee_name, is_manager}]
 
-// ══ SESSION MANAGEMENT ═══════════════════════════════════════════
-function saveSession(user) {
-  const expiry = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
-  localStorage.setItem('gulfit_user',    user);
-  localStorage.setItem('gulfit_expiry',  expiry.toString());
-}
-
-function loadSession() {
-  const user   = localStorage.getItem('gulfit_user');
-  const expiry = parseInt(localStorage.getItem('gulfit_expiry') || '0');
-  if (user && Date.now() < expiry) return user;
-  localStorage.removeItem('gulfit_user');
-  localStorage.removeItem('gulfit_expiry');
-  return null;
-}
-
-function doLogout() {
-  localStorage.removeItem('gulfit_user');
-  localStorage.removeItem('gulfit_expiry');
-  currentUser = ''; isManager = false;
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-emp').value = '';
-  pinEntry = ''; updatePinDisplay();
-}
-
-// ══ LOGIN ════════════════════════════════════════════════════════
-function pinPress(val) {
-  if (val === 'clear') { pinEntry = ''; }
-  else if (val === 'back') { pinEntry = pinEntry.slice(0,-1); }
-  else if (pinEntry.length < 4) { pinEntry += val; }
-  updatePinDisplay();
-  if (pinEntry.length === 4) setTimeout(doLogin, 150);
-}
-
-function updatePinDisplay() {
-  const d = document.getElementById('pin-display');
-  d.textContent = pinEntry.length === 0 ? '——' : '●'.repeat(pinEntry.length) + '—'.repeat(4 - pinEntry.length);
-}
-
-function doLogin() {
-  const emp = document.getElementById('login-emp').value;
-  if (!emp) { showLoginError('Please select your name first.'); return; }
-  if (PINS[emp] !== pinEntry) {
-    showLoginError('Incorrect PIN. Please try again.');
-    pinEntry = ''; updatePinDisplay(); return;
-  }
-  initApp(emp);
-}
-
+// ══ AUTH (Supabase) ══════════════════════════════════════════════
 function showLoginError(msg) {
   const e = document.getElementById('login-error');
-  e.textContent = '❌ ' + msg; e.style.display = 'block';
-  setTimeout(function(){ e.style.display = 'none'; }, 3000);
+  e.textContent = '❌ ' + msg;
+  e.style.display = 'block'; e.style.background='#FEE2E2'; e.style.color='#B91C1C';
+  e.style.padding='10px'; e.style.borderRadius='8px'; e.style.fontSize='13px';
+  e.style.marginBottom='12px'; e.style.textAlign='center';
+  setTimeout(function(){ e.style.display = 'none'; }, 5000);
+}
+
+function showLoginSuccess(msg) {
+  const e = document.getElementById('login-success');
+  e.textContent = '✅ ' + msg;
+  e.style.display = 'block';
+  setTimeout(function(){ e.style.display = 'none'; }, 6000);
+}
+
+function showSigninForm() {
+  document.getElementById('login-form-signin').style.display='block';
+  document.getElementById('login-form-forgot').style.display='none';
+  document.getElementById('login-form-reset').style.display='none';
+  document.getElementById('login-sub').textContent = 'Sign in to continue';
+}
+function showForgotForm() {
+  document.getElementById('login-form-signin').style.display='none';
+  document.getElementById('login-form-forgot').style.display='block';
+  document.getElementById('login-form-reset').style.display='none';
+  document.getElementById('login-sub').textContent = 'Forgot your password?';
+}
+function showResetForm() {
+  document.getElementById('login-form-signin').style.display='none';
+  document.getElementById('login-form-forgot').style.display='none';
+  document.getElementById('login-form-reset').style.display='block';
+  document.getElementById('login-sub').textContent = 'Set a new password';
+}
+
+async function doLogin() {
+  const email    = (document.getElementById('login-email').value||'').trim().toLowerCase();
+  const password = document.getElementById('login-password').value;
+  const remember = document.getElementById('login-remember').checked;
+  if (!email || !password) { showLoginError('Please enter email and password.'); return; }
+
+  const {data, error} = await sb.auth.signInWithPassword({ email: email, password: password });
+  if (error) { showLoginError(error.message || 'Sign in failed.'); return; }
+  if (!data || !data.user) { showLoginError('Sign in failed.'); return; }
+
+  // If "Remember me" is unchecked, sign out when window closes.
+  // (Supabase persists by default; this opt-out gives session-scope behavior.)
+  if (!remember) {
+    window.addEventListener('beforeunload', function(){ sb.auth.signOut(); });
+  }
+
+  await initAppFromUser(data.user);
+}
+
+async function doForgot() {
+  const email = (document.getElementById('forgot-email').value||'').trim().toLowerCase();
+  if (!email) { showLoginError('Please enter your email.'); return; }
+  const redirectTo = window.location.origin + window.location.pathname;
+  const {error} = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirectTo });
+  if (error) { showLoginError(error.message || 'Could not send reset link.'); return; }
+  showLoginSuccess('Reset link sent. Check your email inbox.');
+  setTimeout(showSigninForm, 1500);
+}
+
+async function doResetPassword() {
+  const p1 = document.getElementById('reset-password').value;
+  const p2 = document.getElementById('reset-password2').value;
+  if (p1.length < 8) { showLoginError('Password must be at least 8 characters.'); return; }
+  if (p1 !== p2)     { showLoginError('Passwords do not match.'); return; }
+  const {error} = await sb.auth.updateUser({ password: p1 });
+  if (error) { showLoginError(error.message || 'Could not update password.'); return; }
+  showLoginSuccess('Password set! Signing you in...');
+  // After updateUser the session is already active — go straight in.
+  const {data} = await sb.auth.getUser();
+  if (data && data.user) {
+    setTimeout(function(){ initAppFromUser(data.user); }, 800);
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = ''; currentEmail = ''; isManager = false;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  showSigninForm();
+}
+
+// Look up the user_profiles row for the signed-in user
+async function fetchUserProfile(authUser) {
+  const {data, error} = await sb.from('user_profiles')
+    .select('user_id,email,employee_name,is_manager')
+    .or('user_id.eq.'+authUser.id+',email.eq.'+authUser.email).limit(1);
+  if (error || !data || !data.length) return null;
+  return data[0];
+}
+
+// Load all profiles for the EMPLOYEES list
+async function loadAllProfiles() {
+  const {data} = await sb.from('user_profiles').select('user_id,email,employee_name,is_manager').order('employee_name');
+  if (data && data.length) {
+    USER_PROFILES = data;
+    EMPLOYEES = data.map(function(p){ return p.employee_name; });
+  }
+}
+
+async function initAppFromUser(authUser) {
+  const profile = await fetchUserProfile(authUser);
+  if (!profile) {
+    showLoginError('Your account is not set up yet. Ask the manager to add your profile.');
+    await sb.auth.signOut();
+    return;
+  }
+  currentUser  = profile.employee_name;
+  currentEmail = profile.email || authUser.email;
+  isManager    = !!profile.is_manager;
+  await loadAllProfiles();
+  initApp(currentUser);
 }
 
 function initApp(user) {
-  currentUser = user;
-  isManager   = (user === MANAGER);
-  saveSession(user);
 
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -2426,12 +2480,27 @@ async function deleteKBArticle(id) {
 }
 
 // ══ INIT ══════════════════════════════════════════════════════════
-window.onload = function() {
-  const saved = loadSession();
-  if (saved) {
-    // Auto-login from saved session
-    document.getElementById('login-emp').value = saved;
-    initApp(saved);
+window.onload = async function() {
+  // Detect password-recovery flow first — Supabase puts type=recovery in the URL hash
+  // when the user clicks the email reset link. We listen for the auth event.
+  sb.auth.onAuthStateChange(function(event){
+    if (event === 'PASSWORD_RECOVERY') {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+      showResetForm();
+    }
+  });
+
+  // Restore existing session if present
+  const {data} = await sb.auth.getSession();
+  if (data && data.session && data.session.user) {
+    // If the URL is a recovery link, the auth event above will switch to reset form.
+    // Otherwise sign the user straight in.
+    if (!/type=recovery/.test(window.location.hash)) {
+      await initAppFromUser(data.session.user);
+      return;
+    }
   }
-  // else stay on login screen
+  // No active session — show sign-in form
+  showSigninForm();
 };

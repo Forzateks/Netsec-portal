@@ -2,9 +2,9 @@
 
 **Database:** Supabase (Postgres)  
 **Project URL:** `https://rxxcrlobbtlvjgcqgjjm.supabase.co`  
-**Auth:** Anon key in `js/app.js` — all table access goes through this key  
+**Auth:** Supabase Auth (email + password). Anon key still embedded in `js/app.js` for unauthenticated reads/writes; signed-in users get a JWT that travels alongside it. Manager invites users via Supabase dashboard (Authentication → Users → Invite). Profile-to-employee mapping lives in `user_profiles`.  
 **Last verified:** 2026-04-27  
-**Last updated:** 2026-04-27 — Customers table, customer/project links on OT + project sessions, activity_type standardization
+**Last updated:** 2026-04-27 — Auth migrated to Supabase Auth; new user_profiles table
 
 > This file is the source of truth for the Supabase schema.  
 > Before requesting any DB change, read this file first to avoid duplicating tables or columns.
@@ -63,10 +63,51 @@ Stores individual overtime session logs.
 > -- Standardize activity_type values in project_sessions
 > ```
 >
-> **SQL still to run** (2026-04-27 — activity_type on OT):
+> **SQL already run** (2026-04-27 — activity_type on OT):
 > ```sql
 > ALTER TABLE ot_sessions ADD COLUMN activity_type TEXT;
 > ```
+>
+> **SQL to run** (2026-04-27 — Supabase Auth migration):
+> ```sql
+> CREATE TABLE user_profiles (
+>   email          TEXT PRIMARY KEY,
+>   user_id        UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+>   employee_name  TEXT NOT NULL,
+>   is_manager     BOOLEAN DEFAULT FALSE,
+>   created_at     TIMESTAMPTZ DEFAULT NOW()
+> );
+> ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+> CREATE POLICY "user_profiles_all" ON user_profiles FOR ALL USING (true);
+>
+> -- Pre-seed with the team
+> INSERT INTO user_profiles (email, employee_name, is_manager) VALUES
+>   ('ahmed@gulfitd.com',       'Ahmed Ali',       FALSE),
+>   ('venkat@gulfitd.com',      'Venkatesan',      TRUE),
+>   ('prasanth.p@gulfitd.com',  'Prasanth',        FALSE),
+>   ('salman@gulfitd.com',      'Salman Aziz',     FALSE),
+>   ('afsal@gulfitd.com',       'Mohammed Afsal',  FALSE),
+>   ('nasif@gulfitd.com',       'Mohammed Nasif',  FALSE);
+>
+> -- Trigger: when an auth.users row is created (user accepts invite),
+> -- populate user_profiles.user_id by matching email.
+> CREATE OR REPLACE FUNCTION link_user_profile() RETURNS TRIGGER AS $$
+> BEGIN
+>   UPDATE user_profiles SET user_id = NEW.id WHERE LOWER(email) = LOWER(NEW.email);
+>   RETURN NEW;
+> END;
+> $$ LANGUAGE plpgsql SECURITY DEFINER;
+>
+> CREATE TRIGGER on_auth_user_created
+>   AFTER INSERT ON auth.users
+>   FOR EACH ROW EXECUTE FUNCTION link_user_profile();
+> ```
+>
+> **Steps after running the SQL:**
+> 1. Supabase dashboard → **Authentication → URL Configuration** → set Site URL to `https://gulfit-tracker.netlify.app/`. Add the same as a Redirect URL.
+> 2. Supabase dashboard → **Authentication → Users → Invite User** for each email above.
+> 3. Each user clicks the email link → sets their password → trigger links their `user_id`.
+> 4. After the first user signs in, push the code to Netlify.
 
 ---
 
@@ -168,6 +209,21 @@ Project name registry (used to populate dropdowns).
 | status | text | active / archived |
 | customer_id | bigint | FK to customers.id — added 2026-04-27 |
 | created_at | timestamptz | |
+
+---
+
+### 7a. `user_profiles`
+Maps Supabase Auth users (auth.users) to employee identity used everywhere else in the schema.
+
+| Column | Type | Notes |
+|---|---|---|
+| email | text PRIMARY KEY | Lowercase email — matches auth.users.email |
+| user_id | uuid UNIQUE | FK to auth.users(id) — populated by trigger when user accepts invite |
+| employee_name | text NOT NULL | Display name used in `ot_sessions.employee` etc. |
+| is_manager | boolean | Default FALSE; manager has approvals access |
+| created_at | timestamptz | DEFAULT NOW() |
+
+> Pre-seed before inviting users so the auto-link trigger populates `user_id` on first sign-in.
 
 ---
 
