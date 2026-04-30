@@ -237,13 +237,13 @@ async function renderLeaveApprovals() {
 
   const {data}=await q;
   document.getElementById('lv-approvals-load').style.display='none';
-  if (!data||!data.length){
-    document.getElementById('lv-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">🏖️</div><div class="empty-title">No leave requests match the filters</div></div>';
-    return;
-  }
-  const pending=data.filter(function(r){return r.status==='pending';});
-  const others=data.filter(function(r){return r.status!=='pending';});
+  const rows = data || [];
+  const pending = rows.filter(function(r){return r.status==='pending';});
+  const others  = rows.filter(function(r){return r.status!=='pending';});
   let html='';
+  if (!rows.length) {
+    html += '<div style="padding:14px;background:#f8fafc;border-radius:8px;color:var(--muted);font-size:13px;margin-bottom:14px">No leave requests match the filters.</div>';
+  }
   if (pending.length){
     html+='<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">🟡 Pending ('+pending.length+')</h3>';
     html+=pending.map(function(r){return approvalCard(r,'leave');}).join('');
@@ -253,7 +253,8 @@ async function renderLeaveApprovals() {
     html+=others.map(function(r){return approvalCard(r,'leave');}).join('');
   }
 
-  // Append the approved-balance section (annual_leave table - source of truth)
+  // ALWAYS append the approved-balance section (source of truth in annual_leave),
+  // even when leave_requests is empty - that's exactly when it matters most.
   html += await buildApprovedLeavesSection();
 
   document.getElementById('lv-approvals-content').innerHTML=html;
