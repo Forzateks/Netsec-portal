@@ -329,3 +329,142 @@ async function recomputeAllOT(mode) {
   applyBtn.disabled = true;
 }
 
+// ══ POLICY VIOLATION CLEANUP (one-time) ═══════════════════════════════════
+// Hard-delete OT sessions whose start time falls in the now-blocked weekday
+// window (UAE 7:30-18:30 / KSA 8:00-19:00). To avoid making any employee's
+// CO balance go negative, we keep the oldest violators up to the amount
+// needed to cover already-used CO (Option B: don't claw back used CO).
+let _violationPlan = null;
+
+async function findPolicyViolators() {
+  var sessRes = await sb.from('ot_sessions').select('*').order('ot_date', {ascending: true});
+  var coRes   = await sb.from('comp_off_register').select('*');
+  if (sessRes.error) throw sessRes.error;
+  if (coRes.error)   throw coRes.error;
+
+  var byEmp = {};
+  function ensureEmp(name) {
+    if (!byEmp[name]) byEmp[name] = { violators: [], valid_credit: 0, used_days: 0, used_hours: 0 };
+    return byEmp[name];
+  }
+
+  (sessRes.data||[]).forEach(function(s){
+    var emp = ensureEmp(s.employee);
+    var vErr = validateOTStart(s.ot_date, s.start_time, s.employee);
+    var isApproved = (s.status === 'approved' || s.status == null);
+    if (vErr) {
+      emp.violators.push(s);
+    } else if (isApproved) {
+      emp.valid_credit += parseFloat(s.credited_hours||0);
+    }
+  });
+
+  (coRes.data||[]).forEach(function(c){
+    var emp = ensureEmp(c.employee);
+    emp.used_days += parseFloat(c.days||0);
+  });
+
+  Object.keys(byEmp).forEach(function(name){
+    var d = byEmp[name];
+    d.used_hours = d.used_days * 8;
+    var deficit  = Math.max(0, d.used_hours - d.valid_credit);
+    var keep = [], del = [], keptHours = 0;
+    // Oldest first — those are likely already "spent" CO
+    d.violators.forEach(function(v){
+      var ch = parseFloat(v.credited_hours||0);
+      var isApproved = (v.status === 'approved' || v.status == null);
+      if (isApproved && deficit > 0 && keptHours < deficit) {
+        keep.push(v);
+        keptHours += ch;
+      } else {
+        del.push(v);
+      }
+    });
+    d.recommendation = { keep: keep, del: del, kept_hours: keptHours, deficit_hours: deficit };
+  });
+
+  return byEmp;
+}
+
+async function previewViolations() {
+  if (!isManager) { alert('Manager only.'); return; }
+  var resultEl = document.getElementById('violations-result');
+  var applyBtn = document.getElementById('violations-apply-btn');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning...</div>';
+
+  try {
+    _violationPlan = await findPolicyViolators();
+  } catch (e) {
+    resultEl.innerHTML = '<div style="color:var(--danger)">Error: '+(e.message||e)+'</div>';
+    return;
+  }
+
+  var totalDel = 0, totalKeep = 0, affectedEmps = 0;
+  var rowsHtml = '';
+  Object.keys(_violationPlan).sort().forEach(function(emp){
+    var d = _violationPlan[emp];
+    if (!d.violators.length) return;
+    affectedEmps++;
+    totalDel  += d.recommendation.del.length;
+    totalKeep += d.recommendation.keep.length;
+    var newBalance = ((d.valid_credit + d.recommendation.kept_hours) / 8) - d.used_days;
+    rowsHtml +=
+      '<tr>'+
+      '<td style="font-weight:600">'+emp+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+d.violators.length+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:var(--danger);font-weight:700">'+d.recommendation.del.length+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:var(--gold)">'+d.recommendation.keep.length+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+r2(d.used_days)+' days</td>'+
+      '<td style="font-family:DM Mono,monospace">'+r2(d.valid_credit)+'h</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(newBalance<0?'var(--danger)':'var(--success)')+'">'+r2(newBalance)+' days</td>'+
+      '</tr>';
+  });
+
+  if (!totalDel && !totalKeep) {
+    resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:#ECFDF5;border-radius:8px">✅ No policy violations found. All sessions match the current weekday block window.</div>';
+    applyBtn.disabled = true;
+    return;
+  }
+
+  resultEl.innerHTML =
+    '<div style="padding:10px;background:#FEE2E2;border-radius:8px;margin-bottom:10px">'+
+    '<strong>'+affectedEmps+' employee(s) affected — '+totalDel+' session(s) will be DELETED</strong>'+
+    (totalKeep ? ', '+totalKeep+' kept to preserve already-used CO balance.' : '.')+
+    '</div>'+
+    '<div class="table-wrap"><table style="width:100%;font-size:12px"><thead><tr>'+
+    '<th>Employee</th><th>Violators</th><th>Delete</th><th>Keep</th>'+
+    '<th>CO Used</th><th>Valid Credit</th><th>Balance After</th>'+
+    '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'+
+    '<div style="margin-top:10px;font-size:12px;color:var(--muted)">"Keep" rows are oldest violators retained to keep an employee\'s balance from going negative. They stay in the database with their current credit.</div>';
+  applyBtn.disabled = false;
+}
+
+async function applyViolationCleanup() {
+  if (!isManager) return;
+  if (!_violationPlan) { alert('Run Preview Violations first.'); return; }
+
+  var allDel = [];
+  Object.keys(_violationPlan).forEach(function(emp){
+    allDel = allDel.concat(_violationPlan[emp].recommendation.del);
+  });
+  if (!allDel.length) { alert('Nothing to delete.'); return; }
+
+  if (!confirm('PERMANENTLY DELETE '+allDel.length+' OT session(s)?\n\nThis cannot be undone. Make sure you ran a backup first (Dashboard → Full Backup).')) return;
+  if (!confirm('Final confirmation — delete '+allDel.length+' rows from ot_sessions?')) return;
+
+  var resultEl = document.getElementById('violations-result');
+  var applyBtn = document.getElementById('violations-apply-btn');
+  applyBtn.disabled = true;
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Deleting '+allDel.length+' sessions...</div>';
+
+  var ok = 0, fail = 0;
+  for (var i = 0; i < allDel.length; i++) {
+    var {error} = await sb.from('ot_sessions').delete().eq('id', allDel[i].id);
+    if (error) fail++; else ok++;
+  }
+
+  _violationPlan = null;
+  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Cleanup done.</strong> '+ok+' deleted'+(fail?', '+fail+' failed':'')+'. Reload to see updated CO balances.</div>';
+}
+

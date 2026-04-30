@@ -272,6 +272,21 @@
       </div>
       <div id="recompute-result" style="margin-top:14px;display:none;font-size:13px"></div>
     </div>
+
+    <div class="card" style="margin-bottom:16px;border-left:3px solid #EF4444;background:#FEF2F2">
+      <div class="card-title" style="margin-bottom:6px">🗑️ Policy Violation Cleanup (DESTRUCTIVE)</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        Hard-deletes OT sessions whose start time falls in the now-blocked weekday window
+        (UAE 7:30–18:30 / KSA 8:00–19:00). To avoid making any balance go negative,
+        the oldest violators are retained up to the amount of CO already used.
+        <strong>Run a Full Backup first</strong> (Dashboard).
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="previewViolations()">🔍 Preview Violations</button>
+        <button class="btn btn-danger-solid" id="violations-apply-btn" onclick="applyViolationCleanup()" disabled>🗑 Delete Violators</button>
+      </div>
+      <div id="violations-result" style="margin-top:14px;display:none;font-size:13px"></div>
+    </div>
     <div class="card">
       <div class="card-title">All Employees — OT & Comp Off Summary</div>
       <div id="manager-loading" class="loading"><div class="spinner"></div>Loading...</div>
