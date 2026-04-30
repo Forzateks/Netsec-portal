@@ -99,6 +99,90 @@ function calcOT(dateStr, startStr, endStr, employee) {
     dayName:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()] };
 }
 
+// Decimal hour 7.5 -> "07:30"
+function _fmtHr(h) {
+  var hh = Math.floor(h);
+  var mm = Math.round((h - hh) * 60);
+  return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+}
+
+// Plain-text explanation of how a session's credit was computed.
+// Used in the (i) tooltip on each Sessions row so employees can audit
+// their own credit at a glance.
+function explainOT(session) {
+  if (!session || !session.ot_date || !session.start_time || !session.end_time) return '';
+  var emp = session.employee || '';
+  var t = getOTThresholds(emp);
+  var region = KSA_EMP.includes(emp) ? 'KSA' : 'UAE';
+  var d = new Date(session.ot_date);
+  var wd = d.getDay();
+  var isWknd = isWeekend(wd, emp);
+  var sp = session.start_time.split(':').map(Number);
+  var ep = session.end_time.split(':').map(Number);
+  var sf = sp[0] + sp[1]/60;
+  var ef = ep[0] + ep[1]/60;
+  var crossesMidnight = ef <= sf;
+  var rawDur = crossesMidnight ? ef + 24 - sf : ef - sf;
+
+  var lines = [];
+  lines.push('--- How this was calculated ---');
+  lines.push('Region: ' + region + (region==='KSA' ? ' (block 8:00 AM - 7:00 PM, Eve from 7:00 PM)' : ' (block 7:30 AM - 6:30 PM, Eve from 6:30 PM)'));
+  lines.push('Day: ' + (session.day_name || '') + (isWknd ? ' (weekend - no block)' : ' (weekday)'));
+  lines.push('Time: ' + session.start_time + ' to ' + session.end_time + '  (raw: ' + rawDur.toFixed(2) + 'h)');
+  lines.push('');
+
+  if (isWknd) {
+    lines.push('Weekend rule: 1:1 rate, no cap. All hours count.');
+    lines.push('Credited: ' + rawDur.toFixed(2) + 'h');
+  } else if (crossesMidnight) {
+    if (sf >= t.eveStart) {
+      // Eve/Split
+      var evePart = 24 - sf;
+      var midPart = ef;
+      var pre = evePart + midPart * 2;
+      var capped = Math.min(pre, 8);
+      lines.push('Crosses midnight starting in Eve window -> Eve/Split band.');
+      lines.push('Eve portion ' + session.start_time + '-24:00: ' + evePart.toFixed(2) + 'h x 1:1 = ' + evePart.toFixed(2) + 'h');
+      lines.push('Post-midnight 00:00-' + session.end_time + ': ' + midPart.toFixed(2) + 'h x 1:2 = ' + (midPart*2).toFixed(2) + 'h');
+      lines.push('Subtotal: ' + pre.toFixed(2) + 'h' + (pre > 8 ? ' (capped at 8)' : ''));
+      lines.push('Credited: ' + capped.toFixed(2) + 'h');
+    } else {
+      // Mid
+      var preEveLost = Math.max(0, t.eveStart - sf);
+      var evePart2 = 24 - Math.max(sf, t.eveStart);
+      var postMid = Math.min(ef, t.morningBlock);
+      var lostMorning = Math.max(0, ef - t.morningBlock);
+      lines.push('Crosses midnight starting before Eve window -> Mid band.');
+      if (preEveLost > 0) lines.push('  ' + session.start_time + '-' + _fmtHr(t.eveStart) + ' (' + preEveLost.toFixed(2) + 'h): regular hours, NOT counted');
+      lines.push('  ' + _fmtHr(t.eveStart) + '-24:00 (' + evePart2.toFixed(2) + 'h): Eve OT, counted');
+      lines.push('  00:00-' + _fmtHr(t.morningBlock) + ' (' + postMid.toFixed(2) + 'h): Mid OT, counted');
+      if (lostMorning > 0) lines.push('  ' + _fmtHr(t.morningBlock) + '-' + session.end_time + ' (' + lostMorning.toFixed(2) + 'h): regular hours, NOT counted');
+      lines.push('Rate: ' + (rawDur >= 4 ? '1:2 (qualifies for Comp Off)' : '1:1'));
+      lines.push('Credited: ' + (evePart2 + postMid).toFixed(2) + 'h');
+    }
+  } else {
+    // Same-day weekday
+    var morningOT = (sf < t.morningBlock) ? Math.max(0, Math.min(ef, t.morningBlock) - sf) : 0;
+    var eveningOT = (ef > t.eveStart) ? Math.max(0, ef - Math.max(sf, t.eveStart)) : 0;
+    var blockHrs = Math.max(0, Math.min(ef, t.eveStart) - Math.max(sf, t.morningBlock));
+
+    if (morningOT > 0) {
+      lines.push('Morning OT ' + session.start_time + '-' + _fmtHr(t.morningBlock) + ': ' + morningOT.toFixed(2) + 'h x 1:1');
+    }
+    if (blockHrs > 0) {
+      lines.push('Regular hours ' + _fmtHr(Math.max(sf, t.morningBlock)) + '-' + _fmtHr(Math.min(ef, t.eveStart)) + ': ' + blockHrs.toFixed(2) + 'h NOT counted (in block window)');
+    }
+    if (eveningOT > 0) {
+      lines.push('Evening OT ' + _fmtHr(Math.max(sf, t.eveStart)) + '-' + session.end_time + ': ' + eveningOT.toFixed(2) + 'h x 1:1');
+    }
+    if (morningOT === 0 && eveningOT === 0) {
+      lines.push('Entire session in regular working hours -> 0 OT credit (will be archived).');
+    }
+    lines.push('Credited: ' + (morningOT + eveningOT).toFixed(2) + 'h');
+  }
+  return lines.join('\n');
+}
+
 // == SUMMARY CALC =================================================
 function calcSummary(sessions, compoffs, employee) {
   // Only approved sessions count toward CO
@@ -197,7 +281,9 @@ async function renderSessions() {
     var label = st==='archived' ? 'Archived' : cap(st);
     var badgeClass = st==='archived' ? 'badge-rejected' : 'badge-'+st; // reuse muted badge styling
     var stBadge='<span class="badge '+badgeClass+'" style="font-size:10px" title="'+(esc2(s.manager_comment||'')||'')+'">'+icon+' '+label+'</span>';
-    var creditedDisplay = st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.credited_hours+'h</strong>' : '<span style="color:var(--muted);font-size:12px;text-decoration:line-through">'+s.credited_hours+'h</span>';
+    var explainTxt = explainOT(s).replace(/"/g, '&quot;');
+    var infoIcon = '<span title="'+explainTxt+'" style="cursor:help;color:var(--teal);font-size:11px;margin-left:4px;border:1px solid var(--teal);border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;line-height:1">i</span>';
+    var creditedDisplay = (st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.credited_hours+'h</strong>' : '<span style="color:var(--muted);font-size:12px;text-decoration:line-through">'+s.credited_hours+'h</span>') + infoIcon;
     var rowOpacity = (st==='rejected'||st==='archived') ? 'opacity:0.55' : '';
     return '<tr style="'+rowOpacity+'" title="'+(st==='archived'||st==='rejected'?(esc2(s.manager_comment||'')):'')+'">'+
     '<td style="color:var(--muted);font-family:\'DM Mono\',monospace">'+(i+1)+'</td>'+
