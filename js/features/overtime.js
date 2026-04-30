@@ -50,8 +50,16 @@ function calcOT(dateStr, startStr, endStr, employee) {
     const isEarly=sf>=5&&sf<9&&!crossesMidnight;
     if (isEve)       { band='Eve';   rate='1:1'; cred=rawDur; }
     else if (isEveCross) { band='Eve'; rate='Split'; cred=Math.min((24-sf)+(ef*2),8); }
-    else if (isMid||isMidStart) { band='Mid'; rate=rawDur>=4?'1:2':'1:1'; cred=rawDur; }
-    else if (isEarly) { band='Early'; rate='1:1'; cred=Math.min(ef,9)-sf; }
+    else if (isMid||isMidStart) {
+      band='Mid'; rate=rawDur>=4?'1:2':'1:1';
+      // Cap credit at morning block start - regular working hours after that
+      if (crossesMidnight) {
+        cred = (24 - sf) + Math.min(ef, t.morningBlock);
+      } else {
+        cred = Math.min(ef, t.morningBlock) - sf;
+      }
+    }
+    else if (isEarly) { band='Early'; rate='1:1'; cred=Math.min(ef, t.morningBlock) - sf; }
     else              { band='Day';   rate='1:1'; cred=rawDur; }
   }
   return { band, rate, duration:r2(rawDur), credited:r2(cred>0?cred:rawDur),
