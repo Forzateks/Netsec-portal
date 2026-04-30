@@ -138,7 +138,9 @@ async function initApp(user) {
   // Show/hide manager elements
   document.getElementById('otsub-manager').style.display = isManager ? '' : 'none';
   document.getElementById('tab-approvals').style.display  = isManager ? '' : 'none';
-  // Team overview visible to all employees
+  // Leave sub-tab label depends on role
+  var lsubLabel = document.getElementById('lsub-team-label');
+  if (lsubLabel) lsubLabel.textContent = isManager ? '👔 Team Overview' : '🏖️ My Leave Overview';
 
   // Manager can filter employees; employees cannot
   document.querySelectorAll('.manager-only-el').forEach(function(el) {

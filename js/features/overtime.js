@@ -3,6 +3,17 @@ function isWeekend(wd, employee) {
   return KSA_EMP.includes(employee) ? (wd===5||wd===6) : (wd===0||wd===6);
 }
 
+// Per-region OT thresholds. KSA office hours run later, so block window
+// and Eve band start are pushed 30-60 min later for KSA employees.
+function getOTThresholds(employee) {
+  if (KSA_EMP.includes(employee)) {
+    return { morningBlock: 8.0, eveningBlock: 19.0, eveStart: 19.0,
+             morningLabel: '8:00 AM', eveningLabel: '7:00 PM' };
+  }
+  return   { morningBlock: 7.5, eveningBlock: 18.5, eveStart: 18.5,
+             morningLabel: '7:30 AM', eveningLabel: '6:30 PM' };
+}
+
 // Returns null if valid, or error message string
 function validateOTStart(dateStr, startStr, employee) {
   if (!dateStr || !startStr) return null;
@@ -10,8 +21,9 @@ function validateOTStart(dateStr, startStr, employee) {
   if (isWeekend(wd, employee)) return null;
   var sp = startStr.split(':').map(Number);
   var startHour = sp[0] + sp[1]/60;
-  if (startHour >= 7.5 && startHour < 18.5) {
-    return 'OT cannot start between 7:30 AM and 6:30 PM on weekdays â€” these are regular working hours. OT must begin before 7:30 AM or after 6:30 PM.';
+  var t = getOTThresholds(employee);
+  if (startHour >= t.morningBlock && startHour < t.eveningBlock) {
+    return 'OT cannot start between '+t.morningLabel+' and '+t.eveningLabel+' on weekdays - these are regular working hours. OT must begin before '+t.morningLabel+' or after '+t.eveningLabel+'.';
   }
   return null;
 }
@@ -25,14 +37,16 @@ function calcOT(dateStr, startStr, endStr, employee) {
   const ep=endStr.split(':').map(Number);   const eh=ep[0],em=ep[1];
   const sf=sh+sm/60, ef=eh+em/60;
   const rawDur = ef<sf ? ef+24-sf : ef-sf;
+  const t = getOTThresholds(employee);
+  const eveStart = t.eveStart;
   let band,rate,cred;
   if (isWknd) {
     band='Wknd'; rate='1:1';
     cred=rawDur;
   } else {
     const crossesMidnight=ef<=sf;
-    const isEve=sf>=18.5&&ef>sf; const isEveCross=sf>=18.5&&crossesMidnight;
-    const isMid=crossesMidnight&&sf<18.5; const isMidStart=!crossesMidnight&&sf<5;
+    const isEve=sf>=eveStart&&ef>sf; const isEveCross=sf>=eveStart&&crossesMidnight;
+    const isMid=crossesMidnight&&sf<eveStart; const isMidStart=!crossesMidnight&&sf<5;
     const isEarly=sf>=5&&sf<9&&!crossesMidnight;
     if (isEve)       { band='Eve';   rate='1:1'; cred=rawDur; }
     else if (isEveCross) { band='Eve'; rate='Split'; cred=Math.min((24-sf)+(ef*2),8); }

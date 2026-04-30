@@ -538,17 +538,36 @@ async function renderPjProjectSummary() {
     return {label:proj, value:byProject[proj].hours, color:PIE_COLORS[i%PIE_COLORS.length]};
   });
 
+  // Build Hours by Customer aggregation (rolls up all projects under each customer name,
+  // matching is case-insensitive so LANDMARK and Landmark merge).
+  var byCustomer = {};
+  rows.forEach(function(r){
+    var cust = (r.customer_name || PROJECT_CUSTOMER[r.project_name] || 'Uncategorized');
+    var key = cust.trim();
+    if (!byCustomer[key]) byCustomer[key] = {hours: 0, sessions: 0};
+    byCustomer[key].hours    += parseFloat(r.duration_hours||0);
+    byCustomer[key].sessions += 1;
+  });
+  var sortedCust = Object.keys(byCustomer).sort(function(a,b){ return byCustomer[b].hours - byCustomer[a].hours; });
+  var custPieData = sortedCust.slice(0,8).map(function(cust,i){
+    return {label: cust, value: byCustomer[cust].hours, color: PIE_COLORS[i%PIE_COLORS.length]};
+  });
+
   document.getElementById('pj-project-content').innerHTML =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">'+
     '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by Project (Top 8)</div>'+
     buildPieChart(pieData,'h')+
     '</div>'+
-    '<div class="card" style="margin-bottom:0"><div class="card-title">Quick Stats</div>'+
+    '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by Customer</div>'+
+    buildPieChart(custPieData,'h')+
+    '</div></div>'+
+    '<div class="card" style="margin-bottom:20px"><div class="card-title">Quick Stats</div>'+
     '<div class="summary-grid">'+
     '<div class="stat-card navy"><div class="stat-label">Total Projects</div><div class="stat-value">'+sorted.length+'</div></div>'+
     '<div class="stat-card teal"><div class="stat-label">Total Hours</div><div class="stat-value" style="font-size:20px">'+r2(sorted.reduce(function(s,p){return s+byProject[p].hours;},0))+'h</div></div>'+
     '<div class="stat-card eve"><div class="stat-label">Total Sessions</div><div class="stat-value">'+sorted.reduce(function(s,p){return s+byProject[p].sessions;},0)+'</div></div>'+
-    '</div></div></div>'+
+    '<div class="stat-card wknd"><div class="stat-label">Total Customers</div><div class="stat-value">'+sortedCust.length+'</div></div>'+
+    '</div></div>'+
     '<div class="table-wrap"><table>'+
     '<thead><tr><th>Project</th><th>Sessions</th><th>Total Hours</th><th>Working Days</th><th>Team Breakdown</th></tr></thead>'+
     '<tbody>'+tableRows+'</tbody></table></div>'+

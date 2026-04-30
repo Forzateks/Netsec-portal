@@ -8,7 +8,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let EMPLOYEES = ['Ahmed Ali','Venkatesan','Prasanth','Salman Aziz','Mohammed Afsal','Mohammed Nasif'];
 const KSA_EMP   = ['Salman Aziz','Mohammed Afsal'];
 const LEAVE_ALLOWANCE = 22;
-const SICK_ALLOWANCE  = 15;
+const SICK_ALLOWANCE  = 12;
 
 let currentUser = '';
 let currentEmail = '';
