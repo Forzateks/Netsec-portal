@@ -259,6 +259,18 @@
 
   <!-- MANAGER VIEW -->
   <div id="ottab-manager" style="display:none">
+    <div class="card" style="margin-bottom:16px;border-left:3px solid var(--gold);background:#FFFBEB">
+      <div class="card-title" style="margin-bottom:6px">⚙️ Policy Recompute (one-time)</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        Re-classify every OT session under the latest policy (Eve from 6:30 PM, Wknd 1:1 raw, Mid 1:2 raw, etc.).
+        Click <strong>Preview</strong> first to see what changes — nothing is written until you click <strong>Apply</strong>.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="recomputeAllOT('preview')">🔍 Preview Changes</button>
+        <button class="btn btn-primary" id="recompute-apply-btn" onclick="recomputeAllOT('apply')" disabled>✅ Apply Changes</button>
+      </div>
+      <div id="recompute-result" style="margin-top:14px;display:none;font-size:13px"></div>
+    </div>
     <div class="card">
       <div class="card-title">All Employees — OT & Comp Off Summary</div>
       <div id="manager-loading" class="loading"><div class="spinner"></div>Loading...</div>
@@ -1097,6 +1109,37 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeEditPJ()">Cancel</button>
       <button class="btn btn-primary" onclick="saveEditPJ()">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PROJECT MODAL (manage projects) -->
+<div class="modal-overlay" id="edit-project-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">✏️ Edit Project</div>
+    <input type="hidden" id="edit-project-id">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Customer *</label>
+        <select id="edit-project-customer"></select>
+      </div>
+      <div class="form-group">
+        <label>Project Name *</label>
+        <input type="text" id="edit-project-name" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="edit-project-status">
+          <option value="active">🟢 Active</option>
+          <option value="completed">✅ Completed</option>
+          <option value="on-hold">⏸️ On Hold</option>
+          <option value="archived">🗃️ Archived</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeEditProjectModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditProject()">💾 Save</button>
     </div>
   </div>
 </div>

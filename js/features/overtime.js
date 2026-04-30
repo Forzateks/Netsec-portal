@@ -247,3 +247,71 @@ async function renderMyCompOffRequests() {
   }).join('');
 }
 
+// â•â• RECOMPUTE ALL OT (one-time policy migration) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let _recomputeDiff = null;
+
+async function recomputeAllOT(mode) {
+  if (!isManager) { alert('Manager only.'); return; }
+  var resultEl = document.getElementById('recompute-result');
+  var applyBtn = document.getElementById('recompute-apply-btn');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Loading sessions...</div>';
+
+  if (mode === 'preview') {
+    var {data, error} = await sb.from('ot_sessions').select('*').order('ot_date',{ascending:false});
+    if (error) { resultEl.innerHTML = '<div style="color:var(--danger)">Error loading: '+error.message+'</div>'; return; }
+    var diffs = [];
+    (data||[]).forEach(function(s){
+      var res = calcOT(s.ot_date, s.start_time, s.end_time, s.employee);
+      if (!res) return;
+      var changed = false; var fields = {};
+      if (s.band !== res.band)              { fields.band = {from: s.band, to: res.band}; changed = true; }
+      if (s.rate !== res.rate)              { fields.rate = {from: s.rate, to: res.rate}; changed = true; }
+      if (parseFloat(s.duration_hours||0) !== res.duration) { fields.duration = {from: s.duration_hours, to: res.duration}; changed = true; }
+      if (parseFloat(s.credited_hours||0) !== res.credited) { fields.credited = {from: s.credited_hours, to: res.credited}; changed = true; }
+      if (changed) diffs.push({ id: s.id, employee: s.employee, date: s.ot_date, start: s.start_time, end: s.end_time, fields: fields, newRes: res });
+    });
+    _recomputeDiff = diffs;
+    if (!diffs.length) {
+      resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:#ECFDF5;border-radius:8px">âœ… All sessions already match the current policy. Nothing to change.</div>';
+      applyBtn.disabled = true;
+      return;
+    }
+    var byEmp = {};
+    diffs.forEach(function(d){ byEmp[d.employee] = (byEmp[d.employee]||0) + 1; });
+    var summary = Object.keys(byEmp).map(function(e){ return e+': '+byEmp[e]; }).join(' | ');
+    var rowsHtml = diffs.slice(0, 50).map(function(d){
+      var fieldList = Object.keys(d.fields).map(function(k){
+        return '<span style="font-size:11px"><strong>'+k+'</strong>: '+d.fields[k].from+' â†’ '+d.fields[k].to+'</span>';
+      }).join(' &nbsp;|&nbsp; ');
+      return '<tr><td style="font-size:12px">'+d.employee+'</td><td style="font-size:12px;font-family:DM Mono,monospace">'+d.date+'</td><td style="font-size:12px;font-family:DM Mono,monospace">'+d.start+'â€“'+d.end+'</td><td>'+fieldList+'</td></tr>';
+    }).join('');
+    resultEl.innerHTML =
+      '<div style="padding:10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px"><strong>'+diffs.length+' sessions will change.</strong> '+summary+(diffs.length>50?' &nbsp;(showing first 50)':'')+'</div>'+
+      '<div class="table-wrap" style="max-height:400px;overflow:auto"><table style="width:100%"><thead><tr><th style="font-size:11px">Employee</th><th style="font-size:11px">Date</th><th style="font-size:11px">Time</th><th style="font-size:11px">Changes</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
+    applyBtn.disabled = false;
+    return;
+  }
+
+  // mode === 'apply'
+  if (!_recomputeDiff || !_recomputeDiff.length) {
+    alert('Run Preview first.');
+    return;
+  }
+  if (!confirm('Apply policy recompute to '+_recomputeDiff.length+' sessions? This updates band, rate, duration, and credited hours. Cannot be undone.')) return;
+  applyBtn.disabled = true;
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Updating '+_recomputeDiff.length+' sessions...</div>';
+  var ok = 0, fail = 0;
+  for (var i = 0; i < _recomputeDiff.length; i++) {
+    var d = _recomputeDiff[i];
+    var r = d.newRes;
+    var {error} = await sb.from('ot_sessions').update({
+      band: r.band, rate: r.rate, duration_hours: r.duration, credited_hours: r.credited, day_name: r.dayName
+    }).eq('id', d.id);
+    if (error) fail++; else ok++;
+  }
+  _recomputeDiff = null;
+  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Done.</strong> '+ok+' updated'+(fail?', '+fail+' failed':'')+'. CO balances will reflect new credit on next reload.</div>';
+  applyBtn.disabled = true;
+}
+

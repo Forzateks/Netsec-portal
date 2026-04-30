@@ -130,29 +130,73 @@ async function renderManageProjects() {
     'archived':  {bg:'#F3F4F6',color:'#6B7280',label:'ðŸ—ƒï¸ Archived'},
   };
 
+  // Build customer-id -> name map for display
+  var custById = {}; (CUSTOMERS||[]).forEach(function(c){ custById[c.id] = c.name; });
+
   document.getElementById('pj-manage-content').innerHTML =
     '<div class="table-wrap"><table>'+
-    '<thead><tr><th>#</th><th>Project Name</th><th>Status</th><th>Change Status</th></tr></thead>'+
+    '<thead><tr><th>#</th><th>Customer</th><th>Project Name</th><th>Status</th><th>Actions</th></tr></thead>'+
     '<tbody>'+
     rows.map(function(p,i){
       var sc = STATUS_COLORS[p.status] || STATUS_COLORS['active'];
-      var opts = Object.keys(STATUS_COLORS)
-        .filter(function(s){ return s !== p.status; })
-        .map(function(s){
-          return '<option value="'+s+'">'+STATUS_COLORS[s].label+'</option>';
-        }).join('');
+      var custName = custById[p.customer_id] || PROJECT_CUSTOMER[p.name] || 'â€”';
       return '<tr>'+
         '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
+        '<td style="font-size:13px;color:var(--navy);font-weight:600">'+custName+'</td>'+
         '<td><strong>'+p.name+'</strong></td>'+
         '<td><span style="background:'+sc.bg+';color:'+sc.color+';padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600">'+sc.label+'</span></td>'+
-        '<td>'+
-          '<select onchange="updateProjectStatus(\''+p.name+'\',this.value)" style="width:auto;padding:5px 10px;font-size:12px">'+
-          '<option value="">-- Change --</option>'+opts+
-          '</select>'+
+        '<td style="white-space:nowrap">'+
+          '<button class="btn btn-sm btn-ghost" onclick="openEditProject('+p.id+')" style="margin-right:4px">âœï¸</button>'+
+          '<button class="btn btn-sm btn-danger" onclick="deleteProject('+p.id+',\''+ (p.name||'').replace(/'/g,"\\'") +'\')">ðŸ—‘</button>'+
         '</td>'+
         '</tr>';
     }).join('')+
     '</tbody></table></div>';
+}
+
+// â”€â”€ EDIT PROJECT (manager) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+async function openEditProject(id) {
+  var {data, error} = await sb.from('projects').select('*').eq('id', id).single();
+  if (error || !data) { alert('Could not load project.'); return; }
+  document.getElementById('edit-project-id').value = data.id;
+  document.getElementById('edit-project-name').value = data.name || '';
+  document.getElementById('edit-project-status').value = data.status || 'active';
+  // Fill customer select
+  fillCustomerSelect('edit-project-customer', false);
+  var custById = {}; (CUSTOMERS||[]).forEach(function(c){ custById[c.id] = c.name; });
+  document.getElementById('edit-project-customer').value = custById[data.customer_id] || '';
+  document.getElementById('edit-project-modal').classList.add('show');
+}
+
+function closeEditProjectModal() {
+  document.getElementById('edit-project-modal').classList.remove('show');
+}
+
+async function saveEditProject() {
+  var id = document.getElementById('edit-project-id').value;
+  var customer = document.getElementById('edit-project-customer').value;
+  var name = (document.getElementById('edit-project-name').value||'').trim().toUpperCase();
+  var status = document.getElementById('edit-project-status').value;
+  if (!customer || !name) { alert('Customer and Project Name are required.'); return; }
+  var custRow = (CUSTOMERS||[]).find(function(c){ return c.name === customer; });
+  var customer_id = custRow ? custRow.id : null;
+  var {error} = await sb.from('projects').update({ name: name, status: status, customer_id: customer_id }).eq('id', id);
+  if (error) { alert('Error: '+error.message); return; }
+  closeEditProjectModal();
+  _projectsLoaded = false;
+  await loadProjects();
+  populateProjectDropdowns();
+  renderManageProjects();
+}
+
+async function deleteProject(id, name) {
+  if (!confirm('Delete project "'+name+'"?\n\nThis only removes it from the Projects registry â€” existing OT/Project sessions that referenced it remain unchanged.')) return;
+  var {error} = await sb.from('projects').delete().eq('id', id);
+  if (error) { alert('Error: '+error.message); return; }
+  _projectsLoaded = false;
+  await loadProjects();
+  populateProjectDropdowns();
+  renderManageProjects();
 }
 
 // â”€â”€ POPULATE ALL PROJECT DROPDOWNS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
