@@ -1258,6 +1258,46 @@
   </div>
 </div>
 
+<!-- EDIT ANNUAL LEAVE RECORD MODAL (manager only - edits the balance row) -->
+<div class="modal-overlay" id="edit-al-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">✏️ Edit Approved Leave Record</div>
+    <input type="hidden" id="edit-al-id">
+    <div id="edit-al-error" style="display:none;background:#FEE2E2;color:#B91C1C;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Editing the balance record directly. This affects the employee's used-days total.</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Employee</label>
+        <input type="text" id="edit-al-emp" readonly style="background:#f0f4ff">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="edit-al-type">
+          <option>Annual</option>
+          <option>Sick</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" id="edit-al-start">
+      </div>
+      <div class="form-group">
+        <label>End Date</label>
+        <input type="date" id="edit-al-end">
+      </div>
+      <div class="form-group">
+        <label>Working Days</label>
+        <input type="number" id="edit-al-days" step="0.5" min="0">
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Auto-recalculated on save unless you override</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeEditALModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditAL()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- CHANGE PASSWORD MODAL -->
 <div class="modal-overlay" id="change-password-modal">
   <div class="modal" style="max-width:420px">

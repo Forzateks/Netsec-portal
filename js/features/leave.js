@@ -252,7 +252,99 @@ async function renderLeaveApprovals() {
     html+='<h3 style="font-size:14px;font-weight:600;color:var(--muted);margin:20px 0 12px">History ('+others.length+')</h3>';
     html+=others.map(function(r){return approvalCard(r,'leave');}).join('');
   }
+
+  // Append the approved-balance section (annual_leave table - source of truth)
+  html += await buildApprovedLeavesSection();
+
   document.getElementById('lv-approvals-content').innerHTML=html;
+}
+
+// === APPROVED LEAVE RECORDS (annual_leave table) ==================
+async function buildApprovedLeavesSection() {
+  // Reuse the same filter inputs so manager can drill in
+  var fEmp    = (document.getElementById('lv-app-emp')||{}).value || '';
+  var fType   = (document.getElementById('lv-app-type')||{}).value || '';
+  var fFrom   = (document.getElementById('lv-app-from')||{}).value || '';
+  var fTo     = (document.getElementById('lv-app-to')||{}).value || '';
+
+  var q = sb.from('annual_leave').select('*').order('start_date',{ascending:false});
+  if (fEmp)  q = q.eq('employee', fEmp);
+  if (fType) q = q.eq('leave_type', fType);
+  if (fFrom) q = q.gte('start_date', fFrom);
+  if (fTo)   q = q.lte('end_date', fTo);
+
+  var {data, error} = await q;
+  if (error) {
+    return '<h3 style="font-size:14px;font-weight:600;color:var(--danger);margin:24px 0 8px">Approved Leave Records</h3>'+
+      '<div style="color:var(--danger)">Could not load: '+error.message+'</div>';
+  }
+  var rows = data || [];
+  var html = '<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin:28px 0 8px">📒 Approved Leave Records ('+rows.length+')</h3>'+
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Source of truth for the balance. Editing or deleting here adjusts what the employee has used.</div>';
+  if (!rows.length) {
+    html += '<div class="empty-state" style="padding:14px"><div class="empty-title">No approved leave records</div></div>';
+    return html;
+  }
+  html += '<div class="table-wrap"><table style="width:100%;font-size:12px"><thead><tr>'+
+    '<th>Employee</th><th>Type</th><th>Start</th><th>End</th><th>Working Days</th><th>Created</th><th></th>'+
+    '</tr></thead><tbody>'+
+    rows.map(function(r){
+      return '<tr>'+
+        '<td><strong>'+r.employee+'</strong></td>'+
+        '<td><span class="badge" style="background:#f0f4ff;color:var(--navy)">'+(r.leave_type||'')+'</span></td>'+
+        '<td style="font-family:DM Mono,monospace">'+fmtDate(r.start_date)+'</td>'+
+        '<td style="font-family:DM Mono,monospace">'+fmtDate(r.end_date)+'</td>'+
+        '<td style="font-family:DM Mono,monospace;font-weight:700">'+r.working_days+'</td>'+
+        '<td style="font-size:11px;color:var(--muted)">'+(r.created_at?fmtDate(r.created_at):'')+'</td>'+
+        '<td style="white-space:nowrap">'+
+          '<button class="btn btn-sm btn-ghost" onclick="openEditALModal('+r.id+')" title="Edit">✏️</button>'+
+          '<button class="btn btn-sm btn-danger" onclick="deleteAL('+r.id+',\''+r.employee+'\')" title="Delete">✕</button>'+
+        '</td></tr>';
+    }).join('')+
+    '</tbody></table></div>';
+  return html;
+}
+
+async function openEditALModal(id) {
+  var {data, error} = await sb.from('annual_leave').select('*').eq('id', id).single();
+  if (error || !data) { alert('Could not load record.'); return; }
+  document.getElementById('edit-al-id').value = data.id;
+  document.getElementById('edit-al-emp').value = data.employee || '';
+  document.getElementById('edit-al-type').value = data.leave_type || 'Annual';
+  document.getElementById('edit-al-start').value = data.start_date || '';
+  document.getElementById('edit-al-end').value = data.end_date || '';
+  document.getElementById('edit-al-days').value = data.working_days || '';
+  document.getElementById('edit-al-error').style.display = 'none';
+  document.getElementById('edit-al-modal').classList.add('show');
+}
+function closeEditALModal() {
+  document.getElementById('edit-al-modal').classList.remove('show');
+}
+async function saveEditAL() {
+  var id = document.getElementById('edit-al-id').value;
+  var emp = document.getElementById('edit-al-emp').value;
+  var type = document.getElementById('edit-al-type').value;
+  var start = document.getElementById('edit-al-start').value;
+  var end = document.getElementById('edit-al-end').value;
+  var days = parseFloat(document.getElementById('edit-al-days').value);
+  var errEl = document.getElementById('edit-al-error');
+  errEl.style.display = 'none';
+  if (!start || !end) { errEl.textContent='Start and end dates are required.'; errEl.style.display='block'; return; }
+  if (start > end)    { errEl.textContent='Start date must be before end date.'; errEl.style.display='block'; return; }
+  // Recalc days unless manager overrode
+  if (isNaN(days) || days <= 0) days = calcWorkingDays(start, end, emp);
+  var {error} = await sb.from('annual_leave').update({
+    leave_type: type, start_date: start, end_date: end, working_days: days
+  }).eq('id', id);
+  if (error) { errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
+  closeEditALModal();
+  renderLeaveApprovals();
+}
+async function deleteAL(id, employee) {
+  if (!confirm('Delete this approved leave record for '+employee+'?\n\nThe employee\'s used-days balance will decrease.')) return;
+  var {error} = await sb.from('annual_leave').delete().eq('id', id);
+  if (error) { alert('Error: '+error.message); return; }
+  renderLeaveApprovals();
 }
 
 // === EDIT LEAVE REQUEST (manager only) ============================
@@ -336,8 +428,30 @@ function closeApproveModal() {
 }
 
 async function deleteRequest(type, id) {
-  if (!confirm('Delete this request permanently? This cannot be undone.')) return;
+  // If the request is approved, also clean the corresponding balance row so
+  // we don't leave orphan annual_leave / comp_off_register rows behind.
   const table = type==='compoff' ? 'comp_off_requests' : 'leave_requests';
+  const {data: existing} = await sb.from(table).select('*').eq('id', id).single();
+  var isApproved = existing && existing.status === 'approved';
+
+  var msg = 'Delete this request permanently? This cannot be undone.';
+  if (isApproved) {
+    msg = 'This request is APPROVED. Deleting will also remove the matching balance record (the employee\'s used days will decrease). Continue?';
+  }
+  if (!confirm(msg)) return;
+
+  if (isApproved && existing) {
+    if (type === 'compoff') {
+      await sb.from('comp_off_register').delete().eq('related_request', id);
+    } else {
+      // annual_leave doesn't have related_request FK - match on emp + dates + type
+      await sb.from('annual_leave').delete()
+        .eq('employee', existing.employee)
+        .eq('start_date', existing.start_date)
+        .eq('end_date', existing.end_date)
+        .eq('leave_type', existing.leave_type);
+    }
+  }
   const {error} = await sb.from(table).delete().eq('id', id);
   if (error) { alert('Error: '+error.message); return; }
   if (type==='compoff') renderCompOffApprovals();
