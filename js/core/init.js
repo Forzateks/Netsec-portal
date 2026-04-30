@@ -1,7 +1,14 @@
-﻿// == INIT ==========================================================
+// == INIT ==========================================================
 window.onload = async function() {
-  // Detect password-recovery flow first — Supabase puts type=recovery in the URL hash
-  // when the user clicks the email reset link. We listen for the auth event.
+  // Supabase puts the link type in the URL hash:
+  //   type=recovery            -> forgot-password reset link
+  //   type=invite | type=signup -> invitation from manager (first-time login)
+  // Both should land on the set-password form, not auto-sign-in.
+  const hash = window.location.hash || '';
+  const isRecovery = /type=recovery/.test(hash);
+  const isInvite   = /type=invite|type=signup/.test(hash);
+  const forcePasswordSetup = isRecovery || isInvite;
+
   sb.auth.onAuthStateChange(function(event){
     if (event === 'PASSWORD_RECOVERY') {
       document.getElementById('login-screen').style.display = 'flex';
@@ -12,13 +19,20 @@ window.onload = async function() {
 
   // Restore existing session if present
   const {data} = await sb.auth.getSession();
+
+  if (forcePasswordSetup) {
+    // Invite or recovery link — force password setup before entering the app
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    var sub = document.getElementById('login-sub');
+    if (isInvite && sub) sub.textContent = 'Welcome - set your password to finish setup';
+    showResetForm();
+    return;
+  }
+
   if (data && data.session && data.session.user) {
-    // If the URL is a recovery link, the auth event above will switch to reset form.
-    // Otherwise sign the user straight in.
-    if (!/type=recovery/.test(window.location.hash)) {
-      await initAppFromUser(data.session.user);
-      return;
-    }
+    await initAppFromUser(data.session.user);
+    return;
   }
   // No active session — show sign-in form
   showSigninForm();

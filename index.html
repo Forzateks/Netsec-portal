@@ -82,6 +82,7 @@
       <span class="user-name" id="header-username"></span>
       <span class="role-badge" id="header-role-badge"></span>
     </div>
+    <button class="btn btn-ghost" onclick="openChangePasswordModal()" style="font-size:13px;padding:7px 12px;margin-right:6px" title="Change your password">🔑 Change Password</button>
     <button class="logout-btn" onclick="doLogout()">Logout</button>
   </div>
 </div>
@@ -1164,6 +1165,27 @@
 </div>
 
 <!-- EDIT PROJECT MODAL (manage projects) -->
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-overlay" id="change-password-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">🔑 Change Password</div>
+    <div id="change-password-error" style="display:none;background:#FEE2E2;color:#B91C1C;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
+    <div id="change-password-success" style="display:none;background:#ECFDF5;color:#059669;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>New Password</label>
+      <input type="password" id="cp-new" placeholder="At least 8 characters" autocomplete="new-password">
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Confirm New Password</label>
+      <input type="password" id="cp-confirm" placeholder="Re-enter password" autocomplete="new-password">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeChangePasswordModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doChangePassword()">💾 Save Password</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="edit-project-modal">
   <div class="modal" style="max-width:480px">
     <div class="modal-title">✏️ Edit Project</div>

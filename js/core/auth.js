@@ -88,6 +88,31 @@ async function doLogout() {
   showSigninForm();
 }
 
+// In-app change password (user is already signed in)
+function openChangePasswordModal() {
+  document.getElementById('cp-new').value = '';
+  document.getElementById('cp-confirm').value = '';
+  document.getElementById('change-password-error').style.display = 'none';
+  document.getElementById('change-password-success').style.display = 'none';
+  document.getElementById('change-password-modal').classList.add('show');
+}
+function closeChangePasswordModal() {
+  document.getElementById('change-password-modal').classList.remove('show');
+}
+async function doChangePassword() {
+  var p1 = document.getElementById('cp-new').value;
+  var p2 = document.getElementById('cp-confirm').value;
+  var errEl = document.getElementById('change-password-error');
+  var okEl  = document.getElementById('change-password-success');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+  if (p1.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display='block'; return; }
+  if (p1 !== p2)     { errEl.textContent = 'Passwords do not match.'; errEl.style.display='block'; return; }
+  var {error} = await sb.auth.updateUser({ password: p1 });
+  if (error) { errEl.textContent = error.message || 'Could not update password.'; errEl.style.display='block'; return; }
+  okEl.textContent = 'Password updated. Use the new one next time you sign in.'; okEl.style.display='block';
+  setTimeout(closeChangePasswordModal, 2000);
+}
+
 // Look up the user_profiles row for the signed-in user
 async function fetchUserProfile(authUser) {
   const {data, error} = await sb.from('user_profiles')
