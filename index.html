@@ -622,10 +622,53 @@
     <div id="co-approvals-content"></div>
   </div>
   <div id="apptab-leave" style="display:none">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px">
+      <label style="font-size:12px;color:var(--muted);font-weight:600">Employee:</label>
+      <select id="lv-app-emp" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
+        <option value="">All</option>
+      </select>
+      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Type:</label>
+      <select id="lv-app-type" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
+        <option value="">All</option>
+        <option value="Annual">Annual</option>
+        <option value="Sick">Sick</option>
+      </select>
+      <label style="font-size:12px;color:var(--muted);font-weight:600">Status:</label>
+      <select id="lv-app-status" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
+        <option value="">All</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">From:</label>
+      <input type="date" id="lv-app-from" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 8px;font-size:13px">
+      <label style="font-size:12px;color:var(--muted);font-weight:600">To:</label>
+      <input type="date" id="lv-app-to" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 8px;font-size:13px">
+      <button class="btn btn-sm btn-ghost" onclick="clearLeaveApprovalFilters()">✕ Clear</button>
+    </div>
     <div id="lv-approvals-load" class="loading"><div class="spinner"></div>Loading...</div>
     <div id="lv-approvals-content"></div>
   </div>
   <div id="apptab-ot" style="display:none">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px">
+      <label style="font-size:12px;color:var(--muted);font-weight:600">Employee:</label>
+      <select id="ot-app-emp" onchange="renderOTApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
+        <option value="">All</option>
+      </select>
+      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">From:</label>
+      <input type="date" id="ot-app-from" onchange="renderOTApprovals()" style="width:auto;padding:6px 8px;font-size:13px">
+      <label style="font-size:12px;color:var(--muted);font-weight:600">To:</label>
+      <input type="date" id="ot-app-to" onchange="renderOTApprovals()" style="width:auto;padding:6px 8px;font-size:13px">
+      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Status:</label>
+      <select id="ot-app-status" onchange="renderOTApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
+        <option value="">All</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="archived">Archived</option>
+      </select>
+      <button class="btn btn-sm btn-ghost" onclick="clearOTApprovalFilters()">✕ Clear</button>
+    </div>
     <div id="ot-approvals-load" class="loading"><div class="spinner"></div>Loading...</div>
     <div id="ot-approvals-content"></div>
   </div>
@@ -1165,6 +1208,56 @@
 </div>
 
 <!-- EDIT PROJECT MODAL (manage projects) -->
+<!-- EDIT LEAVE REQUEST MODAL (manager only) -->
+<div class="modal-overlay" id="edit-leave-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">✏️ Edit Leave Request</div>
+    <input type="hidden" id="edit-lv-id">
+    <div id="edit-leave-error" style="display:none;background:#FEE2E2;color:#B91C1C;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Employee</label>
+        <input type="text" id="edit-lv-emp" readonly style="background:#f0f4ff">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="edit-lv-type">
+          <option>Annual</option>
+          <option>Sick</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" id="edit-lv-start">
+      </div>
+      <div class="form-group">
+        <label>End Date</label>
+        <input type="date" id="edit-lv-end">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="edit-lv-status">
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Reason</label>
+        <input type="text" id="edit-lv-reason">
+      </div>
+      <div class="form-group full">
+        <label>Manager Comment</label>
+        <input type="text" id="edit-lv-comment">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeEditLeaveModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditLeave()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- CHANGE PASSWORD MODAL -->
 <div class="modal-overlay" id="change-password-modal">
   <div class="modal" style="max-width:420px">

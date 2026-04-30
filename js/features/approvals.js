@@ -1,12 +1,40 @@
 ﻿// == OT APPROVALS ==================================================
 
+function clearOTApprovalFilters() {
+  ['ot-app-emp','ot-app-from','ot-app-to','ot-app-status'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderOTApprovals();
+}
+
+function populateOTApprovalEmpFilter() {
+  var sel = document.getElementById('ot-app-emp');
+  if (!sel || sel.options.length > 1) return;
+  EMPLOYEES.forEach(function(e){
+    var o = document.createElement('option'); o.value = o.textContent = e; sel.appendChild(o);
+  });
+}
+
 async function renderOTApprovals() {
+  populateOTApprovalEmpFilter();
   document.getElementById('ot-approvals-load').style.display='flex';
   document.getElementById('ot-approvals-content').innerHTML='';
-  const {data,error}=await sb.from('ot_sessions').select('*').order('ot_date',{ascending:false});
+
+  var fEmp    = (document.getElementById('ot-app-emp')||{}).value || '';
+  var fFrom   = (document.getElementById('ot-app-from')||{}).value || '';
+  var fTo     = (document.getElementById('ot-app-to')||{}).value || '';
+  var fStatus = (document.getElementById('ot-app-status')||{}).value || '';
+
+  var q = sb.from('ot_sessions').select('*').order('ot_date',{ascending:false});
+  if (fEmp)    q = q.eq('employee', fEmp);
+  if (fFrom)   q = q.gte('ot_date', fFrom);
+  if (fTo)     q = q.lte('ot_date', fTo);
+  if (fStatus) q = q.eq('status', fStatus);
+
+  const {data,error}=await q;
   document.getElementById('ot-approvals-load').style.display='none';
   if (error||!data||!data.length){
-    document.getElementById('ot-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">⏱</div><div class="empty-title">No OT sessions</div></div>';
+    document.getElementById('ot-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">⏱</div><div class="empty-title">No OT sessions match the filters</div></div>';
     return;
   }
   const pending=data.filter(function(r){return r.status==='pending';});
@@ -17,7 +45,7 @@ async function renderOTApprovals() {
     html+=pending.map(function(r){return otApprovalCard(r);}).join('');
   }
   if (others.length){
-    html+='<h3 style="font-size:14px;font-weight:600;color:var(--muted);margin:20px 0 12px">History</h3>';
+    html+='<h3 style="font-size:14px;font-weight:600;color:var(--muted);margin:20px 0 12px">History ('+others.length+')</h3>';
     html+=others.map(function(r){return otApprovalCard(r);}).join('');
   }
   document.getElementById('ot-approvals-content').innerHTML=html;

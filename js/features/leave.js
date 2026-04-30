@@ -202,13 +202,43 @@ async function renderCompOffApprovals() {
   document.getElementById('co-approvals-content').innerHTML=html;
 }
 
+function clearLeaveApprovalFilters() {
+  ['lv-app-emp','lv-app-type','lv-app-status','lv-app-from','lv-app-to'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  renderLeaveApprovals();
+}
+
+function populateLeaveApprovalEmpFilter() {
+  var sel = document.getElementById('lv-app-emp');
+  if (!sel || sel.options.length > 1) return;
+  EMPLOYEES.forEach(function(e){
+    var o=document.createElement('option'); o.value=o.textContent=e; sel.appendChild(o);
+  });
+}
+
 async function renderLeaveApprovals() {
+  populateLeaveApprovalEmpFilter();
   document.getElementById('lv-approvals-load').style.display='flex';
   document.getElementById('lv-approvals-content').innerHTML='';
-  const {data}=await sb.from('leave_requests').select('*').order('created_at',{ascending:false});
+
+  var fEmp    = (document.getElementById('lv-app-emp')||{}).value || '';
+  var fType   = (document.getElementById('lv-app-type')||{}).value || '';
+  var fStatus = (document.getElementById('lv-app-status')||{}).value || '';
+  var fFrom   = (document.getElementById('lv-app-from')||{}).value || '';
+  var fTo     = (document.getElementById('lv-app-to')||{}).value || '';
+
+  var q = sb.from('leave_requests').select('*').order('created_at',{ascending:false});
+  if (fEmp)    q = q.eq('employee', fEmp);
+  if (fType)   q = q.eq('leave_type', fType);
+  if (fStatus) q = q.eq('status', fStatus);
+  if (fFrom)   q = q.gte('start_date', fFrom);
+  if (fTo)     q = q.lte('end_date', fTo);
+
+  const {data}=await q;
   document.getElementById('lv-approvals-load').style.display='none';
   if (!data||!data.length){
-    document.getElementById('lv-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">🏖️</div><div class="empty-title">No leave requests</div></div>';
+    document.getElementById('lv-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">🏖️</div><div class="empty-title">No leave requests match the filters</div></div>';
     return;
   }
   const pending=data.filter(function(r){return r.status==='pending';});
@@ -219,10 +249,59 @@ async function renderLeaveApprovals() {
     html+=pending.map(function(r){return approvalCard(r,'leave');}).join('');
   }
   if (others.length){
-    html+='<h3 style="font-size:14px;font-weight:600;color:var(--muted);margin:20px 0 12px">History</h3>';
+    html+='<h3 style="font-size:14px;font-weight:600;color:var(--muted);margin:20px 0 12px">History ('+others.length+')</h3>';
     html+=others.map(function(r){return approvalCard(r,'leave');}).join('');
   }
   document.getElementById('lv-approvals-content').innerHTML=html;
+}
+
+// === EDIT LEAVE REQUEST (manager only) ============================
+function openEditLeaveModal(id) {
+  sb.from('leave_requests').select('*').eq('id', id).single().then(function(res){
+    if (res.error || !res.data) { alert('Could not load leave request.'); return; }
+    var r = res.data;
+    document.getElementById('edit-lv-id').value = r.id;
+    document.getElementById('edit-lv-emp').value = r.employee || '';
+    document.getElementById('edit-lv-type').value = r.leave_type || 'Annual';
+    document.getElementById('edit-lv-start').value = r.start_date || '';
+    document.getElementById('edit-lv-end').value = r.end_date || '';
+    document.getElementById('edit-lv-status').value = r.status || 'pending';
+    document.getElementById('edit-lv-reason').value = r.reason || '';
+    document.getElementById('edit-lv-comment').value = r.manager_comment || '';
+    document.getElementById('edit-leave-error').style.display = 'none';
+    document.getElementById('edit-leave-modal').classList.add('show');
+  });
+}
+function closeEditLeaveModal() {
+  document.getElementById('edit-leave-modal').classList.remove('show');
+}
+async function saveEditLeave() {
+  var id = document.getElementById('edit-lv-id').value;
+  var emp = document.getElementById('edit-lv-emp').value;
+  var type = document.getElementById('edit-lv-type').value;
+  var start = document.getElementById('edit-lv-start').value;
+  var end   = document.getElementById('edit-lv-end').value;
+  var status = document.getElementById('edit-lv-status').value;
+  var reason = document.getElementById('edit-lv-reason').value;
+  var comment = document.getElementById('edit-lv-comment').value;
+  var errEl = document.getElementById('edit-leave-error');
+  errEl.style.display = 'none';
+  if (!start || !end) { errEl.textContent='Start and end dates are required.'; errEl.style.display='block'; return; }
+  if (start > end)    { errEl.textContent='Start date must be before end date.'; errEl.style.display='block'; return; }
+
+  var days = calcWorkingDays(start, end, emp);
+  var payload = {
+    leave_type: type,
+    start_date: start, end_date: end,
+    working_days: days,
+    reason: reason || null,
+    status: status,
+    manager_comment: comment || null
+  };
+  var {error} = await sb.from('leave_requests').update(payload).eq('id', id);
+  if (error) { errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
+  closeEditLeaveModal();
+  renderLeaveApprovals();
 }
 
 function approvalCard(r,type) {
@@ -236,6 +315,7 @@ function approvalCard(r,type) {
     '<div style="display:flex;align-items:center;gap:8px">'+
     '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span>'+
     (isPending?'<button class="btn btn-sm btn-primary" onclick="openApproveModal(\''+type+'\','+r.id+',\''+r.employee+'\')">Review</button>':'')+
+    (type==='leave'?'<button class="btn btn-sm btn-ghost" onclick="openEditLeaveModal('+r.id+')" title="Edit request">✏️</button>':'')+
     '<button class="btn btn-sm btn-danger" onclick="deleteRequest(\''+type+'\','+r.id+')" title="Delete request">✕</button>'+
     '</div></div>'+
     (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:8px">💬 '+r.manager_comment+'</div>':'')+
