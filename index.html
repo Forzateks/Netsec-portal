@@ -292,6 +292,21 @@
       <div id="violations-result" style="margin-top:14px;display:none;font-size:13px"></div>
     </div>
 
+    <div class="card" style="margin-bottom:16px;border-left:3px solid #00A0D2;background:#F0F9FF">
+      <div class="card-title" style="margin-bottom:6px">🔄 Re-evaluate Archived Sessions</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        Sweeps archived sessions and un-archives any that now qualify for partial credit
+        under the latest rules (e.g. a weekday session ending past 6:30 PM UAE / 7:00 PM KSA
+        gets credit for the post-threshold portion). Sessions entirely inside regular hours
+        stay archived.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="previewReevalArchived()">🔍 Preview</button>
+        <button class="btn btn-primary" id="reeval-apply-btn" onclick="applyReevalArchived()" disabled>✅ Apply Re-evaluation</button>
+      </div>
+      <div id="reeval-result" style="margin-top:14px;display:none;font-size:13px"></div>
+    </div>
+
     <div class="card" style="margin-bottom:16px;border-left:3px solid #EF4444;background:#FEF2F2">
       <div class="card-title" style="margin-bottom:6px">🗑️ Purge Old Archived/Rejected Sessions (DESTRUCTIVE)</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px">

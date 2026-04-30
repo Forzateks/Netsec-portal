@@ -44,7 +44,7 @@ async function saveEditOT() {
   var start=document.getElementById('edit-ot-start').value;
   var end=document.getElementById('edit-ot-end').value;
   if (!activity||!date||!start||!end){alert('Please fill all required fields.');return;}
-  var vErr = validateOTStart(date, start, _editEmp);
+  var vErr = validateOTStart(date, start, _editEmp, end);
   if (vErr) { alert(vErr); return; }
   var res=calcOT(date,start,end,_editEmp);
   var {error}=await sb.from('ot_sessions').update({

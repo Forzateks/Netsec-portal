@@ -14,16 +14,28 @@ function getOTThresholds(employee) {
              morningLabel: '7:30 AM', eveningLabel: '6:30 PM' };
 }
 
-// Returns null if valid, or error message string
-function validateOTStart(dateStr, startStr, employee) {
+// Returns null if valid, or an error message string.
+// Allows partial-credit sessions (e.g. 18:00-19:00 weekday gives 0.5h credit
+// for the 18:30-19:00 portion). Rejects only sessions that fall entirely
+// inside the regular-hours window (no OT credit at all).
+function validateOTStart(dateStr, startStr, employee, endStr) {
   if (!dateStr || !startStr) return null;
   var d = new Date(dateStr); var wd = d.getDay();
   if (isWeekend(wd, employee)) return null;
+  var t = getOTThresholds(employee);
+
+  // If we have the end time, check whether ANY portion is OT.
+  if (endStr) {
+    var res = calcOT(dateStr, startStr, endStr, employee);
+    if (res && res.credited > 0) return null; // partial or full credit -> allow
+    return 'This session falls entirely within regular working hours ('+t.morningLabel+'-'+t.eveningLabel+' on weekdays). No OT credit applies. Adjust the times so part of the session is before '+t.morningLabel+' or after '+t.eveningLabel+'.';
+  }
+
+  // No end given - fall back to start-only check (still allow if start is outside block)
   var sp = startStr.split(':').map(Number);
   var startHour = sp[0] + sp[1]/60;
-  var t = getOTThresholds(employee);
   if (startHour >= t.morningBlock && startHour < t.eveningBlock) {
-    return 'OT cannot start between '+t.morningLabel+' and '+t.eveningLabel+' on weekdays - these are regular working hours. OT must begin before '+t.morningLabel+' or after '+t.eveningLabel+'.';
+    return 'OT start is inside regular working hours ('+t.morningLabel+'-'+t.eveningLabel+'). Make sure the end time extends past '+t.eveningLabel+' so some OT credit applies.';
   }
   return null;
 }
@@ -39,30 +51,51 @@ function calcOT(dateStr, startStr, endStr, employee) {
   const rawDur = ef<sf ? ef+24-sf : ef-sf;
   const t = getOTThresholds(employee);
   const eveStart = t.eveStart;
+  const morningBlock = t.morningBlock;
   let band,rate,cred;
+
   if (isWknd) {
+    // Weekend - all hours count, no block window applies
     band='Wknd'; rate='1:1';
     cred=rawDur;
   } else {
-    const crossesMidnight=ef<=sf;
-    const isEve=sf>=eveStart&&ef>sf; const isEveCross=sf>=eveStart&&crossesMidnight;
-    const isMid=crossesMidnight&&sf<eveStart; const isMidStart=!crossesMidnight&&sf<5;
-    const isEarly=sf>=5&&sf<9&&!crossesMidnight;
-    if (isEve)       { band='Eve';   rate='1:1'; cred=rawDur; }
-    else if (isEveCross) { band='Eve'; rate='Split'; cred=Math.min((24-sf)+(ef*2),8); }
-    else if (isMid||isMidStart) {
-      band='Mid'; rate=rawDur>=4?'1:2':'1:1';
-      // Cap credit at morning block start - regular working hours after that
-      if (crossesMidnight) {
-        cred = (24 - sf) + Math.min(ef, t.morningBlock);
+    const crossesMidnight = ef<=sf;
+
+    if (crossesMidnight) {
+      if (sf >= eveStart) {
+        // Eve/Split - starts in eve window, crosses midnight
+        band='Eve'; rate='Split';
+        cred = Math.min((24-sf) + (ef*2), 8);
       } else {
-        cred = Math.min(ef, t.morningBlock) - sf;
+        // Mid - crosses midnight, started before eve window
+        // OT credit = (post-eve portion of today) + (pre-morning-block portion of tomorrow)
+        band='Mid'; rate=rawDur>=4?'1:2':'1:1';
+        cred = (24 - Math.max(sf, eveStart)) + Math.min(ef, morningBlock);
+      }
+    } else {
+      // Same-day session - sum morning OT + evening OT
+      var morningOT = (sf < morningBlock) ? Math.max(0, Math.min(ef, morningBlock) - sf) : 0;
+      var eveningOT = (ef > eveStart)     ? Math.max(0, ef - Math.max(sf, eveStart))     : 0;
+      cred = morningOT + eveningOT;
+
+      if (cred <= 0) {
+        // Entirely within regular working hours - no OT credit
+        band='Day'; rate='1:1';
+        cred=0;
+      } else if (eveningOT > 0 && morningOT === 0) {
+        // Pure evening session
+        band='Eve'; rate='1:1';
+      } else if (morningOT > 0 && eveningOT === 0) {
+        // Pure early morning session
+        band='Early'; rate='1:1';
+      } else {
+        // Long shift spanning both - label as Eve (pools with Early/Eve toward CO)
+        band='Eve'; rate='1:1';
       }
     }
-    else if (isEarly) { band='Early'; rate='1:1'; cred=Math.min(ef, t.morningBlock) - sf; }
-    else              { band='Day';   rate='1:1'; cred=rawDur; }
   }
-  return { band, rate, duration:r2(rawDur), credited:r2(cred>0?cred:rawDur),
+
+  return { band, rate, duration:r2(rawDur), credited:r2(cred>0?cred:0),
     dayName:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()] };
 }
 
@@ -118,7 +151,7 @@ async function saveSession() {
   const start=document.getElementById('log-start').value;
   const end=document.getElementById('log-end').value;
   if (!customer||!project||!actType||!act||!date||!start||!end){ showAlert('log-error'); return; }
-  var vErr = validateOTStart(date, start, currentUser);
+  var vErr = validateOTStart(date, start, currentUser, end);
   if (vErr) { alert(vErr); return; }
   const res=calcOT(date,start,end,currentUser);
   const btn=document.getElementById('save-btn');
@@ -492,6 +525,85 @@ async function applyViolationCleanup() {
 
   _violationPlan = null;
   resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Archive done.</strong> '+ok+' marked archived'+(fail?', '+fail+' failed':'')+'. Sessions still visible (dimmed) in employee history. Reload to see updated CO balances.</div>';
+}
+
+// Re-evaluate every archived session under the current calcOT logic.
+// Sessions that now qualify for partial credit (e.g. 18:00-19:00 weekday
+// gives 0.5h post-eve-threshold) get un-archived (status=approved) and
+// their band/rate/credit updated. Sessions still entirely in the block
+// remain archived.
+let _reevalPlan = null;
+
+async function previewReevalArchived() {
+  if (!isManager) { alert('Manager only.'); return; }
+  var resultEl = document.getElementById('reeval-result');
+  var applyBtn = document.getElementById('reeval-apply-btn');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning archived sessions...</div>';
+
+  var {data, error} = await sb.from('ot_sessions').select('*').eq('status', 'archived').order('ot_date',{ascending:false});
+  if (error) { resultEl.innerHTML = '<div style="color:var(--danger)">Error: '+error.message+'</div>'; return; }
+
+  var changes = [];
+  (data||[]).forEach(function(s){
+    var res = calcOT(s.ot_date, s.start_time, s.end_time, s.employee);
+    if (!res) return;
+    if (res.credited > 0) {
+      changes.push({ row: s, newRes: res });
+    }
+  });
+  _reevalPlan = changes;
+
+  if (!changes.length) {
+    resultEl.innerHTML = '<div style="padding:10px;background:#ECFDF5;border-radius:8px;color:var(--success)">No archived sessions need re-evaluation. They are all entirely within regular working hours.</div>';
+    applyBtn.disabled = true;
+    return;
+  }
+
+  var rowsHtml = changes.slice(0, 50).map(function(c){
+    var s = c.row, r = c.newRes;
+    return '<tr><td>'+s.employee+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+s.ot_date+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+s.start_time+' to '+s.end_time+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+s.credited_hours+'h -> <strong>'+r.credited+'h</strong></td>'+
+      '<td><span class="badge badge-'+r.band+'">'+r.band+'</span></td>'+
+      '</tr>';
+  }).join('');
+
+  resultEl.innerHTML =
+    '<div style="padding:10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px"><strong>'+changes.length+' archived session(s)</strong> qualify for partial credit and will be UN-ARCHIVED (status set to approved) with updated band/rate/credit.'+(changes.length>50?' Showing first 50.':'')+'</div>'+
+    '<div class="table-wrap" style="max-height:400px;overflow:auto"><table style="width:100%;font-size:12px"><thead><tr>'+
+    '<th>Employee</th><th>Date</th><th>Time</th><th>Credit Δ</th><th>New Band</th>'+
+    '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
+  applyBtn.disabled = false;
+}
+
+async function applyReevalArchived() {
+  if (!isManager) return;
+  if (!_reevalPlan || !_reevalPlan.length) { alert('Run Preview first.'); return; }
+  if (!confirm('Re-evaluate '+_reevalPlan.length+' archived session(s)?\n\nThey will be marked APPROVED with updated credit. Their CO contribution will resume.')) return;
+
+  var resultEl = document.getElementById('reeval-result');
+  var applyBtn = document.getElementById('reeval-apply-btn');
+  applyBtn.disabled = true;
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Updating '+_reevalPlan.length+'...</div>';
+
+  var nowIso = new Date().toISOString();
+  var ok = 0, fail = 0;
+  for (var i = 0; i < _reevalPlan.length; i++) {
+    var c = _reevalPlan[i];
+    var r = c.newRes;
+    var {error} = await sb.from('ot_sessions').update({
+      status: 'approved',
+      band: r.band, rate: r.rate,
+      duration_hours: r.duration, credited_hours: r.credited, day_name: r.dayName,
+      manager_comment: 'Re-evaluated under updated policy: only the off-hours portion is credited.',
+      reviewed_by: currentUser, reviewed_at: nowIso
+    }).eq('id', c.row.id);
+    if (error) fail++; else ok++;
+  }
+  _reevalPlan = null;
+  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Re-evaluation done.</strong> '+ok+' un-archived'+(fail?', '+fail+' failed':'')+'. Reload to see updated CO balances.</div>';
 }
 
 // Purge archived/rejected OT sessions older than 1 year. Manager-only,
