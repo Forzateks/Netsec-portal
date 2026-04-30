@@ -175,13 +175,27 @@ function closeEditProjectModal() {
 async function saveEditProject() {
   var id = document.getElementById('edit-project-id').value;
   var customer = document.getElementById('edit-project-customer').value;
-  var name = (document.getElementById('edit-project-name').value||'').trim().toUpperCase();
+  var name = (document.getElementById('edit-project-name').value||'').trim();
   var status = document.getElementById('edit-project-status').value;
   if (!customer || !name) { alert('Customer and Project Name are required.'); return; }
   var custRow = (CUSTOMERS||[]).find(function(c){ return c.name === customer; });
   var customer_id = custRow ? custRow.id : null;
+
+  // Read OLD name so we can cascade renames to session tables
+  var oldRes = await sb.from('projects').select('name').eq('id', id).single();
+  var oldName = oldRes.data ? oldRes.data.name : null;
+
   var {error} = await sb.from('projects').update({ name: name, status: status, customer_id: customer_id }).eq('id', id);
   if (error) { alert('Error: '+error.message); return; }
+
+  // If renamed, cascade to session tables so historical rows match
+  if (oldName && oldName !== name) {
+    var pjRes = await sb.from('project_sessions').update({ project_name: name }).eq('project_name', oldName);
+    var otRes = await sb.from('ot_sessions').update({ project_name: name }).eq('project_name', oldName);
+    if (pjRes.error) console.error('project_sessions cascade failed:', pjRes.error);
+    if (otRes.error) console.error('ot_sessions cascade failed:', otRes.error);
+  }
+
   closeEditProjectModal();
   _projectsLoaded = false;
   await loadProjects();
