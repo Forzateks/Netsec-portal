@@ -82,7 +82,7 @@
       <span class="user-name" id="header-username"></span>
       <span class="role-badge" id="header-role-badge"></span>
     </div>
-    <button class="btn btn-ghost" onclick="openChangePasswordModal()" style="font-size:13px;padding:7px 12px;margin-right:6px" title="Change your password">🔑 Change Password</button>
+    <button class="btn btn-ghost" onclick="openChangePasswordModal()" style="font-size:13px;padding:7px 12px;margin-right:6px" title="Change your password">🔑 <span class="change-password-btn-text">Change Password</span></button>
     <button class="logout-btn" onclick="doLogout()">Logout</button>
   </div>
 </div>
@@ -622,7 +622,7 @@
     <div id="co-approvals-content"></div>
   </div>
   <div id="apptab-leave" style="display:none">
-    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px">
+    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px">
       <label style="font-size:12px;color:var(--muted);font-weight:600">Employee:</label>
       <select id="lv-app-emp" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
         <option value="">All</option>
@@ -650,7 +650,7 @@
     <div id="lv-approvals-content"></div>
   </div>
   <div id="apptab-ot" style="display:none">
-    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px">
+    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px">
       <label style="font-size:12px;color:var(--muted);font-weight:600">Employee:</label>
       <select id="ot-app-emp" onchange="renderOTApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
         <option value="">All</option>

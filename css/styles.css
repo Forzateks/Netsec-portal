@@ -254,3 +254,99 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
   .summary-grid{grid-template-columns:1fr}
   .nav-tab{padding:10px 8px;font-size:11px}
 }
+
+/* ══ MOBILE — comprehensive polish (additive to 640px block above) ══ */
+@media(max-width:640px){
+  /* Prevent iOS auto-zoom on input focus (must be 16px) */
+  input,select,textarea{font-size:16px !important}
+
+  /* Header: tighten and drop low-priority items */
+  .header{padding:0 10px;height:52px}
+  .header h1{font-size:14px;line-height:1.1}
+  .header-credit{display:none}
+  .db-status{display:none}
+  .header-left{gap:8px}
+  .header-right{gap:6px}
+  .logo,.header-left img{width:28px !important;height:28px !important}
+  .role-badge{font-size:10px;padding:2px 7px}
+  .user-name{font-size:11px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .logout-btn{padding:5px 10px;font-size:11px}
+
+  /* Header buttons (Change Password etc.): icon-only on mobile */
+  .header-right .btn{padding:6px 8px !important;font-size:11px !important;min-height:32px;margin:0 !important}
+  .change-password-btn-text{display:none}
+
+  /* Touch targets: bump to ~38px minimum */
+  .btn{min-height:38px}
+  .btn-sm{min-height:30px;padding:6px 10px}
+  .btn-icon{min-height:32px}
+
+  /* Inline filter bars (OT/Leave approvals, Sessions tab): stack labels above
+     compact inputs, allow horizontal scroll if user adds many filters */
+  .filter-bar-inline{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .filter-bar-inline label{font-size:10px !important}
+  .filter-bar-inline input,
+  .filter-bar-inline select{font-size:14px !important;padding:6px 8px !important;min-width:110px}
+
+  /* Inventory + KB filter bars: collapse to single column */
+  .inv-filter-bar,.kb-filter-bar{padding:12px;gap:8px}
+  .inv-filter-bar .form-group,.kb-filter-bar .form-group{min-width:0;flex:1 1 100%;width:100%}
+
+  /* Manage Projects filter / status dropdowns inline with title */
+  .flex-between>div{width:100%}
+
+  /* Admin button rows: each button takes full width or two-per-row, never overflow */
+  .card>div[style*="display:flex"][style*="flex-wrap:wrap"]>.btn{
+    flex:1 1 calc(50% - 4px);justify-content:center;font-size:12px;
+  }
+
+  /* Request cards (approvals): stack header + actions */
+  .request-card>div[style*="justify-content:space-between"]{flex-direction:column;gap:8px;align-items:stretch !important}
+  .request-card>div[style*="justify-content:space-between"]>div:last-child{justify-content:flex-end;flex-wrap:wrap}
+
+  /* Sub-tab nav bars (leave-sub, project subs): smooth horizontal scroll */
+  div[style*="border-bottom"][style*="display:flex"]{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .leave-sub{flex-shrink:0}
+
+  /* Sessions / Project Sessions tables: hide more low-priority columns */
+  .table-wrap th:nth-last-child(-n+1),
+  .table-wrap td:nth-last-child(-n+1){position:sticky;right:0;background:white}
+
+  /* Login screen: use full available width on small phones */
+  .login-card{padding:22px 18px;width:94%}
+  .login-title{font-size:20px}
+  .login-sub{font-size:12px;margin-bottom:18px}
+  #login-form-signin .form-group input,
+  #login-form-forgot .form-group input,
+  #login-form-reset .form-group input{padding:12px !important}
+
+  /* Modal action buttons: full-width-ish on small screens */
+  .modal-actions{flex-direction:column-reverse;gap:8px}
+  .modal-actions .btn{width:100%;justify-content:center}
+
+  /* Notification badge: move slightly so it doesn't crowd the icon */
+  .notif-badge{top:4px;right:0}
+}
+
+/* ══ Tighter MID breakpoint for tablets/large phones (480px) ══ */
+@media(max-width:480px){
+  .main{padding:10px 8px}
+  .card{padding:12px;border-radius:10px;margin-bottom:12px}
+  .header h1{font-size:13px}
+  .header h1 span{display:none}
+  .summary-grid{gap:8px}
+  .stat-card{padding:12px}
+  .stat-value{font-size:18px !important}
+  .nav{padding:0 4px}
+  .nav-tab{padding:11px 10px;font-size:11px}
+  .preview-box{padding:10px;gap:8px}
+  .preview-value{font-size:16px}
+  .preview-label{font-size:9px}
+  .modal{padding:16px 12px}
+  .modal-title{font-size:14px}
+  .login-card{padding:20px 14px}
+  .pin-display{font-size:20px;letter-spacing:6px;padding:10px}
+  .request-card{padding:10px}
+  /* Quick actions: 2 buttons per row */
+  .quick-actions-wrap .btn{flex:1 1 calc(50% - 4px);font-size:12px;padding:10px 8px;justify-content:center}
+}
