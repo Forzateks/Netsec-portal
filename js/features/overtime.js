@@ -336,7 +336,10 @@ async function recomputeAllOT(mode) {
 // needed to cover already-used CO (Option B: don't claw back used CO).
 let _violationPlan = null;
 
-async function findPolicyViolators() {
+async function findPolicyViolators(fromDate) {
+  // fromDate: 'YYYY-MM-DD' string. Sessions before this date are exempt
+  // (kept untouched, even if they violate). Their credit still counts
+  // toward valid_credit so the cap-at-used logic stays accurate.
   var sessRes = await sb.from('ot_sessions').select('*').order('ot_date', {ascending: true});
   var coRes   = await sb.from('comp_off_register').select('*');
   if (sessRes.error) throw sessRes.error;
@@ -352,9 +355,12 @@ async function findPolicyViolators() {
     var emp = ensureEmp(s.employee);
     var vErr = validateOTStart(s.ot_date, s.start_time, s.employee);
     var isApproved = (s.status === 'approved' || s.status == null);
-    if (vErr) {
+    var inScope = !fromDate || (s.ot_date && s.ot_date >= fromDate);
+    if (vErr && inScope) {
+      // Eligible for cleanup
       emp.violators.push(s);
     } else if (isApproved) {
+      // Either valid, or violator out of scope — keep contributing to credit
       emp.valid_credit += parseFloat(s.credited_hours||0);
     }
   });
@@ -390,11 +396,13 @@ async function previewViolations() {
   if (!isManager) { alert('Manager only.'); return; }
   var resultEl = document.getElementById('violations-result');
   var applyBtn = document.getElementById('violations-apply-btn');
+  var fromEl   = document.getElementById('violations-from');
+  var fromDate = fromEl ? fromEl.value : '';
   resultEl.style.display = 'block';
-  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning...</div>';
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning'+(fromDate?' (from '+fromDate+')':'')+'...</div>';
 
   try {
-    _violationPlan = await findPolicyViolators();
+    _violationPlan = await findPolicyViolators(fromDate || null);
   } catch (e) {
     resultEl.innerHTML = '<div style="color:var(--danger)">Error: '+(e.message||e)+'</div>';
     return;

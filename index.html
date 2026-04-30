@@ -281,10 +281,13 @@
         the oldest violators are retained up to the amount of CO already used.
         <strong>Run a Full Backup first</strong> (Dashboard).
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <label style="font-size:12px;color:var(--muted);font-weight:600">From date:</label>
+        <input type="date" id="violations-from" value="2026-01-01" style="width:auto;padding:7px 10px">
         <button class="btn btn-ghost" onclick="previewViolations()">🔍 Preview Violations</button>
         <button class="btn btn-danger-solid" id="violations-apply-btn" onclick="applyViolationCleanup()" disabled>🗑 Delete Violators</button>
       </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">Sessions before the From date are exempt (kept as historical record). Default 2026-01-01.</div>
       <div id="violations-result" style="margin-top:14px;display:none;font-size:13px"></div>
     </div>
     <div class="card">
