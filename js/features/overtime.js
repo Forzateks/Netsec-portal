@@ -152,9 +152,13 @@ async function renderSessions() {
   document.getElementById('sessions-table').style.display='block';
   document.getElementById('sessions-tbody').innerHTML=data.map(function(s,i){
     var st=s.status||'approved';
-    var stBadge='<span class="badge badge-'+st+'" style="font-size:10px">'+statusIcon(st)+' '+cap(st)+'</span>';
-    var creditedDisplay = st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.credited_hours+'h</strong>' : '<span style="color:var(--muted);font-size:12px">'+s.credited_hours+'h</span>';
-    return '<tr style="'+(st==='rejected'?'opacity:0.6':'')+'">'+
+    var icon = st==='archived' ? '📦' : statusIcon(st);
+    var label = st==='archived' ? 'Archived' : cap(st);
+    var badgeClass = st==='archived' ? 'badge-rejected' : 'badge-'+st; // reuse muted badge styling
+    var stBadge='<span class="badge '+badgeClass+'" style="font-size:10px" title="'+(esc2(s.manager_comment||'')||'')+'">'+icon+' '+label+'</span>';
+    var creditedDisplay = st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.credited_hours+'h</strong>' : '<span style="color:var(--muted);font-size:12px;text-decoration:line-through">'+s.credited_hours+'h</span>';
+    var rowOpacity = (st==='rejected'||st==='archived') ? 'opacity:0.55' : '';
+    return '<tr style="'+rowOpacity+'" title="'+(st==='archived'||st==='rejected'?(esc2(s.manager_comment||'')):'')+'">'+
     '<td style="color:var(--muted);font-family:\'DM Mono\',monospace">'+(i+1)+'</td>'+
     '<td><strong>'+s.employee+'</strong></td>'+
     '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+s.activity+'">'+s.activity+'</td>'+
@@ -456,23 +460,68 @@ async function applyViolationCleanup() {
   Object.keys(_violationPlan).forEach(function(emp){
     allDel = allDel.concat(_violationPlan[emp].recommendation.del);
   });
-  if (!allDel.length) { alert('Nothing to delete.'); return; }
+  if (!allDel.length) { alert('Nothing to archive.'); return; }
 
-  if (!confirm('PERMANENTLY DELETE '+allDel.length+' OT session(s)?\n\nThis cannot be undone. Make sure you ran a backup first (Dashboard → Full Backup).')) return;
-  if (!confirm('Final confirmation — delete '+allDel.length+' rows from ot_sessions?')) return;
+  if (!confirm('Archive '+allDel.length+' OT session(s)?\n\nThey will be marked as archived (no longer count toward CO) but stay visible to manager and the affected employee for reference. Reason will be auto-recorded.')) return;
 
   var resultEl = document.getElementById('violations-result');
   var applyBtn = document.getElementById('violations-apply-btn');
   applyBtn.disabled = true;
-  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Deleting '+allDel.length+' sessions...</div>';
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Archiving '+allDel.length+' sessions...</div>';
 
+  var reason = 'Auto-archived: violates current weekday OT block window (UAE 7:30 AM-6:30 PM / KSA 8:00 AM-7:00 PM). Sessions starting in regular working hours no longer count as overtime under the updated policy.';
+  var nowIso = new Date().toISOString();
   var ok = 0, fail = 0;
   for (var i = 0; i < allDel.length; i++) {
-    var {error} = await sb.from('ot_sessions').delete().eq('id', allDel[i].id);
+    var {error} = await sb.from('ot_sessions').update({
+      status: 'archived',
+      manager_comment: reason,
+      reviewed_by: currentUser,
+      reviewed_at: nowIso
+    }).eq('id', allDel[i].id);
     if (error) fail++; else ok++;
   }
 
   _violationPlan = null;
-  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Cleanup done.</strong> '+ok+' deleted'+(fail?', '+fail+' failed':'')+'. Reload to see updated CO balances.</div>';
+  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Archive done.</strong> '+ok+' marked archived'+(fail?', '+fail+' failed':'')+'. Sessions still visible (dimmed) in employee history. Reload to see updated CO balances.</div>';
+}
+
+// Purge archived/rejected OT sessions older than 1 year. Manager-only,
+// double-confirm. Hard-delete is irreversible.
+async function purgeOldArchived() {
+  if (!isManager) { alert('Manager only.'); return; }
+  var resultEl = document.getElementById('purge-result');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning...</div>';
+
+  var cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 1);
+  var cutoffIso = cutoff.toISOString();
+
+  var {data, error} = await sb.from('ot_sessions')
+    .select('id,employee,ot_date,activity,status,reviewed_at,created_at')
+    .in('status', ['archived','rejected']);
+  if (error) { resultEl.innerHTML = '<div style="color:var(--danger)">Error: '+error.message+'</div>'; return; }
+
+  // Filter to those older than 1 year (use reviewed_at if present, else created_at)
+  var stale = (data||[]).filter(function(r){
+    var ts = r.reviewed_at || r.created_at;
+    return ts && ts < cutoffIso;
+  });
+
+  if (!stale.length) {
+    resultEl.innerHTML = '<div style="padding:10px;background:#ECFDF5;border-radius:8px;color:var(--success)">Nothing to purge — no archived/rejected sessions older than 1 year.</div>';
+    return;
+  }
+
+  if (!confirm('PERMANENTLY DELETE '+stale.length+' archived/rejected session(s) older than 1 year ('+cutoff.toISOString().split('T')[0]+')?\n\nThis cannot be undone.')) return;
+  if (!confirm('Final confirmation — hard-delete '+stale.length+' rows?')) return;
+
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Purging '+stale.length+'...</div>';
+  var ok = 0, fail = 0;
+  for (var i = 0; i < stale.length; i++) {
+    var res = await sb.from('ot_sessions').delete().eq('id', stale[i].id);
+    if (res.error) fail++; else ok++;
+  }
+  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Purge done.</strong> '+ok+' deleted'+(fail?', '+fail+' failed':'')+'.</div>';
 }
 
