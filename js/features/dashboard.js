@@ -8,7 +8,7 @@
   a.download='Gulfit_OT_Sessions.csv'; a.click();
 }
 
-// â•â• DASHBOARD â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == DASHBOARD ====================================================
 async function renderDashboard() {
   document.getElementById('dash-content').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   var year  = new Date().getFullYear().toString();

@@ -1,4 +1,4 @@
-﻿// â•â• PROJECTS MODULE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// == PROJECTS MODULE ==============================================
 // Projects loaded dynamically from Supabase (not hardcoded)
 let PROJECTS = [
   'ABK','QDSBG','DH-NONCORP','MASHREQ-DCDR','MASHREQ-IBG','ADAA','NBO-MSOT',
@@ -8,7 +8,7 @@ let PROJECTS = [
   'TAAGEER-FINANCE','DFM','NAIVAS','NAIVAS-PHASE2','ARABIAN-SHIELD',
   'DERAYA-FINANCE','MOH','QASSIM-UNIVERSITY','OLD-DUBAI-HOLDING',
   'OLD-MASHREQ','MASHREQ-IBG-OLD'
-]; // fallback â€” overwritten by loadProjects()
+]; // fallback — overwritten by loadProjects()
 
 let _projectsLoaded = false;
 
@@ -57,23 +57,23 @@ function fillProjectSelect(selectId, customerName, includeAll) {
   if (cur && list.indexOf(cur) >= 0) el.value = cur;
 }
 
-// â”€â”€ ADD PROJECT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── ADD PROJECT ──────────────────────────────────────────────────
 async function addProject() {
   const customer = document.getElementById('pj-new-customer').value;
   const name   = (document.getElementById('pj-new-name').value||'').trim().toUpperCase();
   const status = document.getElementById('pj-new-status').value;
   if (!customer) {
-    document.getElementById('pj-manage-error').textContent = 'âš ï¸ Please select a customer.';
+    document.getElementById('pj-manage-error').textContent = '⚠️ Please select a customer.';
     showAlert('pj-manage-error'); return;
   }
   if (!name) {
-    document.getElementById('pj-manage-error').textContent = 'âš ï¸ Please enter a project name.';
+    document.getElementById('pj-manage-error').textContent = '⚠️ Please enter a project name.';
     showAlert('pj-manage-error'); return;
   }
 
   // Check duplicate
   if (PROJECTS.includes(name)) {
-    document.getElementById('pj-manage-error').textContent = 'âš ï¸ Project "'+name+'" already exists.';
+    document.getElementById('pj-manage-error').textContent = '⚠️ Project "'+name+'" already exists.';
     showAlert('pj-manage-error'); return;
   }
 
@@ -95,7 +95,7 @@ async function addProject() {
   renderManageProjects();
 }
 
-// â”€â”€ UPDATE PROJECT STATUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── UPDATE PROJECT STATUS ────────────────────────────────────────
 async function updateProjectStatus(name, newStatus) {
   const {error} = await sb.from('projects').update({status: newStatus}).eq('name', name);
   if (error) { alert('Error: '+error.message); return; }
@@ -105,7 +105,7 @@ async function updateProjectStatus(name, newStatus) {
   renderManageProjects();
 }
 
-// â”€â”€ RENDER MANAGE PROJECTS LIST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── RENDER MANAGE PROJECTS LIST ──────────────────────────────────
 async function renderManageProjects() {
   document.getElementById('pj-manage-loading').style.display = 'flex';
   document.getElementById('pj-manage-content').innerHTML = '';
@@ -119,15 +119,15 @@ async function renderManageProjects() {
   const rows = data || [];
   if (!rows.length) {
     document.getElementById('pj-manage-content').innerHTML =
-      '<div class="empty-state"><div class="empty-icon">ðŸ“</div><div class="empty-title">No projects found</div></div>';
+      '<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-title">No projects found</div></div>';
     return;
   }
 
   const STATUS_COLORS = {
-    'active':    {bg:'#ECFDF5',color:'#059669',label:'ðŸŸ¢ Active'},
-    'completed': {bg:'#EFF6FF',color:'#2563EB',label:'âœ… Completed'},
-    'on-hold':   {bg:'#FEF9C3',color:'#B45309',label:'â¸ï¸ On Hold'},
-    'archived':  {bg:'#F3F4F6',color:'#6B7280',label:'ðŸ—ƒï¸ Archived'},
+    'active':    {bg:'#ECFDF5',color:'#059669',label:'🟢 Active'},
+    'completed': {bg:'#EFF6FF',color:'#2563EB',label:'✅ Completed'},
+    'on-hold':   {bg:'#FEF9C3',color:'#B45309',label:'⏸️ On Hold'},
+    'archived':  {bg:'#F3F4F6',color:'#6B7280',label:'🗃️ Archived'},
   };
 
   // Build customer-id -> name map for display
@@ -139,22 +139,22 @@ async function renderManageProjects() {
     '<tbody>'+
     rows.map(function(p,i){
       var sc = STATUS_COLORS[p.status] || STATUS_COLORS['active'];
-      var custName = custById[p.customer_id] || PROJECT_CUSTOMER[p.name] || 'â€”';
+      var custName = custById[p.customer_id] || PROJECT_CUSTOMER[p.name] || '—';
       return '<tr>'+
         '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
         '<td style="font-size:13px;color:var(--navy);font-weight:600">'+custName+'</td>'+
         '<td><strong>'+p.name+'</strong></td>'+
         '<td><span style="background:'+sc.bg+';color:'+sc.color+';padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600">'+sc.label+'</span></td>'+
         '<td style="white-space:nowrap">'+
-          '<button class="btn btn-sm btn-ghost" onclick="openEditProject('+p.id+')" style="margin-right:4px">âœï¸</button>'+
-          '<button class="btn btn-sm btn-danger" onclick="deleteProject('+p.id+',\''+ (p.name||'').replace(/'/g,"\\'") +'\')">ðŸ—‘</button>'+
+          '<button class="btn btn-sm btn-ghost" onclick="openEditProject('+p.id+')" style="margin-right:4px">✏️</button>'+
+          '<button class="btn btn-sm btn-danger" onclick="deleteProject('+p.id+',\''+ (p.name||'').replace(/'/g,"\\'") +'\')">🗑</button>'+
         '</td>'+
         '</tr>';
     }).join('')+
     '</tbody></table></div>';
 }
 
-// â”€â”€ EDIT PROJECT (manager) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── EDIT PROJECT (manager) ────────────────────────────────────────
 async function openEditProject(id) {
   var {data, error} = await sb.from('projects').select('*').eq('id', id).single();
   if (error || !data) { alert('Could not load project.'); return; }
@@ -190,7 +190,7 @@ async function saveEditProject() {
 }
 
 async function deleteProject(id, name) {
-  if (!confirm('Delete project "'+name+'"?\n\nThis only removes it from the Projects registry â€” existing OT/Project sessions that referenced it remain unchanged.')) return;
+  if (!confirm('Delete project "'+name+'"?\n\nThis only removes it from the Projects registry — existing OT/Project sessions that referenced it remain unchanged.')) return;
   var {error} = await sb.from('projects').delete().eq('id', id);
   if (error) { alert('Error: '+error.message); return; }
   _projectsLoaded = false;
@@ -199,7 +199,7 @@ async function deleteProject(id, name) {
   renderManageProjects();
 }
 
-// â”€â”€ POPULATE ALL PROJECT DROPDOWNS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── POPULATE ALL PROJECT DROPDOWNS ───────────────────────────────
 function populateProjectDropdowns() {
   // Customer selects (forms + filters)
   fillCustomerSelect('pj-customer', false);
@@ -209,7 +209,7 @@ function populateProjectDropdowns() {
   fillCustomerSelect('edit-pj-customer', false);
   fillCustomerSelect('pj-filter-customer', true);
 
-  // Project selects â€” log/OT forms start unfiltered (until user picks customer)
+  // Project selects — log/OT forms start unfiltered (until user picks customer)
   fillProjectSelect('pj-project', '', false);
   fillProjectSelect('log-project', '', false);
   fillProjectSelect('edit-ot-project', '', false);
@@ -223,7 +223,7 @@ function populateProjectDropdowns() {
   fillActivitySelect('edit-ot-activity-type');
 }
 
-// Customer-change handlers â€” re-filter project dropdown to only that customer
+// Customer-change handlers — re-filter project dropdown to only that customer
 function onPjCustomerChange() {
   fillProjectSelect('pj-project', document.getElementById('pj-customer').value, false);
 }
@@ -285,7 +285,7 @@ function initProjectTab() {
         label.style.borderColor = 'var(--teal)';
       }
       label.appendChild(cb);
-      // Show distinct short names â€” avoid two "Mohammed" labels
+      // Show distinct short names — avoid two "Mohammed" labels
       const _shortNames = {
         'Ahmed Ali':'AHMED','Venkatesan':'VENKAT','Prasanth':'PRASANTH',
         'Salman Aziz':'SALMAN','Mohammed Afsal':'AFSAL','Mohammed Nasif':'NASIF'
@@ -357,7 +357,7 @@ async function savePjSession() {
   }
 
   const btn = document.getElementById('pj-save-btn');
-  btn.disabled = true; btn.textContent = 'â³ Saving...';
+  btn.disabled = true; btn.textContent = '⏳ Saving...';
 
   const {error} = await sb.from('project_sessions').insert({
     project_name: proj,
@@ -375,7 +375,7 @@ async function savePjSession() {
     logged_by: currentUser
   });
 
-  btn.disabled = false; btn.innerHTML = 'ðŸ’¾ Save Session';
+  btn.disabled = false; btn.innerHTML = '💾 Save Session';
   if (error) { alert('Error: ' + error.message); return; }
   showAlert('pj-success');
 
@@ -432,19 +432,19 @@ async function renderPjSessions() {
 
   document.getElementById('pj-sessions-tbody').innerHTML = rows.map(function(r,i){
     const canEdit = isManager || (r.logged_by===currentUser);
-    var custDisplay = r.customer_name || PROJECT_CUSTOMER[r.project_name] || 'â€”';
+    var custDisplay = r.customer_name || PROJECT_CUSTOMER[r.project_name] || '—';
     return '<tr>' +
       '<td style="color:var(--muted)">'+(i+1)+'</td>'+
       '<td style="font-size:12px;color:var(--navy);font-weight:600">'+esc2(custDisplay)+'</td>'+
       '<td><strong style="color:var(--navy)">'+r.project_name+'</strong></td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtDate(r.session_date)+'</td>'+
-      '<td><span class="badge" style="background:#f0f4ff;color:var(--navy)">'+(r.activity_type||'â€”')+'</span></td>'+
-      '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px" title="'+(r.session_info||'')+'">'+( r.session_info||'â€”')+'</td>'+
+      '<td><span class="badge" style="background:#f0f4ff;color:var(--navy)">'+(r.activity_type||'—')+'</span></td>'+
+      '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px" title="'+(r.session_info||'')+'">'+( r.session_info||'—')+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:600;color:var(--teal)">'+( r.duration_hours||0)+'h</td>'+
-      '<td style="font-size:12px;color:var(--muted)">'+(r.onsite_remote||'â€”')+'</td>'+
-      '<td style="font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(r.team_members||'')+'">'+( r.team_members||'â€”')+'</td>'+
-      '<td style="font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+( r.stake_holders||'â€”')+'</td>'+
-      '<td>'+(canEdit ? '<button class="btn btn-sm btn-ghost" onclick="openEditPJ('+r.id+',\''+esc2(r.project_name)+'\',\''+r.session_date+'\',\''+esc2(r.activity_type)+'\',\''+esc2(r.session_info)+'\',\''+(r.start_time||'')+'\',\''+(r.end_time||'')+'\',\''+esc2(r.onsite_remote||'')+'\',\''+esc2(r.stake_holders||'')+'\',\''+esc2(r.team_members||'')+'\',\''+esc2(custDisplay==='â€”'?'':custDisplay)+'\')" style="margin-right:4px">âœï¸</button><button class="btn btn-sm btn-danger" onclick="deletePjSession('+r.id+')">âœ•</button>' : '')+'</td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+(r.onsite_remote||'—')+'</td>'+
+      '<td style="font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(r.team_members||'')+'">'+( r.team_members||'—')+'</td>'+
+      '<td style="font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+( r.stake_holders||'—')+'</td>'+
+      '<td>'+(canEdit ? '<button class="btn btn-sm btn-ghost" onclick="openEditPJ('+r.id+',\''+esc2(r.project_name)+'\',\''+r.session_date+'\',\''+esc2(r.activity_type)+'\',\''+esc2(r.session_info)+'\',\''+(r.start_time||'')+'\',\''+(r.end_time||'')+'\',\''+esc2(r.onsite_remote||'')+'\',\''+esc2(r.stake_holders||'')+'\',\''+esc2(r.team_members||'')+'\',\''+esc2(custDisplay==='—'?'':custDisplay)+'\')" style="margin-right:4px">✏️</button><button class="btn btn-sm btn-danger" onclick="deletePjSession('+r.id+')">✕</button>' : '')+'</td>'+
     '</tr>';
   }).join('');
 
@@ -498,7 +498,7 @@ async function renderPjProjectSummary() {
 
   const rows = data || [];
   if (!rows.length) {
-    document.getElementById('pj-project-content').innerHTML='<div class="empty-state"><div class="empty-icon">ðŸ“Š</div><div class="empty-title">No sessions for '+year+'</div></div>';
+    document.getElementById('pj-project-content').innerHTML='<div class="empty-state"><div class="empty-icon">📁Š</div><div class="empty-title">No sessions for '+year+'</div></div>';
     return;
   }
 
@@ -532,7 +532,7 @@ async function renderPjProjectSummary() {
     '</tr>';
   }).join('');
 
-  // Build pie chart data â€” top 8 projects by hours
+  // Build pie chart data — top 8 projects by hours
   var PIE_COLORS = ['#0A1F5C','#00A0D2','#C8A832','#3B82F6','#10B981','#8B5CF6','#F59E0B','#EF4444'];
   var pieData = sorted.slice(0,8).map(function(proj,i) {
     return {label:proj, value:byProject[proj].hours, color:PIE_COLORS[i%PIE_COLORS.length]};
@@ -571,7 +571,7 @@ async function renderPjProjectSummary() {
     '<div class="table-wrap"><table>'+
     '<thead><tr><th>Project</th><th>Sessions</th><th>Total Hours</th><th>Working Days</th><th>Team Breakdown</th></tr></thead>'+
     '<tbody>'+tableRows+'</tbody></table></div>'+
-    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | * Working days = hours Ã· 8</div>';
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | * Working days = hours ÷ 8</div>';
 }
 
 async function renderPjEmployeeSummary() {
@@ -595,7 +595,7 @@ async function renderPjEmployeeSummary() {
   rows.forEach(function(r) {
     (r.team_members||'').split(',').forEach(function(m) {
       const name = m.trim();
-      // Match against known employees â€” exact match first, then first-name fallback
+      // Match against known employees — exact match first, then first-name fallback
       EMPLOYEES.forEach(function(emp) {
         const firstName = emp.split(' ')[0].toLowerCase();
         const nameLower = name.toLowerCase();
@@ -623,7 +623,7 @@ async function renderPjEmployeeSummary() {
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:16px">'+r2(d.hours)+'h</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+r2(d.hours/8)+' days</td>'+
       '<td style="font-size:12px;color:var(--muted)">'+projCount+' projects</td>'+
-      '<td style="font-size:11px;color:var(--muted)">'+( topProjects||'â€”')+'</td>'+
+      '<td style="font-size:11px;color:var(--muted)">'+( topProjects||'—')+'</td>'+
     '</tr>';
   }).join('');
 
@@ -641,14 +641,14 @@ async function renderPjEmployeeSummary() {
     '<div class="table-wrap"><table>'+
     '<thead><tr><th>Employee</th><th>Sessions</th><th>Total Hours</th><th>Working Days</th><th>Projects</th><th>Top Projects</th></tr></thead>'+
     '<tbody>'+tableRows+
-    '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>â€”</td>'+
+    '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>—</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+r2(totalHours)+'h</td>'+
-    '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+r2(totalHours/8)+'</td><td>â€”</td><td>â€”</td></tr>'+
+    '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+r2(totalHours/8)+'</td><td>—</td><td>—</td></tr>'+
     '</tbody></table></div>'+
-    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours Ã· 8</div>';
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours ÷ 8</div>';
 }
 
-// â”€â”€ PIE CHART HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── PIE CHART HELPERS ────────────────────────────────────────────
 function empShortName(emp) {
   var parts = emp.split(' ');
   if (parts.length > 2) return parts[parts.length-1]; // Last name for Mohammed X

@@ -1,6 +1,6 @@
-﻿// â•â• INIT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// == INIT ==========================================================
 window.onload = async function() {
-  // Detect password-recovery flow first â€” Supabase puts type=recovery in the URL hash
+  // Detect password-recovery flow first — Supabase puts type=recovery in the URL hash
   // when the user clicks the email reset link. We listen for the auth event.
   sb.auth.onAuthStateChange(function(event){
     if (event === 'PASSWORD_RECOVERY') {
@@ -20,6 +20,6 @@ window.onload = async function() {
       return;
     }
   }
-  // No active session â€” show sign-in form
+  // No active session — show sign-in form
   showSigninForm();
 };

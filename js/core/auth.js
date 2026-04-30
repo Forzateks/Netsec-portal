@@ -1,7 +1,7 @@
-﻿// â•â• AUTH (Supabase) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// == AUTH (Supabase) ==============================================
 function showLoginError(msg) {
   const e = document.getElementById('login-error');
-  e.textContent = 'âŒ ' + msg;
+  e.textContent = '❌ ' + msg;
   e.style.display = 'block'; e.style.background='#FEE2E2'; e.style.color='#B91C1C';
   e.style.padding='10px'; e.style.borderRadius='8px'; e.style.fontSize='13px';
   e.style.marginBottom='12px'; e.style.textAlign='center';
@@ -10,7 +10,7 @@ function showLoginError(msg) {
 
 function showLoginSuccess(msg) {
   const e = document.getElementById('login-success');
-  e.textContent = 'âœ… ' + msg;
+  e.textContent = '✅ ' + msg;
   e.style.display = 'block';
   setTimeout(function(){ e.style.display = 'none'; }, 6000);
 }
@@ -71,7 +71,7 @@ async function doResetPassword() {
   const {error} = await sb.auth.updateUser({ password: p1 });
   if (error) { showLoginError(error.message || 'Could not update password.'); return; }
   showLoginSuccess('Password set! Signing you in...');
-  // After updateUser the session is already active â€” go straight in.
+  // After updateUser the session is already active — go straight in.
   const {data} = await sb.auth.getUser();
   if (data && data.user) {
     setTimeout(function(){ initAppFromUser(data.user); }, 800);
@@ -154,7 +154,7 @@ async function initApp(user) {
   if (isManager) updateNotifBadge();
 }
 
-// â•â• CONNECTION CHECK â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == CONNECTION CHECK ==============================================
 async function checkConnection() {
   try {
     const { error } = await sb.from('ot_sessions').select('id').limit(1);

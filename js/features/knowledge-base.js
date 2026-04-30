@@ -1,4 +1,4 @@
-﻿// â•â• KNOWLEDGE BASE MODULE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// == KNOWLEDGE BASE MODULE ==========================================
 
 var _kbData = [];
 var _kbViewId = null;
@@ -58,24 +58,24 @@ function kbCatClass(cat) {
 function renderKBArticles(data) {
   var wrap = document.getElementById('kb-articles-wrap');
   if (!data.length) {
-    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">ðŸ“š</div><div class="empty-title">No articles found</div><div>Be the first to submit one!</div></div>';
+    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📁š</div><div class="empty-title">No articles found</div><div>Be the first to submit one!</div></div>';
     return;
   }
   var cards = data.map(function(a) {
     var tags = (a.tags||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
     var tagHtml = tags.map(function(t){return '<span class="kb-tag">'+esc2(t)+'</span>';}).join('');
-    var excerpt = (a.content||'').slice(0,180).trim() + ((a.content||'').length>180?'â€¦':'');
+    var excerpt = (a.content||'').slice(0,180).trim() + ((a.content||'').length>180?'…':'');
     return '<div class="kb-card">'+
       '<div class="kb-card-meta">'+
       '<span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'General')+'</span>'+
-      '<span class="kb-author">by <strong>'+esc2(a.submitted_by)+'</strong> Â· '+fmtDate(a.created_at)+'</span>'+
+      '<span class="kb-author">by <strong>'+esc2(a.submitted_by)+'</strong> · '+fmtDate(a.created_at)+'</span>'+
       '</div>'+
       '<div class="kb-title">'+esc2(a.title)+'</div>'+
       '<div class="kb-excerpt">'+esc2(excerpt)+'</div>'+
       (tagHtml?'<div class="kb-tags">'+tagHtml+'</div>':'')+
       '<div style="display:flex;gap:8px;margin-top:4px">'+
       '<button class="btn btn-sm btn-primary" onclick="openKBArticle('+a.id+')">Read More</button>'+
-      (a.file_url?'<a href="'+esc2(a.file_url)+'" target="_blank" class="btn btn-sm btn-ghost">ðŸ”— Reference</a>':'')+
+      (a.file_url?'<a href="'+esc2(a.file_url)+'" target="_blank" class="btn btn-sm btn-ghost">🔍— Reference</a>':'')+
       '</div>'+
       '</div>';
   }).join('');
@@ -89,7 +89,7 @@ function openKBArticle(id) {
   var tags = (a.tags||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
   document.getElementById('kb-view-cat').innerHTML='<span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'General')+'</span>';
   document.getElementById('kb-view-title').textContent=a.title;
-  document.getElementById('kb-view-meta').innerHTML='Submitted by <strong>'+esc2(a.submitted_by)+'</strong> &nbsp;Â·&nbsp; '+fmtDate(a.created_at);
+  document.getElementById('kb-view-meta').innerHTML='Submitted by <strong>'+esc2(a.submitted_by)+'</strong> &nbsp;·&nbsp; '+fmtDate(a.created_at);
   document.getElementById('kb-view-tags').innerHTML=tags.map(function(t){return '<span class="kb-tag">'+esc2(t)+'</span>';}).join('');
   document.getElementById('kb-view-body').textContent=a.content;
   var urlEl=document.getElementById('kb-view-url');
@@ -98,8 +98,8 @@ function openKBArticle(id) {
   // show edit/delete for own articles or manager
   var editBtns=document.getElementById('kb-view-edit-btns');
   if (a.submitted_by===currentUser||isManager){
-    editBtns.innerHTML='<button class="btn btn-ghost" onclick="openKBEditModal('+id+')">âœï¸ Edit</button>'+
-      (isManager||a.submitted_by===currentUser?'<button class="btn btn-danger" onclick="deleteKBArticle('+id+')" style="margin-left:8px">ðŸ—‘ Delete</button>':'');
+    editBtns.innerHTML='<button class="btn btn-ghost" onclick="openKBEditModal('+id+')">✏️ Edit</button>'+
+      (isManager||a.submitted_by===currentUser?'<button class="btn btn-danger" onclick="deleteKBArticle('+id+')" style="margin-left:8px">🗑 Delete</button>':'');
   } else { editBtns.innerHTML=''; }
   document.getElementById('kb-view-modal').classList.add('show');
 }
@@ -121,7 +121,7 @@ async function submitKBArticle() {
   var content = (document.getElementById('kb-content').value||'').trim();
   if (!title||!category||!content){alert('Title, Category and Content are required.');return;}
   var btn=document.getElementById('kb-submit-btn');
-  btn.disabled=true; btn.textContent='â³ Publishing...';
+  btn.disabled=true; btn.textContent='⏳ Publishing...';
   var {error}=await sb.from('kb_articles').insert({
     title:title, category:category,
     tags:document.getElementById('kb-tags').value.trim(),
@@ -129,7 +129,7 @@ async function submitKBArticle() {
     file_url:document.getElementById('kb-url').value.trim()||null,
     submitted_by:currentUser
   });
-  btn.disabled=false; btn.textContent='ðŸ“¤ Publish Article';
+  btn.disabled=false; btn.textContent='📁¤ Publish Article';
   if (error){alert('Error: '+error.message);return;}
   showAlert('kb-submit-success');
   resetKBForm();
@@ -142,7 +142,7 @@ async function loadMyKBArticles() {
   var {data,error}=await sb.from('kb_articles').select('*').eq('submitted_by',currentUser).order('created_at',{ascending:false});
   if (error){wrap.innerHTML='<div class="alert alert-error show">Error: '+error.message+'</div>';return;}
   if (!data||!data.length){
-    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">ðŸ“</div><div class="empty-title">No articles yet</div><div>Submit your first article!</div></div>';
+    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-title">No articles yet</div><div>Submit your first article!</div></div>';
     return;
   }
   // Update _kbData so openKBArticle works from My Articles tab
@@ -150,12 +150,12 @@ async function loadMyKBArticles() {
   var rows=data.map(function(a){
     return '<tr>'+
       '<td style="font-weight:600">'+esc2(a.title)+'</td>'+
-      '<td><span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'â€”')+'</span></td>'+
+      '<td><span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'—')+'</span></td>'+
       '<td style="font-size:12px;color:var(--muted)">'+fmtDate(a.created_at)+'</td>'+
       '<td style="white-space:nowrap">'+
-        '<button class="btn btn-sm btn-ghost" onclick="openKBArticle('+a.id+')" style="margin-right:6px">ðŸ‘ View</button>'+
-        '<button class="btn btn-sm btn-ghost" onclick="openKBEditModal('+a.id+')" style="margin-right:6px">âœï¸ Edit</button>'+
-        '<button class="btn btn-sm btn-danger" onclick="deleteKBArticle('+a.id+')">ðŸ—‘</button>'+
+        '<button class="btn btn-sm btn-ghost" onclick="openKBArticle('+a.id+')" style="margin-right:6px">👁 View</button>'+
+        '<button class="btn btn-sm btn-ghost" onclick="openKBEditModal('+a.id+')" style="margin-right:6px">✏️ Edit</button>'+
+        '<button class="btn btn-sm btn-danger" onclick="deleteKBArticle('+a.id+')">🗑</button>'+
       '</td>'+
     '</tr>';
   }).join('');
@@ -186,7 +186,7 @@ async function saveKBEdit() {
   var content=(document.getElementById('kb-edit-content').value||'').trim();
   if (!title||!content){alert('Title and Content are required.');return;}
   var btn=document.getElementById('kb-edit-save-btn');
-  btn.disabled=true; btn.textContent='â³ Saving...';
+  btn.disabled=true; btn.textContent='⏳ Saving...';
   var {error}=await sb.from('kb_articles').update({
     title:title,
     category:document.getElementById('kb-edit-category').value,
@@ -195,7 +195,7 @@ async function saveKBEdit() {
     file_url:document.getElementById('kb-edit-url').value.trim()||null,
     updated_at:new Date().toISOString()
   }).eq('id',id);
-  btn.disabled=false; btn.textContent='ðŸ’¾ Save';
+  btn.disabled=false; btn.textContent='💾 Save';
   if (error){alert('Error: '+error.message);return;}
   closeKBEditModal();
   refreshKBViews();

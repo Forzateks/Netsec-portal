@@ -1,4 +1,4 @@
-﻿// â•â• HELPERS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// == HELPERS =======================================================
 function showAlert(id){
   const el=document.getElementById(id);
   if(!el) return false;
@@ -9,12 +9,12 @@ function showAlert(id){
 function fmtDate(str){if(!str)return '';const s=str.split('T')[0].split('-');return s[2]+'/'+s[1]+'/'+s[0];}
 function r2(n){return Math.round((n||0)*100)/100;}
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
-function statusIcon(s){return s==='approved'?'âœ…':s==='rejected'?'âŒ':'ðŸŸ¡';}
+function statusIcon(s){return s==='approved'?'✅':s==='rejected'?'❌':'🟡';}
 function esc2(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
 
 
-// â•â• WEEKLY BACKUP â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == WEEKLY BACKUP ================================================
 function checkBackupReminder() {
   if (!isManager) return;
   const last = parseInt(localStorage.getItem('gulfit_last_backup')||'0');
@@ -34,7 +34,7 @@ function dismissBackup() {
 async function downloadBackup(btnEl) {
   const btn = btnEl || document.querySelector('#backup-banner button');
   if (!btn) return;
-  btn.textContent = 'â³ Preparing...';
+  btn.textContent = '⏳ Preparing...';
   btn.disabled = true;
 
   try {
@@ -90,7 +90,7 @@ async function downloadBackup(btnEl) {
 
     // Combine all sections into one CSV with headers
     const today = new Date().toLocaleDateString('en-GB').replace(/\//g,'-');
-    let fullCsv = 'NetSec Portal â€” Full Data Backup â€” ' + today + '\n\n';
+    let fullCsv = 'NetSec Portal — Full Data Backup — ' + today + '\n\n';
     sections.forEach(function(s) {
       fullCsv += '=== ' + s.name + ' ===\n' + s.csv + '\n\n';
     });
@@ -104,11 +104,11 @@ async function downloadBackup(btnEl) {
     localStorage.setItem('gulfit_last_backup', Date.now().toString());
     const banner = document.getElementById('backup-banner');
     if (banner) banner.style.display='none';
-    btn.textContent = 'âœ… Downloaded!';
-    setTimeout(function(){ btn.textContent='ðŸ’¾ Download Backup Now'; btn.disabled=false; }, 2000);
+    btn.textContent = '✅ Downloaded!';
+    setTimeout(function(){ btn.textContent='💾 Download Backup Now'; btn.disabled=false; }, 2000);
 
   } catch(e) {
-    btn.textContent = 'âŒ Error';
+    btn.textContent = '❌ Error';
     btn.disabled = false;
     alert('Backup failed: ' + e.message);
   }

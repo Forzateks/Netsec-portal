@@ -1,4 +1,4 @@
-﻿// â•â• OT CALCULATION ENGINE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// == OT CALCULATION ENGINE ========================================
 function isWeekend(wd, employee) {
   return KSA_EMP.includes(employee) ? (wd===5||wd===6) : (wd===0||wd===6);
 }
@@ -58,7 +58,7 @@ function calcOT(dateStr, startStr, endStr, employee) {
     dayName:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()] };
 }
 
-// â•â• SUMMARY CALC â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == SUMMARY CALC =================================================
 function calcSummary(sessions, compoffs, employee) {
   // Only approved sessions count toward CO
   const s = sessions.filter(function(x){ return x.employee===employee && (x.status==='approved' || x.status===null || x.status===undefined); });
@@ -69,7 +69,7 @@ function calcSummary(sessions, compoffs, employee) {
     else if(x.band==='Mid'){if(x.rate==='1:2')mid12+=cr;else mid11+=cr;}
     else if(x.band==='Wknd'){if(x.rate==='1:2')wk12+=cr;else wk11+=cr;}
   });
-  // Eve + Early pool together (both 1:1) â€” 8 combined hrs = 1 CO day
+  // Eve + Early pool together (both 1:1) — 8 combined hrs = 1 CO day
   var combined=eveCred+earlyCred;
   var wkTotal=wk11+wk12;
   var coEarlyEve=Math.floor(combined/8),coMid=Math.floor(mid12/8),coWknd=Math.floor(wkTotal/8);
@@ -80,7 +80,7 @@ function calcSummary(sessions, compoffs, employee) {
           coEarlyEve,coMid,coWknd,totalCO,used,balance:totalCO-used,remEve:r2(remEve)};
 }
 
-// â•â• LIVE PREVIEW â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == LIVE PREVIEW =================================================
 function updatePreview() {
   const date=document.getElementById('log-date').value;
   const start=document.getElementById('log-start').value;
@@ -100,7 +100,7 @@ function updatePreview() {
   document.getElementById('prev-cred').textContent=res.credited+'h';
 }
 
-// â•â• SAVE SESSION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == SAVE SESSION =================================================
 async function saveSession() {
   const customer = document.getElementById('log-customer').value;
   const project  = document.getElementById('log-project').value;
@@ -114,14 +114,14 @@ async function saveSession() {
   if (vErr) { alert(vErr); return; }
   const res=calcOT(date,start,end,currentUser);
   const btn=document.getElementById('save-btn');
-  btn.disabled=true; btn.textContent='â³ Saving...';
+  btn.disabled=true; btn.textContent='⏳ Saving...';
   const {error}=await sb.from('ot_sessions').insert({
     employee:currentUser,activity:act,ot_date:date,start_time:start,end_time:end,
     day_name:res.dayName,band:res.band,rate:res.rate,duration_hours:res.duration,credited_hours:res.credited,
     customer_name:customer,project_name:project,activity_type:actType,
     status:'pending'
   });
-  btn.disabled=false; btn.innerHTML='ðŸ’¾ Save Session';
+  btn.disabled=false; btn.innerHTML='💾 Save Session';
   if (error){alert('Save failed: '+error.message);return;}
   showAlert('log-success'); clearForm();
 }
@@ -134,11 +134,11 @@ function clearForm() {
   // Reset project dropdown back to full list
   fillProjectSelect('log-project', '', false);
   ['prev-band','prev-dur','prev-rate','prev-cred'].forEach(function(id){
-    const el=document.getElementById(id); el.textContent='â€”'; el.className='preview-value';
+    const el=document.getElementById(id); el.textContent='—'; el.className='preview-value';
   });
 }
 
-// â•â• RENDER SESSIONS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == RENDER SESSIONS ==============================================
 async function renderSessions() {
   document.getElementById('sessions-loading').style.display='flex';
   document.getElementById('sessions-table').style.display='none';
@@ -166,7 +166,7 @@ async function renderSessions() {
     '<td><span class="badge '+(s.rate==='1:2'?'badge-12':'badge-11')+'">'+s.rate+'</span></td>'+
     '<td>'+creditedDisplay+'</td>'+
     '<td>'+stBadge+'</td>'+
-    '<td style="white-space:nowrap">'+((isManager||s.employee===currentUser)?'<button class="btn btn-sm btn-ghost" onclick="openEditOT('+s.id+',\''+s.employee+'\',\''+esc2(s.activity)+'\',\''+s.ot_date+'\',\''+s.start_time+'\',\''+s.end_time+'\',\''+esc2(s.customer_name||'')+'\',\''+esc2(s.project_name||'')+'\',\''+esc2(s.activity_type||'')+'\')" style="margin-right:4px">âœï¸</button>':'')+(isManager?'<button class="btn btn-sm btn-danger" onclick="deleteSession('+s.id+')">âœ•</button>':'')+'</td></tr>';
+    '<td style="white-space:nowrap">'+((isManager||s.employee===currentUser)?'<button class="btn btn-sm btn-ghost" onclick="openEditOT('+s.id+',\''+s.employee+'\',\''+esc2(s.activity)+'\',\''+s.ot_date+'\',\''+s.start_time+'\',\''+s.end_time+'\',\''+esc2(s.customer_name||'')+'\',\''+esc2(s.project_name||'')+'\',\''+esc2(s.activity_type||'')+'\')" style="margin-right:4px">✏️</button>':'')+(isManager?'<button class="btn btn-sm btn-danger" onclick="deleteSession('+s.id+')">✕</button>':'')+'</td></tr>';
   }).join('');
   window._sessionsData=data;
 }
@@ -177,7 +177,7 @@ async function deleteSession(id) {
   renderSessions();
 }
 
-// â•â• RENDER SUMMARY â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == RENDER SUMMARY ================================================
 async function renderSummary(emp) {
   document.getElementById('summary-loading').style.display='flex';
   document.getElementById('summary-content').innerHTML='';
@@ -195,11 +195,11 @@ async function renderSummary(emp) {
     '<div class="stat-card teal"><div class="stat-label">Rem. to Next CO</div><div class="stat-value">'+s.remEve+'</div><div class="stat-sub">Eve+Early hrs needed</div></div>'+
     '</div><div class="summary-grid">'+
     '<div class="stat-card eve"><div class="stat-label">Eve Credited</div><div class="stat-value">'+r2(s.eveCred)+'</div><div class="stat-sub">hrs (pools with Early)</div></div>'+
-    '<div class="stat-card early"><div class="stat-label">Early Morning</div><div class="stat-value">'+r2(s.earlyCred)+'</div><div class="stat-sub">hrs â†’ '+s.coEarlyEve+' CO days (combined)</div></div>'+
+    '<div class="stat-card early"><div class="stat-label">Early Morning</div><div class="stat-value">'+r2(s.earlyCred)+'</div><div class="stat-sub">hrs → '+s.coEarlyEve+' CO days (combined)</div></div>'+
     '<div class="stat-card mid"><div class="stat-label">Midnight 1:1</div><div class="stat-value">'+r2(s.mid11)+'</div><div class="stat-sub">hrs</div></div>'+
-    '<div class="stat-card mid"><div class="stat-label">Midnight 1:2</div><div class="stat-value">'+r2(s.mid12)+'</div><div class="stat-sub">hrs â†’ '+s.coMid+' CO days</div></div>'+
+    '<div class="stat-card mid"><div class="stat-label">Midnight 1:2</div><div class="stat-value">'+r2(s.mid12)+'</div><div class="stat-sub">hrs → '+s.coMid+' CO days</div></div>'+
     '<div class="stat-card wknd"><div class="stat-label">Weekend 1:1</div><div class="stat-value">'+r2(s.wk11)+'</div><div class="stat-sub">hrs</div></div>'+
-    '<div class="stat-card wknd"><div class="stat-label">Weekend 1:2</div><div class="stat-value">'+r2(s.wk12)+'</div><div class="stat-sub">hrs â†’ '+s.coWknd+' CO days</div></div>'+
+    '<div class="stat-card wknd"><div class="stat-label">Weekend 1:2</div><div class="stat-value">'+r2(s.wk12)+'</div><div class="stat-sub">hrs → '+s.coWknd+' CO days</div></div>'+
     '</div>';
 }
 
@@ -217,7 +217,7 @@ function selectSummaryEmp(el,emp) {
   el.classList.add('active'); renderSummary(emp);
 }
 
-// â•â• COMP OFF REQUESTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == COMP OFF REQUESTS ============================================
 async function submitCompOffRequest() {
   const date=document.getElementById('co-date').value;
   const type=document.getElementById('co-type').value;
@@ -247,21 +247,21 @@ async function renderMyCompOffRequests() {
   const {data}=await q;
   document.getElementById('co-req-loading').style.display='none';
   if (!data||!data.length){
-    document.getElementById('co-req-content').innerHTML='<div class="empty-state"><div class="empty-icon">ðŸ“‹</div><div class="empty-title">No requests yet</div></div>';
+    document.getElementById('co-req-content').innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No requests yet</div></div>';
     return;
   }
   document.getElementById('co-req-content').innerHTML=data.map(function(r){
     return '<div class="request-card '+r.status+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
-      '<div><strong>'+r.employee+'</strong> â€” '+r.type+' ('+r.days+' day)<br>'+
-      '<span style="font-size:12px;color:var(--muted)">ðŸ“… '+fmtDate(r.request_date)+(r.related_activity?' | '+r.related_activity:'')+'</span></div>'+
+      '<div><strong>'+r.employee+'</strong> — '+r.type+' ('+r.days+' day)<br>'+
+      '<span style="font-size:12px;color:var(--muted)">📅 '+fmtDate(r.request_date)+(r.related_activity?' | '+r.related_activity:'')+'</span></div>'+
       '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span></div>'+
-      (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:4px">ðŸ’¬ '+r.manager_comment+'</div>':'')+
+      (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:4px">💬 '+r.manager_comment+'</div>':'')+
       '</div>';
   }).join('');
 }
 
-// â•â• RECOMPUTE ALL OT (one-time policy migration) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == RECOMPUTE ALL OT (one-time policy migration) ===========================
 let _recomputeDiff = null;
 
 async function recomputeAllOT(mode) {
@@ -287,7 +287,7 @@ async function recomputeAllOT(mode) {
     });
     _recomputeDiff = diffs;
     if (!diffs.length) {
-      resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:#ECFDF5;border-radius:8px">âœ… All sessions already match the current policy. Nothing to change.</div>';
+      resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:#ECFDF5;border-radius:8px">✅ All sessions already match the current policy. Nothing to change.</div>';
       applyBtn.disabled = true;
       return;
     }
@@ -296,9 +296,9 @@ async function recomputeAllOT(mode) {
     var summary = Object.keys(byEmp).map(function(e){ return e+': '+byEmp[e]; }).join(' | ');
     var rowsHtml = diffs.slice(0, 50).map(function(d){
       var fieldList = Object.keys(d.fields).map(function(k){
-        return '<span style="font-size:11px"><strong>'+k+'</strong>: '+d.fields[k].from+' â†’ '+d.fields[k].to+'</span>';
+        return '<span style="font-size:11px"><strong>'+k+'</strong>: '+d.fields[k].from+' → '+d.fields[k].to+'</span>';
       }).join(' &nbsp;|&nbsp; ');
-      return '<tr><td style="font-size:12px">'+d.employee+'</td><td style="font-size:12px;font-family:DM Mono,monospace">'+d.date+'</td><td style="font-size:12px;font-family:DM Mono,monospace">'+d.start+'â€“'+d.end+'</td><td>'+fieldList+'</td></tr>';
+      return '<tr><td style="font-size:12px">'+d.employee+'</td><td style="font-size:12px;font-family:DM Mono,monospace">'+d.date+'</td><td style="font-size:12px;font-family:DM Mono,monospace">'+d.start+'–'+d.end+'</td><td>'+fieldList+'</td></tr>';
     }).join('');
     resultEl.innerHTML =
       '<div style="padding:10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px"><strong>'+diffs.length+' sessions will change.</strong> '+summary+(diffs.length>50?' &nbsp;(showing first 50)':'')+'</div>'+

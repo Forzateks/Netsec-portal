@@ -1,4 +1,4 @@
-﻿// â•â• INVENTORY MODULE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// == INVENTORY MODULE ==============================================
 
 var _invData   = [];
 var _invEditId = null;
@@ -56,7 +56,7 @@ function invStatusClass(status) {
   var s = (status||'').toLowerCase();
   if (s.includes('locked'))    return 'inv-status-locked';
   if (s.includes('available')) return 'inv-status-available';
-  if (s === '' || s === 'â€”')   return 'inv-status-default';
+  if (s === '' || s === '—')   return 'inv-status-default';
   return 'inv-status-unavailable';
 }
 
@@ -84,7 +84,7 @@ function applyInventoryFilters() {
 function renderInventoryTable(data) {
   var wrap = document.getElementById('inv-table-wrap');
   if (!data.length) {
-    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ“¦</div><div class="empty-title">No devices found</div><div>Try adjusting your filters</div></div>';
+    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📁¦</div><div class="empty-title">No devices found</div><div>Try adjusting your filters</div></div>';
     return;
   }
   var rows = '';
@@ -93,17 +93,17 @@ function renderInventoryTable(data) {
     rows += '<tr>'+
       '<td style="font-size:11px;color:var(--muted);font-weight:600">'+(i+1)+'</td>'+
       '<td style="font-family:\'DM Mono\',monospace;font-size:12px;font-weight:600">'+esc2(d.serial_number||'')+'</td>'+
-      '<td>'+esc2(d.model_no||'â€”')+'</td>'+
-      '<td><span class="badge '+sc+'">'+esc2(d.availability_status||'â€”')+'</span></td>'+
-      '<td class="hide-mobile">'+esc2(d.current_location||'â€”')+'</td>'+
-      '<td class="hide-mobile">'+esc2(d.current_partner||'â€”')+'</td>'+
-      '<td class="hide-mobile">'+esc2(d.current_end_user||'â€”')+'</td>'+
-      '<td class="hide-mobile">'+esc2(d.ids_ps||'â€”')+'</td>'+
-      '<td class="hide-mobile" style="font-size:11px;color:var(--muted);line-height:1.3">'+esc2(d.last_updated_by||'â€”')+'<br><span style="font-size:10px">'+(d.updated_at?new Date(d.updated_at).toLocaleDateString():'')+'</span></td>'+
+      '<td>'+esc2(d.model_no||'—')+'</td>'+
+      '<td><span class="badge '+sc+'">'+esc2(d.availability_status||'—')+'</span></td>'+
+      '<td class="hide-mobile">'+esc2(d.current_location||'—')+'</td>'+
+      '<td class="hide-mobile">'+esc2(d.current_partner||'—')+'</td>'+
+      '<td class="hide-mobile">'+esc2(d.current_end_user||'—')+'</td>'+
+      '<td class="hide-mobile">'+esc2(d.ids_ps||'—')+'</td>'+
+      '<td class="hide-mobile" style="font-size:11px;color:var(--muted);line-height:1.3">'+esc2(d.last_updated_by||'—')+'<br><span style="font-size:10px">'+(d.updated_at?new Date(d.updated_at).toLocaleDateString():'')+'</span></td>'+
       '<td>'+
         '<div style="display:flex;gap:6px">'+
-        '<button class="btn btn-sm btn-ghost" onclick="openEditDeviceModal('+d.id+')">âœï¸ Edit</button>'+
-        (isManager ? '<button class="btn btn-sm btn-danger" onclick="deleteDevice('+d.id+',\''+esc2(d.serial_number||'')+'\')">ðŸ—‘</button>' : '')+
+        '<button class="btn btn-sm btn-ghost" onclick="openEditDeviceModal('+d.id+')">✏️ Edit</button>'+
+        (isManager ? '<button class="btn btn-sm btn-danger" onclick="deleteDevice('+d.id+',\''+esc2(d.serial_number||'')+'\')">🗑</button>' : '')+
         '</div>'+
       '</td>'+
     '</tr>';
@@ -137,12 +137,12 @@ async function saveNewDevice() {
   // Pre-check: serial already in our loaded inventory?
   var dupe = (_invData||[]).find(function(x){ return (x.serial_number||'').toLowerCase() === serial.toLowerCase(); });
   if (dupe) {
-    alert('Serial number "'+serial+'" is already in inventory.\n\nExisting device:\n  Model: '+(dupe.model_no||'â€”')+'\n  Location: '+(dupe.current_location||'â€”')+'\n  Partner: '+(dupe.current_partner||'â€”')+'\n\nUse the Edit button on that device instead of adding a duplicate.');
+    alert('Serial number "'+serial+'" is already in inventory.\n\nExisting device:\n  Model: '+(dupe.model_no||'—')+'\n  Location: '+(dupe.current_location||'—')+'\n  Partner: '+(dupe.current_partner||'—')+'\n\nUse the Edit button on that device instead of adding a duplicate.');
     return;
   }
 
   var btn = document.getElementById('inv-add-save-btn');
-  btn.disabled = true; btn.textContent = 'â³ Saving...';
+  btn.disabled = true; btn.textContent = '⏳ Saving...';
 
   var payload = {
     serial_number:       serial,
@@ -165,11 +165,11 @@ async function saveNewDevice() {
   if (res.error) {
     // Friendly message for unique-violation (race condition fallback)
     if (res.error.code === '23505' || /duplicate key|unique/i.test(res.error.message)) {
-      alert('Serial number "'+serial+'" is already in inventory. Please check the device list â€” it may have been added by someone else.');
+      alert('Serial number "'+serial+'" is already in inventory. Please check the device list — it may have been added by someone else.');
     } else {
       alert('Error saving device: ' + res.error.message);
     }
-    btn.disabled = false; btn.textContent = 'ðŸ’¾ Save Device'; return;
+    btn.disabled = false; btn.textContent = '💾 Save Device'; return;
   }
 
   await sb.from('inventory_activity_log').insert({
@@ -180,7 +180,7 @@ async function saveNewDevice() {
     field_changes: payload,
   });
 
-  btn.disabled = false; btn.textContent = 'ðŸ’¾ Save Device';
+  btn.disabled = false; btn.textContent = '💾 Save Device';
   showInventoryTab('devices');
   showAlert('inv-add-success');
 }
@@ -202,12 +202,12 @@ function openEditDeviceModal(id) {
   document.getElementById('inv-edit-version').value          = d.version || '';
   document.getElementById('inv-edit-remarks').value          = d.remarks || '';
   document.getElementById('inv-edit-auditdate').value        = d.audit_date ? d.audit_date.split('T')[0] : '';
-  // Last updated info â€” read-only display
+  // Last updated info — read-only display
   var lu = document.getElementById('inv-edit-lastupdated');
   if (lu) {
-    var by = d.last_updated_by || 'â€”';
-    var when = d.updated_at ? new Date(d.updated_at).toLocaleString() : (d.created_at ? new Date(d.created_at).toLocaleString() : 'â€”');
-    lu.value = by + '  â€¢  ' + when;
+    var by = d.last_updated_by || '—';
+    var when = d.updated_at ? new Date(d.updated_at).toLocaleString() : (d.created_at ? new Date(d.created_at).toLocaleString() : '—');
+    lu.value = by + '  •  ' + when;
   }
   document.getElementById('inv-edit-modal').classList.add('show');
 }
@@ -220,7 +220,7 @@ function closeEditDeviceModal() {
 async function saveEditDevice() {
   if (!_invEditId) return;
   var btn = document.getElementById('inv-edit-save-btn');
-  btn.disabled = true; btn.textContent = 'â³ Saving...';
+  btn.disabled = true; btn.textContent = '⏳ Saving...';
 
   var old = _invData.find(function(x) { return x.id === _invEditId; });
   var newData = {
@@ -259,7 +259,7 @@ async function saveEditDevice() {
   var res = await sb.from('inventory').update(newData).eq('id', _invEditId);
   if (res.error) {
     alert('Error updating device: ' + res.error.message);
-    btn.disabled = false; btn.textContent = 'ðŸ’¾ Save Changes'; return;
+    btn.disabled = false; btn.textContent = '💾 Save Changes'; return;
   }
 
   if (Object.keys(changes).length > 0) {
@@ -272,7 +272,7 @@ async function saveEditDevice() {
     });
   }
 
-  btn.disabled = false; btn.textContent = 'ðŸ’¾ Save Changes';
+  btn.disabled = false; btn.textContent = '💾 Save Changes';
   closeEditDeviceModal();
   loadInventory();
 }
@@ -306,22 +306,22 @@ async function loadActivityLog() {
   }
   var data = res.data || [];
   if (!data.length) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ“œ</div><div class="empty-title">No activity yet</div></div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📁œ</div><div class="empty-title">No activity yet</div></div>';
     return;
   }
 
   var rows = '';
   data.forEach(function(log) {
-    var icon  = log.action==='created'?'âœ…':log.action==='deleted'?'ðŸ—‘ï¸':'âœï¸';
+    var icon  = log.action==='created'?'✅':log.action==='deleted'?'🗑️':'✏️';
     var color = log.action==='created'?'var(--success)':log.action==='deleted'?'var(--danger)':'var(--teal)';
-    var changesHtml = 'â€”';
+    var changesHtml = '—';
     if (log.action === 'updated' && log.field_changes && typeof log.field_changes === 'object') {
       var parts = [];
       Object.keys(log.field_changes).forEach(function(f) {
         var c = log.field_changes[f];
         parts.push('<span style="color:var(--muted)">'+f+':</span> '+
-          '<span style="color:var(--danger);text-decoration:line-through">'+esc2(c.from||'â€”')+'</span>'+
-          ' â†’ <span style="color:var(--success)">'+esc2(c.to||'â€”')+'</span>');
+          '<span style="color:var(--danger);text-decoration:line-through">'+esc2(c.from||'—')+'</span>'+
+          ' → <span style="color:var(--success)">'+esc2(c.to||'—')+'</span>');
       });
       changesHtml = parts.join('<br>');
     }

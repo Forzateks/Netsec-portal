@@ -1,4 +1,4 @@
-﻿// â•â• EDIT OT SESSION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// == EDIT OT SESSION ==============================================
 var _editEmp = '';
 function openEditOT(id,emp,activity,date,start,end,customer,project,actType) {
   _editEmp = emp;
@@ -57,7 +57,7 @@ async function saveEditOT() {
   closeEditOT(); renderSessions();
 }
 
-// â•â• EDIT PROJECT SESSION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == EDIT PROJECT SESSION =========================================
 function openEditPJ(id,proj,date,act,info,start,end,mode,stk,team,customer) {
   document.getElementById('edit-pj-id').value=id;
   document.getElementById('edit-pj-date').value=date;
@@ -111,10 +111,10 @@ async function saveEditPJ() {
   closeEditPJ(); renderPjSessions();
 }
 
-// â•â• MONTHLY OT REPORT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == MONTHLY OT REPORT ============================================
 async function downloadMonthlyReport() {
   var btn=document.getElementById('monthly-report-btn');
-  if (btn){btn.disabled=true;btn.textContent='â³ Generating...';}
+  if (btn){btn.disabled=true;btn.textContent='⏳ Generating...';}
   var now=new Date();
   var reportYear=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
   var reportMonth=now.getMonth()===0?12:now.getMonth();
@@ -150,6 +150,6 @@ async function downloadMonthlyReport() {
   var a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
   a.download='GulfIT_OT_Report_'+monthName+'_'+reportYear+'.csv'; a.click();
-  if (btn){btn.disabled=false;btn.innerHTML='ðŸ“„ Monthly OT Report';}
+  if (btn){btn.disabled=false;btn.innerHTML='📁„ Monthly OT Report';}
 }
 

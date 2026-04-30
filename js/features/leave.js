@@ -1,4 +1,4 @@
-﻿// â•â• LEAVE REQUESTS (Annual + Sick) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// == LEAVE REQUESTS (Annual + Sick) ===============================
 function calcWorkingDays(startStr,endStr,employee) {
   if (!startStr||!endStr) return 0;
   const start=new Date(startStr); const end=new Date(endStr);
@@ -31,7 +31,7 @@ async function updateLeavePreview() {
   const isSick = ltype === 'sick';
   const allowance = isSick ? SICK_ALLOWANCE : LEAVE_ALLOWANCE;
 
-  document.getElementById('lv-prev-type').textContent = isSick ? 'ðŸ¤’ Sick' : 'ðŸ–ï¸ Annual';
+  document.getElementById('lv-prev-type').textContent = isSick ? 'Sick' : 'Annual';
 
   if (!start||!end) return;
   const days = calcWorkingDays(start,end,currentUser);
@@ -53,18 +53,18 @@ async function submitLeaveRequest() {
   const days = calcWorkingDays(start,end,currentUser);
   if (days<=0){showAlert('leave-error');return;}
   const btn=document.getElementById('lv-save-btn');
-  btn.disabled=true; btn.textContent='â³ Submitting...';
+  btn.disabled=true; btn.textContent='⏳ Submitting...';
   const {error}=await sb.from('leave_requests').insert({
     employee:currentUser,start_date:start,end_date:end,working_days:days,
     reason,status:'pending',leave_type:ltype
   });
-  btn.disabled=false; btn.innerHTML='ðŸ“¤ Submit Request';
+  btn.disabled=false; btn.innerHTML='📁¤ Submit Request';
   if (error){alert('Error: '+error.message);return;}
   showAlert('leave-success');
   ['lv-start','lv-end','lv-reason'].forEach(function(id){document.getElementById(id).value='';});
-  document.getElementById('lv-prev-days').textContent='â€”';
-  document.getElementById('lv-prev-used').textContent='â€”';
-  document.getElementById('lv-prev-bal').textContent='â€”';
+  document.getElementById('lv-prev-days').textContent='—';
+  document.getElementById('lv-prev-used').textContent='—';
+  document.getElementById('lv-prev-bal').textContent='—';
 }
 
 async function renderLeaveHistory() {
@@ -76,19 +76,19 @@ async function renderLeaveHistory() {
   const {data}=await q;
   document.getElementById('lv-hist-load').style.display='none';
   if (!data||!data.length){
-    document.getElementById('lv-hist-content').innerHTML='<div class="empty-state"><div class="empty-icon">ðŸ–ï¸</div><div class="empty-title">No leave requests yet</div></div>';
+    document.getElementById('lv-hist-content').innerHTML='<div class="empty-state"><div class="empty-title">No leave requests yet</div></div>';
     return;
   }
   document.getElementById('lv-hist-content').innerHTML=data.map(function(r){
-    var ltIcon  = (r.leave_type||'annual')==='sick' ? 'ðŸ¤’ Sick Leave' : 'ðŸ–ï¸ Annual Leave';
+    var ltIcon  = (r.leave_type||'annual')==='sick' ? 'Sick Leave' : 'Annual Leave';
     var ltColor = (r.leave_type||'annual')==='sick' ? '#8B5CF6' : 'var(--teal)';
     return '<div class="request-card '+r.status+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
       '<div><strong>'+r.employee+'</strong> <span style="font-size:11px;font-weight:600;color:'+ltColor+'">'+ltIcon+'</span><br>'+
-      '<span style="font-family:DM Mono,monospace;font-size:13px">'+fmtDate(r.start_date)+' â†’ '+fmtDate(r.end_date)+'</span><br>'+
+      '<span style="font-family:DM Mono,monospace;font-size:13px">'+fmtDate(r.start_date)+' to '+fmtDate(r.end_date)+'</span><br>'+
       '<span style="font-size:12px;color:var(--muted)">'+r.working_days+' working days'+(r.reason?' | '+r.reason:'')+'</span></div>'+
       '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span></div>'+
-      (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:4px">ðŸ’¬ '+r.manager_comment+'</div>':'')+
+      (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:4px">💬 '+r.manager_comment+'</div>':'')+
       '</div>';
   }).join('');
 }
@@ -118,7 +118,7 @@ async function renderLeaveTeam() {
     const aBadge = annualRem<=0?'<span class="badge badge-rejected">No balance</span>':annualRem<=5?'<span class="badge badge-pending">Low</span>':'<span class="badge badge-approved">OK</span>';
     const sBadge = sickRem<=0?'<span class="badge badge-rejected">No balance</span>':sickRem<=3?'<span class="badge badge-pending">Low</span>':'<span class="badge badge-approved">OK</span>';
     return '<tr>'+
-      '<td><strong>'+emp+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(KSA_EMP.includes(emp)?'KSA â€” Fri/Sat':'UAE â€” Sat/Sun')+'</span></td>'+
+      '<td><strong>'+emp+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(KSA_EMP.includes(emp)?'KSA — Fri/Sat':'UAE — Sat/Sun')+'</span></td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+annualUsed+' / '+LEAVE_ALLOWANCE+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:'+aColor+'">'+annualRem+'</td>'+
       '<td><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+aPct+'%;background:'+aColor+';border-radius:4px"></div></div><div style="font-size:11px;color:var(--muted);margin-top:3px">'+Math.round(aPct)+'% used</div></td>'+
@@ -140,7 +140,7 @@ async function renderLeaveTeam() {
     '</div>';
 }
 
-// â•â• MANAGER VIEW â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == MANAGER VIEW =================================================
 async function renderManager() {
   document.getElementById('manager-loading').style.display='flex';
   document.getElementById('manager-content').innerHTML='';
@@ -166,7 +166,7 @@ async function renderManager() {
     '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Sessions</th><th>Eve Cred</th><th>Early Cred</th><th>Mid 1:2</th><th>Wknd 1:2</th><th>CO Earned</th><th>CO Used</th><th>Balance</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
-// â•â• APPROVALS (MANAGER) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == APPROVALS (MANAGER) ==========================================
 async function updateNotifBadge() {
   const [{data:coReqs},{data:lvReqs},{data:otReqs}]=await Promise.all([
     sb.from('comp_off_requests').select('id').eq('status','pending'),
@@ -185,14 +185,14 @@ async function renderCompOffApprovals() {
   const {data}=await sb.from('comp_off_requests').select('*').order('created_at',{ascending:false});
   document.getElementById('co-approvals-load').style.display='none';
   if (!data||!data.length){
-    document.getElementById('co-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">âœ…</div><div class="empty-title">No comp off requests</div></div>';
+    document.getElementById('co-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No comp off requests</div></div>';
     return;
   }
   const pending=data.filter(function(r){return r.status==='pending';});
   const others=data.filter(function(r){return r.status!=='pending';});
   let html='';
   if (pending.length){
-    html+='<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">ðŸŸ¡ Pending ('+pending.length+')</h3>';
+    html+='<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">🟡 Pending ('+pending.length+')</h3>';
     html+=pending.map(function(r){return approvalCard(r,'compoff');}).join('');
   }
   if (others.length){
@@ -208,14 +208,14 @@ async function renderLeaveApprovals() {
   const {data}=await sb.from('leave_requests').select('*').order('created_at',{ascending:false});
   document.getElementById('lv-approvals-load').style.display='none';
   if (!data||!data.length){
-    document.getElementById('lv-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">ðŸ–ï¸</div><div class="empty-title">No leave requests</div></div>';
+    document.getElementById('lv-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">🏖️</div><div class="empty-title">No leave requests</div></div>';
     return;
   }
   const pending=data.filter(function(r){return r.status==='pending';});
   const others=data.filter(function(r){return r.status!=='pending';});
   let html='';
   if (pending.length){
-    html+='<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">ðŸŸ¡ Pending ('+pending.length+')</h3>';
+    html+='<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">🟡 Pending ('+pending.length+')</h3>';
     html+=pending.map(function(r){return approvalCard(r,'leave');}).join('');
   }
   if (others.length){
@@ -228,17 +228,17 @@ async function renderLeaveApprovals() {
 function approvalCard(r,type) {
   const isPending=r.status==='pending';
   let info='';
-  if (type==='compoff') info='<strong>'+r.employee+'</strong> â€” '+r.type+' on '+fmtDate(r.request_date)+(r.related_activity?' ('+r.related_activity+')':'');
-  else info='<strong>'+r.employee+'</strong> â€” '+fmtDate(r.start_date)+' to '+fmtDate(r.end_date)+' ('+r.working_days+' days)'+(r.reason?' | '+r.reason:'');
+  if (type==='compoff') info='<strong>'+r.employee+'</strong> — '+r.type+' on '+fmtDate(r.request_date)+(r.related_activity?' ('+r.related_activity+')':'');
+  else info='<strong>'+r.employee+'</strong> — '+fmtDate(r.start_date)+' to '+fmtDate(r.end_date)+' ('+r.working_days+' days)'+(r.reason?' | '+r.reason:'');
   return '<div class="request-card '+r.status+'" style="margin-bottom:10px">'+
     '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
     '<div style="font-size:13px">'+info+'<br><span style="font-size:11px;color:var(--muted)">Submitted: '+fmtDate(r.created_at)+'</span></div>'+
     '<div style="display:flex;align-items:center;gap:8px">'+
     '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span>'+
     (isPending?'<button class="btn btn-sm btn-primary" onclick="openApproveModal(\''+type+'\','+r.id+',\''+r.employee+'\')">Review</button>':'')+
-    '<button class="btn btn-sm btn-danger" onclick="deleteRequest(\''+type+'\','+r.id+')" title="Delete request">âœ•</button>'+
+    '<button class="btn btn-sm btn-danger" onclick="deleteRequest(\''+type+'\','+r.id+')" title="Delete request">✕</button>'+
     '</div></div>'+
-    (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:8px">ðŸ’¬ '+r.manager_comment+'</div>':'')+
+    (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:8px">💬 '+r.manager_comment+'</div>':'')+
     '</div>';
 }
 
@@ -269,7 +269,7 @@ async function processRequest(decision) {
   const {type,id,employee}=approveTarget;
   const comment=document.getElementById('approve-comment').value.trim();
 
-  // OT sessions live in their own table â€” just update status
+  // OT sessions live in their own table — just update status
   if (type==='ot') {
     const {error}=await sb.from('ot_sessions').update({
       status:decision,manager_comment:comment,reviewed_by:currentUser,reviewed_at:new Date().toISOString()
@@ -307,4 +307,4 @@ async function processRequest(decision) {
   else renderLeaveApprovals();
 }
 
-// â•â• EXPORT CSV â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// == EXPORT CSV ====================================================
