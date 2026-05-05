@@ -424,7 +424,7 @@
     <div class="leave-sub"        id="pjsub-sessions"  onclick="showProjectTab('sessions')">📋 Sessions</div>
     <div class="leave-sub"        id="pjsub-project"   onclick="showProjectTab('project')">📊 Project Summary</div>
     <div class="leave-sub"        id="pjsub-employee"  onclick="showProjectTab('employee')">👥 Employee Summary</div>
-    <div class="leave-sub"        id="pjsub-manage"    onclick="showProjectTab('manage')" style="display:none">⚙️ Manage Projects</div>
+    <div class="leave-sub"        id="pjsub-manage"    onclick="showProjectTab('manage')" style="display:none">⚙️ Manage Engagements</div>
   </div>
 
   <!-- LOG SESSION -->
@@ -564,12 +564,12 @@
     </div>
   </div>
 
-  <!-- MANAGE PROJECTS (manager only) -->
+  <!-- MANAGE ENGAGEMENTS (manager only) -->
   <div id="pjtab-manage" style="display:none">
-    <div class="alert alert-success" id="pj-manage-success">✅ Project saved!</div>
-    <div class="alert alert-error"   id="pj-manage-error">⚠️ Please enter a project name.</div>
+    <div class="alert alert-success" id="pj-manage-success">✅ Engagement saved!</div>
+    <div class="alert alert-error"   id="pj-manage-error">⚠️ Please enter an engagement name.</div>
     <div class="card" style="margin-bottom:20px">
-      <div class="card-title">➕ Add New Project</div>
+      <div class="card-title">➕ Add New Engagement</div>
       <div class="form-grid mb-4">
         <div class="form-group">
           <label>Customer *</label>
@@ -578,7 +578,16 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Project Name *</label>
+          <label>Type *</label>
+          <select id="pj-new-type">
+            <option value="">-- Select Type --</option>
+            <option value="project">📁 Project</option>
+            <option value="poc">🎯 POC</option>
+            <option value="amc">🛠️ AMC</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Engagement Name *</label>
           <input type="text" id="pj-new-name" placeholder="e.g. ENBD-PHASE3" style="text-transform:uppercase">
         </div>
         <div class="form-group">
@@ -590,17 +599,25 @@
           </select>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="addProject()">💾 Add Project</button>
+      <button class="btn btn-primary" onclick="addEngagement()">💾 Add Engagement</button>
     </div>
     <div class="card">
       <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">All Projects</div>
-        <select id="pj-manage-filter" onchange="renderManageProjects()" style="width:auto;padding:7px 12px">
-          <option value="">All Status</option>
-          <option value="active">🟢 Active</option>
-          <option value="completed">✅ Completed</option>
-          <option value="on-hold">⏸️ On Hold</option>
-        </select>
+        <div class="card-title" style="margin-bottom:0">All Engagements</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="pj-manage-type-filter" onchange="renderManageProjects()" style="width:auto;padding:7px 12px">
+            <option value="">All Types</option>
+            <option value="project">📁 Project</option>
+            <option value="poc">🎯 POC</option>
+            <option value="amc">🛠️ AMC</option>
+          </select>
+          <select id="pj-manage-filter" onchange="renderManageProjects()" style="width:auto;padding:7px 12px">
+            <option value="">All Status</option>
+            <option value="active">🟢 Active</option>
+            <option value="completed">✅ Completed</option>
+            <option value="on-hold">⏸️ On Hold</option>
+          </select>
+        </div>
       </div>
       <div id="pj-manage-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="pj-manage-content"></div>
@@ -1321,7 +1338,7 @@
 
 <div class="modal-overlay" id="edit-project-modal">
   <div class="modal" style="max-width:480px">
-    <div class="modal-title">✏️ Edit Project</div>
+    <div class="modal-title">✏️ Edit Engagement</div>
     <input type="hidden" id="edit-project-id">
     <div class="form-grid">
       <div class="form-group">
@@ -1329,7 +1346,15 @@
         <select id="edit-project-customer"></select>
       </div>
       <div class="form-group">
-        <label>Project Name *</label>
+        <label>Type *</label>
+        <select id="edit-project-type">
+          <option value="project">📁 Project</option>
+          <option value="poc">🎯 POC</option>
+          <option value="amc">🛠️ AMC</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Engagement Name *</label>
         <input type="text" id="edit-project-name" style="text-transform:uppercase">
       </div>
       <div class="form-group">

@@ -12,22 +12,28 @@ let PROJECTS = [
 
 let _projectsLoaded = false;
 
-// Customer & project lookup
+// Customer & engagement lookup
 let CUSTOMERS = []; // [{id, name}]
-let PROJECT_CUSTOMER = {}; // { projectName: customerName }
+let ENGAGEMENTS = []; // [{id, customer_id, name, type, status, ...}] — full new model
+let PROJECT_CUSTOMER = {}; // { engagementName: customerName }
 
 async function loadProjects() {
   const cRes = await sb.from('customers').select('id,name,status').order('name');
   if (!cRes.error && cRes.data) {
     CUSTOMERS = cRes.data.filter(function(c){ return c.status !== 'archived'; });
   }
-  const {data, error} = await sb.from('projects').select('name,status,customer_id').order('name');
-  if (!error && data && data.length) {
-    PROJECTS = data.filter(function(p){ return p.status !== 'archived'; })
-                   .map(function(p){ return p.name; });
+  // Engagements is the new source of truth (replaces projects)
+  const eRes = await sb.from('engagements').select('id,customer_id,name,type,status,created_by,created_at').order('name');
+  if (!eRes.error && eRes.data) {
+    ENGAGEMENTS = eRes.data;
+    // PROJECTS array keeps backward-compat with existing OT/Project log forms —
+    // it now contains only type='project' engagement names (active ones).
+    PROJECTS = ENGAGEMENTS
+      .filter(function(e){ return e.type === 'project' && e.status !== 'archived'; })
+      .map(function(e){ return e.name; });
     PROJECT_CUSTOMER = {};
     var byId = {}; CUSTOMERS.forEach(function(c){ byId[c.id] = c.name; });
-    data.forEach(function(p){ if (p.customer_id) PROJECT_CUSTOMER[p.name] = byId[p.customer_id]; });
+    ENGAGEMENTS.forEach(function(e){ if (e.customer_id) PROJECT_CUSTOMER[e.name] = byId[e.customer_id]; });
     _projectsLoaded = true;
   }
 }
@@ -57,47 +63,59 @@ function fillProjectSelect(selectId, customerName, includeAll) {
   if (cur && list.indexOf(cur) >= 0) el.value = cur;
 }
 
-// ── ADD PROJECT ──────────────────────────────────────────────────
-async function addProject() {
+// ── ADD ENGAGEMENT (Project / POC / AMC) ────────────────────────
+async function addEngagement() {
   const customer = document.getElementById('pj-new-customer').value;
-  const name   = (document.getElementById('pj-new-name').value||'').trim().toUpperCase();
-  const status = document.getElementById('pj-new-status').value;
-  if (!customer) {
-    document.getElementById('pj-manage-error').textContent = '⚠️ Please select a customer.';
-    showAlert('pj-manage-error'); return;
-  }
-  if (!name) {
-    document.getElementById('pj-manage-error').textContent = '⚠️ Please enter a project name.';
-    showAlert('pj-manage-error'); return;
-  }
+  const type     = document.getElementById('pj-new-type').value;
+  const name     = (document.getElementById('pj-new-name').value||'').trim().toUpperCase();
+  const status   = document.getElementById('pj-new-status').value;
+  var errEl = document.getElementById('pj-manage-error');
 
-  // Check duplicate
-  if (PROJECTS.includes(name)) {
-    document.getElementById('pj-manage-error').textContent = '⚠️ Project "'+name+'" already exists.';
-    showAlert('pj-manage-error'); return;
-  }
+  if (!customer) { errEl.textContent = '⚠️ Please select a customer.';            showAlert('pj-manage-error'); return; }
+  if (!type)     { errEl.textContent = '⚠️ Please select an engagement type.';    showAlert('pj-manage-error'); return; }
+  if (!name)     { errEl.textContent = '⚠️ Please enter an engagement name.';     showAlert('pj-manage-error'); return; }
 
-  // Look up customer id
   var custRow = CUSTOMERS.find(function(c){ return c.name === customer; });
   var customer_id = custRow ? custRow.id : null;
 
-  const {error} = await sb.from('projects').insert({name:name, status:status, customer_id:customer_id});
+  // Duplicate within (customer, name, type)
+  var dup = ENGAGEMENTS.some(function(e){
+    return e.customer_id === customer_id && e.name === name && e.type === type;
+  });
+  if (dup) {
+    errEl.textContent = '⚠️ A '+type.toUpperCase()+' engagement named "'+name+'" already exists for this customer.';
+    showAlert('pj-manage-error'); return;
+  }
+
+  const {error} = await sb.from('engagements').insert({
+    customer_id: customer_id, name: name, type: type, status: status, created_by: currentUser
+  });
   if (error) { alert('Error: '+error.message); return; }
 
   document.getElementById('pj-new-name').value = '';
   document.getElementById('pj-new-status').value = 'active';
   document.getElementById('pj-new-customer').value = '';
+  document.getElementById('pj-new-type').value = '';
   showAlert('pj-manage-success');
-  // Refresh dropdowns and list
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
   renderManageProjects();
 }
 
+// Backward-compat alias (anything still referencing addProject keeps working)
+var addProject = addEngagement;
+
 // ── UPDATE PROJECT STATUS ────────────────────────────────────────
-async function updateProjectStatus(name, newStatus) {
-  const {error} = await sb.from('projects').update({status: newStatus}).eq('name', name);
+async function updateProjectStatus(idOrName, newStatus) {
+  // Backward-compat: callers may pass either an id (new) or a name (old).
+  var query = sb.from('engagements').update({status: newStatus});
+  if (typeof idOrName === 'number' || /^\d+$/.test(String(idOrName))) {
+    query = query.eq('id', Number(idOrName));
+  } else {
+    query = query.eq('name', idOrName);
+  }
+  const {error} = await query;
   if (error) { alert('Error: '+error.message); return; }
   _projectsLoaded = false;
   await loadProjects();
@@ -105,21 +123,23 @@ async function updateProjectStatus(name, newStatus) {
   renderManageProjects();
 }
 
-// ── RENDER MANAGE PROJECTS LIST ──────────────────────────────────
+// ── RENDER MANAGE ENGAGEMENTS LIST ───────────────────────────────
 async function renderManageProjects() {
   document.getElementById('pj-manage-loading').style.display = 'flex';
   document.getElementById('pj-manage-content').innerHTML = '';
-  const filter = document.getElementById('pj-manage-filter').value;
+  const statusFilter = document.getElementById('pj-manage-filter').value;
+  const typeFilter   = (document.getElementById('pj-manage-type-filter')||{}).value || '';
 
-  let q = sb.from('projects').select('*').order('name');
-  if (filter) q = q.eq('status', filter);
+  let q = sb.from('engagements').select('*').order('type').order('name');
+  if (statusFilter) q = q.eq('status', statusFilter);
+  if (typeFilter)   q = q.eq('type',   typeFilter);
   const {data} = await q;
   document.getElementById('pj-manage-loading').style.display = 'none';
 
   const rows = data || [];
   if (!rows.length) {
     document.getElementById('pj-manage-content').innerHTML =
-      '<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-title">No projects found</div></div>';
+      '<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-title">No engagements found</div></div>';
     return;
   }
 
@@ -129,20 +149,26 @@ async function renderManageProjects() {
     'on-hold':   {bg:'#FEF9C3',color:'#B45309',label:'⏸️ On Hold'},
     'archived':  {bg:'#F3F4F6',color:'#6B7280',label:'🗃️ Archived'},
   };
+  const TYPE_BADGES = {
+    'project': {bg:'#EFF6FF',color:'#2563EB',label:'PROJECT'},
+    'poc':     {bg:'#F5F3FF',color:'#7C3AED',label:'POC'},
+    'amc':     {bg:'#FFFBEB',color:'#B45309',label:'AMC'},
+  };
 
-  // Build customer-id -> name map for display
   var custById = {}; (CUSTOMERS||[]).forEach(function(c){ custById[c.id] = c.name; });
 
   document.getElementById('pj-manage-content').innerHTML =
     '<div class="table-wrap"><table>'+
-    '<thead><tr><th>#</th><th>Customer</th><th>Project Name</th><th>Status</th><th>Actions</th></tr></thead>'+
+    '<thead><tr><th>#</th><th>Customer</th><th>Type</th><th>Engagement Name</th><th>Status</th><th>Actions</th></tr></thead>'+
     '<tbody>'+
     rows.map(function(p,i){
       var sc = STATUS_COLORS[p.status] || STATUS_COLORS['active'];
-      var custName = custById[p.customer_id] || PROJECT_CUSTOMER[p.name] || '—';
+      var tb = TYPE_BADGES[p.type] || {bg:'#F3F4F6',color:'#6B7280',label:(p.type||'-').toUpperCase()};
+      var custName = custById[p.customer_id] || PROJECT_CUSTOMER[p.name] || '-';
       return '<tr>'+
         '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
         '<td style="font-size:13px;color:var(--navy);font-weight:600">'+custName+'</td>'+
+        '<td><span style="background:'+tb.bg+';color:'+tb.color+';padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">'+tb.label+'</span></td>'+
         '<td><strong>'+p.name+'</strong></td>'+
         '<td><span style="background:'+sc.bg+';color:'+sc.color+';padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600">'+sc.label+'</span></td>'+
         '<td style="white-space:nowrap">'+
@@ -156,12 +182,13 @@ async function renderManageProjects() {
 
 // ── EDIT PROJECT (manager) ────────────────────────────────────────
 async function openEditProject(id) {
-  var {data, error} = await sb.from('projects').select('*').eq('id', id).single();
-  if (error || !data) { alert('Could not load project.'); return; }
+  var {data, error} = await sb.from('engagements').select('*').eq('id', id).single();
+  if (error || !data) { alert('Could not load engagement.'); return; }
   document.getElementById('edit-project-id').value = data.id;
   document.getElementById('edit-project-name').value = data.name || '';
   document.getElementById('edit-project-status').value = data.status || 'active';
-  // Fill customer select
+  var typeEl = document.getElementById('edit-project-type');
+  if (typeEl) typeEl.value = data.type || 'project';
   fillCustomerSelect('edit-project-customer', false);
   var custById = {}; (CUSTOMERS||[]).forEach(function(c){ custById[c.id] = c.name; });
   document.getElementById('edit-project-customer').value = custById[data.customer_id] || '';
@@ -177,15 +204,17 @@ async function saveEditProject() {
   var customer = document.getElementById('edit-project-customer').value;
   var name = (document.getElementById('edit-project-name').value||'').trim();
   var status = document.getElementById('edit-project-status').value;
-  if (!customer || !name) { alert('Customer and Project Name are required.'); return; }
+  var typeEl = document.getElementById('edit-project-type');
+  var type   = typeEl ? typeEl.value : 'project';
+  if (!customer || !name || !type) { alert('Customer, Type and Engagement Name are required.'); return; }
   var custRow = (CUSTOMERS||[]).find(function(c){ return c.name === customer; });
   var customer_id = custRow ? custRow.id : null;
 
   // Read OLD name so we can cascade renames to session tables
-  var oldRes = await sb.from('projects').select('name').eq('id', id).single();
+  var oldRes = await sb.from('engagements').select('name').eq('id', id).single();
   var oldName = oldRes.data ? oldRes.data.name : null;
 
-  var {error} = await sb.from('projects').update({ name: name, status: status, customer_id: customer_id }).eq('id', id);
+  var {error} = await sb.from('engagements').update({ name: name, status: status, customer_id: customer_id, type: type }).eq('id', id);
   if (error) { alert('Error: '+error.message); return; }
 
   // If renamed, cascade to session tables so historical rows match
@@ -204,8 +233,8 @@ async function saveEditProject() {
 }
 
 async function deleteProject(id, name) {
-  if (!confirm('Delete project "'+name+'"?\n\nThis only removes it from the Projects registry — existing OT/Project sessions that referenced it remain unchanged.')) return;
-  var {error} = await sb.from('projects').delete().eq('id', id);
+  if (!confirm('Delete engagement "'+name+'"?\n\nThis only removes it from the Projects registry — existing OT/Project sessions that referenced it remain unchanged.')) return;
+  var {error} = await sb.from('engagements').delete().eq('id', id);
   if (error) { alert('Error: '+error.message); return; }
   _projectsLoaded = false;
   await loadProjects();

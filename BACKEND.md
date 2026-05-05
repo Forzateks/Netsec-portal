@@ -3,8 +3,8 @@
 **Database:** Supabase (Postgres)  
 **Project URL:** `https://rxxcrlobbtlvjgcqgjjm.supabase.co`  
 **Auth:** Supabase Auth (email + password). Anon key still embedded in `js/core/state.js` for unauthenticated reads/writes; signed-in users get a JWT that travels alongside it. Manager invites users via Supabase dashboard (Authentication → Users → Invite). Profile-to-employee mapping lives in `user_profiles`.  
-**Last verified:** 2026-04-27  
-**Last updated:** 2026-04-27 — Auth migrated to Supabase Auth; new user_profiles table
+**Last verified:** 2026-04-30  
+**Last updated:** 2026-04-30 — Phase 1 of Unified Sessions: new `engagements` table (replaces `projects` going forward), helper functions `current_employee_name()` and `is_manager_user()`, `ot_sessions.source` + `source_session_id` columns added.
 
 > This file is the source of truth for the Supabase schema.  
 > Before requesting any DB change, read this file first to avoid duplicating tables or columns.
