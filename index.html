@@ -566,8 +566,22 @@
 
   <!-- MANAGE ENGAGEMENTS (manager only) -->
   <div id="pjtab-manage" style="display:none">
-    <div class="alert alert-success" id="pj-manage-success">✅ Engagement saved!</div>
-    <div class="alert alert-error"   id="pj-manage-error">⚠️ Please enter an engagement name.</div>
+    <div class="alert alert-success" id="pj-manage-success">✅ Saved!</div>
+    <div class="alert alert-error"   id="pj-manage-error">⚠️ Please complete the form.</div>
+
+    <!-- Customers -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">🏢 Customers</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+        <div class="form-group" style="flex:1;min-width:200px;margin:0">
+          <label>New Customer Name *</label>
+          <input type="text" id="cust-new-name" placeholder="e.g. Etisalat" onkeydown="if(event.key==='Enter')addCustomer()">
+        </div>
+        <button class="btn btn-primary" onclick="addCustomer()">💾 Add Customer</button>
+      </div>
+      <div id="cust-list-content" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
+
     <div class="card" style="margin-bottom:20px">
       <div class="card-title">➕ Add New Engagement</div>
       <div class="form-grid mb-4">
@@ -1225,6 +1239,31 @@
 </div>
 
 <!-- EDIT PROJECT MODAL (manage projects) -->
+<!-- EDIT CUSTOMER MODAL (manager only) -->
+<div class="modal-overlay" id="edit-customer-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">✏️ Edit Customer</div>
+    <input type="hidden" id="edit-cust-id">
+    <div id="edit-cust-error" style="display:none;background:#FEE2E2;color:#B91C1C;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Customer Name *</label>
+      <input type="text" id="edit-cust-name">
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Status</label>
+      <select id="edit-cust-status">
+        <option value="active">🟢 Active</option>
+        <option value="archived">🗃️ Archived</option>
+      </select>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Renaming will cascade to all engagements, OT sessions, and project sessions referencing this customer.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeEditCustomerModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditCustomer()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT LEAVE REQUEST MODAL (manager only) -->
 <div class="modal-overlay" id="edit-leave-modal">
   <div class="modal" style="max-width:480px">

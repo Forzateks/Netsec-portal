@@ -123,6 +123,107 @@ async function updateProjectStatus(idOrName, newStatus) {
   renderManageProjects();
 }
 
+
+// === CUSTOMERS CRUD (manager only) ==============================
+async function addCustomer() {
+  var nameEl = document.getElementById('cust-new-name');
+  var name = (nameEl.value||'').trim();
+  var errEl = document.getElementById('pj-manage-error');
+  if (!name) { errEl.textContent = 'Please enter a customer name.'; showAlert('pj-manage-error'); return; }
+  // Duplicate check (case-insensitive)
+  var dup = (CUSTOMERS||[]).some(function(c){ return c.name.toLowerCase() === name.toLowerCase(); });
+  if (dup) { errEl.textContent = 'A customer named "'+name+'" already exists.'; showAlert('pj-manage-error'); return; }
+
+  var {error} = await sb.from('customers').insert({ name: name, status: 'active' });
+  if (error) { alert('Error: '+error.message); return; }
+  nameEl.value = '';
+  showAlert('pj-manage-success');
+  _projectsLoaded = false;
+  await loadProjects();
+  populateProjectDropdowns();
+  renderCustomersList();
+  renderManageProjects();
+}
+
+function renderCustomersList() {
+  var el = document.getElementById('cust-list-content');
+  if (!el) return;
+  var rows = CUSTOMERS || [];
+  if (!rows.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px">No customers yet.</div>'; return; }
+  // Count engagements per customer for delete-blocking display
+  var counts = {};
+  (ENGAGEMENTS||[]).forEach(function(e){ counts[e.customer_id] = (counts[e.customer_id]||0) + 1; });
+  el.innerHTML = rows.map(function(c){
+    var n = counts[c.id] || 0;
+    var archived = c.status === 'archived';
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:1.5px solid var(--border);border-radius:20px;background:'+(archived?'#F3F4F6':'white')+';font-size:13px">'
+      + '<strong style="'+(archived?'color:var(--muted);text-decoration:line-through':'color:var(--navy)')+'">'+esc2(c.name)+'</strong>'
+      + (n ? '<span style="font-size:11px;color:var(--muted)">('+n+')</span>' : '')
+      + '<button class="btn btn-sm btn-ghost" onclick="openEditCustomer('+c.id+')" title="Edit" style="padding:2px 6px;min-height:0">✏</button>'
+      + '<button class="btn btn-sm btn-danger" onclick="deleteCustomer('+c.id+",'"+c.name.replace(/'/g,"'")+"'"+')" title="Delete" style="padding:2px 6px;min-height:0">×</button>'
+      + '</div>';
+  }).join('');
+}
+
+async function openEditCustomer(id) {
+  var {data, error} = await sb.from('customers').select('*').eq('id', id).single();
+  if (error || !data) { alert('Could not load customer.'); return; }
+  document.getElementById('edit-cust-id').value = data.id;
+  document.getElementById('edit-cust-name').value = data.name || '';
+  document.getElementById('edit-cust-status').value = data.status || 'active';
+  document.getElementById('edit-cust-error').style.display = 'none';
+  document.getElementById('edit-customer-modal').classList.add('show');
+}
+function closeEditCustomerModal() {
+  document.getElementById('edit-customer-modal').classList.remove('show');
+}
+async function saveEditCustomer() {
+  var id = document.getElementById('edit-cust-id').value;
+  var name = (document.getElementById('edit-cust-name').value||'').trim();
+  var status = document.getElementById('edit-cust-status').value;
+  var errEl = document.getElementById('edit-cust-error');
+  errEl.style.display = 'none';
+  if (!name) { errEl.textContent='Customer name is required.'; errEl.style.display='block'; return; }
+
+  // Read OLD name for cascade
+  var oldRes = await sb.from('customers').select('name').eq('id', id).single();
+  var oldName = oldRes.data ? oldRes.data.name : null;
+  // Duplicate (other rows with same name)
+  var dup = (CUSTOMERS||[]).some(function(c){ return String(c.id) !== String(id) && c.name.toLowerCase() === name.toLowerCase(); });
+  if (dup) { errEl.textContent='Another customer is already named "'+name+'".'; errEl.style.display='block'; return; }
+
+  var {error} = await sb.from('customers').update({ name: name, status: status }).eq('id', id);
+  if (error) { errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
+
+  // If renamed, cascade to session tables that snapshot customer_name
+  if (oldName && oldName !== name) {
+    await sb.from('project_sessions').update({ customer_name: name }).eq('customer_name', oldName);
+    await sb.from('ot_sessions').update({ customer_name: name }).eq('customer_name', oldName);
+  }
+  closeEditCustomerModal();
+  _projectsLoaded = false;
+  await loadProjects();
+  populateProjectDropdowns();
+  renderCustomersList();
+  renderManageProjects();
+}
+
+async function deleteCustomer(id, name) {
+  var inUse = (ENGAGEMENTS||[]).filter(function(e){ return e.customer_id === id; }).length;
+  if (inUse) {
+    alert('Cannot delete "'+name+'" - it has '+inUse+' engagement(s) attached. Edit or remove those engagements first, or set the customer to Archived to hide it.');
+    return;
+  }
+  if (!confirm('Delete customer "'+name+'"?\n\nThis is permanent. Existing OT/Project sessions that referenced it stay unchanged (the snapshot text remains).')) return;
+  var {error} = await sb.from('customers').delete().eq('id', id);
+  if (error) { alert('Error: '+error.message); return; }
+  _projectsLoaded = false;
+  await loadProjects();
+  populateProjectDropdowns();
+  renderCustomersList();
+  renderManageProjects();
+}
+
 // ── RENDER MANAGE ENGAGEMENTS LIST ───────────────────────────────
 async function renderManageProjects() {
   document.getElementById('pj-manage-loading').style.display = 'flex';
@@ -796,6 +897,6 @@ function showProjectTab(tab) {
   if (tab==='sessions') { initProjectTab(); renderPjSessions(); }
   if (tab==='project')  { initProjectTab(); renderPjProjectSummary(); }
   if (tab==='employee') { initProjectTab(); renderPjEmployeeSummary(); }
-  if (tab==='manage')   { populateProjectDropdowns(); renderManageProjects(); }
+  if (tab==='manage')   { populateProjectDropdowns(); renderCustomersList(); renderManageProjects(); }
 }
 
