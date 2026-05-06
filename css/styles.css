@@ -46,6 +46,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sidebar-item .sidebar-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
 .sidebar-item-logout{margin-top:auto;color:var(--danger)}
 .sidebar-item-logout:hover{background:rgba(239,68,68,.06);color:var(--danger)}
+.sidebar-item.has-children.active{background:transparent;border-left-color:transparent}
 .sidebar-item.has-children .sidebar-chevron{margin-left:auto;font-size:18px;color:var(--muted);transition:transform .2s ease;line-height:1}
 .sidebar-group.open .sidebar-chevron{transform:rotate(90deg);color:var(--teal)}
 .sidebar-submenu{max-height:0;overflow:hidden;transition:max-height .25s ease;background:rgba(248,250,252,.6)}
