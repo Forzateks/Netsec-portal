@@ -365,9 +365,8 @@ async function submitCompOffRequest() {
     days:parseFloat(type),related_activity:activity,remarks,status:'pending'
   });
   if (error){alert('Error: '+error.message);return;}
-  showAlert('co-success');
 
-  // Open a pre-filled email draft to the manager
+  // Build email draft links for the manager
   var subject = 'Comp Off Request - ' + currentUser + ' - ' + typeLabel + ' on ' + date;
   var body =
     'Hi Venkat,\n\n' +
@@ -378,8 +377,16 @@ async function submitCompOffRequest() {
     'Remarks: ' + (remarks || '(none)') + '\n\n' +
     'Please review and approve at https://netsec-portal.pages.dev/\n\n' +
     'Thanks,\n' + currentUser;
-  var mailto = 'mailto:venkat@gulfitd.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-  window.location.href = mailto;
+  var enc = encodeURIComponent;
+  var mailto    = 'mailto:venkat@gulfitd.com?subject=' + enc(subject) + '&body=' + enc(body);
+  var outlookWb = 'https://outlook.office.com/mail/deeplink/compose?to=venkat@gulfitd.com&subject=' + enc(subject) + '&body=' + enc(body);
+  var successEl = document.getElementById('co-success');
+  if (successEl) {
+    successEl.innerHTML = '✅ Comp off request submitted. Notify manager: '
+      + '<a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a> '
+      + '<a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>';
+  }
+  showAlert('co-success');
 
   ['co-date','co-type','co-activity','co-remarks'].forEach(function(id){document.getElementById(id).value='';});
   renderMyCompOffRequests();

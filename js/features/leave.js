@@ -60,10 +60,9 @@ async function submitLeaveRequest() {
   });
   btn.disabled=false; btn.innerHTML='📁¤ Submit Request';
   if (error){alert('Error: '+error.message);return;}
-  showAlert('leave-success');
-
-  // Open a pre-filled email draft to the manager (mailto: opens the
-  // user's default mail client — Outlook on Windows, etc.)
+  // Build email draft links and show them inside the success alert.
+  // Letting the user click preserves the browser's user-gesture rule
+  // (which mailto: triggered after an async await usually fails).
   var ltypeLabel = ltype.charAt(0).toUpperCase() + ltype.slice(1);
   var subject = 'Leave Request - ' + currentUser + ' - ' + ltypeLabel + ' (' + days + ' day' + (days===1?'':'s') + ')';
   var body =
@@ -76,8 +75,16 @@ async function submitLeaveRequest() {
     'Reason: ' + (reason || '(none)') + '\n\n' +
     'Please review and approve at https://netsec-portal.pages.dev/\n\n' +
     'Thanks,\n' + currentUser;
-  var mailto = 'mailto:venkat@gulfitd.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-  window.location.href = mailto;
+  var enc = encodeURIComponent;
+  var mailto    = 'mailto:venkat@gulfitd.com?subject=' + enc(subject) + '&body=' + enc(body);
+  var outlookWb = 'https://outlook.office.com/mail/deeplink/compose?to=venkat@gulfitd.com&subject=' + enc(subject) + '&body=' + enc(body);
+  var successEl = document.getElementById('leave-success');
+  if (successEl) {
+    successEl.innerHTML = '✅ Request submitted. Notify manager: '
+      + '<a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a> '
+      + '<a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>';
+  }
+  showAlert('leave-success');
 
   ['lv-start','lv-end','lv-reason'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('lv-prev-days').textContent='—';
