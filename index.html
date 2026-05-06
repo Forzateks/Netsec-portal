@@ -437,8 +437,6 @@
     <div class="leave-sub"        id="pjsub-amc"       onclick="showProjectTab('amc')">🛠️ AMC Summary</div>
     <div class="leave-sub"        id="pjsub-employee"  onclick="showProjectTab('employee')">👥 Employee Summary</div>
     <div class="leave-sub"        id="pjsub-manage"    onclick="showProjectTab('manage')" style="display:none">⚙️ Manage Engagements</div>
-    <div class="leave-sub"        id="pjsub-log"       onclick="showProjectTab('log')" style="display:none">➕ Log (legacy)</div>
-    <div class="leave-sub"        id="pjsub-sessions"  onclick="showProjectTab('sessions')" style="display:none">📋 Sessions (legacy)</div>
   </div>
 
   <!-- 🆕 LOG UNIFIED SESSION (Phase 2 Beta) -->
@@ -532,7 +530,7 @@
   <div id="pjtab-ussess" style="display:none">
     <div class="card">
       <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">📋 My Sessions <label style="font-size:12px;color:var(--muted);font-weight:500;margin-left:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="us-legacy-toggle" onchange="renderUSSessions()" style="accent-color:var(--gold)">📂 Show legacy data</label></div>
+        <div class="card-title" style="margin-bottom:0">📋 My Sessions</div>
         <div class="filter-bar-inline" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <select id="us-flt-type" onchange="renderUSSessions()" style="width:auto;padding:6px 10px;font-size:13px">
             <option value="">All Types</option>
@@ -567,117 +565,6 @@
       </div>
       <div id="us-sess-empty" class="empty-state" style="display:none">
         <div class="empty-icon">📋</div><div class="empty-title">No sessions match the filters</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- LOG SESSION -->
-  <div id="pjtab-log">
-    <div class="alert alert-success" id="pj-success">✅ Project session saved!</div>
-    <div class="alert alert-error"   id="pj-error">⚠️ Please fill all required fields.</div>
-    <div class="card">
-      <div class="card-title">Log Project Session</div>
-      <div class="form-grid mb-4">
-        <div class="form-group">
-          <label>Customer *</label>
-          <select id="pj-customer" onchange="onPjCustomerChange()">
-            <option value="">-- Select Customer --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Project *</label>
-          <select id="pj-project">
-            <option value="">-- Select Project --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Date *</label>
-          <input type="date" id="pj-date">
-        </div>
-        <div class="form-group">
-          <label>Activity Type *</label>
-          <select id="pj-activity">
-            <option value="">-- Select --</option>
-          </select>
-        </div>
-        <div class="form-group full">
-          <label>Session Info *</label>
-          <input type="text" id="pj-info" placeholder="e.g. ABK LLD Document preparation">
-        </div>
-        <div class="form-group">
-          <label>Start Time (24hr)</label>
-          <input type="time" id="pj-start" onchange="calcPjDuration()">
-        </div>
-        <div class="form-group">
-          <label>End Time (24hr)</label>
-          <input type="time" id="pj-end" onchange="calcPjDuration()">
-        </div>
-        <div class="form-group">
-          <label>Duration (auto)</label>
-          <input type="text" id="pj-duration" readonly placeholder="Auto-calculated">
-        </div>
-        <div class="form-group">
-          <label>Onsite / Remote</label>
-          <select id="pj-mode">
-            <option value="">-- Select --</option>
-            <option>Remote</option><option>Onsite</option><option>Onsite/Remote</option>
-          </select>
-        </div>
-        <div class="form-group full">
-          <label>Stake Holders (client contacts)</label>
-          <input type="text" id="pj-stakeholders" placeholder="e.g. Ahmed, Nidosan, Ishan">
-        </div>
-        <div class="form-group full">
-          <label>Gulf IT Team Members *</label>
-          <div id="pj-team-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:white"></div>
-        </div>
-        <div class="form-group full">
-          <label>Remarks</label>
-          <input type="text" id="pj-remarks" placeholder="Optional notes">
-        </div>
-      </div>
-      <button class="btn btn-primary" id="pj-save-btn" onclick="savePjSession()">💾 Save Session</button>
-    </div>
-  </div>
-
-  <!-- SESSIONS -->
-  <div id="pjtab-sessions" style="display:none">
-    <div class="card">
-      <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">Project Sessions</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <select id="pj-filter-customer" onchange="onPjFilterCustomerChange()" style="width:auto;padding:7px 12px">
-            <option value="">All Customers</option>
-          </select>
-          <select id="pj-filter-project" onchange="renderPjSessions()" style="width:auto;padding:7px 12px">
-            <option value="">All Projects</option>
-          </select>
-          <select id="pj-filter-member" onchange="renderPjSessions()" style="width:auto;padding:7px 12px">
-            <option value="">All Members</option>
-            <option>Ahmed Ali</option><option>Venkatesan</option><option>Prasanth</option>
-            <option>Salman Aziz</option><option>Mohammed Afsal</option><option>Mohammed Nasif</option>
-          </select>
-          <input type="date" id="pj-filter-from" onchange="renderPjSessions()" title="From date" style="width:auto;padding:7px 10px">
-          <input type="date" id="pj-filter-to" onchange="renderPjSessions()" title="To date" style="width:auto;padding:7px 10px">
-          <button class="btn btn-sm btn-ghost" onclick="clearPjFilters()" title="Clear all filters">✕ Clear</button>
-          <button class="btn btn-sm btn-ghost" onclick="exportPjCSV()">⬇ Export CSV</button>
-        </div>
-      </div>
-      <div id="pj-sessions-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <!-- Top scroll mirror — synced with the table below -->
-      <div id="pj-scroll-top" style="overflow-x:auto;overflow-y:hidden;display:none;margin-bottom:6px"><div id="pj-scroll-top-inner" style="height:1px"></div></div>
-      <div class="table-wrap" id="pj-sessions-table" style="display:none">
-        <table>
-          <thead><tr>
-            <th>#</th><th>Customer</th><th>Project</th><th>Date</th><th>Activity</th><th>Session Info</th>
-            <th>Duration</th><th>Mode</th><th>Team</th><th>Stake Holders</th><th></th>
-          </tr></thead>
-          <tbody id="pj-sessions-tbody"></tbody>
-        </table>
-      </div>
-      <div id="pj-sessions-empty" class="empty-state" style="display:none">
-        <div class="empty-icon">📋</div><div class="empty-title">No sessions yet</div>
-        <div class="empty-sub">Log your first project session using the Log Session tab</div>
       </div>
     </div>
   </div>
@@ -1346,65 +1233,6 @@
 </div>
 
 <!-- EDIT PROJECT SESSION MODAL -->
-<div class="modal-overlay" id="edit-pj-modal">
-  <div class="modal" style="max-width:560px">
-    <div class="modal-title">✏️ Edit Project Session</div>
-    <input type="hidden" id="edit-pj-id">
-    <div class="form-grid mb-4">
-      <div class="form-group">
-        <label>Customer</label>
-        <select id="edit-pj-customer" onchange="onEditPjCustomerChange()"></select>
-      </div>
-      <div class="form-group">
-        <label>Project</label>
-        <select id="edit-pj-project"></select>
-      </div>
-      <div class="form-group">
-        <label>Date</label>
-        <input type="date" id="edit-pj-date">
-      </div>
-      <div class="form-group">
-        <label>Activity Type</label>
-        <select id="edit-pj-activity"></select>
-      </div>
-      <div class="form-group full">
-        <label>Session Info</label>
-        <input type="text" id="edit-pj-info">
-      </div>
-      <div class="form-group">
-        <label>Start Time</label>
-        <input type="time" id="edit-pj-start" onchange="calcEditPjDuration()">
-      </div>
-      <div class="form-group">
-        <label>End Time</label>
-        <input type="time" id="edit-pj-end" onchange="calcEditPjDuration()">
-      </div>
-      <div class="form-group">
-        <label>Duration (auto)</label>
-        <input type="text" id="edit-pj-duration" readonly>
-      </div>
-      <div class="form-group">
-        <label>Onsite / Remote</label>
-        <select id="edit-pj-mode">
-          <option value="">-- Select --</option>
-          <option>Remote</option><option>Onsite</option><option>Onsite/Remote</option>
-        </select>
-      </div>
-      <div class="form-group full">
-        <label>Stake Holders</label>
-        <input type="text" id="edit-pj-stakeholders">
-      </div>
-      <div class="form-group full">
-        <label>Team Members</label>
-        <input type="text" id="edit-pj-team" placeholder="e.g. Venkatesan, Ahmed Ali">
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeEditPJ()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEditPJ()">💾 Save Changes</button>
-    </div>
-  </div>
-</div>
 
 <!-- EDIT PROJECT MODAL (manage projects) -->
 <!-- EDIT UNIFIED SESSION MODAL -->

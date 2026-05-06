@@ -4,7 +4,7 @@
 **Project URL:** `https://rxxcrlobbtlvjgcqgjjm.supabase.co`  
 **Auth:** Supabase Auth (email + password). Anon key still embedded in `js/core/state.js` for unauthenticated reads/writes; signed-in users get a JWT that travels alongside it. Manager invites users via Supabase dashboard (Authentication → Users → Invite). Profile-to-employee mapping lives in `user_profiles`.  
 **Last verified:** 2026-05-06  
-**Last updated:** 2026-05-06 — Phase 6 of Unified Sessions complete: Projects nav renamed to Sessions, legacy sub-tabs hidden, Project/Employee Summaries now read unified_sessions, My Sessions has a Legacy toggle for project_sessions data. No new tables in Phase 6.
+**Last updated:** 2026-05-06 — Migrated 592 rows from `project_sessions` into `unified_sessions` and dropped both `project_sessions` and `projects` tables. Single source of truth for session data is now `unified_sessions`; the registry lives in `engagements`.
 
 > This file is the source of truth for the Supabase schema.  
 > Before requesting any DB change, read this file first to avoid duplicating tables or columns.
