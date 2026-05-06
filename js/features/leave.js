@@ -52,6 +52,13 @@ async function submitLeaveRequest() {
   if (!start||!end){showAlert('leave-error');return;}
   const days = calcWorkingDays(start,end,currentUser);
   if (days<=0){showAlert('leave-error');return;}
+
+  // Open a blank tab SYNCHRONOUSLY so the browser's user-gesture rule
+  // is satisfied. We'll navigate it to Outlook Web after the save returns.
+  // If the popup blocker rejects, emailWindow is null and we fall back to
+  // the clickable links inside the success toast.
+  var emailWindow = window.open('about:blank', '_blank');
+
   const btn=document.getElementById('lv-save-btn');
   btn.disabled=true; btn.textContent='⏳ Submitting...';
   const {error}=await sb.from('leave_requests').insert({
@@ -59,7 +66,10 @@ async function submitLeaveRequest() {
     reason,status:'pending',leave_type:ltype
   });
   btn.disabled=false; btn.innerHTML='📁¤ Submit Request';
-  if (error){alert('Error: '+error.message);return;}
+  if (error){
+    if (emailWindow) try { emailWindow.close(); } catch(e){}
+    alert('Error: '+error.message); return;
+  }
   // Build email draft links and show them inside the success alert.
   // Letting the user click preserves the browser's user-gesture rule
   // (which mailto: triggered after an async await usually fails).
@@ -78,11 +88,21 @@ async function submitLeaveRequest() {
   var enc = encodeURIComponent;
   var mailto    = 'mailto:venkat@gulfitd.com?subject=' + enc(subject) + '&body=' + enc(body);
   var outlookWb = 'https://outlook.office.com/mail/deeplink/compose?to=venkat@gulfitd.com&subject=' + enc(subject) + '&body=' + enc(body);
+
+  // Auto-navigate the pre-opened tab to Outlook Web compose.
+  // Fall back to clickable links in the success toast if the popup was blocked.
+  if (emailWindow) {
+    try { emailWindow.location.href = outlookWb; } catch(e) {
+      try { emailWindow.close(); } catch(e2){}
+      emailWindow = null;
+    }
+  }
   var successEl = document.getElementById('leave-success');
   if (successEl) {
-    successEl.innerHTML = '✅ Request submitted. Notify manager: '
-      + '<a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a> '
-      + '<a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>';
+    var fallback = emailWindow ? '' : ' Email tab was blocked - click below:';
+    successEl.innerHTML = '✅ Request submitted.' + fallback
+      + ' <a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>'
+      + ' <a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a>';
   }
   showAlert('leave-success');
 

@@ -360,11 +360,19 @@ async function submitCompOffRequest() {
   }
 
   const typeLabel = parseFloat(type)===1 ? 'Full Day' : 'Half Day';
+
+  // Open blank tab synchronously to preserve user-gesture for the
+  // Outlook Web compose nav after save.
+  var emailWindow = window.open('about:blank', '_blank');
+
   const {error}=await sb.from('comp_off_requests').insert({
     employee:currentUser,request_date:date,type:typeLabel,
     days:parseFloat(type),related_activity:activity,remarks,status:'pending'
   });
-  if (error){alert('Error: '+error.message);return;}
+  if (error){
+    if (emailWindow) try { emailWindow.close(); } catch(e){}
+    alert('Error: '+error.message); return;
+  }
 
   // Build email draft links for the manager
   var subject = 'Comp Off Request - ' + currentUser + ' - ' + typeLabel + ' on ' + date;
@@ -380,11 +388,19 @@ async function submitCompOffRequest() {
   var enc = encodeURIComponent;
   var mailto    = 'mailto:venkat@gulfitd.com?subject=' + enc(subject) + '&body=' + enc(body);
   var outlookWb = 'https://outlook.office.com/mail/deeplink/compose?to=venkat@gulfitd.com&subject=' + enc(subject) + '&body=' + enc(body);
+
+  if (emailWindow) {
+    try { emailWindow.location.href = outlookWb; } catch(e) {
+      try { emailWindow.close(); } catch(e2){}
+      emailWindow = null;
+    }
+  }
   var successEl = document.getElementById('co-success');
   if (successEl) {
-    successEl.innerHTML = '✅ Comp off request submitted. Notify manager: '
-      + '<a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a> '
-      + '<a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>';
+    var fallback = emailWindow ? '' : ' Email tab was blocked - click below:';
+    successEl.innerHTML = '✅ Comp off request submitted.' + fallback
+      + ' <a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>'
+      + ' <a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a>';
   }
   showAlert('co-success');
 
