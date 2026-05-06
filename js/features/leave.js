@@ -61,6 +61,24 @@ async function submitLeaveRequest() {
   btn.disabled=false; btn.innerHTML='📁¤ Submit Request';
   if (error){alert('Error: '+error.message);return;}
   showAlert('leave-success');
+
+  // Open a pre-filled email draft to the manager (mailto: opens the
+  // user's default mail client — Outlook on Windows, etc.)
+  var ltypeLabel = ltype.charAt(0).toUpperCase() + ltype.slice(1);
+  var subject = 'Leave Request - ' + currentUser + ' - ' + ltypeLabel + ' (' + days + ' day' + (days===1?'':'s') + ')';
+  var body =
+    'Hi Venkat,\n\n' +
+    'I have submitted a leave request through the NetSec Portal:\n\n' +
+    'Type: ' + ltypeLabel + ' Leave\n' +
+    'From: ' + start + '\n' +
+    'To: ' + end + '\n' +
+    'Working days: ' + days + '\n' +
+    'Reason: ' + (reason || '(none)') + '\n\n' +
+    'Please review and approve at https://netsec-portal.pages.dev/\n\n' +
+    'Thanks,\n' + currentUser;
+  var mailto = 'mailto:venkat@gulfitd.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  window.location.href = mailto;
+
   ['lv-start','lv-end','lv-reason'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('lv-prev-days').textContent='—';
   document.getElementById('lv-prev-used').textContent='—';

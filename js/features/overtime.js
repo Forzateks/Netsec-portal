@@ -359,12 +359,28 @@ async function submitCompOffRequest() {
     return;
   }
 
+  const typeLabel = parseFloat(type)===1 ? 'Full Day' : 'Half Day';
   const {error}=await sb.from('comp_off_requests').insert({
-    employee:currentUser,request_date:date,type:parseFloat(type)===1?'Full Day':'Half Day',
+    employee:currentUser,request_date:date,type:typeLabel,
     days:parseFloat(type),related_activity:activity,remarks,status:'pending'
   });
   if (error){alert('Error: '+error.message);return;}
   showAlert('co-success');
+
+  // Open a pre-filled email draft to the manager
+  var subject = 'Comp Off Request - ' + currentUser + ' - ' + typeLabel + ' on ' + date;
+  var body =
+    'Hi Venkat,\n\n' +
+    'I have submitted a comp off request through the NetSec Portal:\n\n' +
+    'Type: ' + typeLabel + ' (' + parseFloat(type) + ' day)\n' +
+    'Date: ' + date + '\n' +
+    'Related activity: ' + (activity || '(none)') + '\n' +
+    'Remarks: ' + (remarks || '(none)') + '\n\n' +
+    'Please review and approve at https://netsec-portal.pages.dev/\n\n' +
+    'Thanks,\n' + currentUser;
+  var mailto = 'mailto:venkat@gulfitd.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  window.location.href = mailto;
+
   ['co-date','co-type','co-activity','co-remarks'].forEach(function(id){document.getElementById(id).value='';});
   renderMyCompOffRequests();
 }
