@@ -390,17 +390,21 @@ async function submitCompOffRequest() {
   var outlookWb = 'https://outlook.office.com/mail/deeplink/compose?to=venkat@gulfitd.com&subject=' + enc(subject) + '&body=' + enc(body);
 
   if (emailWindow) {
-    try { emailWindow.location.href = outlookWb; } catch(e) {
+    try {
+      emailWindow.location.href = mailto;
+      setTimeout(function(){ try { emailWindow.close(); } catch(e){} }, 1200);
+    } catch(e) {
       try { emailWindow.close(); } catch(e2){}
       emailWindow = null;
     }
   }
   var successEl = document.getElementById('co-success');
   if (successEl) {
-    var fallback = emailWindow ? '' : ' Email tab was blocked - click below:';
-    successEl.innerHTML = '✅ Comp off request submitted.' + fallback
-      + ' <a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>'
-      + ' <a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a>';
+    var note = emailWindow ? ' Outlook should have opened.' : ' (Outlook auto-launch was blocked.)';
+    successEl.innerHTML = '✅ Comp off request submitted.' + note
+      + ' Or open manually: '
+      + '<a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a>'
+      + '<a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>';
   }
   showAlert('co-success');
 

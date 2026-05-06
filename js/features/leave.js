@@ -89,20 +89,26 @@ async function submitLeaveRequest() {
   var mailto    = 'mailto:venkat@gulfitd.com?subject=' + enc(subject) + '&body=' + enc(body);
   var outlookWb = 'https://outlook.office.com/mail/deeplink/compose?to=venkat@gulfitd.com&subject=' + enc(subject) + '&body=' + enc(body);
 
-  // Auto-navigate the pre-opened tab to Outlook Web compose.
-  // Fall back to clickable links in the success toast if the popup was blocked.
+  // Hand the pre-opened blank tab to mailto: — the OS picks up the
+  // default mail handler (Outlook desktop on Windows). After ~1.2s
+  // we close the now-empty tab. Outlook Web stays in the success
+  // toast as a fallback if Outlook desktop isn't registered.
   if (emailWindow) {
-    try { emailWindow.location.href = outlookWb; } catch(e) {
+    try {
+      emailWindow.location.href = mailto;
+      setTimeout(function(){ try { emailWindow.close(); } catch(e){} }, 1200);
+    } catch(e) {
       try { emailWindow.close(); } catch(e2){}
       emailWindow = null;
     }
   }
   var successEl = document.getElementById('leave-success');
   if (successEl) {
-    var fallback = emailWindow ? '' : ' Email tab was blocked - click below:';
-    successEl.innerHTML = '✅ Request submitted.' + fallback
-      + ' <a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>'
-      + ' <a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a>';
+    var note = emailWindow ? ' Outlook should have opened.' : ' (Outlook auto-launch was blocked.)';
+    successEl.innerHTML = '✅ Request submitted.' + note
+      + ' Or open manually: '
+      + '<a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a>'
+      + '<a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>';
   }
   showAlert('leave-success');
 
