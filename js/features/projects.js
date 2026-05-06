@@ -879,7 +879,7 @@ function exportPjCSV() {
 }
 
 function showProjectTab(tab) {
-  ['log','sessions','project','employee','manage'].forEach(function(t) {
+  ['uslog','ussess','log','sessions','project','employee','manage'].forEach(function(t) {
     const el  = document.getElementById('pjtab-'+t);
     const sub = document.getElementById('pjsub-'+t);
     if (!el) return;
@@ -893,6 +893,8 @@ function showProjectTab(tab) {
       sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap';
     }
   });
+  if (tab==='uslog')    { initProjectTab(); initUSLogForm(); }
+  if (tab==='ussess')   { initProjectTab(); populateUSFilters(); renderUSSessions(); }
   if (tab==='log')      initProjectTab();
   if (tab==='sessions') { initProjectTab(); renderPjSessions(); }
   if (tab==='project')  { initProjectTab(); renderPjProjectSummary(); }

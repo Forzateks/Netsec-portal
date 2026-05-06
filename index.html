@@ -420,11 +420,137 @@
 <!-- ══ PROJECTS SCREEN ══ -->
 <div class="screen" id="screen-projects">
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="pjsub-log"      onclick="showProjectTab('log')">➕ Log Session</div>
-    <div class="leave-sub"        id="pjsub-sessions"  onclick="showProjectTab('sessions')">📋 Sessions</div>
+    <div class="leave-sub active" id="pjsub-uslog"     onclick="showProjectTab('uslog')">🆕 Log Session</div>
+    <div class="leave-sub"        id="pjsub-ussess"    onclick="showProjectTab('ussess')">🆕 My Sessions</div>
+    <div class="leave-sub"        id="pjsub-log"       onclick="showProjectTab('log')">➕ Log (legacy)</div>
+    <div class="leave-sub"        id="pjsub-sessions"  onclick="showProjectTab('sessions')">📋 Sessions (legacy)</div>
     <div class="leave-sub"        id="pjsub-project"   onclick="showProjectTab('project')">📊 Project Summary</div>
     <div class="leave-sub"        id="pjsub-employee"  onclick="showProjectTab('employee')">👥 Employee Summary</div>
     <div class="leave-sub"        id="pjsub-manage"    onclick="showProjectTab('manage')" style="display:none">⚙️ Manage Engagements</div>
+  </div>
+
+  <!-- 🆕 LOG UNIFIED SESSION (Phase 2 Beta) -->
+  <div id="pjtab-uslog">
+    <div class="alert alert-success" id="us-success">✅ Session saved!</div>
+    <div class="alert alert-error"   id="us-error" style="display:none"></div>
+    <div class="card">
+      <div class="card-title">🆕 Log Session (unified) <span style="font-size:11px;color:var(--gold);font-weight:500;margin-left:6px">Beta — runs in parallel with the legacy form</span></div>
+      <div class="form-grid mb-4">
+        <div class="form-group full">
+          <label>Session Type *</label>
+          <select id="us-type" onchange="onUSTypeChange()">
+            <option value="">-- Select Type --</option>
+            <option value="project">📁 Project</option>
+            <option value="poc">🎯 POC</option>
+            <option value="amc">🛠️ AMC</option>
+            <option value="internal">🔧 Internal / Other</option>
+          </select>
+        </div>
+        <div class="form-group" id="us-customer-row">
+          <label>Customer *</label>
+          <select id="us-customer" onchange="onUSCustomerChange()">
+            <option value="">-- Select Customer --</option>
+          </select>
+        </div>
+        <div class="form-group" id="us-engagement-row">
+          <label>Engagement *</label>
+          <select id="us-engagement">
+            <option value="">-- Select Engagement --</option>
+          </select>
+        </div>
+        <div class="form-group" id="us-activity-row">
+          <label>Activity Type *</label>
+          <select id="us-activity-type">
+            <option value="">-- Select --</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Session Info *</label>
+          <input type="text" id="us-info" placeholder="e.g. Aruba switch upgrade rollout - Bahrain HO">
+        </div>
+        <div class="form-group">
+          <label>Date *</label>
+          <input type="date" id="us-date" onchange="updateUSPreview()">
+        </div>
+        <div class="form-group">
+          <label>Start Time *</label>
+          <input type="time" id="us-start" onchange="updateUSPreview()">
+        </div>
+        <div class="form-group">
+          <label>End Time *</label>
+          <input type="time" id="us-end" onchange="updateUSPreview()">
+        </div>
+        <div class="form-group" id="us-mode-row">
+          <label>Mode</label>
+          <select id="us-mode">
+            <option value="">-- Select --</option>
+            <option>Remote</option><option>Onsite</option><option>Onsite/Remote</option>
+          </select>
+        </div>
+        <div class="form-group full" id="us-stake-row">
+          <label>Stake Holders</label>
+          <input type="text" id="us-stake" placeholder="e.g. Ahmed (Customer), Nidosan (PM)">
+        </div>
+        <div class="form-group full" id="us-team-row">
+          <label>Team Members *</label>
+          <div id="us-team-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:white"></div>
+        </div>
+        <div class="form-group full">
+          <label>Remarks</label>
+          <input type="text" id="us-remarks" placeholder="Optional notes">
+        </div>
+      </div>
+      <div class="preview-box" style="grid-template-columns:repeat(2,1fr)">
+        <div class="preview-item"><div class="preview-label">Total Hours</div><div class="preview-value" id="us-preview-total">—</div></div>
+        <div class="preview-item"><div class="preview-label">OT Detection</div><div class="preview-value" style="font-size:13px;color:var(--muted)">arrives in Phase 3</div></div>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:10px">
+        <button class="btn btn-primary" id="us-save-btn" onclick="saveUnifiedSession()">💾 Save Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🆕 MY SESSIONS (Beta) -->
+  <div id="pjtab-ussess" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">🆕 My Sessions <span style="font-size:11px;color:var(--gold);font-weight:500;margin-left:6px">Beta — unified table</span></div>
+        <div class="filter-bar-inline" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <select id="us-flt-type" onchange="renderUSSessions()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">All Types</option>
+            <option value="project">📁 Project</option>
+            <option value="poc">🎯 POC</option>
+            <option value="amc">🛠️ AMC</option>
+            <option value="internal">🔧 Internal</option>
+          </select>
+          <select id="us-flt-cust" onchange="renderUSSessions()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">All Customers</option>
+          </select>
+          <select id="us-flt-eng"  onchange="renderUSSessions()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">All Engagements</option>
+          </select>
+          <select id="us-flt-mem"  onchange="renderUSSessions()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">All Members</option>
+          </select>
+          <input type="date" id="us-flt-from" onchange="renderUSSessions()" title="From" style="width:auto;padding:6px 8px;font-size:13px">
+          <input type="date" id="us-flt-to"   onchange="renderUSSessions()" title="To" style="width:auto;padding:6px 8px;font-size:13px">
+          <button class="btn btn-sm btn-ghost" onclick="clearUSFilters()">✕ Clear</button>
+        </div>
+      </div>
+      <div id="us-sess-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div class="table-wrap" id="us-sess-table" style="display:none">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Type</th><th>Customer</th><th>Engagement</th><th>Date</th>
+            <th>Time</th><th>Hours</th><th>Activity</th><th>Info</th><th>Logged By</th><th></th>
+          </tr></thead>
+          <tbody id="us-sess-tbody"></tbody>
+        </table>
+      </div>
+      <div id="us-sess-empty" class="empty-state" style="display:none">
+        <div class="empty-icon">📋</div><div class="empty-title">No sessions match the filters</div>
+      </div>
+    </div>
   </div>
 
   <!-- LOG SESSION -->
@@ -1239,6 +1365,76 @@
 </div>
 
 <!-- EDIT PROJECT MODAL (manage projects) -->
+<!-- EDIT UNIFIED SESSION MODAL -->
+<div class="modal-overlay" id="edit-unified-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title">✏️ Edit Session</div>
+    <input type="hidden" id="edit-us-id">
+    <div id="edit-us-error" style="display:none;background:#FEE2E2;color:#B91C1C;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Type *</label>
+        <select id="edit-us-type">
+          <option value="project">📁 Project</option>
+          <option value="poc">🎯 POC</option>
+          <option value="amc">🛠️ AMC</option>
+          <option value="internal">🔧 Internal</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date *</label>
+        <input type="date" id="edit-us-date">
+      </div>
+      <div class="form-group">
+        <label>Customer</label>
+        <select id="edit-us-customer"></select>
+      </div>
+      <div class="form-group">
+        <label>Engagement</label>
+        <select id="edit-us-engagement"></select>
+      </div>
+      <div class="form-group">
+        <label>Activity Type</label>
+        <select id="edit-us-activity-type"></select>
+      </div>
+      <div class="form-group">
+        <label>Mode</label>
+        <select id="edit-us-mode">
+          <option value="">--</option><option>Remote</option><option>Onsite</option><option>Onsite/Remote</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Start Time *</label>
+        <input type="time" id="edit-us-start">
+      </div>
+      <div class="form-group">
+        <label>End Time *</label>
+        <input type="time" id="edit-us-end">
+      </div>
+      <div class="form-group full">
+        <label>Session Info *</label>
+        <input type="text" id="edit-us-info">
+      </div>
+      <div class="form-group full">
+        <label>Team Members</label>
+        <input type="text" id="edit-us-team" placeholder="e.g. Ahmed Ali, Mohammed Nasif">
+      </div>
+      <div class="form-group full">
+        <label>Stake Holders</label>
+        <input type="text" id="edit-us-stake">
+      </div>
+      <div class="form-group full">
+        <label>Remarks</label>
+        <input type="text" id="edit-us-remarks">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeEditUS()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditUS()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT CUSTOMER MODAL (manager only) -->
 <div class="modal-overlay" id="edit-customer-modal">
   <div class="modal" style="max-width:420px">
@@ -1439,6 +1635,7 @@
 <script src="js/core/navigation.js"></script>
 <script src="js/core/helpers.js"></script>
 <script src="js/features/projects.js"></script>
+<script src="js/features/unified-sessions.js"></script>
 <script src="js/features/inventory.js"></script>
 <script src="js/features/approvals.js"></script>
 <script src="js/features/knowledge-base.js"></script>

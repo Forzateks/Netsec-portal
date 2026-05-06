@@ -52,7 +52,7 @@ function showScreen(name) {
   if (name==='dashboard') renderDashboard();
   if (name==='overtime')  showOTTab('log');
   if (name==='leave')     showLeaveTab('log');
-  if (name==='projects')  { initProjectTab(); showProjectTab('log'); };
+  if (name==='projects')  { initProjectTab(); showProjectTab('uslog'); };
   if (name==='approvals')  showApprovalsTab('compoff');
   if (name==='inventory')  showInventoryTab('devices');
   if (name==='kb')         showKBTab('browse');
