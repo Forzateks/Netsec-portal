@@ -99,7 +99,7 @@
 <!-- NAV -->
 <div class="nav" id="main-nav">
   <div class="nav-tab active" onclick="showScreen('dashboard')" id="tab-dashboard">🏠 Dashboard</div>
-  <div class="nav-tab" onclick="showScreen('overtime')" id="tab-overtime">⏱ Overtime</div>
+  <div class="nav-tab" onclick="showScreen('overtime')" id="tab-overtime" style="display:none">⏱ Overtime</div>
   <div class="nav-tab" onclick="showScreen('leave')" id="tab-leave">🏖️ Leave</div>
   <div class="nav-tab" onclick="showScreen('projects')" id="tab-projects">📋 Sessions</div>
   <div class="nav-tab" onclick="showScreen('approvals')" id="tab-approvals" style="display:none">
@@ -131,10 +131,6 @@
 <div class="screen" id="screen-overtime">
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
     <div class="leave-sub" id="otsub-log"      onclick="showOTTab('log')" style="display:none">➕ Log OT Session</div>
-    <div class="leave-sub"        id="otsub-sessions"  onclick="showOTTab('sessions')">📋 OT Sessions</div>
-    <div class="leave-sub"        id="otsub-summary"   onclick="showOTTab('summary')">📊 Summary</div>
-    <div class="leave-sub"        id="otsub-manager"   onclick="showOTTab('manager')" style="display:none">👔 Manager View</div>
-    <div class="leave-sub"        id="otsub-policy"    onclick="showOTTab('policy')">📖 Policy</div>
   </div>
 
   <!-- LOG OT -->
@@ -200,125 +196,10 @@
     </div>
   </div>
 
-  <!-- OT SESSIONS -->
-  <div id="ottab-sessions" style="display:none">
-    <div class="card">
-      <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">OT Sessions</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <select id="sessions-emp-filter" onchange="renderSessions()" style="width:auto;padding:7px 12px" class="manager-only-el">
-            <option value="">All Employees</option>
-            <option>Ahmed Ali</option><option>Venkatesan</option><option>Prasanth</option>
-            <option>Salman Aziz</option><option>Mohammed Afsal</option><option>Mohammed Nasif</option>
-          </select>
-          <button class="btn btn-sm btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
-        </div>
-      </div>
-      <div id="sessions-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <div class="table-wrap" id="sessions-table" style="display:none">
-        <table><thead><tr><th>#</th><th>Employee</th><th>Activity</th><th>Date</th><th class="hide-mobile">Start</th><th class="hide-mobile">End</th><th>Hrs</th><th>Band</th><th>Rate</th><th>Credited</th><th>Status</th><th></th></tr></thead>
-        <tbody id="sessions-tbody"></tbody></table>
-      </div>
-      <div id="sessions-empty" class="empty-state" style="display:none"><div class="empty-icon">📭</div><div class="empty-title">No sessions yet</div></div>
-    </div>
-  </div>
-
-  <!-- SUMMARY -->
-  <div id="ottab-summary" style="display:none">
-    <div class="emp-filter" id="summary-emp-filter"></div>
-    <div id="summary-loading" class="loading"><div class="spinner"></div>Loading...</div>
-    <div id="summary-content"></div>
-  </div>
 
 
-  <!-- MANAGER VIEW -->
-  <div id="ottab-manager" style="display:none">
-    <div class="card" style="margin-bottom:16px;border-left:3px solid var(--gold);background:#FFFBEB">
-      <div class="card-title" style="margin-bottom:6px">⚙️ Policy Recompute (one-time)</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
-        Re-classify every OT session under the latest policy (Eve from 6:30 PM, Wknd 1:1 raw, Mid 1:2 raw, etc.).
-        Click <strong>Preview</strong> first to see what changes — nothing is written until you click <strong>Apply</strong>.
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-ghost" onclick="recomputeAllOT('preview')">🔍 Preview Changes</button>
-        <button class="btn btn-primary" id="recompute-apply-btn" onclick="recomputeAllOT('apply')" disabled>✅ Apply Changes</button>
-      </div>
-      <div id="recompute-result" style="margin-top:14px;display:none;font-size:13px"></div>
-    </div>
 
-    <div class="card" style="margin-bottom:16px;border-left:3px solid #F59E0B;background:#FFFBEB">
-      <div class="card-title" style="margin-bottom:6px">📦 Archive Policy Violators</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
-        Marks OT sessions whose start time falls in the now-blocked weekday window
-        (UAE 7:30 AM–6:30 PM / KSA 8:00 AM–7:00 PM) as <strong>archived</strong>. They stop
-        counting toward CO but stay visible (dimmed) in the employee's history with the reason
-        recorded. To avoid balances going negative, the oldest violators are retained up to
-        the amount of CO already used. Re-runnable; idempotent.
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <label style="font-size:12px;color:var(--muted);font-weight:600">From date:</label>
-        <input type="date" id="violations-from" value="2026-01-01" style="width:auto;padding:7px 10px">
-        <button class="btn btn-ghost" onclick="previewViolations()">🔍 Preview</button>
-        <button class="btn btn-primary" id="violations-apply-btn" onclick="applyViolationCleanup()" disabled>📦 Archive Violators</button>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px">Sessions before the From date are exempt. Default 2026-01-01.</div>
-      <div id="violations-result" style="margin-top:14px;display:none;font-size:13px"></div>
-    </div>
 
-    <div class="card" style="margin-bottom:16px;border-left:3px solid #00A0D2;background:#F0F9FF">
-      <div class="card-title" style="margin-bottom:6px">🔄 Re-evaluate Archived Sessions</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
-        Sweeps archived sessions and un-archives any that now qualify for partial credit
-        under the latest rules (e.g. a weekday session ending past 6:30 PM UAE / 7:00 PM KSA
-        gets credit for the post-threshold portion). Sessions entirely inside regular hours
-        stay archived.
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-ghost" onclick="previewReevalArchived()">🔍 Preview</button>
-        <button class="btn btn-primary" id="reeval-apply-btn" onclick="applyReevalArchived()" disabled>✅ Apply Re-evaluation</button>
-      </div>
-      <div id="reeval-result" style="margin-top:14px;display:none;font-size:13px"></div>
-    </div>
-
-    <div class="card" style="margin-bottom:16px;border-left:3px solid #EF4444;background:#FEF2F2">
-      <div class="card-title" style="margin-bottom:6px">🗑️ Purge Old Archived/Rejected Sessions (DESTRUCTIVE)</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
-        Permanently deletes any archived or rejected OT session older than <strong>1 year</strong>.
-        Use annually to keep the table tidy. Take a <strong>Full Backup first</strong> (Dashboard).
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-danger-solid" onclick="purgeOldArchived()">🗑 Purge &gt; 1 Year</button>
-      </div>
-      <div id="purge-result" style="margin-top:14px;display:none;font-size:13px"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">All Employees — OT & Comp Off Summary</div>
-      <div id="manager-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <div id="manager-content"></div>
-    </div>
-  </div>
-
-  <!-- POLICY -->
-  <div id="ottab-policy" style="display:none">
-    <div class="card">
-      <div class="card-title">OT Policy Reference</div>
-      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#EFF6FF"><div style="width:10px;height:10px;border-radius:50%;background:var(--eve);margin-top:2px;flex-shrink:0"></div><div><strong>Eve (6:30PM–11:59PM weekday, no midnight cross):</strong> 1:1 always. 8 credited hrs = 1 Comp Off day.</div></div>
-      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#FFFBEB;border-left:3px solid var(--gold)"><div style="width:10px;height:10px;border-radius:50%;background:var(--gold);margin-top:2px;flex-shrink:0"></div><div><strong>Eve/Split (starts 6:30PM+, crosses midnight):</strong> Eve portion at 1:1 + Midnight portion doubled at 1:2. Cap 8hrs total.</div></div>
-      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#ECFDF5"><div style="width:10px;height:10px;border-radius:50%;background:var(--early);margin-top:2px;flex-shrink:0"></div><div><strong>Early Morning (start 5:00 AM–7:29 AM UAE / 5:00 AM–7:59 AM KSA):</strong> 1:1 always. Credit is capped at the regular-hours boundary (UAE 7:30 AM / KSA 8:00 AM) — only the time before regular working hours counts as OT. 8 credited hrs = 1 Comp Off day (pools with Eve hours).</div></div>
-      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#F5F3FF"><div style="width:10px;height:10px;border-radius:50%;background:var(--mid);margin-top:2px;flex-shrink:0"></div><div><strong>Midnight (crosses midnight before 6:30 PM, or starts before 5 AM):</strong> &lt;4hrs raw = 1:1, ≥4hrs raw = 1:2 (qualifies for CO). Credit capped at morning block start (UAE 7:30 AM / KSA 8:00 AM) — time after that is regular hours. 8 credited hrs = 1 Comp Off day.</div></div>
-      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#FFFBEB"><div style="width:10px;height:10px;border-radius:50%;background:var(--wknd);margin-top:2px;flex-shrink:0"></div><div><strong>Weekend — UAE (Sat/Sun) or KSA (Fri/Sat):</strong> 1:1 always. Credited = actual hours worked (no cap). 8 credited hrs = 1 Comp Off day.</div></div>
-      <div style="margin-top:16px;padding:14px;background:#FEF2F2;border-radius:8px;font-size:13px;border-left:3px solid #EF4444">
-        <strong>⚠️ Weekday OT submission rule:</strong><br>
-        <span style="display:inline-block;margin-top:4px"><strong>UAE employees:</strong> OT cannot start between <strong>7:30 AM and 6:30 PM</strong>. Eve band starts at 6:30 PM.</span><br>
-        <span style="display:inline-block;margin-top:2px"><strong>KSA employees (Salman Aziz, Mohammed Afsal):</strong> OT cannot start between <strong>8:00 AM and 7:00 PM</strong>. Eve band starts at 7:00 PM.</span><br>
-        <span style="display:inline-block;margin-top:4px;color:var(--muted)">Does not apply to weekends.</span>
-      </div>
-      <div style="margin-top:10px;padding:14px;background:#f8fafc;border-radius:8px;font-size:13px">
-        <strong>Comp Off rules:</strong> Full Day=1 day, Half Day=0.5. Submit request → Manager approves → appears in balance.<br>
-        <strong>Annual Leave:</strong> 22 working days per year. <strong>Sick Leave:</strong> 12 days per year. Submit request → Manager approves → deducted from balance.
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- ══ ANNUAL LEAVE SCREEN ══ -->
@@ -429,13 +310,17 @@
 <!-- ══ PROJECTS SCREEN ══ -->
 <div class="screen" id="screen-projects">
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="pjsub-uslog"     onclick="showProjectTab('uslog')">➕ Log Session</div>
-    <div class="leave-sub"        id="pjsub-ussess"    onclick="showProjectTab('ussess')">📋 My Sessions</div>
-    <div class="leave-sub"        id="pjsub-project"   onclick="showProjectTab('project')">📊 Project Summary</div>
-    <div class="leave-sub"        id="pjsub-poc"       onclick="showProjectTab('poc')">🎯 POC Summary</div>
-    <div class="leave-sub"        id="pjsub-amc"       onclick="showProjectTab('amc')">🛠️ AMC Summary</div>
-    <div class="leave-sub"        id="pjsub-employee"  onclick="showProjectTab('employee')">👥 Employee Summary</div>
-    <div class="leave-sub"        id="pjsub-manage"    onclick="showProjectTab('manage')" style="display:none">⚙️ Manage Engagements</div>
+    <div class="leave-sub active" id="pjsub-uslog"       onclick="showProjectTab('uslog')">➕ Log Session</div>
+    <div class="leave-sub"        id="pjsub-ussess"      onclick="showProjectTab('ussess')">📋 My Sessions</div>
+    <div class="leave-sub"        id="pjsub-otsessions"  onclick="showProjectTab('otsessions')">⏱ OT Sessions</div>
+    <div class="leave-sub"        id="pjsub-otsummary"   onclick="showProjectTab('otsummary')">📊 OT Summary</div>
+    <div class="leave-sub"        id="pjsub-project"     onclick="showProjectTab('project')">📊 Project Summary</div>
+    <div class="leave-sub"        id="pjsub-poc"         onclick="showProjectTab('poc')">🎯 POC Summary</div>
+    <div class="leave-sub"        id="pjsub-amc"         onclick="showProjectTab('amc')">🛠️ AMC Summary</div>
+    <div class="leave-sub"        id="pjsub-employee"    onclick="showProjectTab('employee')">👥 Employee Summary</div>
+    <div class="leave-sub"        id="pjsub-otpolicy"    onclick="showProjectTab('otpolicy')">📖 OT Policy</div>
+    <div class="leave-sub"        id="pjsub-otmanager"   onclick="showProjectTab('otmanager')" style="display:none">👔 Manager View</div>
+    <div class="leave-sub"        id="pjsub-manage"      onclick="showProjectTab('manage')" style="display:none">⚙️ Manage Engagements</div>
   </div>
 
   <!-- 🆕 LOG UNIFIED SESSION (Phase 2 Beta) -->
@@ -689,6 +574,125 @@
       </div>
       <div id="pj-manage-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="pj-manage-content"></div>
+    </div>
+  </div>
+
+  <!-- OT SESSIONS -->
+  <div id="pjtab-otsessions" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">OT Sessions</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="sessions-emp-filter" onchange="renderSessions()" style="width:auto;padding:7px 12px" class="manager-only-el">
+            <option value="">All Employees</option>
+            <option>Ahmed Ali</option><option>Venkatesan</option><option>Prasanth</option>
+            <option>Salman Aziz</option><option>Mohammed Afsal</option><option>Mohammed Nasif</option>
+          </select>
+          <button class="btn btn-sm btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
+        </div>
+      </div>
+      <div id="sessions-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div class="table-wrap" id="sessions-table" style="display:none">
+        <table><thead><tr><th>#</th><th>Employee</th><th>Activity</th><th>Date</th><th class="hide-mobile">Start</th><th class="hide-mobile">End</th><th>Hrs</th><th>Band</th><th>Rate</th><th>Credited</th><th>Status</th><th></th></tr></thead>
+        <tbody id="sessions-tbody"></tbody></table>
+      </div>
+      <div id="sessions-empty" class="empty-state" style="display:none"><div class="empty-icon">📭</div><div class="empty-title">No sessions yet</div></div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div id="pjtab-otsummary" style="display:none">
+    <div class="emp-filter" id="summary-emp-filter"></div>
+    <div id="summary-loading" class="loading"><div class="spinner"></div>Loading...</div>
+    <div id="summary-content"></div>
+  </div>
+
+  <!-- MANAGER VIEW -->
+  <div id="pjtab-otmanager" style="display:none">
+    <div class="card" style="margin-bottom:16px;border-left:3px solid var(--gold);background:#FFFBEB">
+      <div class="card-title" style="margin-bottom:6px">⚙️ Policy Recompute (one-time)</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        Re-classify every OT session under the latest policy (Eve from 6:30 PM, Wknd 1:1 raw, Mid 1:2 raw, etc.).
+        Click <strong>Preview</strong> first to see what changes — nothing is written until you click <strong>Apply</strong>.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="recomputeAllOT('preview')">🔍 Preview Changes</button>
+        <button class="btn btn-primary" id="recompute-apply-btn" onclick="recomputeAllOT('apply')" disabled>✅ Apply Changes</button>
+      </div>
+      <div id="recompute-result" style="margin-top:14px;display:none;font-size:13px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;border-left:3px solid #F59E0B;background:#FFFBEB">
+      <div class="card-title" style="margin-bottom:6px">📦 Archive Policy Violators</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        Marks OT sessions whose start time falls in the now-blocked weekday window
+        (UAE 7:30 AM–6:30 PM / KSA 8:00 AM–7:00 PM) as <strong>archived</strong>. They stop
+        counting toward CO but stay visible (dimmed) in the employee's history with the reason
+        recorded. To avoid balances going negative, the oldest violators are retained up to
+        the amount of CO already used. Re-runnable; idempotent.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <label style="font-size:12px;color:var(--muted);font-weight:600">From date:</label>
+        <input type="date" id="violations-from" value="2026-01-01" style="width:auto;padding:7px 10px">
+        <button class="btn btn-ghost" onclick="previewViolations()">🔍 Preview</button>
+        <button class="btn btn-primary" id="violations-apply-btn" onclick="applyViolationCleanup()" disabled>📦 Archive Violators</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">Sessions before the From date are exempt. Default 2026-01-01.</div>
+      <div id="violations-result" style="margin-top:14px;display:none;font-size:13px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;border-left:3px solid #00A0D2;background:#F0F9FF">
+      <div class="card-title" style="margin-bottom:6px">🔄 Re-evaluate Archived Sessions</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        Sweeps archived sessions and un-archives any that now qualify for partial credit
+        under the latest rules (e.g. a weekday session ending past 6:30 PM UAE / 7:00 PM KSA
+        gets credit for the post-threshold portion). Sessions entirely inside regular hours
+        stay archived.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="previewReevalArchived()">🔍 Preview</button>
+        <button class="btn btn-primary" id="reeval-apply-btn" onclick="applyReevalArchived()" disabled>✅ Apply Re-evaluation</button>
+      </div>
+      <div id="reeval-result" style="margin-top:14px;display:none;font-size:13px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;border-left:3px solid #EF4444;background:#FEF2F2">
+      <div class="card-title" style="margin-bottom:6px">🗑️ Purge Old Archived/Rejected Sessions (DESTRUCTIVE)</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        Permanently deletes any archived or rejected OT session older than <strong>1 year</strong>.
+        Use annually to keep the table tidy. Take a <strong>Full Backup first</strong> (Dashboard).
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-danger-solid" onclick="purgeOldArchived()">🗑 Purge &gt; 1 Year</button>
+      </div>
+      <div id="purge-result" style="margin-top:14px;display:none;font-size:13px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">All Employees — OT & Comp Off Summary</div>
+      <div id="manager-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div id="manager-content"></div>
+    </div>
+  </div>
+
+  <!-- POLICY -->
+  <div id="pjtab-otpolicy" style="display:none">
+    <div class="card">
+      <div class="card-title">OT Policy Reference</div>
+      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#EFF6FF"><div style="width:10px;height:10px;border-radius:50%;background:var(--eve);margin-top:2px;flex-shrink:0"></div><div><strong>Eve (6:30PM–11:59PM weekday, no midnight cross):</strong> 1:1 always. 8 credited hrs = 1 Comp Off day.</div></div>
+      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#FFFBEB;border-left:3px solid var(--gold)"><div style="width:10px;height:10px;border-radius:50%;background:var(--gold);margin-top:2px;flex-shrink:0"></div><div><strong>Eve/Split (starts 6:30PM+, crosses midnight):</strong> Eve portion at 1:1 + Midnight portion doubled at 1:2. Cap 8hrs total.</div></div>
+      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#ECFDF5"><div style="width:10px;height:10px;border-radius:50%;background:var(--early);margin-top:2px;flex-shrink:0"></div><div><strong>Early Morning (start 5:00 AM–7:29 AM UAE / 5:00 AM–7:59 AM KSA):</strong> 1:1 always. Credit is capped at the regular-hours boundary (UAE 7:30 AM / KSA 8:00 AM) — only the time before regular working hours counts as OT. 8 credited hrs = 1 Comp Off day (pools with Eve hours).</div></div>
+      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#F5F3FF"><div style="width:10px;height:10px;border-radius:50%;background:var(--mid);margin-top:2px;flex-shrink:0"></div><div><strong>Midnight (crosses midnight before 6:30 PM, or starts before 5 AM):</strong> &lt;4hrs raw = 1:1, ≥4hrs raw = 1:2 (qualifies for CO). Credit capped at morning block start (UAE 7:30 AM / KSA 8:00 AM) — time after that is regular hours. 8 credited hrs = 1 Comp Off day.</div></div>
+      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#FFFBEB"><div style="width:10px;height:10px;border-radius:50%;background:var(--wknd);margin-top:2px;flex-shrink:0"></div><div><strong>Weekend — UAE (Sat/Sun) or KSA (Fri/Sat):</strong> 1:1 always. Credited = actual hours worked (no cap). 8 credited hrs = 1 Comp Off day.</div></div>
+      <div style="margin-top:16px;padding:14px;background:#FEF2F2;border-radius:8px;font-size:13px;border-left:3px solid #EF4444">
+        <strong>⚠️ Weekday OT submission rule:</strong><br>
+        <span style="display:inline-block;margin-top:4px"><strong>UAE employees:</strong> OT cannot start between <strong>7:30 AM and 6:30 PM</strong>. Eve band starts at 6:30 PM.</span><br>
+        <span style="display:inline-block;margin-top:2px"><strong>KSA employees (Salman Aziz, Mohammed Afsal):</strong> OT cannot start between <strong>8:00 AM and 7:00 PM</strong>. Eve band starts at 7:00 PM.</span><br>
+        <span style="display:inline-block;margin-top:4px;color:var(--muted)">Does not apply to weekends.</span>
+      </div>
+      <div style="margin-top:10px;padding:14px;background:#f8fafc;border-radius:8px;font-size:13px">
+        <strong>Comp Off rules:</strong> Full Day=1 day, Half Day=0.5. Submit request → Manager approves → appears in balance.<br>
+        <strong>Annual Leave:</strong> 22 working days per year. <strong>Sick Leave:</strong> 12 days per year. Submit request → Manager approves → deducted from balance.
+      </div>
     </div>
   </div>
 

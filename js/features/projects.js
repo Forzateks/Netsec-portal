@@ -635,12 +635,14 @@ function buildPieChart(data, unit) {
 
 
 function showProjectTab(tab) {
-  ['uslog','ussess','project','poc','amc','employee','manage'].forEach(function(t) {
+  ['uslog','ussess','otsessions','otsummary','project','poc','amc','employee','otpolicy','otmanager','manage'].forEach(function(t) {
     const el  = document.getElementById('pjtab-'+t);
     const sub = document.getElementById('pjsub-'+t);
     if (!el) return;
     el.style.display = t===tab ? 'block' : 'none';
     if (!sub) return;
+    // Always keep manager sub-tab hidden for non-managers regardless of cssText changes
+    if (t==='otmanager' && !isManager) { sub.style.display='none'; return; }
     if (t===tab) {
       sub.classList.add('active');
       sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--teal);color:var(--navy);white-space:nowrap';
@@ -649,12 +651,15 @@ function showProjectTab(tab) {
       sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap';
     }
   });
-  if (tab==='uslog')    { initProjectTab(); initUSLogForm(); }
-  if (tab==='ussess')   { initProjectTab(); populateUSFilters(); renderUSSessions(); }
-  if (tab==='project')  { initProjectTab(); renderUnifiedTypeSummary('project'); }
-  if (tab==='poc')      { initProjectTab(); renderUnifiedTypeSummary('poc'); }
-  if (tab==='amc')      { initProjectTab(); renderUnifiedTypeSummary('amc'); }
-  if (tab==='employee') { initProjectTab(); renderPjEmployeeSummary(); }
-  if (tab==='manage')   { populateProjectDropdowns(); renderCustomersList(); renderManageProjects(); }
+  if (tab==='uslog')      { initProjectTab(); initUSLogForm(); }
+  if (tab==='ussess')     { initProjectTab(); populateUSFilters(); renderUSSessions(); }
+  if (tab==='otsessions') { renderSessions(); }
+  if (tab==='otsummary')  { buildSummaryFilters(); }
+  if (tab==='project')    { initProjectTab(); renderUnifiedTypeSummary('project'); }
+  if (tab==='poc')        { initProjectTab(); renderUnifiedTypeSummary('poc'); }
+  if (tab==='amc')        { initProjectTab(); renderUnifiedTypeSummary('amc'); }
+  if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
+  if (tab==='otmanager')  { renderManager(); }
+  if (tab==='manage')     { populateProjectDropdowns(); renderCustomersList(); renderManageProjects(); }
 }
 

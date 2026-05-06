@@ -161,7 +161,8 @@ async function initApp(user) {
   document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
 
   // Show/hide manager elements
-  document.getElementById('otsub-manager').style.display = isManager ? '' : 'none';
+  var pjsubOTManager = document.getElementById('pjsub-otmanager');
+  if (pjsubOTManager) pjsubOTManager.style.display = isManager ? '' : 'none';
   document.getElementById('tab-approvals').style.display  = isManager ? '' : 'none';
   // Leave sub-tab label depends on role
   var lsubLabel = document.getElementById('lsub-team-label');
