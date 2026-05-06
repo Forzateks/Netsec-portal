@@ -59,7 +59,7 @@ async function renderDashboard() {
     '<div class="quick-actions-wrap">'+
     '<button class="btn btn-primary" onclick="showScreen(\'projects\');showProjectTab(\'uslog\')">Log Session</button>'+
     '<button class="btn btn-ghost" onclick="showScreen(\'leave\');showLeaveTab(\'log\')">Request Leave</button>'+
-    '<button class="btn btn-ghost" onclick="showScreen(\'leave\');showLeaveTab(\'compoff\')">Comp Off</button>'+
+    '<button class="btn btn-ghost" onclick="showScreen(\'leave\');showLeaveTab(\'log\');document.getElementById(\'lv-type\').value=\'compoff_full\';onLeaveTypeChange()">Comp Off</button>'+
     (isManager?'<button id="monthly-report-btn" class="btn btn-ghost" onclick="downloadMonthlyReport()">Monthly OT Report</button>':'')+
     (isManager?'<button class="btn btn-ghost" onclick="showScreen(\'approvals\')">Approvals</button>':'')+
     '</div></div>';

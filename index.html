@@ -128,9 +128,8 @@
 <!-- ══ ANNUAL LEAVE SCREEN ══ -->
 <div class="screen" id="screen-leave">
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="lsub-log"     onclick="showLeaveTab('log')">✏️ Request Leave</div>
+    <div class="leave-sub active" id="lsub-log"     onclick="showLeaveTab('log')">✏️ Request Time Off</div>
     <div class="leave-sub"        id="lsub-history"  onclick="showLeaveTab('history')">📋 My Requests</div>
-    <div class="leave-sub"        id="lsub-compoff"  onclick="showLeaveTab('compoff')">🗓 Comp Off</div>
     <div class="leave-sub"        id="lsub-team"     onclick="showLeaveTab('team')"><span id="lsub-team-label">👔 Team Overview</span></div>
   </div>
 
@@ -139,26 +138,28 @@
     <div class="alert alert-success" id="leave-success">✅ Leave request submitted! Awaiting manager approval.</div>
     <div class="alert alert-error" id="leave-error">⚠️ Please fill all required fields.</div>
     <div class="card">
-      <div class="card-title">Request Leave</div>
+      <div class="card-title">Request Time Off</div>
       <div class="form-grid mb-4">
-        <div class="form-group">
-          <label>Leave Type *</label>
-          <select id="lv-type" onchange="updateLeavePreview()">
+        <div class="form-group full">
+          <label>Type *</label>
+          <select id="lv-type" onchange="onLeaveTypeChange()">
             <option value="annual">🏖️ Annual Leave</option>
             <option value="sick">🤒 Sick Leave</option>
+            <option value="compoff_full">🗓 Comp Off (Full Day)</option>
+            <option value="compoff_half">🗓 Comp Off (Half Day)</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Start Date *</label>
+        <div class="form-group" id="lv-start-wrap">
+          <label id="lv-start-label">Start Date *</label>
           <input type="date" id="lv-start" onchange="updateLeavePreview()">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="lv-end-wrap">
           <label>End Date *</label>
           <input type="date" id="lv-end" onchange="updateLeavePreview()">
         </div>
         <div class="form-group full">
           <label>Reason (optional)</label>
-          <input type="text" id="lv-reason" placeholder="e.g. Family vacation / Medical appointment">
+          <input type="text" id="lv-reason" placeholder="e.g. Family vacation / Medical appointment / LMG migration OT">
         </div>
       </div>
       <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1.5px solid #bae6fd;border-radius:10px;padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
@@ -191,42 +192,6 @@
   <div id="ltab-team" style="display:none">
     <div id="lv-team-load" class="loading"><div class="spinner"></div>Loading...</div>
     <div id="lv-team-content"></div>
-  </div>
-  <!-- COMP OFF -->
-  <div id="ltab-compoff" style="display:none">
-    <div class="alert alert-success" id="co-success">✅ Comp off request submitted! Awaiting manager approval.</div>
-    <div class="alert alert-error" id="co-error">⚠️ Please select the date and request type.</div>
-    <div class="card">
-      <div class="card-title">Request Comp Off</div>
-      <div class="form-grid mb-4">
-        <div class="form-group">
-          <label>Date to Take *</label>
-          <input type="date" id="co-date">
-        </div>
-        <div class="form-group">
-          <label>Type *</label>
-          <select id="co-type">
-            <option value="">-- Select --</option>
-            <option value="1">Full Day (1.0)</option>
-            <option value="0.5">Half Day (0.5)</option>
-          </select>
-        </div>
-        <div class="form-group full">
-          <label>Related Activity (optional)</label>
-          <input type="text" id="co-activity" placeholder="e.g. LMG Migration OT">
-        </div>
-        <div class="form-group full">
-          <label>Remarks (optional)</label>
-          <input type="text" id="co-remarks" placeholder="Any additional notes">
-        </div>
-      </div>
-      <button class="btn btn-primary" onclick="submitCompOffRequest()">📤 Submit Request</button>
-    </div>
-    <div class="card">
-      <div class="card-title">My Comp Off Requests</div>
-      <div id="co-req-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <div id="co-req-content"></div>
-    </div>
   </div>
 </div>
 

@@ -24,16 +24,56 @@ async function getLeaveDaysUsed(employee,year,leaveType) {
   }).reduce(function(s,r){return s+parseFloat(r.working_days||0);},0);
 }
 
+function isCompOffType(t) { return t==='compoff_full' || t==='compoff_half'; }
+
+function onLeaveTypeChange() {
+  const ltype = document.getElementById('lv-type').value;
+  const compoff = isCompOffType(ltype);
+  const endWrap = document.getElementById('lv-end-wrap');
+  const startLabel = document.getElementById('lv-start-label');
+  const startWrap = document.getElementById('lv-start-wrap');
+  if (endWrap)   endWrap.style.display   = compoff ? 'none' : '';
+  if (startLabel) startLabel.textContent = compoff ? 'Date *' : 'Start Date *';
+  if (startWrap) startWrap.classList.toggle('full', compoff);
+  updateLeavePreview();
+}
+
 async function updateLeavePreview() {
-  const start  = document.getElementById('lv-start').value;
-  const end    = document.getElementById('lv-end').value;
-  const ltype  = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual';
+  const start = document.getElementById('lv-start').value;
+  const end   = document.getElementById('lv-end').value;
+  const ltype = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual';
+
+  if (isCompOffType(ltype)) {
+    const reqDays = ltype==='compoff_full' ? 1 : 0.5;
+    document.getElementById('lv-prev-type').textContent = ltype==='compoff_full' ? 'Comp Off (Full)' : 'Comp Off (Half)';
+    if (!start) {
+      document.getElementById('lv-prev-days').textContent = '—';
+      document.getElementById('lv-prev-used').textContent = '—';
+      document.getElementById('lv-prev-bal').textContent  = '—';
+      return;
+    }
+    const [{data:sessions},{data:coRegs}] = await Promise.all([
+      sb.from('ot_sessions').select('*').eq('employee',currentUser),
+      sb.from('comp_off_register').select('*').eq('employee',currentUser)
+    ]);
+    const s = calcSummary(sessions||[], coRegs||[], currentUser);
+    const balAfter = s.balance - reqDays;
+    document.getElementById('lv-prev-days').textContent = reqDays+' day';
+    document.getElementById('lv-prev-used').textContent = s.used+' / '+s.totalCO;
+    document.getElementById('lv-prev-bal').textContent  = balAfter+' days';
+    document.getElementById('lv-prev-bal').style.color  = balAfter<0?'var(--danger)':balAfter<=1?'var(--gold)':'var(--success)';
+    return;
+  }
+
   const isSick = ltype === 'sick';
   const allowance = isSick ? SICK_ALLOWANCE : LEAVE_ALLOWANCE;
-
   document.getElementById('lv-prev-type').textContent = isSick ? 'Sick' : 'Annual';
-
-  if (!start||!end) return;
+  if (!start||!end) {
+    document.getElementById('lv-prev-days').textContent = '—';
+    document.getElementById('lv-prev-used').textContent = '—';
+    document.getElementById('lv-prev-bal').textContent  = '—';
+    return;
+  }
   const days = calcWorkingDays(start,end,currentUser);
   const year = start.split('-')[0];
   const used = await getLeaveDaysUsed(currentUser,year,ltype);
@@ -45,10 +85,11 @@ async function updateLeavePreview() {
 }
 
 async function submitLeaveRequest() {
+  const ltype  = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual';
+  if (isCompOffType(ltype)) { return submitCompOffViaLeaveForm(ltype); }
   const start  = document.getElementById('lv-start').value;
   const end    = document.getElementById('lv-end').value;
   const reason = document.getElementById('lv-reason').value.trim();
-  const ltype  = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual';
   const errEl  = document.getElementById('leave-error');
   if (!start||!end){showAlert('leave-error');return;}
   const days = calcWorkingDays(start,end,currentUser);
@@ -144,19 +185,113 @@ async function submitLeaveRequest() {
   document.getElementById('lv-prev-bal').textContent='—';
 }
 
+async function submitCompOffViaLeaveForm(ltype) {
+  const date   = document.getElementById('lv-start').value;
+  const reason = document.getElementById('lv-reason').value.trim();
+  const errEl  = document.getElementById('leave-error');
+  if (!date) { showAlert('leave-error'); return; }
+  const days     = ltype==='compoff_full' ? 1 : 0.5;
+  const typeLabel = days===1 ? 'Full Day' : 'Half Day';
+
+  // Block requesting comp off on a date that already has a non-rejected
+  // request OR an already-redeemed register entry for this user.
+  var conflictRes = await Promise.all([
+    sb.from('comp_off_requests')
+      .select('id,status,request_date').eq('employee', currentUser)
+      .neq('status','rejected').eq('request_date', date),
+    sb.from('comp_off_register')
+      .select('id,date_taken').eq('employee', currentUser).eq('date_taken', date)
+  ]);
+  var conflict = (conflictRes[0].data && conflictRes[0].data[0]) ||
+                 (conflictRes[1].data && conflictRes[1].data[0]);
+  if (conflict) {
+    if (errEl) errEl.textContent = '⚠️ You already have a comp off record for ' + date + '. Cancel that one or pick a different date.';
+    showAlert('leave-error'); return;
+  }
+
+  var emailWindow = window.open('about:blank', '_blank');
+
+  const btn=document.getElementById('lv-save-btn');
+  btn.disabled=true; btn.textContent='⏳ Submitting...';
+  const {error}=await sb.from('comp_off_requests').insert({
+    employee:currentUser, request_date:date, type:typeLabel,
+    days, related_activity:'', remarks:reason, status:'pending'
+  });
+  btn.disabled=false; btn.innerHTML='📤 Submit Request';
+  if (error){
+    if (emailWindow) try { emailWindow.close(); } catch(e){}
+    alert('Error: '+error.message); return;
+  }
+
+  var subject = 'Comp Off Request - ' + currentUser + ' - ' + typeLabel + ' on ' + date;
+  var body =
+    'Hi Venkat,\n\n' +
+    'I have submitted a comp off request through the NetSec Portal:\n\n' +
+    'Type: ' + typeLabel + ' (' + days + ' day)\n' +
+    'Date: ' + date + '\n' +
+    'Reason: ' + (reason || '(none)') + '\n\n' +
+    'Please review and approve at https://netsec-portal.pages.dev/\n\n' +
+    'Thanks,\n' + currentUser;
+  var enc = encodeURIComponent;
+  var mailto    = 'mailto:venkat@gulfitd.com?subject=' + enc(subject) + '&body=' + enc(body);
+  var outlookWb = 'https://outlook.office.com/mail/deeplink/compose?to=venkat@gulfitd.com&subject=' + enc(subject) + '&body=' + enc(body);
+
+  if (emailWindow) {
+    try {
+      emailWindow.location.href = mailto;
+      setTimeout(function(){ try { emailWindow.close(); } catch(e){} }, 1200);
+    } catch(e) {
+      try { emailWindow.close(); } catch(e2){}
+      emailWindow = null;
+    }
+  }
+  var successEl = document.getElementById('leave-success');
+  if (successEl) {
+    var note = emailWindow ? ' Outlook should have opened.' : ' (Outlook auto-launch was blocked.)';
+    successEl.innerHTML = '✅ Comp off request submitted.' + note
+      + ' Or open manually: '
+      + '<a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a>'
+      + '<a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>';
+  }
+  showAlert('leave-success');
+
+  ['lv-start','lv-end','lv-reason'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('lv-prev-days').textContent='—';
+  document.getElementById('lv-prev-used').textContent='—';
+  document.getElementById('lv-prev-bal').textContent='—';
+}
+
 async function renderLeaveHistory() {
   document.getElementById('lv-hist-load').style.display='flex';
   document.getElementById('lv-hist-content').innerHTML='';
   const filter=isManager?document.getElementById('lv-hist-filter').value:currentUser;
-  let q=sb.from('leave_requests').select('*').order('created_at',{ascending:false});
-  if (filter) q=q.eq('employee',filter);
-  const {data}=await q;
+  let lq=sb.from('leave_requests').select('*').order('created_at',{ascending:false});
+  let cq=sb.from('comp_off_requests').select('*').order('created_at',{ascending:false});
+  if (filter) { lq=lq.eq('employee',filter); cq=cq.eq('employee',filter); }
+  const [lr, cr] = await Promise.all([lq, cq]);
   document.getElementById('lv-hist-load').style.display='none';
-  if (!data||!data.length){
-    document.getElementById('lv-hist-content').innerHTML='<div class="empty-state"><div class="empty-title">No leave requests yet</div></div>';
+
+  const leaveRows = (lr.data||[]).map(function(r){ return Object.assign({_kind:'leave'}, r); });
+  const coRows    = (cr.data||[]).map(function(r){ return Object.assign({_kind:'compoff'}, r); });
+  const all = leaveRows.concat(coRows).sort(function(a,b){
+    return new Date(b.created_at||0) - new Date(a.created_at||0);
+  });
+
+  if (!all.length){
+    document.getElementById('lv-hist-content').innerHTML='<div class="empty-state"><div class="empty-title">No requests yet</div></div>';
     return;
   }
-  document.getElementById('lv-hist-content').innerHTML=data.map(function(r){
+  document.getElementById('lv-hist-content').innerHTML=all.map(function(r){
+    if (r._kind==='compoff') {
+      return '<div class="request-card '+r.status+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+        '<div><strong>'+r.employee+'</strong> <span style="font-size:11px;font-weight:600;color:var(--gold)">Comp Off ('+r.type+')</span><br>'+
+        '<span style="font-family:DM Mono,monospace;font-size:13px">'+fmtDate(r.request_date)+'</span><br>'+
+        '<span style="font-size:12px;color:var(--muted)">'+r.days+' day'+(r.remarks?' | '+r.remarks:(r.related_activity?' | '+r.related_activity:''))+'</span></div>'+
+        '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span></div>'+
+        (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:4px">💬 '+r.manager_comment+'</div>':'')+
+        '</div>';
+    }
     var ltIcon  = (r.leave_type||'annual')==='sick' ? 'Sick Leave' : 'Annual Leave';
     var ltColor = (r.leave_type||'annual')==='sick' ? '#8B5CF6' : 'var(--teal)';
     return '<div class="request-card '+r.status+'">'+
