@@ -590,15 +590,10 @@
 <!-- ══ APPROVALS SCREEN (manager only) ══ -->
 <div class="screen" id="screen-approvals">
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="appsub-compoff" onclick="showApprovalsTab('compoff')">🗓 Comp Off Requests</div>
-    <div class="leave-sub"        id="appsub-leave"   onclick="showApprovalsTab('leave')">📅 Leave Requests</div>
+    <div class="leave-sub active" id="appsub-leave"   onclick="showApprovalsTab('leave')">📅 Time Off Requests</div>
     <div class="leave-sub"        id="appsub-ot"      onclick="showApprovalsTab('ot')">⏱ OT Sessions</div>
   </div>
-  <div id="apptab-compoff">
-    <div id="co-approvals-load" class="loading"><div class="spinner"></div>Loading...</div>
-    <div id="co-approvals-content"></div>
-  </div>
-  <div id="apptab-leave" style="display:none">
+  <div id="apptab-leave">
     <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px">
       <label style="font-size:12px;color:var(--muted);font-weight:600">Employee:</label>
       <select id="lv-app-emp" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
@@ -607,8 +602,10 @@
       <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Type:</label>
       <select id="lv-app-type" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
         <option value="">All</option>
-        <option value="Annual">Annual</option>
-        <option value="Sick">Sick</option>
+        <option value="annual">Annual Leave</option>
+        <option value="sick">Sick Leave</option>
+        <option value="compoff_full">Comp Off (Full)</option>
+        <option value="compoff_half">Comp Off (Half)</option>
       </select>
       <label style="font-size:12px;color:var(--muted);font-weight:600">Status:</label>
       <select id="lv-app-status" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 10px;font-size:13px">

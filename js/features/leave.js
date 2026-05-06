@@ -391,29 +391,6 @@ async function updateNotifBadge() {
   else {badge.style.display='none';}
 }
 
-async function renderCompOffApprovals() {
-  document.getElementById('co-approvals-load').style.display='flex';
-  document.getElementById('co-approvals-content').innerHTML='';
-  const {data}=await sb.from('comp_off_requests').select('*').order('created_at',{ascending:false});
-  document.getElementById('co-approvals-load').style.display='none';
-  if (!data||!data.length){
-    document.getElementById('co-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No comp off requests</div></div>';
-    return;
-  }
-  const pending=data.filter(function(r){return r.status==='pending';});
-  const others=data.filter(function(r){return r.status!=='pending';});
-  let html='';
-  if (pending.length){
-    html+='<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">🟡 Pending ('+pending.length+')</h3>';
-    html+=pending.map(function(r){return approvalCard(r,'compoff');}).join('');
-  }
-  if (others.length){
-    html+='<h3 style="font-size:14px;font-weight:600;color:var(--muted);margin:20px 0 12px">History</h3>';
-    html+=others.map(function(r){return approvalCard(r,'compoff');}).join('');
-  }
-  document.getElementById('co-approvals-content').innerHTML=html;
-}
-
 function clearLeaveApprovalFilters() {
   ['lv-app-emp','lv-app-type','lv-app-status','lv-app-from','lv-app-to'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
@@ -440,21 +417,45 @@ async function renderLeaveApprovals() {
   var fFrom   = (document.getElementById('lv-app-from')||{}).value || '';
   var fTo     = (document.getElementById('lv-app-to')||{}).value || '';
 
-  var q = sb.from('leave_requests').select('*').order('created_at',{ascending:false});
-  if (fEmp)    q = q.eq('employee', fEmp);
-  if (fType)   q = q.eq('leave_type', fType);
-  if (fStatus) q = q.eq('status', fStatus);
-  if (fFrom)   q = q.gte('start_date', fFrom);
-  if (fTo)     q = q.lte('end_date', fTo);
+  // Type filter routes which tables to query:
+  //   ''               -> both tables
+  //   'annual'/'sick'  -> leave_requests only (with leave_type filter)
+  //   'compoff_full'   -> comp_off_requests with type='Full Day'
+  //   'compoff_half'   -> comp_off_requests with type='Half Day'
+  var wantLeave   = fType==='' || fType==='annual' || fType==='sick';
+  var wantCompOff = fType==='' || fType==='compoff_full' || fType==='compoff_half';
 
-  const {data}=await q;
+  var leaveQ = null, coQ = null;
+  if (wantLeave) {
+    leaveQ = sb.from('leave_requests').select('*').order('created_at',{ascending:false});
+    if (fEmp)    leaveQ = leaveQ.eq('employee', fEmp);
+    if (fType==='annual' || fType==='sick') leaveQ = leaveQ.eq('leave_type', fType);
+    if (fStatus) leaveQ = leaveQ.eq('status', fStatus);
+    if (fFrom)   leaveQ = leaveQ.gte('start_date', fFrom);
+    if (fTo)     leaveQ = leaveQ.lte('end_date', fTo);
+  }
+  if (wantCompOff) {
+    coQ = sb.from('comp_off_requests').select('*').order('created_at',{ascending:false});
+    if (fEmp)    coQ = coQ.eq('employee', fEmp);
+    if (fType==='compoff_full') coQ = coQ.eq('type', 'Full Day');
+    if (fType==='compoff_half') coQ = coQ.eq('type', 'Half Day');
+    if (fStatus) coQ = coQ.eq('status', fStatus);
+    if (fFrom)   coQ = coQ.gte('request_date', fFrom);
+    if (fTo)     coQ = coQ.lte('request_date', fTo);
+  }
+
+  const [lr, cr] = await Promise.all([
+    leaveQ ? leaveQ : Promise.resolve({data:[]}),
+    coQ    ? coQ    : Promise.resolve({data:[]})
+  ]);
   document.getElementById('lv-approvals-load').style.display='none';
-  const rows = data || [];
 
-  // For each row, find OTHER employees whose pending or approved leave
-  // overlaps the date range (different employee, not rejected, dates intersect).
-  rows.forEach(function(r){
-    r._overlaps = rows.filter(function(o){
+  const leaveRows = (lr.data||[]).map(function(r){ return Object.assign({_kind:'leave'}, r); });
+  const coRows    = (cr.data||[]).map(function(r){ return Object.assign({_kind:'compoff'}, r); });
+
+  // Overlap detection only meaningful for date-range leave; skip comp-off.
+  leaveRows.forEach(function(r){
+    r._overlaps = leaveRows.filter(function(o){
       return o.id !== r.id
           && o.employee !== r.employee
           && o.status !== 'rejected'
@@ -463,24 +464,30 @@ async function renderLeaveApprovals() {
     });
   });
 
+  const rows = leaveRows.concat(coRows).sort(function(a,b){
+    return new Date(b.created_at||0) - new Date(a.created_at||0);
+  });
+
   const pending = rows.filter(function(r){return r.status==='pending';});
   const others  = rows.filter(function(r){return r.status!=='pending';});
   let html='';
   if (!rows.length) {
-    html += '<div style="padding:14px;background:#f8fafc;border-radius:8px;color:var(--muted);font-size:13px;margin-bottom:14px">No leave requests match the filters.</div>';
+    html += '<div style="padding:14px;background:#f8fafc;border-radius:8px;color:var(--muted);font-size:13px;margin-bottom:14px">No requests match the filters.</div>';
   }
   if (pending.length){
     html+='<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">🟡 Pending ('+pending.length+')</h3>';
-    html+=pending.map(function(r){return approvalCard(r,'leave');}).join('');
+    html+=pending.map(function(r){return approvalCard(r, r._kind);}).join('');
   }
   if (others.length){
     html+='<h3 style="font-size:14px;font-weight:600;color:var(--muted);margin:20px 0 12px">History ('+others.length+')</h3>';
-    html+=others.map(function(r){return approvalCard(r,'leave');}).join('');
+    html+=others.map(function(r){return approvalCard(r, r._kind);}).join('');
   }
 
-  // ALWAYS append the approved-balance section (source of truth in annual_leave),
-  // even when leave_requests is empty - that's exactly when it matters most.
-  html += await buildApprovedLeavesSection();
+  // Always show the approved-balance source-of-truth section (annual_leave).
+  // Only relevant when annual/sick selected or no type filter.
+  if (wantLeave) {
+    html += await buildApprovedLeavesSection();
+  }
 
   document.getElementById('lv-approvals-content').innerHTML=html;
 }
@@ -694,8 +701,7 @@ async function deleteRequest(type, id) {
   }
   const {error} = await sb.from(table).delete().eq('id', id);
   if (error) { alert('Error: '+error.message); return; }
-  if (type==='compoff') renderCompOffApprovals();
-  else renderLeaveApprovals();
+  renderLeaveApprovals();
 }
 
 async function processRequest(decision) {
@@ -737,8 +743,7 @@ async function processRequest(decision) {
 
   closeApproveModal();
   updateNotifBadge();
-  if (type==='compoff') renderCompOffApprovals();
-  else renderLeaveApprovals();
+  renderLeaveApprovals();
 }
 
 // == EXPORT CSV ====================================================

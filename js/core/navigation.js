@@ -15,14 +15,13 @@ function showLeaveTab(tab) {
 }
 
 function showApprovalsTab(tab) {
-  ['compoff','leave','ot'].forEach(function(t) {
+  ['leave','ot'].forEach(function(t) {
     document.getElementById('apptab-'+t).style.display=t===tab?'block':'none';
     const sub=document.getElementById('appsub-'+t);
     if (t===tab){sub.classList.add('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--teal);color:var(--navy);white-space:nowrap';}
     else{sub.classList.remove('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap';}
   });
-  if (tab==='compoff') renderCompOffApprovals();
-  else if (tab==='leave') renderLeaveApprovals();
+  if (tab==='leave') renderLeaveApprovals();
   else if (tab==='ot') renderOTApprovals();
 }
 
@@ -34,7 +33,7 @@ function showScreen(name) {
   if (name==='dashboard') renderDashboard();
   if (name==='leave')     showLeaveTab('log');
   if (name==='projects')  { initProjectTab(); showProjectTab('uslog'); };
-  if (name==='approvals')  showApprovalsTab('compoff');
+  if (name==='approvals')  showApprovalsTab('leave');
   if (name==='inventory')  showInventoryTab('devices');
   if (name==='kb')         showKBTab('browse');
 }
