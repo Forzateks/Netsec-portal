@@ -251,9 +251,10 @@ async function renderManageProjects() {
     'archived':  {bg:'#F3F4F6',color:'#6B7280',label:'🗃️ Archived'},
   };
   const TYPE_BADGES = {
-    'project': {bg:'#EFF6FF',color:'#2563EB',label:'PROJECT'},
-    'poc':     {bg:'#F5F3FF',color:'#7C3AED',label:'POC'},
-    'amc':     {bg:'#FFFBEB',color:'#B45309',label:'AMC'},
+    'project':  {bg:'#EFF6FF',color:'#2563EB',label:'PROJECT'},
+    'poc':      {bg:'#F5F3FF',color:'#7C3AED',label:'POC'},
+    'amc':      {bg:'#FFFBEB',color:'#B45309',label:'AMC'},
+    'presales': {bg:'#FDF2F8',color:'#BE185D',label:'PRE-SALES'},
   };
 
   var custById = {}; (CUSTOMERS||[]).forEach(function(c){ custById[c.id] = c.name; });
@@ -474,7 +475,7 @@ async function renderPjEmployeeSummary() {
 
   const empData = {};
   EMPLOYEES.forEach(function(e){
-    empData[e] = { total:0, sessions:0, project:0, poc:0, amc:0, internal:0, engagements:{} };
+    empData[e] = { total:0, sessions:0, project:0, poc:0, amc:0, presales:0, internal:0, engagements:{} };
   });
 
   rows.forEach(function(r) {
@@ -524,6 +525,7 @@ async function renderPjEmployeeSummary() {
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.project)+'h</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.poc)+'h</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.amc)+'h</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.presales)+'h</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.internal)+'h</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+r2(d.total/8)+' days</td>'+
       '<td style="font-size:11px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(topEngs)+'">'+(topEngs||'-')+'</td>'+
@@ -541,11 +543,11 @@ async function renderPjEmployeeSummary() {
     buildPieChart(EMPLOYEES.map(function(e){ return {label:empShortName(e),value:empData[e].sessions,color:empColor(e)}; }).filter(function(d){return d.value>0;}),'')+
     '</div></div>'+
     '<div class="table-wrap"><table>'+
-    '<thead><tr><th>Employee</th><th>Sessions</th><th>Total</th><th>📁 Project</th><th>🎯 POC</th><th>🛠️ AMC</th><th>🔧 Internal</th><th>Working Days</th><th>Top Engagements</th></tr></thead>'+
+    '<thead><tr><th>Employee</th><th>Sessions</th><th>Total</th><th>📁 Project</th><th>🎯 POC</th><th>🛠️ AMC</th><th>💼 Pre-Sales</th><th>🔧 Internal</th><th>Working Days</th><th>Top Engagements</th></tr></thead>'+
     '<tbody>'+tableRows+
     '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>-</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+r2(totalHours)+'h</td>'+
-    '<td colspan="4">-</td>'+
+    '<td colspan="5">-</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+r2(totalHours/8)+'</td><td>-</td></tr>'+
     '</tbody></table></div>'+
     '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours / 8 | Hours are credited to every team member on a session (so a 4h session with 3 members shows 4h on each row, summing to 12h in TOTAL).</div>';
@@ -629,7 +631,7 @@ function buildPieChart(data, unit) {
 
 
 function showProjectTab(tab) {
-  ['uslog','ussess','otsessions','otsummary','project','poc','amc','employee','otpolicy','otmanager','manage'].forEach(function(t) {
+  ['uslog','ussess','otsessions','otsummary','project','poc','amc','presales','employee','otpolicy','otmanager','manage'].forEach(function(t) {
     const el  = document.getElementById('pjtab-'+t);
     const sub = document.getElementById('pjsub-'+t);
     if (!el) return;
@@ -652,6 +654,7 @@ function showProjectTab(tab) {
   if (tab==='project')    { initProjectTab(); renderUnifiedTypeSummary('project'); }
   if (tab==='poc')        { initProjectTab(); renderUnifiedTypeSummary('poc'); }
   if (tab==='amc')        { initProjectTab(); renderUnifiedTypeSummary('amc'); }
+  if (tab==='presales')   { initProjectTab(); renderUnifiedTypeSummary('presales'); }
   if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
   if (tab==='otmanager')  { renderManager(); }
   if (tab==='manage')     { populateProjectDropdowns(); renderCustomersList(); renderManageProjects(); }

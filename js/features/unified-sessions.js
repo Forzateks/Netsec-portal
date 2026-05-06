@@ -6,6 +6,7 @@ const SESSION_TYPE_BADGES = {
   project:  { bg: '#EFF6FF', color: '#2563EB', label: '📁 Project' },
   poc:      { bg: '#F5F3FF', color: '#7C3AED', label: '🎯 POC' },
   amc:      { bg: '#FFFBEB', color: '#B45309', label: '🛠️ AMC' },
+  presales: { bg: '#FDF2F8', color: '#BE185D', label: '💼 Pre-Sales' },
   internal: { bg: '#F3F4F6', color: '#6B7280', label: '🔧 Internal' },
 };
 
@@ -68,7 +69,7 @@ function splitSessionHours(dateStr, startStr, endStr, employee) {
 // === FORM: type toggle + conditional fields ====================
 function onUSTypeChange() {
   var type = document.getElementById('us-type').value;
-  var isEng = (type === 'project' || type === 'poc' || type === 'amc');
+  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'presales');
   var engRow = document.getElementById('us-engagement-row');
   if (engRow) engRow.style.display = isEng ? '' : 'none';
   var actRow = document.getElementById('us-activity-row');
@@ -195,7 +196,7 @@ async function saveUnifiedSession() {
   if (!type)  return fail('Please pick a session type.');
   if (!date || !start || !end) return fail('Date, start and end times are required.');
 
-  var isEng = (type === 'project' || type === 'poc' || type === 'amc');
+  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'presales');
   if (isEng) {
     if (!customer)  return fail('Please pick a customer.');
     if (!engId)     return fail('Please pick an engagement.');
@@ -448,7 +449,7 @@ async function saveEditUS() {
   if (!date || !start || !end) return fail('Date and times required.');
   if (!info) return fail('Session info required.');
 
-  var isEng = (type === 'project' || type === 'poc' || type === 'amc');
+  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'presales');
   var engId = null;
   if (isEng && engagement) {
     var engRow = (ENGAGEMENTS||[]).find(function(e){ return e.name === engagement && e.type === type; });
@@ -566,9 +567,10 @@ async function saveEditUS() {
 // the grouping key.
 async function renderUnifiedTypeSummary(typeKey) {
   var ids = {
-    project: { year: 'pj-sum-year',  loading: 'pj-project-loading', content: 'pj-project-content', heading: 'Project' },
-    poc:     { year: 'pj-poc-year',  loading: 'pj-poc-loading',     content: 'pj-poc-content',     heading: 'POC Engagements' },
-    amc:     { year: 'pj-amc-year',  loading: 'pj-amc-loading',     content: 'pj-amc-content',     heading: 'AMC Engagements' },
+    project:  { year: 'pj-sum-year',       loading: 'pj-project-loading',  content: 'pj-project-content',  heading: 'Project' },
+    poc:      { year: 'pj-poc-year',       loading: 'pj-poc-loading',      content: 'pj-poc-content',      heading: 'POC Engagements' },
+    amc:      { year: 'pj-amc-year',       loading: 'pj-amc-loading',      content: 'pj-amc-content',      heading: 'AMC Engagements' },
+    presales: { year: 'pj-presales-year',  loading: 'pj-presales-loading', content: 'pj-presales-content', heading: 'Pre-Sales Engagements' },
   };
   var ui = ids[typeKey];
   if (!ui) return;

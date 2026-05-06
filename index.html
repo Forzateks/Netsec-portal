@@ -205,6 +205,7 @@
     <div class="leave-sub"        id="pjsub-project"     onclick="showProjectTab('project')">📊 Project Summary</div>
     <div class="leave-sub"        id="pjsub-poc"         onclick="showProjectTab('poc')">🎯 POC Summary</div>
     <div class="leave-sub"        id="pjsub-amc"         onclick="showProjectTab('amc')">🛠️ AMC Summary</div>
+    <div class="leave-sub"        id="pjsub-presales"    onclick="showProjectTab('presales')">💼 Pre-Sales Summary</div>
     <div class="leave-sub"        id="pjsub-employee"    onclick="showProjectTab('employee')">👥 Employee Summary</div>
     <div class="leave-sub"        id="pjsub-otpolicy"    onclick="showProjectTab('otpolicy')">📖 OT Policy</div>
     <div class="leave-sub"        id="pjsub-otmanager"   onclick="showProjectTab('otmanager')" style="display:none">👔 Manager View</div>
@@ -225,6 +226,7 @@
             <option value="project">📁 Project</option>
             <option value="poc">🎯 POC</option>
             <option value="amc">🛠️ AMC</option>
+            <option value="presales">💼 Pre-Sales</option>
             <option value="internal">🔧 Internal / Other</option>
           </select>
         </div>
@@ -309,6 +311,7 @@
             <option value="project">📁 Project</option>
             <option value="poc">🎯 POC</option>
             <option value="amc">🛠️ AMC</option>
+            <option value="presales">💼 Pre-Sales</option>
             <option value="internal">🔧 Internal</option>
           </select>
           <select id="us-flt-cust" onchange="renderUSSessions()" style="width:auto;padding:6px 10px;font-size:13px">
@@ -379,6 +382,18 @@
     </div>
   </div>
 
+  <!-- PRE-SALES SUMMARY -->
+  <div id="pjtab-presales" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">💼 Pre-Sales Summary</div>
+        <select id="pj-presales-year" onchange="renderUnifiedTypeSummary('presales')" style="width:auto;padding:7px 12px"></select>
+      </div>
+      <div id="pj-presales-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div id="pj-presales-content"></div>
+    </div>
+  </div>
+
   <!-- EMPLOYEE SUMMARY -->
   <div id="pjtab-employee" style="display:none">
     <div class="card">
@@ -425,6 +440,7 @@
             <option value="project">📁 Project</option>
             <option value="poc">🎯 POC</option>
             <option value="amc">🛠️ AMC</option>
+            <option value="presales">💼 Pre-Sales</option>
           </select>
         </div>
         <div class="form-group">
@@ -451,6 +467,7 @@
             <option value="project">📁 Project</option>
             <option value="poc">🎯 POC</option>
             <option value="amc">🛠️ AMC</option>
+            <option value="presales">💼 Pre-Sales</option>
           </select>
           <select id="pj-manage-filter" onchange="renderManageProjects()" style="width:auto;padding:7px 12px">
             <option value="">All Status</option>
@@ -1136,6 +1153,7 @@
           <option value="project">📁 Project</option>
           <option value="poc">🎯 POC</option>
           <option value="amc">🛠️ AMC</option>
+          <option value="presales">💼 Pre-Sales</option>
           <option value="internal">🔧 Internal</option>
         </select>
       </div>
@@ -1344,6 +1362,7 @@
           <option value="project">📁 Project</option>
           <option value="poc">🎯 POC</option>
           <option value="amc">🛠️ AMC</option>
+          <option value="presales">💼 Pre-Sales</option>
         </select>
       </div>
       <div class="form-group">
