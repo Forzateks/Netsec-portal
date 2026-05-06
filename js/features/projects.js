@@ -723,7 +723,10 @@ async function renderPjEmployeeSummary() {
   document.getElementById('pj-employee-content').innerHTML='';
   const year = document.getElementById('pj-emp-year').value || 'all';
 
-  let q = sb.from('project_sessions').select('*');
+  // Reads unified_sessions (Phase 6 cutover). Aggregates by employee
+  // (the `employee` column on the unified row, which is the logger),
+  // with a per-type breakdown column.
+  let q = sb.from('unified_sessions').select('*');
   if (year !== 'all') {
     q = q.gte('session_date', year+'-01-01').lte('session_date', year+'-12-31');
   }
@@ -732,64 +735,62 @@ async function renderPjEmployeeSummary() {
 
   const rows = data || [];
 
-  // Build per-employee totals
   const empData = {};
-  EMPLOYEES.forEach(function(e){ empData[e] = {hours:0, sessions:0, projects:{}}; });
+  EMPLOYEES.forEach(function(e){
+    empData[e] = { total:0, sessions:0, project:0, poc:0, amc:0, internal:0, engagements:{} };
+  });
 
   rows.forEach(function(r) {
-    (r.team_members||'').split(',').forEach(function(m) {
-      const name = m.trim();
-      // Match against known employees — exact match first, then first-name fallback
-      EMPLOYEES.forEach(function(emp) {
-        const firstName = emp.split(' ')[0].toLowerCase();
-        const nameLower = name.toLowerCase();
-        // Exact full name match OR first name match
-        if (nameLower === emp.toLowerCase() || nameLower === firstName) {
-          empData[emp].hours += parseFloat(r.duration_hours||0);
-          empData[emp].sessions++;
-          empData[emp].projects[r.project_name] = (empData[emp].projects[r.project_name]||0) + parseFloat(r.duration_hours||0);
-        }
-      });
-    });
+    var emp = r.employee;
+    if (!empData[emp]) return; // skip rows from unknown employees
+    var hrs = parseFloat(r.total_hours || 0);
+    empData[emp].total    += hrs;
+    empData[emp].sessions += 1;
+    if (empData[emp][r.session_type] !== undefined) empData[emp][r.session_type] += hrs;
+    var key = r.engagement_name || (r.session_type==='internal' ? '(internal)' : '(unspecified)');
+    empData[emp].engagements[key] = (empData[emp].engagements[key]||0) + hrs;
   });
 
   const tableRows = EMPLOYEES.map(function(emp) {
     const d = empData[emp];
-    const projCount = Object.keys(d.projects).length;
-    const topProjects = Object.keys(d.projects)
-      .sort(function(a,b){ return d.projects[b]-d.projects[a]; })
+    const engCount = Object.keys(d.engagements).length;
+    const topEngs = Object.keys(d.engagements)
+      .sort(function(a,b){ return d.engagements[b]-d.engagements[a]; })
       .slice(0,3)
-      .map(function(p){ return p+' ('+r2(d.projects[p])+'h)'; })
+      .map(function(p){ return p+' ('+r2(d.engagements[p])+'h)'; })
       .join(', ');
     return '<tr>'+
       '<td><strong>'+emp+'</strong></td>'+
       '<td style="font-family:DM Mono,monospace;font-size:13px">'+d.sessions+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:16px">'+r2(d.hours)+'h</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+r2(d.hours/8)+' days</td>'+
-      '<td style="font-size:12px;color:var(--muted)">'+projCount+' projects</td>'+
-      '<td style="font-size:11px;color:var(--muted)">'+( topProjects||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:16px">'+r2(d.total)+'h</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.project)+'h</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.poc)+'h</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.amc)+'h</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.internal)+'h</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+r2(d.total/8)+' days</td>'+
+      '<td style="font-size:11px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(topEngs)+'">'+(topEngs||'-')+'</td>'+
     '</tr>';
   }).join('');
 
-  // Total row
-  const totalHours = EMPLOYEES.reduce(function(s,e){ return s+empData[e].hours; },0);
+  const totalHours = EMPLOYEES.reduce(function(s,e){ return s+empData[e].total; },0);
 
   document.getElementById('pj-employee-content').innerHTML =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">'+
-    '<div class="card" style="margin-bottom:0"><div class="card-title">Hours Distribution</div>'+
-    buildPieChart(EMPLOYEES.map(function(e){ return {label:empShortName(e),value:empData[e].hours,color:empColor(e)}; }).filter(function(d){return d.value>0;}),'h')+
+    '<div class="card" style="margin-bottom:0"><div class="card-title">Total Hours by Employee</div>'+
+    buildPieChart(EMPLOYEES.map(function(e){ return {label:empShortName(e),value:empData[e].total,color:empColor(e)}; }).filter(function(d){return d.value>0;}),'h')+
     '</div>'+
-    '<div class="card" style="margin-bottom:0"><div class="card-title">Sessions Distribution</div>'+
+    '<div class="card" style="margin-bottom:0"><div class="card-title">Sessions by Employee</div>'+
     buildPieChart(EMPLOYEES.map(function(e){ return {label:empShortName(e),value:empData[e].sessions,color:empColor(e)}; }).filter(function(d){return d.value>0;}),'')+
     '</div></div>'+
     '<div class="table-wrap"><table>'+
-    '<thead><tr><th>Employee</th><th>Sessions</th><th>Total Hours</th><th>Working Days</th><th>Projects</th><th>Top Projects</th></tr></thead>'+
+    '<thead><tr><th>Employee</th><th>Sessions</th><th>Total</th><th>📁 Project</th><th>🎯 POC</th><th>🛠️ AMC</th><th>🔧 Internal</th><th>Working Days</th><th>Top Engagements</th></tr></thead>'+
     '<tbody>'+tableRows+
-    '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>—</td>'+
+    '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>-</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+r2(totalHours)+'h</td>'+
-    '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+r2(totalHours/8)+'</td><td>—</td><td>—</td></tr>'+
+    '<td colspan="4">-</td>'+
+    '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+r2(totalHours/8)+'</td><td>-</td></tr>'+
     '</tbody></table></div>'+
-    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours ÷ 8</div>';
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours / 8 | Reads unified_sessions (sessions logged via the new Log Session form)</div>';
 }
 
 // ── PIE CHART HELPERS ────────────────────────────────────────────
@@ -897,7 +898,7 @@ function showProjectTab(tab) {
   if (tab==='ussess')   { initProjectTab(); populateUSFilters(); renderUSSessions(); }
   if (tab==='log')      initProjectTab();
   if (tab==='sessions') { initProjectTab(); renderPjSessions(); }
-  if (tab==='project')  { initProjectTab(); renderPjProjectSummary(); }
+  if (tab==='project')  { initProjectTab(); renderUnifiedTypeSummary('project'); }
   if (tab==='poc')      { initProjectTab(); renderUnifiedTypeSummary('poc'); }
   if (tab==='amc')      { initProjectTab(); renderUnifiedTypeSummary('amc'); }
   if (tab==='employee') { initProjectTab(); renderPjEmployeeSummary(); }

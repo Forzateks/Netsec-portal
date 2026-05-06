@@ -102,7 +102,7 @@
   <div class="nav-tab active" onclick="showScreen('dashboard')" id="tab-dashboard">🏠 Dashboard</div>
   <div class="nav-tab" onclick="showScreen('overtime')" id="tab-overtime">⏱ Overtime</div>
   <div class="nav-tab" onclick="showScreen('leave')" id="tab-leave">🏖️ Leave</div>
-  <div class="nav-tab" onclick="showScreen('projects')" id="tab-projects">📁 Projects</div>
+  <div class="nav-tab" onclick="showScreen('projects')" id="tab-projects">📋 Sessions</div>
   <div class="nav-tab" onclick="showScreen('approvals')" id="tab-approvals" style="display:none">
     🔔 Approvals<span class="notif-badge" id="notif-badge" style="display:none">0</span>
   </div>
@@ -131,7 +131,7 @@
 <!-- ══ OVERTIME SCREEN ══ -->
 <div class="screen" id="screen-overtime">
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="otsub-log"      onclick="showOTTab('log')">➕ Log OT Session</div>
+    <div class="leave-sub" id="otsub-log"      onclick="showOTTab('log')" style="display:none">➕ Log OT Session</div>
     <div class="leave-sub"        id="otsub-sessions"  onclick="showOTTab('sessions')">📋 OT Sessions</div>
     <div class="leave-sub"        id="otsub-summary"   onclick="showOTTab('summary')">📊 Summary</div>
     <div class="leave-sub"        id="otsub-compoff"   onclick="showOTTab('compoff')">🗓 Comp Off</div>
@@ -430,15 +430,15 @@
 <!-- ══ PROJECTS SCREEN ══ -->
 <div class="screen" id="screen-projects">
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="pjsub-uslog"     onclick="showProjectTab('uslog')">🆕 Log Session</div>
-    <div class="leave-sub"        id="pjsub-ussess"    onclick="showProjectTab('ussess')">🆕 My Sessions</div>
-    <div class="leave-sub"        id="pjsub-log"       onclick="showProjectTab('log')">➕ Log (legacy)</div>
-    <div class="leave-sub"        id="pjsub-sessions"  onclick="showProjectTab('sessions')">📋 Sessions (legacy)</div>
+    <div class="leave-sub active" id="pjsub-uslog"     onclick="showProjectTab('uslog')">➕ Log Session</div>
+    <div class="leave-sub"        id="pjsub-ussess"    onclick="showProjectTab('ussess')">📋 My Sessions</div>
     <div class="leave-sub"        id="pjsub-project"   onclick="showProjectTab('project')">📊 Project Summary</div>
     <div class="leave-sub"        id="pjsub-poc"       onclick="showProjectTab('poc')">🎯 POC Summary</div>
     <div class="leave-sub"        id="pjsub-amc"       onclick="showProjectTab('amc')">🛠️ AMC Summary</div>
     <div class="leave-sub"        id="pjsub-employee"  onclick="showProjectTab('employee')">👥 Employee Summary</div>
     <div class="leave-sub"        id="pjsub-manage"    onclick="showProjectTab('manage')" style="display:none">⚙️ Manage Engagements</div>
+    <div class="leave-sub"        id="pjsub-log"       onclick="showProjectTab('log')" style="display:none">➕ Log (legacy)</div>
+    <div class="leave-sub"        id="pjsub-sessions"  onclick="showProjectTab('sessions')" style="display:none">📋 Sessions (legacy)</div>
   </div>
 
   <!-- 🆕 LOG UNIFIED SESSION (Phase 2 Beta) -->
@@ -532,7 +532,7 @@
   <div id="pjtab-ussess" style="display:none">
     <div class="card">
       <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">🆕 My Sessions <span style="font-size:11px;color:var(--gold);font-weight:500;margin-left:6px">Beta — unified table</span></div>
+        <div class="card-title" style="margin-bottom:0">📋 My Sessions <label style="font-size:12px;color:var(--muted);font-weight:500;margin-left:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="us-legacy-toggle" onchange="renderUSSessions()" style="accent-color:var(--gold)">📂 Show legacy data</label></div>
         <div class="filter-bar-inline" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <select id="us-flt-type" onchange="renderUSSessions()" style="width:auto;padding:6px 10px;font-size:13px">
             <option value="">All Types</option>

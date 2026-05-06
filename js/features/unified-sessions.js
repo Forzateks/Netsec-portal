@@ -318,18 +318,47 @@ async function renderUSSessions() {
   var fMem   = (document.getElementById('us-flt-mem')||{}).value || '';
   var fFrom  = (document.getElementById('us-flt-from')||{}).value || '';
   var fTo    = (document.getElementById('us-flt-to')||{}).value || '';
+  var legacy = !!(document.getElementById('us-legacy-toggle')||{}).checked;
 
-  var q = sb.from('unified_sessions').select('*').order('session_date',{ascending:false}).order('start_time',{ascending:false});
-  if (fType) q = q.eq('session_type', fType);
-  if (fCust) q = q.eq('customer_name', fCust);
-  if (fEng)  q = q.eq('engagement_name', fEng);
-  if (fFrom) q = q.gte('session_date', fFrom);
-  if (fTo)   q = q.lte('session_date', fTo);
+  var rows;
+  if (legacy) {
+    // Legacy mode: read project_sessions, normalise to unified-shape rows
+    var lq = sb.from('project_sessions').select('*').order('session_date',{ascending:false}).order('start_time',{ascending:false});
+    if (fCust) lq = lq.eq('customer_name', fCust);
+    if (fEng)  lq = lq.eq('project_name',  fEng);
+    if (fFrom) lq = lq.gte('session_date', fFrom);
+    if (fTo)   lq = lq.lte('session_date', fTo);
+    var lr = await lq;
+    document.getElementById('us-sess-loading').style.display = 'none';
+    rows = (lr.data || []).map(function(r){
+      return {
+        id:              r.id,
+        employee:        r.logged_by,
+        session_type:    'project',
+        session_date:    r.session_date,
+        start_time:      r.start_time,
+        end_time:        r.end_time,
+        total_hours:     r.duration_hours,
+        customer_name:   r.customer_name,
+        engagement_name: r.project_name,
+        activity_type:   r.activity_type,
+        session_info:    r.session_info,
+        team_members:    r.team_members,
+        _legacy:         true,
+      };
+    });
+  } else {
+    var q = sb.from('unified_sessions').select('*').order('session_date',{ascending:false}).order('start_time',{ascending:false});
+    if (fType) q = q.eq('session_type', fType);
+    if (fCust) q = q.eq('customer_name', fCust);
+    if (fEng)  q = q.eq('engagement_name', fEng);
+    if (fFrom) q = q.gte('session_date', fFrom);
+    if (fTo)   q = q.lte('session_date', fTo);
+    var res = await q;
+    document.getElementById('us-sess-loading').style.display = 'none';
+    rows = res.data || [];
+  }
 
-  var res = await q;
-  document.getElementById('us-sess-loading').style.display = 'none';
-
-  var rows = res.data || [];
   if (fMem) {
     var firstName = fMem.split(' ')[0].toLowerCase();
     rows = rows.filter(function(r){ return (r.team_members||r.employee||'').toLowerCase().includes(firstName); });
@@ -338,11 +367,12 @@ async function renderUSSessions() {
 
   document.getElementById('us-sess-table').style.display = 'block';
   document.getElementById('us-sess-tbody').innerHTML = rows.map(function(r,i){
-    var canEdit = isManager || (r.employee === currentUser);
+    var canEdit = !r._legacy && (isManager || (r.employee === currentUser));
     var t = SESSION_TYPE_BADGES[r.session_type] || {bg:'#F3F4F6',color:'#6B7280',label:r.session_type||'-'};
-    return '<tr>'+
+    var legacyLabel = r._legacy ? '<span class="badge" style="background:#FEF3C7;color:#92400E;font-size:10px;margin-left:4px">LEGACY</span>' : '';
+    return '<tr style="'+(r._legacy?'opacity:0.85':'')+'">'+
       '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
-      '<td><span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+t.label+'</span></td>'+
+      '<td><span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+t.label+'</span>'+legacyLabel+'</td>'+
       '<td style="font-size:12px;color:var(--navy);font-weight:600">'+(r.customer_name||'-')+'</td>'+
       '<td style="font-size:12px"><strong>'+(r.engagement_name||'-')+'</strong></td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtDate(r.session_date)+'</td>'+
@@ -567,8 +597,9 @@ async function saveEditUS() {
 // the grouping key.
 async function renderUnifiedTypeSummary(typeKey) {
   var ids = {
-    poc: { year: 'pj-poc-year', loading: 'pj-poc-loading', content: 'pj-poc-content', heading: 'POC Engagements' },
-    amc: { year: 'pj-amc-year', loading: 'pj-amc-loading', content: 'pj-amc-content', heading: 'AMC Engagements' },
+    project: { year: 'pj-sum-year',  loading: 'pj-project-loading', content: 'pj-project-content', heading: 'Project' },
+    poc:     { year: 'pj-poc-year',  loading: 'pj-poc-loading',     content: 'pj-poc-content',     heading: 'POC Engagements' },
+    amc:     { year: 'pj-amc-year',  loading: 'pj-amc-loading',     content: 'pj-amc-content',     heading: 'AMC Engagements' },
   };
   var ui = ids[typeKey];
   if (!ui) return;

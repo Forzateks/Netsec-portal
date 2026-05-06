@@ -72,7 +72,7 @@ netsec-portal/
 | Dashboard | 🏠 | Summary stats, quick actions, team overview |
 | Overtime | ⏱ | Log OT sessions, comp off requests, summary, manager view |
 | Leave | 🏖️ | Annual leave + sick leave requests and history |
-| Projects | 📁 | Project session logging and summaries |
+| Sessions | 📋 | Unified session log (Project / POC / AMC / Internal) — auto-creates pending OT for hours outside the block window. Project / POC / AMC / Employee summaries with type breakdown. |
 | Approvals | 🔔 | Manager-only — approve/reject comp off and leave requests |
 | Inventory | 📦 | Device tracking with activity log (UAE/Oman/Bahrain/KDM/Qatar) |
 | Knowledge Base | 📚 | Internal article library for notes, troubleshooting, and configuration knowledge |

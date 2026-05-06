@@ -50,7 +50,7 @@ function showScreen(name) {
   document.getElementById('screen-'+name).classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
   if (name==='dashboard') renderDashboard();
-  if (name==='overtime')  showOTTab('log');
+  if (name==='overtime')  showOTTab('sessions');
   if (name==='leave')     showLeaveTab('log');
   if (name==='projects')  { initProjectTab(); showProjectTab('uslog'); };
   if (name==='approvals')  showApprovalsTab('compoff');

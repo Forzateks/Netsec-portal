@@ -83,7 +83,9 @@ For KSA accounts (Salman, Afsal), confirm boundaries shift to 8:00 AM and 7:00 P
 - [ ] Adding a duplicate project name → reject with "already exists" error
 - [ ] **Edit Project**: change customer, name, or status → cascades to project_sessions and ot_sessions referencing the old name
 - [ ] **Delete Project**: removes from registry only; existing sessions still reference the (now orphaned) name
-- [ ] **Log Project Session**: Customer → Project → Activity Type dropdowns chained correctly
+- [ ] **Log Session** (Sessions tab): Type → Customer → Engagement → Activity Type chained correctly. Live preview shows Total / Office / OT split with band info. Save creates a unified_sessions row plus a linked pending ot_sessions row when OT > 0.
+- [ ] **My Sessions**: shows everyone's unified sessions; Legacy toggle swaps the data source to old `project_sessions` (read-only)
+- [ ] **POC Summary** + **AMC Summary**: each shows only their respective type sessions; pie + table
 - [ ] Activity Type dropdown shows the 10 standardized values
 - [ ] **Sessions tab**: filter by Customer, Project, Member, From-date, To-date all work
 - [ ] Top horizontal scrollbar mirrors bottom scroll
