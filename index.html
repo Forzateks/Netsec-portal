@@ -129,7 +129,7 @@
 <div class="screen" id="screen-leave">
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
     <div class="leave-sub active" id="lsub-log"     onclick="showLeaveTab('log')">✏️ Request Time Off</div>
-    <div class="leave-sub"        id="lsub-history"  onclick="showLeaveTab('history')">📋 My Requests</div>
+    <div class="leave-sub"        id="lsub-history"  onclick="showLeaveTab('history')"><span id="lsub-history-label">📋 My Requests</span></div>
     <div class="leave-sub"        id="lsub-team"     onclick="showLeaveTab('team')"><span id="lsub-team-label">👔 Team Overview</span></div>
   </div>
 
@@ -176,7 +176,7 @@
   <div id="ltab-history" style="display:none">
     <div class="card">
       <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">Leave Requests</div>
+        <div class="card-title" style="margin-bottom:0" id="lv-hist-card-title">Time Off Requests</div>
         <select id="lv-hist-filter" onchange="renderLeaveHistory()" style="width:auto;padding:7px 12px" class="manager-only-el">
           <option value="">All Employees</option>
           <option>Ahmed Ali</option><option>Venkatesan</option><option>Prasanth</option>

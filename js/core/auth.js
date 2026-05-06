@@ -160,9 +160,11 @@ async function initApp(user) {
   var pjsubOTManager = document.getElementById('pjsub-otmanager');
   if (pjsubOTManager) pjsubOTManager.style.display = isManager ? '' : 'none';
   document.getElementById('tab-approvals').style.display  = isManager ? '' : 'none';
-  // Leave sub-tab label depends on role
+  // Leave sub-tab labels depend on role
   var lsubLabel = document.getElementById('lsub-team-label');
   if (lsubLabel) lsubLabel.textContent = isManager ? '👔 Team Overview' : '🏖️ My Leave Overview';
+  var histLabel = document.getElementById('lsub-history-label');
+  if (histLabel) histLabel.textContent = isManager ? '📋 All Requests' : '📋 My Requests';
 
   // Manager can filter employees; employees cannot
   document.querySelectorAll('.manager-only-el').forEach(function(el) {
