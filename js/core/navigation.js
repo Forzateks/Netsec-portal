@@ -12,17 +12,17 @@ function showLeaveTab(tab) {
   if (tab==='log')     onLeaveTypeChange();
   if (tab==='history') renderLeaveHistory();
   if (tab==='team')    renderLeaveTeam();
+  setSidebarSubActive('leave', tab);
 }
 
 function showApprovalsTab(tab) {
   ['leave','ot'].forEach(function(t) {
-    document.getElementById('apptab-'+t).style.display=t===tab?'block':'none';
-    const sub=document.getElementById('appsub-'+t);
-    if (t===tab){sub.classList.add('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--teal);color:var(--navy);white-space:nowrap';}
-    else{sub.classList.remove('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap';}
+    var el = document.getElementById('apptab-'+t);
+    if (el) el.style.display = t===tab ? 'block' : 'none';
   });
   if (tab==='leave') renderLeaveApprovals();
   else if (tab==='ot') renderOTApprovals();
+  setSidebarSubActive('approvals', tab);
 }
 
 function showScreen(name) {
@@ -31,12 +31,42 @@ function showScreen(name) {
   document.getElementById('screen-'+name).classList.add('active');
   var tab = document.getElementById('tab-'+name);
   if (tab) tab.classList.add('active');
+  // Accordion: open the matching group, collapse the rest
+  document.querySelectorAll('.sidebar-group').forEach(function(g){ g.classList.remove('open'); });
+  var grp = document.getElementById('sbg-'+name);
+  if (grp) grp.classList.add('open');
   if (name==='dashboard') renderDashboard();
   if (name==='leave')     showLeaveTab('log');
   if (name==='projects')  { initProjectTab(); showProjectTab('uslog'); };
   if (name==='approvals')  showApprovalsTab('leave');
   if (name==='inventory')  showInventoryTab('devices');
   if (name==='kb')         showKBTab('browse');
+}
+
+// Sidebar drove navigation: jump to a screen + a specific sub-tab.
+function navigateSub(screen, subTab) {
+  var screenEl = document.getElementById('screen-'+screen);
+  if (screenEl && !screenEl.classList.contains('active')) {
+    showScreen(screen); // sets default sub-tab; we override below
+  } else {
+    // Already on the screen — still ensure group is expanded
+    var grp = document.getElementById('sbg-'+screen);
+    if (grp) grp.classList.add('open');
+  }
+  if (screen==='leave')      showLeaveTab(subTab);
+  else if (screen==='projects')  showProjectTab(subTab);
+  else if (screen==='approvals') showApprovalsTab(subTab);
+  else if (screen==='inventory') showInventoryTab(subTab);
+  else if (screen==='kb')        showKBTab(subTab);
+  closeSidebarOnMobile();
+}
+
+// Helper: keep one .sidebar-subitem.active under a given screen group.
+function setSidebarSubActive(screen, subTab) {
+  var prefix = 'sbi-'+screen+'-';
+  document.querySelectorAll('.sidebar-subitem[id^="'+prefix+'"]').forEach(function(el){
+    el.classList.toggle('active', el.id === prefix+subTab);
+  });
 }
 
 function toggleSidebar(open) {

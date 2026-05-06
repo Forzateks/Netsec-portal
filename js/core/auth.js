@@ -157,15 +157,19 @@ async function initApp(user) {
   rb.className = 'role-badge ' + (isManager ? 'manager' : 'employee');
 
   // Show/hide manager elements
-  var pjsubOTManager = document.getElementById('pjsub-otmanager');
-  if (pjsubOTManager) pjsubOTManager.style.display = isManager ? '' : 'none';
+  var sbiOTManager = document.getElementById('sbi-projects-otmanager');
+  if (sbiOTManager) sbiOTManager.style.display = isManager ? '' : 'none';
+  var sbiManage = document.getElementById('sbi-projects-manage');
+  if (sbiManage) sbiManage.style.display = isManager ? '' : 'none';
   document.getElementById('tab-approvals').style.display  = isManager ? '' : 'none';
+  var sbgApprovals = document.getElementById('sbg-approvals');
+  if (sbgApprovals) sbgApprovals.style.display = isManager ? '' : 'none';
   var apprLabel = document.getElementById('sidebar-approvals-label');
   if (apprLabel) apprLabel.style.display = isManager ? '' : 'none';
   // Leave sub-tab labels depend on role
-  var lsubLabel = document.getElementById('lsub-team-label');
-  if (lsubLabel) lsubLabel.textContent = isManager ? '👔 Team Overview' : '🏖️ My Leave Overview';
-  var histLabel = document.getElementById('lsub-history-label');
+  var teamLabel = document.getElementById('sbi-leave-team-label');
+  if (teamLabel) teamLabel.textContent = isManager ? '👔 Team Overview' : '🏖️ My Leave Overview';
+  var histLabel = document.getElementById('sbi-leave-history-label');
   if (histLabel) histLabel.textContent = isManager ? '📋 All Requests' : '📋 My Requests';
 
   // Manager can filter employees; employees cannot

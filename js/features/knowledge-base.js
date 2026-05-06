@@ -24,6 +24,7 @@ function showKBTab(tab) {
   if (tab==='browse') loadKBArticles();
   if (tab==='submit') resetKBForm();
   if (tab==='mine')   loadMyKBArticles();
+  setSidebarSubActive('kb', tab);
 }
 
 async function loadKBArticles() {

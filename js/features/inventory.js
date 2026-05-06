@@ -16,6 +16,7 @@ function showInventoryTab(tab) {
   if (tab === 'devices') loadInventory();
   if (tab === 'add')     resetAddDeviceForm();
   if (tab === 'log')     loadActivityLog();
+  setSidebarSubActive('inventory', tab);
 }
 
 async function loadInventory() {

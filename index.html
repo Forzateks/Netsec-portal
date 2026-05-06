@@ -83,19 +83,70 @@
   <div class="sidebar-item active" id="tab-dashboard" onclick="showScreen('dashboard');closeSidebarOnMobile()"><span class="sidebar-icon">🏠</span>Dashboard</div>
 
   <div class="sidebar-section-label">Time Off</div>
-  <div class="sidebar-item" id="tab-leave" onclick="showScreen('leave');closeSidebarOnMobile()"><span class="sidebar-icon">🏖️</span>Leave</div>
+  <div class="sidebar-group" id="sbg-leave">
+    <div class="sidebar-item has-children" id="tab-leave" onclick="showScreen('leave');closeSidebarOnMobile()">
+      <span class="sidebar-icon">🏖️</span>Leave<span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
+      <div class="sidebar-subitem" id="sbi-leave-log"     onclick="navigateSub('leave','log')">Request Time Off</div>
+      <div class="sidebar-subitem" id="sbi-leave-history" onclick="navigateSub('leave','history')"><span id="sbi-leave-history-label">My Requests</span></div>
+      <div class="sidebar-subitem" id="sbi-leave-team"    onclick="navigateSub('leave','team')"><span id="sbi-leave-team-label">Team Overview</span></div>
+    </div>
+  </div>
 
   <div class="sidebar-section-label">Work</div>
-  <div class="sidebar-item" id="tab-projects" onclick="showScreen('projects');closeSidebarOnMobile()"><span class="sidebar-icon">📋</span>Sessions</div>
+  <div class="sidebar-group" id="sbg-projects">
+    <div class="sidebar-item has-children" id="tab-projects" onclick="showScreen('projects');closeSidebarOnMobile()">
+      <span class="sidebar-icon">📋</span>Sessions<span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
+      <div class="sidebar-subitem" id="sbi-projects-uslog"      onclick="navigateSub('projects','uslog')">➕ Log Session</div>
+      <div class="sidebar-subitem" id="sbi-projects-ussess"     onclick="navigateSub('projects','ussess')">📋 My Sessions</div>
+      <div class="sidebar-subitem" id="sbi-projects-otsessions" onclick="navigateSub('projects','otsessions')">⏱ OT Sessions</div>
+      <div class="sidebar-subitem" id="sbi-projects-otsummary"  onclick="navigateSub('projects','otsummary')">📊 OT Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-project"    onclick="navigateSub('projects','project')">📊 Project Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-poc"        onclick="navigateSub('projects','poc')">🎯 POC Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-amc"        onclick="navigateSub('projects','amc')">🛠️ AMC Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-presales"   onclick="navigateSub('projects','presales')">💼 Pre-Sales Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-employee"   onclick="navigateSub('projects','employee')">👥 Employee Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-otpolicy"   onclick="navigateSub('projects','otpolicy')">📖 OT Policy</div>
+      <div class="sidebar-subitem" id="sbi-projects-otmanager"  onclick="navigateSub('projects','otmanager')" style="display:none">👔 Manager View</div>
+      <div class="sidebar-subitem" id="sbi-projects-manage"     onclick="navigateSub('projects','manage')" style="display:none">⚙️ Manage Engagements</div>
+    </div>
+  </div>
 
   <div class="sidebar-section-label" id="sidebar-approvals-label" style="display:none">Approvals</div>
-  <div class="sidebar-item" id="tab-approvals" onclick="showScreen('approvals');closeSidebarOnMobile()" style="display:none">
-    <span class="sidebar-icon">🔔</span>Approvals<span class="notif-badge" id="notif-badge" style="display:none">0</span>
+  <div class="sidebar-group" id="sbg-approvals" style="display:none">
+    <div class="sidebar-item has-children" id="tab-approvals" onclick="showScreen('approvals');closeSidebarOnMobile()">
+      <span class="sidebar-icon">🔔</span>Approvals<span class="notif-badge" id="notif-badge" style="display:none">0</span><span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
+      <div class="sidebar-subitem" id="sbi-approvals-leave" onclick="navigateSub('approvals','leave')">📅 Time Off Requests</div>
+      <div class="sidebar-subitem" id="sbi-approvals-ot"    onclick="navigateSub('approvals','ot')">⏱ OT Sessions</div>
+    </div>
   </div>
 
   <div class="sidebar-section-label">Assets</div>
-  <div class="sidebar-item" id="tab-inventory" onclick="showScreen('inventory');closeSidebarOnMobile()"><span class="sidebar-icon">📦</span>Inventory</div>
-  <div class="sidebar-item" id="tab-kb" onclick="showScreen('kb');closeSidebarOnMobile()"><span class="sidebar-icon">📚</span>Knowledge Base</div>
+  <div class="sidebar-group" id="sbg-inventory">
+    <div class="sidebar-item has-children" id="tab-inventory" onclick="showScreen('inventory');closeSidebarOnMobile()">
+      <span class="sidebar-icon">📦</span>Inventory<span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
+      <div class="sidebar-subitem" id="sbi-inventory-devices" onclick="navigateSub('inventory','devices')">📋 Devices</div>
+      <div class="sidebar-subitem" id="sbi-inventory-add"     onclick="navigateSub('inventory','add')">➕ Add Device</div>
+      <div class="sidebar-subitem" id="sbi-inventory-log"     onclick="navigateSub('inventory','log')">📜 Activity Log</div>
+    </div>
+  </div>
+  <div class="sidebar-group" id="sbg-kb">
+    <div class="sidebar-item has-children" id="tab-kb" onclick="showScreen('kb');closeSidebarOnMobile()">
+      <span class="sidebar-icon">📚</span>Knowledge Base<span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
+      <div class="sidebar-subitem" id="sbi-kb-browse" onclick="navigateSub('kb','browse')">🔍 Browse</div>
+      <div class="sidebar-subitem" id="sbi-kb-submit" onclick="navigateSub('kb','submit')">📝 Submit Article</div>
+      <div class="sidebar-subitem" id="sbi-kb-mine"   onclick="navigateSub('kb','mine')">📄 My Articles</div>
+    </div>
+  </div>
 
   <div class="sidebar-section-label">System</div>
   <div class="sidebar-item" onclick="openChangePasswordModal();closeSidebarOnMobile()"><span class="sidebar-icon">🔑</span>Change Password</div>
@@ -147,12 +198,6 @@
 </div>
 <!-- ══ ANNUAL LEAVE SCREEN ══ -->
 <div class="screen" id="screen-leave">
-  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="lsub-log"     onclick="showLeaveTab('log')">✏️ Request Time Off</div>
-    <div class="leave-sub"        id="lsub-history"  onclick="showLeaveTab('history')"><span id="lsub-history-label">📋 My Requests</span></div>
-    <div class="leave-sub"        id="lsub-team"     onclick="showLeaveTab('team')"><span id="lsub-team-label">👔 Team Overview</span></div>
-  </div>
-
   <!-- REQUEST LEAVE -->
   <div id="ltab-log">
     <div class="alert alert-success" id="leave-success">✅ Leave request submitted! Awaiting manager approval.</div>
@@ -217,21 +262,6 @@
 
 <!-- ══ PROJECTS SCREEN ══ -->
 <div class="screen" id="screen-projects">
-  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="pjsub-uslog"       onclick="showProjectTab('uslog')">➕ Log Session</div>
-    <div class="leave-sub"        id="pjsub-ussess"      onclick="showProjectTab('ussess')">📋 My Sessions</div>
-    <div class="leave-sub"        id="pjsub-otsessions"  onclick="showProjectTab('otsessions')">⏱ OT Sessions</div>
-    <div class="leave-sub"        id="pjsub-otsummary"   onclick="showProjectTab('otsummary')">📊 OT Summary</div>
-    <div class="leave-sub"        id="pjsub-project"     onclick="showProjectTab('project')">📊 Project Summary</div>
-    <div class="leave-sub"        id="pjsub-poc"         onclick="showProjectTab('poc')">🎯 POC Summary</div>
-    <div class="leave-sub"        id="pjsub-amc"         onclick="showProjectTab('amc')">🛠️ AMC Summary</div>
-    <div class="leave-sub"        id="pjsub-presales"    onclick="showProjectTab('presales')">💼 Pre-Sales Summary</div>
-    <div class="leave-sub"        id="pjsub-employee"    onclick="showProjectTab('employee')">👥 Employee Summary</div>
-    <div class="leave-sub"        id="pjsub-otpolicy"    onclick="showProjectTab('otpolicy')">📖 OT Policy</div>
-    <div class="leave-sub"        id="pjsub-otmanager"   onclick="showProjectTab('otmanager')" style="display:none">👔 Manager View</div>
-    <div class="leave-sub"        id="pjsub-manage"      onclick="showProjectTab('manage')" style="display:none">⚙️ Manage Engagements</div>
-  </div>
-
   <!-- 🆕 LOG UNIFIED SESSION (Phase 2 Beta) -->
   <div id="pjtab-uslog">
     <div class="alert alert-success" id="us-success">✅ Session saved!</div>
@@ -626,10 +656,6 @@
 
 <!-- ══ APPROVALS SCREEN (manager only) ══ -->
 <div class="screen" id="screen-approvals">
-  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="appsub-leave"   onclick="showApprovalsTab('leave')">📅 Time Off Requests</div>
-    <div class="leave-sub"        id="appsub-ot"      onclick="showApprovalsTab('ot')">⏱ OT Sessions</div>
-  </div>
   <div id="apptab-leave">
     <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px">
       <label style="font-size:12px;color:var(--muted);font-weight:600">Employee:</label>
@@ -689,12 +715,6 @@
 <!-- ══ INVENTORY SCREEN ══ -->
 <div class="screen" id="screen-inventory">
 
-  <!-- Sub-tabs -->
-  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="invsub-devices" onclick="showInventoryTab('devices')">📋 Devices</div>
-    <div class="leave-sub" id="invsub-add" onclick="showInventoryTab('add')">➕ Add Device</div>
-    <div class="leave-sub" id="invsub-log" onclick="showInventoryTab('log')">📜 Activity Log</div>
-  </div>
 
   <!-- ── DEVICES TAB ── -->
   <div id="invtab-devices">
@@ -860,13 +880,6 @@
 
 <!-- ══ KNOWLEDGE BASE SCREEN ══ -->
 <div class="screen" id="screen-kb">
-
-  <!-- Sub-tabs -->
-  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub active" id="kbsub-browse" onclick="showKBTab('browse')">🔍 Browse</div>
-    <div class="leave-sub" id="kbsub-submit" onclick="showKBTab('submit')">📝 Submit Article</div>
-    <div class="leave-sub" id="kbsub-mine" onclick="showKBTab('mine')">📄 My Articles</div>
-  </div>
 
   <!-- ── BROWSE TAB ── -->
   <div id="kbtab-browse">

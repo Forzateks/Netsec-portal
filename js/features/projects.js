@@ -397,9 +397,9 @@ function fillActivitySelect(selectId) {
 }
 
 function initProjectTab() {
-  // Show Manage Projects tab for manager only
-  const manageTab = document.getElementById('pjsub-manage');
-  if (manageTab) manageTab.style.display = isManager ? '' : 'none';
+  // Show Manage Engagements item for manager only
+  const sbiManage = document.getElementById('sbi-projects-manage');
+  if (sbiManage) sbiManage.style.display = isManager ? '' : 'none';
 
   // Populate project dropdowns
   populateProjectDropdowns();
@@ -658,5 +658,6 @@ function showProjectTab(tab) {
   if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
   if (tab==='otmanager')  { renderManager(); }
   if (tab==='manage')     { populateProjectDropdowns(); renderCustomersList(); renderManageProjects(); }
+  setSidebarSubActive('projects', tab);
 }
 
