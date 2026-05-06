@@ -82,6 +82,16 @@
       <span class="user-name" id="header-username"></span>
       <span class="role-badge" id="header-role-badge"></span>
     </div>
+    <div id="notif-bell-wrap" style="display:none;position:relative;margin-right:6px">
+      <button class="btn btn-ghost" onclick="toggleNotifDropdown()" style="font-size:14px;padding:7px 10px;position:relative" title="Notifications">
+        🔔
+        <span id="notif-bell-count" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center">0</span>
+      </button>
+      <div id="notif-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:340px;max-height:420px;overflow-y:auto;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:300">
+        <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--navy)">Notifications</div>
+        <div id="notif-dropdown-list"></div>
+      </div>
+    </div>
     <button class="btn btn-ghost" onclick="openChangePasswordModal()" style="font-size:13px;padding:7px 12px;margin-right:6px" title="Change your password">🔑 <span class="change-password-btn-text">Change Password</span></button>
     <button class="logout-btn" onclick="doLogout()">Logout</button>
   </div>
@@ -425,6 +435,8 @@
     <div class="leave-sub"        id="pjsub-log"       onclick="showProjectTab('log')">➕ Log (legacy)</div>
     <div class="leave-sub"        id="pjsub-sessions"  onclick="showProjectTab('sessions')">📋 Sessions (legacy)</div>
     <div class="leave-sub"        id="pjsub-project"   onclick="showProjectTab('project')">📊 Project Summary</div>
+    <div class="leave-sub"        id="pjsub-poc"       onclick="showProjectTab('poc')">🎯 POC Summary</div>
+    <div class="leave-sub"        id="pjsub-amc"       onclick="showProjectTab('amc')">🛠️ AMC Summary</div>
     <div class="leave-sub"        id="pjsub-employee"  onclick="showProjectTab('employee')">👥 Employee Summary</div>
     <div class="leave-sub"        id="pjsub-manage"    onclick="showProjectTab('manage')" style="display:none">⚙️ Manage Engagements</div>
   </div>
@@ -681,6 +693,30 @@
       </div>
       <div id="pj-project-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="pj-project-content"></div>
+    </div>
+  </div>
+
+  <!-- POC SUMMARY -->
+  <div id="pjtab-poc" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">🎯 POC Summary</div>
+        <select id="pj-poc-year" onchange="renderUnifiedTypeSummary('poc')" style="width:auto;padding:7px 12px"></select>
+      </div>
+      <div id="pj-poc-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div id="pj-poc-content"></div>
+    </div>
+  </div>
+
+  <!-- AMC SUMMARY -->
+  <div id="pjtab-amc" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">🛠️ AMC Summary</div>
+        <select id="pj-amc-year" onchange="renderUnifiedTypeSummary('amc')" style="width:auto;padding:7px 12px"></select>
+      </div>
+      <div id="pj-amc-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div id="pj-amc-content"></div>
     </div>
   </div>
 
@@ -1642,6 +1678,7 @@
 <script src="js/core/helpers.js"></script>
 <script src="js/features/projects.js"></script>
 <script src="js/features/unified-sessions.js"></script>
+<script src="js/features/notifications.js"></script>
 <script src="js/features/inventory.js"></script>
 <script src="js/features/approvals.js"></script>
 <script src="js/features/knowledge-base.js"></script>

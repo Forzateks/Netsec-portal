@@ -177,6 +177,7 @@ async function initApp(user) {
   updatePreview();
   showScreen('dashboard');
   if (isManager) updateNotifBadge();
+  if (typeof startNotifPolling === 'function') startNotifPolling();
 }
 
 // == CONNECTION CHECK ==============================================

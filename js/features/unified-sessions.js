@@ -475,7 +475,8 @@ async function saveEditUS() {
   if (!split) return fail('Could not compute hours.');
 
   // Approved-OT warning
-  if (oldOt && oldOt.status === 'approved') {
+  var wasApproved = !!(oldOt && oldOt.status === 'approved');
+  if (wasApproved) {
     var msg = 'WARNING: This session has APPROVED OT linked to it ('+oldOt.credited_hours+'h credited).\n\nSaving will recalculate the OT and reset its status to PENDING. The manager will need to re-approve it. Comp-off balance for ' + sessionEmployee + ' may change.\n\nContinue?';
     if (!confirm(msg)) return;
   }
@@ -550,8 +551,115 @@ async function saveEditUS() {
     await sb.from('unified_sessions').update({ linked_ot_session_id: null }).eq('id', id);
   }
 
+  // Notify manager if an approved OT was just reset
+  if (wasApproved && typeof notifyManagerOTEvent === 'function') {
+    var notifMsg = sessionEmployee + ' edited a session that had APPROVED OT (' + oldOt.credited_hours + 'h, ' + oldOt.band + '). It is now PENDING again — please review.';
+    notifyManagerOTEvent('ot_edited_after_approval', id, notifMsg);
+  }
+
   closeEditUS();
   renderUSSessions();
+}
+
+// === POC / AMC SUMMARIES ======================================
+// Generic renderer driven by session_type. Mirrors renderPjProjectSummary
+// in shape but reads from unified_sessions and uses engagement_name as
+// the grouping key.
+async function renderUnifiedTypeSummary(typeKey) {
+  var ids = {
+    poc: { year: 'pj-poc-year', loading: 'pj-poc-loading', content: 'pj-poc-content', heading: 'POC Engagements' },
+    amc: { year: 'pj-amc-year', loading: 'pj-amc-loading', content: 'pj-amc-content', heading: 'AMC Engagements' },
+  };
+  var ui = ids[typeKey];
+  if (!ui) return;
+
+  // Year picker setup
+  var yearEl = document.getElementById(ui.year);
+  if (yearEl && !yearEl.options.length) {
+    var allOpt = document.createElement('option');
+    allOpt.value = 'all'; allOpt.textContent = 'All Years'; allOpt.selected = true;
+    yearEl.appendChild(allOpt);
+    var thisYear = new Date().getFullYear();
+    for (var y = thisYear; y >= 2023; y--) {
+      var o = document.createElement('option'); o.value = y; o.textContent = y; yearEl.appendChild(o);
+    }
+  }
+
+  document.getElementById(ui.loading).style.display = 'flex';
+  document.getElementById(ui.content).innerHTML = '';
+
+  var year = (yearEl && yearEl.value) || 'all';
+  var q = sb.from('unified_sessions').select('*').eq('session_type', typeKey);
+  if (year && year !== 'all') {
+    q = q.gte('session_date', year + '-01-01').lte('session_date', year + '-12-31');
+  }
+  var res = await q;
+  document.getElementById(ui.loading).style.display = 'none';
+  var rows = res.data || [];
+
+  if (!rows.length) {
+    document.getElementById(ui.content).innerHTML =
+      '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No '+typeKey.toUpperCase()+' sessions for '+year+'</div></div>';
+    return;
+  }
+
+  // Aggregate by engagement_name
+  var byEng = {};
+  rows.forEach(function(r){
+    var key = r.engagement_name || '(unspecified)';
+    if (!byEng[key]) byEng[key] = { sessions: 0, hours: 0, members: {}, customer: r.customer_name || '-' };
+    byEng[key].sessions += 1;
+    byEng[key].hours += parseFloat(r.total_hours || 0);
+    if (r.team_members) {
+      r.team_members.split(',').forEach(function(name){
+        name = name.trim();
+        if (!name) return;
+        byEng[key].members[name] = (byEng[key].members[name] || 0) + parseFloat(r.total_hours || 0);
+      });
+    } else if (r.employee) {
+      byEng[key].members[r.employee] = (byEng[key].members[r.employee] || 0) + parseFloat(r.total_hours || 0);
+    }
+  });
+
+  var sorted = Object.keys(byEng).sort(function(a,b){ return byEng[b].hours - byEng[a].hours; });
+  var totalHours = sorted.reduce(function(s,k){ return s + byEng[k].hours; }, 0);
+  var totalSessions = sorted.reduce(function(s,k){ return s + byEng[k].sessions; }, 0);
+
+  var tableRows = sorted.map(function(name){
+    var d = byEng[name];
+    var memberBreakdown = Object.keys(d.members).map(function(m){
+      return '<span class="badge" style="background:#f0f4ff;color:var(--navy);margin:1px">'+m.split(' ')[0]+': '+r2(d.members[m])+'h</span>';
+    }).join(' ');
+    return '<tr>'+
+      '<td><strong>'+esc2(name)+'</strong></td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+esc2(d.customer)+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+d.sessions+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:15px">'+r2(d.hours)+'h</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px;color:var(--muted)">'+r2(d.hours/8)+' days</td>'+
+      '<td style="font-size:12px">'+memberBreakdown+'</td>'+
+    '</tr>';
+  }).join('');
+
+  var PIE_COLORS = ['#0A1F5C','#00A0D2','#C8A832','#3B82F6','#10B981','#8B5CF6','#F59E0B','#EF4444'];
+  var pieData = sorted.slice(0,8).map(function(name,i){
+    return { label: name, value: byEng[name].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
+  });
+
+  var pie = (typeof buildPieChart === 'function') ? buildPieChart(pieData,'h') : '';
+
+  document.getElementById(ui.content).innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">'+
+    '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by '+ui.heading+' (Top 8)</div>'+pie+'</div>'+
+    '<div class="card" style="margin-bottom:0"><div class="card-title">Quick Stats</div>'+
+    '<div class="summary-grid">'+
+    '<div class="stat-card navy"><div class="stat-label">Total '+typeKey.toUpperCase()+'s</div><div class="stat-value">'+sorted.length+'</div></div>'+
+    '<div class="stat-card teal"><div class="stat-label">Total Hours</div><div class="stat-value" style="font-size:20px">'+r2(totalHours)+'h</div></div>'+
+    '<div class="stat-card eve"><div class="stat-label">Total Sessions</div><div class="stat-value">'+totalSessions+'</div></div>'+
+    '</div></div></div>'+
+    '<div class="table-wrap"><table>'+
+    '<thead><tr><th>Engagement</th><th>Customer</th><th>Sessions</th><th>Total Hours</th><th>Working Days</th><th>Team Breakdown</th></tr></thead>'+
+    '<tbody>'+tableRows+'</tbody></table></div>'+
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | * Working days = hours / 8</div>';
 }
 
 async function deleteUS(id) {
@@ -580,5 +688,12 @@ async function deleteUS(id) {
   }
   var del = await sb.from('unified_sessions').delete().eq('id', id);
   if (del.error) { alert('Error: ' + del.error.message); return; }
+
+  // Notify manager when an approved OT row was just deleted
+  if (oldOt && oldOt.status === 'approved' && typeof notifyManagerOTEvent === 'function') {
+    var nm = sessionEmployee + ' deleted a session that had APPROVED OT (' + oldOt.credited_hours + 'h, ' + oldOt.band + '). The credit has been removed from their balance.';
+    notifyManagerOTEvent('ot_deleted_after_approval', id, nm);
+  }
+
   renderUSSessions();
 }

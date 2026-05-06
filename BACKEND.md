@@ -4,7 +4,7 @@
 **Project URL:** `https://rxxcrlobbtlvjgcqgjjm.supabase.co`  
 **Auth:** Supabase Auth (email + password). Anon key still embedded in `js/core/state.js` for unauthenticated reads/writes; signed-in users get a JWT that travels alongside it. Manager invites users via Supabase dashboard (Authentication → Users → Invite). Profile-to-employee mapping lives in `user_profiles`.  
 **Last verified:** 2026-05-06  
-**Last updated:** 2026-05-06 — Phase 2 of Unified Sessions: new `unified_sessions` table with per-row ownership RLS. Phase 1 added `engagements` and the `ot_sessions.source` columns.
+**Last updated:** 2026-05-06 — Phase 5 of Unified Sessions: new `notifications` table for manager edit/delete-after-approval alerts. Phases 1–4 added engagements, unified_sessions, ot_sessions.source columns, and the auto-OT cascade.
 
 > This file is the source of truth for the Supabase schema.  
 > Before requesting any DB change, read this file first to avoid duplicating tables or columns.
