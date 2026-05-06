@@ -9,6 +9,62 @@ const SESSION_TYPE_BADGES = {
   internal: { bg: '#F3F4F6', color: '#6B7280', label: '🔧 Internal' },
 };
 
+// Split a session's raw duration into office_hours vs ot_hours using the
+// existing OT policy (calcOT). Returns the calcOT result alongside so the
+// caller can persist band/rate/credited_hours on the auto-created OT row.
+//
+// office_hours = portion that falls inside regular working hours
+// ot_hours     = portion outside regular working hours (raw, no doubling)
+// otCalc       = full calcOT result if ot_hours > 0, else null
+//
+// Note: credited_hours on the OT record may differ from ot_hours when
+// Eve/Split doubles or caps. That's intentional - office/ot in unified_sessions
+// reflect actual time worked; ot_sessions.credited_hours is what counts for CO.
+function splitSessionHours(dateStr, startStr, endStr, employee) {
+  if (!dateStr || !startStr || !endStr) return null;
+  var d = new Date(dateStr);
+  var wd = d.getDay();
+  var t = getOTThresholds(employee);
+  var eveStart = t.eveStart;
+  var morningBlock = t.morningBlock;
+  var sp = startStr.split(':').map(Number);
+  var ep = endStr.split(':').map(Number);
+  var sf = sp[0] + sp[1]/60;
+  var ef = ep[0] + ep[1]/60;
+  var rawDur = ef <= sf ? ef + 24 - sf : ef - sf;
+  var isWknd = isWeekend(wd, employee);
+
+  var otHours = 0;
+  if (isWknd) {
+    otHours = rawDur;
+  } else {
+    var crossesMidnight = ef <= sf;
+    if (crossesMidnight) {
+      if (sf >= eveStart) {
+        // Eve/Split — whole session is OT
+        otHours = rawDur;
+      } else {
+        // Mid — only post-eve portion of today + pre-morning portion of tomorrow
+        otHours = (24 - Math.max(sf, eveStart)) + Math.min(ef, morningBlock);
+      }
+    } else {
+      var morningOT = (sf < morningBlock) ? Math.max(0, Math.min(ef, morningBlock) - sf) : 0;
+      var eveningOT = (ef > eveStart)     ? Math.max(0, ef - Math.max(sf, eveStart))     : 0;
+      otHours = morningOT + eveningOT;
+    }
+  }
+  otHours = Math.max(0, otHours);
+  var officeHours = Math.max(0, rawDur - otHours);
+  var otCalc = otHours > 0 ? calcOT(dateStr, startStr, endStr, employee) : null;
+
+  return {
+    total:  r2(rawDur),
+    office: r2(officeHours),
+    ot:     r2(otHours),
+    otCalc: otCalc,
+  };
+}
+
 // === FORM: type toggle + conditional fields ====================
 function onUSTypeChange() {
   var type = document.getElementById('us-type').value;
@@ -92,15 +148,27 @@ function updateUSPreview() {
   var date  = document.getElementById('us-date').value;
   var start = document.getElementById('us-start').value;
   var end   = document.getElementById('us-end').value;
-  var prev  = document.getElementById('us-preview-total');
-  if (!prev) return;
-  if (!start || !end) { prev.textContent = '—'; return; }
-  var sp = start.split(':').map(Number);
-  var ep = end.split(':').map(Number);
-  var sf = sp[0] + sp[1]/60;
-  var ef = ep[0] + ep[1]/60;
-  var dur = ef <= sf ? ef + 24 - sf : ef - sf;
-  prev.textContent = r2(dur) + 'h';
+  var totEl = document.getElementById('us-preview-total');
+  var offEl = document.getElementById('us-preview-office');
+  var otEl  = document.getElementById('us-preview-ot');
+  if (!totEl) return;
+  if (!date || !start || !end) {
+    totEl.textContent = '—'; offEl.textContent = '—'; otEl.textContent = '—';
+    otEl.style.color = 'var(--gold)';
+    return;
+  }
+  var split = splitSessionHours(date, start, end, currentUser);
+  if (!split) { totEl.textContent = '—'; offEl.textContent = '—'; otEl.textContent = '—'; return; }
+  totEl.textContent = split.total + 'h';
+  offEl.textContent = split.office + 'h';
+  if (split.ot > 0 && split.otCalc) {
+    var c = split.otCalc;
+    otEl.textContent = split.ot + 'h  →  ' + c.band + ' · ' + c.rate + ' · credited ' + c.credited + 'h (pending approval)';
+    otEl.style.color = 'var(--gold)';
+  } else {
+    otEl.textContent = 'none';
+    otEl.style.color = 'var(--muted)';
+  }
 }
 
 async function saveUnifiedSession() {
@@ -136,18 +204,16 @@ async function saveUnifiedSession() {
   }
   if (!info) return fail('Session info is required.');
 
-  // Compute total_hours (midnight-aware)
-  var sp = start.split(':').map(Number);
-  var ep = end.split(':').map(Number);
-  var sf = sp[0] + sp[1]/60, ef = ep[0] + ep[1]/60;
-  var totalHours = r2(ef <= sf ? ef + 24 - sf : ef - sf);
-
   // Engagement snapshot (name) for non-internal
   var engagement_name = null;
   if (isEng && engId) {
     var engRow = (ENGAGEMENTS||[]).find(function(e){ return String(e.id) === String(engId); });
     if (engRow) engagement_name = engRow.name;
   }
+
+  // Compute office vs OT split using the existing OT policy
+  var split = splitSessionHours(date, start, end, currentUser);
+  if (!split) return fail('Could not compute hours.');
 
   var btn = document.getElementById('us-save-btn');
   btn.disabled = true; btn.textContent = '⏳ Saving...';
@@ -167,14 +233,55 @@ async function saveUnifiedSession() {
     stake_holders: isEng ? (stakeH || null) : null,
     mode:          isEng ? (mode || null) : null,
     remarks:       remarks || null,
-    total_hours:   totalHours,
-    office_hours:  0,
-    ot_hours:      0,
+    total_hours:   split.total,
+    office_hours:  split.office,
+    ot_hours:      split.ot,
   };
 
-  var res = await sb.from('unified_sessions').insert(payload);
+  var res = await sb.from('unified_sessions').insert(payload).select().single();
+  if (res.error) {
+    btn.disabled = false; btn.innerHTML = '💾 Save Session';
+    return fail('Save failed: ' + res.error.message);
+  }
+  var unifiedId = res.data.id;
+
+  // If OT detected, auto-create the linked ot_sessions record
+  var otSummary = '';
+  if (split.ot > 0 && split.otCalc) {
+    var c = split.otCalc;
+    var activityLabel = isEng
+      ? ((customer || '') + ' / ' + (engagement_name || '-') + ' — ' + info)
+      : info;
+    var otRow = {
+      employee:          currentUser,
+      activity:          activityLabel,
+      ot_date:           date,
+      start_time:        start,
+      end_time:          end,
+      day_name:          c.dayName,
+      band:              c.band,
+      rate:              c.rate,
+      duration_hours:    c.duration,
+      credited_hours:    c.credited,
+      status:            'pending',
+      source:            'unified',
+      source_session_id: unifiedId,
+      customer_name:     isEng ? (customer || null) : null,
+      project_name:      isEng ? engagement_name : null,
+      activity_type:     isEng ? (actType || null) : null,
+    };
+    var otRes = await sb.from('ot_sessions').insert(otRow).select().single();
+    if (otRes.error) {
+      console.error('Linked OT creation failed:', otRes.error);
+      otSummary = ' (warning: linked OT record could not be created — '+otRes.error.message+')';
+    } else {
+      // Stamp the unified row with the new OT id
+      await sb.from('unified_sessions').update({ linked_ot_session_id: otRes.data.id }).eq('id', unifiedId);
+      otSummary = ' · ' + c.band + ' OT ' + c.credited + 'h pending approval';
+    }
+  }
+
   btn.disabled = false; btn.innerHTML = '💾 Save Session';
-  if (res.error) return fail('Save failed: ' + res.error.message);
 
   // Reset form
   ['us-info','us-stake','us-remarks','us-start','us-end'].forEach(function(id){
@@ -192,6 +299,9 @@ async function saveUnifiedSession() {
     lbl.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
   });
 
+  // Update alert text to summarize what was saved
+  var successEl = document.getElementById('us-success');
+  if (successEl) successEl.textContent = '✅ Session saved' + otSummary;
   showAlert('us-success');
   updateUSPreview();
 }

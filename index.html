@@ -500,9 +500,15 @@
           <input type="text" id="us-remarks" placeholder="Optional notes">
         </div>
       </div>
-      <div class="preview-box" style="grid-template-columns:repeat(2,1fr)">
-        <div class="preview-item"><div class="preview-label">Total Hours</div><div class="preview-value" id="us-preview-total">—</div></div>
-        <div class="preview-item"><div class="preview-label">OT Detection</div><div class="preview-value" style="font-size:13px;color:var(--muted)">arrives in Phase 3</div></div>
+      <div style="background:linear-gradient(135deg,#f8faff,#eef4ff);border:1.5px solid #c7d7f5;border-radius:10px;padding:16px;margin-top:16px">
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px;align-items:center">
+          <div style="color:var(--muted);font-weight:600">📁 Total</div>
+          <div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--navy)" id="us-preview-total">—</div>
+          <div style="color:var(--muted);font-weight:600">🏢 Office</div>
+          <div style="font-family:'DM Mono',monospace;font-weight:700" id="us-preview-office">—</div>
+          <div style="color:var(--muted);font-weight:600">⏱ OT detected</div>
+          <div id="us-preview-ot" style="font-family:'DM Mono',monospace;font-weight:700;color:var(--gold)">—</div>
+        </div>
       </div>
       <div style="margin-top:20px;display:flex;gap:10px">
         <button class="btn btn-primary" id="us-save-btn" onclick="saveUnifiedSession()">💾 Save Session</button>
