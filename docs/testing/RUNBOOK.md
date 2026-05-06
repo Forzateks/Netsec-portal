@@ -156,7 +156,6 @@ For KSA accounts (Salman, Afsal), confirm boundaries shift to 8:00 AM and 7:00 P
 - [ ] Login → app transition: no flash of unauthenticated content
 - [ ] Loading spinners visible during fetches
 - [ ] No mojibake in any visible text (em dashes, emojis render correctly)
-- [ ] Footer credit "Built by Mohammed Nasif" present
 - [ ] Date format `DD/MM/YYYY` consistent across all tables
 
 ---

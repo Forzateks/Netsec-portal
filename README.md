@@ -1,7 +1,7 @@
 # NetSec Portal
 
 Internal operations portal for Gulf IT / Gulfit Network Distribution FZC.  
-Built by Mohammed Nasif. Deployed via Cloudflare Pages (static site, no build step).
+Deployed via Cloudflare Pages (static site, no build step).
 
 ---
 
