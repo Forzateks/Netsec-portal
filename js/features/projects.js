@@ -484,14 +484,35 @@ async function renderPjEmployeeSummary() {
   });
 
   rows.forEach(function(r) {
-    var emp = r.employee;
-    if (!empData[emp]) return; // skip rows from unknown employees
     var hrs = parseFloat(r.total_hours || 0);
-    empData[emp].total    += hrs;
-    empData[emp].sessions += 1;
-    if (empData[emp][r.session_type] !== undefined) empData[emp][r.session_type] += hrs;
-    var key = r.engagement_name || (r.session_type==='internal' ? '(internal)' : '(unspecified)');
-    empData[emp].engagements[key] = (empData[emp].engagements[key]||0) + hrs;
+    // Credit every team member (not just the logger). Internal sessions
+    // have no team_members → credit just the logger. For Project/POC/AMC,
+    // match each comma-separated name against the EMPLOYEES list (exact
+    // or first-name). Fall back to the logger if no name matched.
+    var participants = [];
+    if (!r.team_members || r.session_type === 'internal') {
+      if (r.employee) participants.push(r.employee);
+    } else {
+      var names = r.team_members.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+      EMPLOYEES.forEach(function(emp) {
+        var firstName = emp.split(' ')[0].toLowerCase();
+        var hit = names.some(function(n) {
+          var nl = n.toLowerCase();
+          return nl === emp.toLowerCase() || nl === firstName;
+        });
+        if (hit) participants.push(emp);
+      });
+      if (participants.length === 0 && r.employee) participants.push(r.employee);
+    }
+
+    participants.forEach(function(emp) {
+      if (!empData[emp]) return;
+      empData[emp].total    += hrs;
+      empData[emp].sessions += 1;
+      if (empData[emp][r.session_type] !== undefined) empData[emp][r.session_type] += hrs;
+      var key = r.engagement_name || (r.session_type==='internal' ? '(internal)' : '(unspecified)');
+      empData[emp].engagements[key] = (empData[emp].engagements[key]||0) + hrs;
+    });
   });
 
   const tableRows = EMPLOYEES.map(function(emp) {
@@ -533,7 +554,7 @@ async function renderPjEmployeeSummary() {
     '<td colspan="4">-</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+r2(totalHours/8)+'</td><td>-</td></tr>'+
     '</tbody></table></div>'+
-    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours / 8 | Reads unified_sessions (sessions logged via the new Log Session form)</div>';
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours / 8 | Hours are credited to every team member on a session (so a 4h session with 3 members shows 4h on each row, summing to 12h in TOTAL).</div>';
 }
 
 // ── PIE CHART HELPERS ────────────────────────────────────────────
