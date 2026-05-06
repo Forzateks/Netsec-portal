@@ -1,6 +1,6 @@
 ﻿// == NAVIGATION ====================================================
 function showOTTab(tab) {
-  ['log','sessions','summary','compoff','manager','policy'].forEach(function(t) {
+  ['log','sessions','summary','manager','policy'].forEach(function(t) {
     const el=document.getElementById('ottab-'+t);
     const sub=document.getElementById('otsub-'+t);
     if (!el) return;
@@ -14,12 +14,11 @@ function showOTTab(tab) {
   if (tab==='log')      populateProjectDropdowns();
   if (tab==='summary')  buildSummaryFilters();
   if (tab==='sessions') renderSessions();
-  if (tab==='compoff')  { renderMyCompOffRequests(); }
   if (tab==='manager')  renderManager();
 }
 
 function showLeaveTab(tab) {
-  ['log','history','team'].forEach(function(t) {
+  ['log','history','compoff','team'].forEach(function(t) {
     const el=document.getElementById('ltab-'+t);
     const sub=document.getElementById('lsub-'+t);
     if (!el) return;
@@ -29,6 +28,7 @@ function showLeaveTab(tab) {
     else{sub.classList.remove('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap';}
   });
   if (tab==='history') renderLeaveHistory();
+  if (tab==='compoff') renderMyCompOffRequests();
   if (tab==='team')    renderLeaveTeam();
 }
 
