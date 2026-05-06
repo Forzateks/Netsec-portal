@@ -27,13 +27,32 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .login-btn:hover{background:#0d2870}
 .login-error{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px;display:none}
 
-/* ── HEADER ── */
-.header{background:var(--navy);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(10,31,92,.3)}
-.header-left{display:flex;align-items:center;gap:12px}
-.logo{width:32px;height:32px;background:var(--teal);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white}
-.header h1{color:white;font-size:16px;font-weight:600}.header h1 span{color:var(--teal)}
-.header-credit{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px}
-.header-right{display:flex;align-items:center;gap:10px}
+/* ── APP SHELL (sidebar layout) ── */
+.app-shell{display:flex;min-height:100vh;align-items:stretch}
+.main-area{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* ── SIDEBAR ── */
+.sidebar{width:240px;background:var(--card);border-right:1px solid var(--border);padding:0 0 16px;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:120;display:flex;flex-direction:column}
+.sidebar-brand{padding:18px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:var(--navy)}
+.sidebar-brand img{width:36px;height:36px;border-radius:8px;object-fit:contain;flex-shrink:0}
+.sidebar-brand-text{flex:1;min-width:0}
+.sidebar-brand-text h1{font-size:16px;color:white;font-weight:700;line-height:1.1}
+.sidebar-brand-text h1 span{color:var(--teal)}
+.sidebar-close{display:none;background:transparent;border:none;color:white;font-size:26px;cursor:pointer;padding:0 4px;line-height:1}
+.sidebar-section-label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:14px 20px 6px}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:14px;color:var(--text);cursor:pointer;transition:background .15s,color .15s;border-left:3px solid transparent;font-weight:500;position:relative}
+.sidebar-item:hover{background:rgba(0,160,210,.06);color:var(--navy)}
+.sidebar-item.active{background:rgba(0,160,210,.1);color:var(--navy);border-left-color:var(--teal);font-weight:600}
+.sidebar-item .sidebar-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sidebar-item-logout{margin-top:auto;color:var(--danger)}
+.sidebar-item-logout:hover{background:rgba(239,68,68,.06);color:var(--danger)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:110}
+.sidebar-overlay.show{display:block}
+
+/* ── TOP BAR (slim, inside main-area) ── */
+.top-bar{background:var(--navy);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(10,31,92,.2)}
+.hamburger{background:transparent;border:none;color:white;font-size:22px;cursor:pointer;padding:6px 10px;display:none;line-height:1}
+.top-bar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
 .db-status{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.7)}
 .db-dot{width:6px;height:6px;border-radius:50%;background:#ef4444}.db-dot.connected{background:#10b981}
 .user-info{display:flex;align-items:center;gap:8px}
@@ -41,17 +60,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .role-badge{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
 .role-badge.manager{background:var(--gold);color:var(--navy)}
 .role-badge.employee{background:rgba(255,255,255,.15);color:white}
-.logout-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 10px;color:white;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
-.logout-btn:hover{background:rgba(255,255,255,.2)}
 
-/* ── NAV ── */
-.nav{background:white;border-bottom:1px solid var(--border);padding:0 24px;display:flex;overflow-x:auto}
-.nav-tab{padding:14px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;position:relative}
-.nav-tab:hover{color:var(--navy)}.nav-tab.active{color:var(--navy);border-bottom-color:var(--teal);font-weight:600}
-.notif-badge{position:absolute;top:8px;right:4px;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center}
+.notif-badge{margin-left:auto;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
 
 /* ── MAIN ── */
-.main{padding:24px;max-width:1200px;margin:0 auto}
+.main{padding:24px;max-width:1200px;margin:0 auto;width:100%}
 .screen{display:none}.screen.active{display:block}
 .card{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .card-title{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:8px}
@@ -128,6 +141,14 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
 .request-card.pending{border-left:4px solid var(--gold)}
 .request-card.approved{border-left:4px solid var(--success)}
 .request-card.rejected{border-left:4px solid var(--danger)}
+/* ── SIDEBAR mobile collapse (≤900px) ── */
+@media(max-width:900px){
+  .sidebar{position:fixed;left:0;top:0;height:100vh;transform:translateX(-100%);transition:transform .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.15)}
+  .sidebar.open{transform:translateX(0)}
+  .hamburger{display:inline-block}
+  .sidebar-close{display:inline-block}
+}
+
 /* ══ MOBILE RESPONSIVE ══════════════════════════════════════════ */
 @media(max-width:640px){
 
@@ -135,10 +156,6 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
   .main{padding:12px}
   .card{padding:16px;border-radius:10px;margin-bottom:14px}
   .card-title{font-size:14px}
-
-  /* Nav — scrollable, smaller tabs */
-  .nav{padding:0 8px}
-  .nav-tab{padding:12px 12px;font-size:12px}
 
   /* Sub-tabs */
   .leave-sub{padding:8px 12px !important;font-size:12px !important}
@@ -252,7 +269,6 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
 /* Small phones */
 @media(max-width:380px){
   .summary-grid{grid-template-columns:1fr}
-  .nav-tab{padding:10px 8px;font-size:11px}
 }
 
 /* ══ MOBILE — comprehensive polish (additive to 640px block above) ══ */
@@ -260,21 +276,15 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
   /* Prevent iOS auto-zoom on input focus (must be 16px) */
   input,select,textarea{font-size:16px !important}
 
-  /* Header: tighten and drop low-priority items */
-  .header{padding:0 10px;height:52px}
-  .header h1{font-size:14px;line-height:1.1}
-  .header-credit{display:none}
+  /* Top bar: tighten on mobile */
+  .top-bar{padding:0 10px;height:48px}
   .db-status{display:none}
-  .header-left{gap:8px}
-  .header-right{gap:6px}
-  .logo,.header-left img{width:28px !important;height:28px !important}
+  .top-bar-right{gap:6px}
   .role-badge{font-size:10px;padding:2px 7px}
   .user-name{font-size:11px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .logout-btn{padding:5px 10px;font-size:11px}
 
-  /* Header buttons (Change Password etc.): icon-only on mobile */
-  .header-right .btn{padding:6px 8px !important;font-size:11px !important;min-height:32px;margin:0 !important}
-  .change-password-btn-text{display:none}
+  /* Top bar buttons: icon-only on mobile */
+  .top-bar-right .btn{padding:6px 8px !important;font-size:11px !important;min-height:32px;margin:0 !important}
 
   /* Touch targets: bump to ~38px minimum */
   .btn{min-height:38px}
@@ -332,13 +342,9 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
 @media(max-width:480px){
   .main{padding:10px 8px}
   .card{padding:12px;border-radius:10px;margin-bottom:12px}
-  .header h1{font-size:13px}
-  .header h1 span{display:none}
   .summary-grid{gap:8px}
   .stat-card{padding:12px}
   .stat-value{font-size:18px !important}
-  .nav{padding:0 4px}
-  .nav-tab{padding:11px 10px;font-size:11px}
   .preview-box{padding:10px;gap:8px}
   .preview-value{font-size:16px}
   .preview-label{font-size:9px}

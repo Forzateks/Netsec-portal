@@ -27,13 +27,27 @@ function showApprovalsTab(tab) {
 
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
-  document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.sidebar-item').forEach(function(t){t.classList.remove('active');});
   document.getElementById('screen-'+name).classList.add('active');
-  document.getElementById('tab-'+name).classList.add('active');
+  var tab = document.getElementById('tab-'+name);
+  if (tab) tab.classList.add('active');
   if (name==='dashboard') renderDashboard();
   if (name==='leave')     showLeaveTab('log');
   if (name==='projects')  { initProjectTab(); showProjectTab('uslog'); };
   if (name==='approvals')  showApprovalsTab('leave');
   if (name==='inventory')  showInventoryTab('devices');
   if (name==='kb')         showKBTab('browse');
+}
+
+function toggleSidebar(open) {
+  var sb = document.getElementById('sidebar');
+  var ov = document.getElementById('sidebar-overlay');
+  if (!sb) return;
+  if (open === undefined) open = !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  if (ov) ov.classList.toggle('show', open);
+}
+
+function closeSidebarOnMobile() {
+  if (window.innerWidth <= 900) toggleSidebar(false);
 }

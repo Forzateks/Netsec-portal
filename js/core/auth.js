@@ -160,6 +160,8 @@ async function initApp(user) {
   var pjsubOTManager = document.getElementById('pjsub-otmanager');
   if (pjsubOTManager) pjsubOTManager.style.display = isManager ? '' : 'none';
   document.getElementById('tab-approvals').style.display  = isManager ? '' : 'none';
+  var apprLabel = document.getElementById('sidebar-approvals-label');
+  if (apprLabel) apprLabel.style.display = isManager ? '' : 'none';
   // Leave sub-tab labels depend on role
   var lsubLabel = document.getElementById('lsub-team-label');
   if (lsubLabel) lsubLabel.textContent = isManager ? '👔 Team Overview' : '🏖️ My Leave Overview';
