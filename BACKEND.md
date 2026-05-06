@@ -104,10 +104,10 @@ Stores individual overtime session logs.
 > ```
 >
 > **Steps after running the SQL:**
-> 1. Supabase dashboard → **Authentication → URL Configuration** → set Site URL to `https://gulfit-tracker.netlify.app/`. Add the same as a Redirect URL.
+> 1. Supabase dashboard → **Authentication → URL Configuration** → set Site URL to `https://netsec-portal.pages.dev/`. Add the same as a Redirect URL.
 > 2. Supabase dashboard → **Authentication → Users → Invite User** for each email above.
 > 3. Each user clicks the email link → sets their password → trigger links their `user_id`.
-> 4. After the first user signs in, push the code to Netlify.
+> 4. After the first user signs in, push the code to Cloudflare.
 
 ---
 

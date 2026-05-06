@@ -1,7 +1,7 @@
 # NetSec Portal
 
 Internal operations portal for Gulf IT / Gulfit Network Distribution FZC.  
-Built by Mohammed Nasif. Deployed via Netlify (static site, no build step).
+Built by Mohammed Nasif. Deployed via Cloudflare Pages (static site, no build step).
 
 ---
 
@@ -60,7 +60,7 @@ netsec-portal/
 | Frontend | Vanilla HTML + CSS + JavaScript (no framework, no build) |
 | Backend | Supabase (Postgres + REST via supabase-js v2) |
 | Auth | Supabase Auth (email/password + password reset) |
-| Hosting | Netlify — auto-deploys on push to `master` |
+| Hosting | Cloudflare Pages — auto-deploys on push to `master` |
 | Fonts | Google Fonts (DM Sans + DM Mono) |
 
 ---
@@ -111,7 +111,7 @@ Supabase anon key is embedded in `js/core/state.js` — do not commit new keys p
 
 ## Deployment
 
-Push to `master` → GitHub → Netlify auto-deploys (usually < 60 seconds).
+Push to `master` → GitHub → Cloudflare Pages auto-deploys (usually < 60 seconds).
 
 ---
 

@@ -7,7 +7,7 @@
 
 ## 1. The basics
 
-Overtime (OT) is logged through the **NetSec Portal** at https://gulfit-tracker.netlify.app/. Each session goes through three stages:
+Overtime (OT) is logged through the **NetSec Portal** at https://netsec-portal.pages.dev/. Each session goes through three stages:
 
 1. **You log it** → status: *Pending*
 2. **Manager reviews** → status: *Approved* or *Rejected*

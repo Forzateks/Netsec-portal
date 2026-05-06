@@ -6,7 +6,7 @@ Run this before pushing significant changes. Each step lists the click path, the
 
 ## Pre-flight
 
-- [ ] Latest Netlify deployment is live (check the dashboard for the most recent commit hash)
+- [ ] Latest Cloudflare Pages deployment is live (check the dashboard for the most recent commit hash)
 - [ ] You have at least two test accounts: one manager (Venkatesan), one employee
 - [ ] Test data is acceptable to modify, OR you've taken a Full Backup from Dashboard
 
