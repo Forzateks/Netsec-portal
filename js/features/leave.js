@@ -49,9 +49,35 @@ async function submitLeaveRequest() {
   const end    = document.getElementById('lv-end').value;
   const reason = document.getElementById('lv-reason').value.trim();
   const ltype  = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual';
+  const errEl  = document.getElementById('leave-error');
   if (!start||!end){showAlert('leave-error');return;}
   const days = calcWorkingDays(start,end,currentUser);
   if (days<=0){showAlert('leave-error');return;}
+
+  // Block self-overlap with any existing pending/approved leave request
+  // OR any already-recorded annual_leave row (the source-of-truth balance table).
+  // Two date ranges overlap when start_a <= end_b AND end_a >= start_b.
+  var conflictRes = await Promise.all([
+    sb.from('leave_requests')
+      .select('id,leave_type,start_date,end_date,status')
+      .eq('employee', currentUser)
+      .neq('status', 'rejected')
+      .lte('start_date', end)
+      .gte('end_date', start),
+    sb.from('annual_leave')
+      .select('id,leave_type,start_date,end_date')
+      .eq('employee', currentUser)
+      .lte('start_date', end)
+      .gte('end_date', start)
+  ]);
+  var conflict = (conflictRes[0].data && conflictRes[0].data[0]) ||
+                 (conflictRes[1].data && conflictRes[1].data[0]);
+  if (conflict) {
+    if (errEl) errEl.textContent = '⚠️ You already have a ' + (conflict.leave_type || 'leave') +
+      ' record from ' + conflict.start_date + ' to ' + conflict.end_date +
+      ' (' + (conflict.status || 'approved') + '). Cancel or wait for that one before requesting overlapping dates.';
+    showAlert('leave-error'); return;
+  }
 
   // Open a blank tab SYNCHRONOUSLY so the browser's user-gesture rule
   // is satisfied. We'll navigate it to Outlook Web after the save returns.
@@ -289,6 +315,19 @@ async function renderLeaveApprovals() {
   const {data}=await q;
   document.getElementById('lv-approvals-load').style.display='none';
   const rows = data || [];
+
+  // For each row, find OTHER employees whose pending or approved leave
+  // overlaps the date range (different employee, not rejected, dates intersect).
+  rows.forEach(function(r){
+    r._overlaps = rows.filter(function(o){
+      return o.id !== r.id
+          && o.employee !== r.employee
+          && o.status !== 'rejected'
+          && o.start_date <= r.end_date
+          && o.end_date   >= r.start_date;
+    });
+  });
+
   const pending = rows.filter(function(r){return r.status==='pending';});
   const others  = rows.filter(function(r){return r.status!=='pending';});
   let html='';
@@ -453,6 +492,19 @@ function approvalCard(r,type) {
   let info='';
   if (type==='compoff') info='<strong>'+r.employee+'</strong> — '+r.type+' on '+fmtDate(r.request_date)+(r.related_activity?' ('+r.related_activity+')':'');
   else info='<strong>'+r.employee+'</strong> — '+fmtDate(r.start_date)+' to '+fmtDate(r.end_date)+' ('+r.working_days+' days)'+(r.reason?' | '+r.reason:'');
+
+  // Overlap warning for leave requests where another employee has a
+  // pending/approved leave covering any of the same dates.
+  var overlapHtml = '';
+  if (type==='leave' && r._overlaps && r._overlaps.length) {
+    var detail = r._overlaps.map(function(o){
+      return o.employee + ' (' + (o.status||'?') + ', ' + fmtDate(o.start_date) + '–' + fmtDate(o.end_date) + ')';
+    }).join('; ');
+    overlapHtml = '<div style="background:#FEF3C7;color:#92400E;border-left:3px solid #F59E0B;padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+      '⚠️ <strong>Overlap caution:</strong> '+r._overlaps.length+' other request'+(r._overlaps.length===1?'':'s')+' on these dates — '+detail+
+      '</div>';
+  }
+
   return '<div class="request-card '+r.status+'" style="margin-bottom:10px">'+
     '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
     '<div style="font-size:13px">'+info+'<br><span style="font-size:11px;color:var(--muted)">Submitted: '+fmtDate(r.created_at)+'</span></div>'+
@@ -462,6 +514,7 @@ function approvalCard(r,type) {
     (type==='leave'?'<button class="btn btn-sm btn-ghost" onclick="openEditLeaveModal('+r.id+')" title="Edit request">✏️</button>':'')+
     '<button class="btn btn-sm btn-danger" onclick="deleteRequest(\''+type+'\','+r.id+')" title="Delete request">✕</button>'+
     '</div></div>'+
+    overlapHtml+
     (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:8px">💬 '+r.manager_comment+'</div>':'')+
     '</div>';
 }
