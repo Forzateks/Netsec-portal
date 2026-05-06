@@ -156,10 +156,6 @@ async function initApp(user) {
   rb.textContent = isManager ? 'Manager' : 'Employee';
   rb.className = 'role-badge ' + (isManager ? 'manager' : 'employee');
 
-  // Set log-employee field
-  document.getElementById('log-employee').value = user;
-  document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
-
   // Show/hide manager elements
   var pjsubOTManager = document.getElementById('pjsub-otmanager');
   if (pjsubOTManager) pjsubOTManager.style.display = isManager ? '' : 'none';
@@ -175,7 +171,6 @@ async function initApp(user) {
 
   await loadProjects();
   checkConnection();
-  updatePreview();
   showScreen('dashboard');
   if (isManager) updateNotifBadge();
   if (typeof startNotifPolling === 'function') startNotifPolling();

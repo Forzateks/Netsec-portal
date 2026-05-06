@@ -348,21 +348,18 @@ function populateProjectDropdowns() {
   // Customer selects (forms + filters)
   fillCustomerSelect('pj-customer', false);
   fillCustomerSelect('pj-new-customer', false);
-  fillCustomerSelect('log-customer', false);
   fillCustomerSelect('edit-ot-customer', false);
   fillCustomerSelect('edit-pj-customer', false);
   fillCustomerSelect('pj-filter-customer', true);
 
-  // Project selects — log/OT forms start unfiltered (until user picks customer)
+  // Project selects — OT edit forms start unfiltered (until user picks customer)
   fillProjectSelect('pj-project', '', false);
-  fillProjectSelect('log-project', '', false);
   fillProjectSelect('edit-ot-project', '', false);
   fillProjectSelect('edit-pj-project', '', false);
   fillProjectSelect('pj-filter-project', '', true);
 
   // Activity type selects
   fillActivitySelect('pj-activity');
-  fillActivitySelect('log-activity-type');
   fillActivitySelect('edit-pj-activity');
   fillActivitySelect('edit-ot-activity-type');
 }
@@ -370,9 +367,6 @@ function populateProjectDropdowns() {
 // Customer-change handlers — re-filter project dropdown to only that customer
 function onPjCustomerChange() {
   fillProjectSelect('pj-project', document.getElementById('pj-customer').value, false);
-}
-function onLogCustomerChange() {
-  fillProjectSelect('log-project', document.getElementById('log-customer').value, false);
 }
 function onEditOTCustomerChange() {
   fillProjectSelect('edit-ot-project', document.getElementById('edit-ot-customer').value, false);

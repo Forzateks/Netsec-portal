@@ -205,64 +205,6 @@ function calcSummary(sessions, compoffs, employee) {
           coEarlyEve,coMid,coWknd,totalCO,used,balance:totalCO-used,remEve:r2(remEve)};
 }
 
-// == LIVE PREVIEW =================================================
-function updatePreview() {
-  const date=document.getElementById('log-date').value;
-  const start=document.getElementById('log-start').value;
-  const end=document.getElementById('log-end').value;
-  if (date) {
-    const d=new Date(date);
-    document.getElementById('log-day').value=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
-  }
-  if (!date||!start||!end) return;
-  const res=calcOT(date,start,end,currentUser);
-  if (!res) return;
-  const bEl=document.getElementById('prev-band');
-  bEl.textContent=res.band; bEl.className='preview-value '+res.band;
-  document.getElementById('prev-dur').textContent=res.duration+'h';
-  const rEl=document.getElementById('prev-rate');
-  rEl.textContent=res.rate; rEl.className='preview-value'+(res.rate==='1:2'?' r12':'');
-  document.getElementById('prev-cred').textContent=res.credited+'h';
-}
-
-// == SAVE SESSION =================================================
-async function saveSession() {
-  const customer = document.getElementById('log-customer').value;
-  const project  = document.getElementById('log-project').value;
-  const actType  = document.getElementById('log-activity-type').value;
-  const act=document.getElementById('log-activity').value.trim();
-  const date=document.getElementById('log-date').value;
-  const start=document.getElementById('log-start').value;
-  const end=document.getElementById('log-end').value;
-  if (!customer||!project||!actType||!act||!date||!start||!end){ showAlert('log-error'); return; }
-  var vErr = validateOTStart(date, start, currentUser, end);
-  if (vErr) { alert(vErr); return; }
-  const res=calcOT(date,start,end,currentUser);
-  const btn=document.getElementById('save-btn');
-  btn.disabled=true; btn.textContent='⏳ Saving...';
-  const {error}=await sb.from('ot_sessions').insert({
-    employee:currentUser,activity:act,ot_date:date,start_time:start,end_time:end,
-    day_name:res.dayName,band:res.band,rate:res.rate,duration_hours:res.duration,credited_hours:res.credited,
-    customer_name:customer,project_name:project,activity_type:actType,
-    status:'pending'
-  });
-  btn.disabled=false; btn.innerHTML='💾 Save Session';
-  if (error){alert('Save failed: '+error.message);return;}
-  showAlert('log-success'); clearForm();
-}
-
-function clearForm() {
-  ['log-activity','log-start','log-end','log-customer','log-project','log-activity-type'].forEach(function(id){
-    var el=document.getElementById(id); if (el) el.value='';
-  });
-  document.getElementById('log-day').value='';
-  // Reset project dropdown back to full list
-  fillProjectSelect('log-project', '', false);
-  ['prev-band','prev-dur','prev-rate','prev-cred'].forEach(function(id){
-    const el=document.getElementById(id); el.textContent='—'; el.className='preview-value';
-  });
-}
-
 // == RENDER SESSIONS ==============================================
 async function renderSessions() {
   document.getElementById('sessions-loading').style.display='flex';

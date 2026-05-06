@@ -99,7 +99,6 @@
 <!-- NAV -->
 <div class="nav" id="main-nav">
   <div class="nav-tab active" onclick="showScreen('dashboard')" id="tab-dashboard">🏠 Dashboard</div>
-  <div class="nav-tab" onclick="showScreen('overtime')" id="tab-overtime" style="display:none">⏱ Overtime</div>
   <div class="nav-tab" onclick="showScreen('leave')" id="tab-leave">🏖️ Leave</div>
   <div class="nav-tab" onclick="showScreen('projects')" id="tab-projects">📋 Sessions</div>
   <div class="nav-tab" onclick="showScreen('approvals')" id="tab-approvals" style="display:none">
@@ -126,82 +125,6 @@
     <div class="loading"><div class="spinner"></div>Loading dashboard...</div>
   </div>
 </div>
-
-<!-- ══ OVERTIME SCREEN ══ -->
-<div class="screen" id="screen-overtime">
-  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="leave-sub" id="otsub-log"      onclick="showOTTab('log')" style="display:none">➕ Log OT Session</div>
-  </div>
-
-  <!-- LOG OT -->
-  <div id="ottab-log">
-    <div class="alert alert-success" id="log-success">✅ OT session saved to database!</div>
-    <div class="alert alert-error" id="log-error">⚠️ Please fill all required fields.</div>
-    <div class="card">
-      <div class="card-title">Log Overtime Session</div>
-      <div class="form-grid mb-4">
-        <div class="form-group full">
-          <label>Employee</label>
-          <input type="text" id="log-employee" readonly style="background:#f0f4ff;font-weight:600">
-        </div>
-        <div class="form-group">
-          <label>Customer *</label>
-          <select id="log-customer" onchange="onLogCustomerChange()">
-            <option value="">-- Select Customer --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Project *</label>
-          <select id="log-project">
-            <option value="">-- Select Project --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Activity Type *</label>
-          <select id="log-activity-type">
-            <option value="">-- Select --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Activity / Description *</label>
-          <input type="text" id="log-activity" placeholder="e.g. Switch upgrade post-cutover" oninput="updatePreview()">
-        </div>
-        <div class="form-group">
-          <label>Date *</label>
-          <input type="date" id="log-date" onchange="updatePreview()">
-        </div>
-        <div class="form-group">
-          <label>Day (Auto)</label>
-          <input type="text" id="log-day" readonly>
-        </div>
-        <div class="form-group">
-          <label>Start Time * (24hr)</label>
-          <input type="time" id="log-start" onchange="updatePreview()">
-        </div>
-        <div class="form-group">
-          <label>End Time * (24hr)</label>
-          <input type="time" id="log-end" onchange="updatePreview()">
-        </div>
-      </div>
-      <div class="preview-box">
-        <div class="preview-item"><div class="preview-label">Band</div><div class="preview-value" id="prev-band">—</div></div>
-        <div class="preview-item"><div class="preview-label">Duration</div><div class="preview-value" id="prev-dur">—</div></div>
-        <div class="preview-item"><div class="preview-label">Rate</div><div class="preview-value" id="prev-rate">—</div></div>
-        <div class="preview-item"><div class="preview-label">Credited Hrs</div><div class="preview-value" id="prev-cred">—</div></div>
-      </div>
-      <div style="margin-top:20px;display:flex;gap:10px">
-        <button class="btn btn-primary" id="save-btn" onclick="saveSession()">💾 Save Session</button>
-        <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
-      </div>
-    </div>
-  </div>
-
-
-
-
-
-</div>
-
 <!-- ══ ANNUAL LEAVE SCREEN ══ -->
 <div class="screen" id="screen-leave">
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">

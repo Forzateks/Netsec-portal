@@ -57,10 +57,9 @@ async function renderDashboard() {
 
   html += '<div class="card" style="margin-bottom:20px"><div class="card-title">Quick Actions</div>'+
     '<div class="quick-actions-wrap">'+
-    '<button class="btn btn-primary" onclick="showScreen(\'overtime\');showOTTab(\'log\')">Log OT</button>'+
+    '<button class="btn btn-primary" onclick="showScreen(\'projects\');showProjectTab(\'uslog\')">Log Session</button>'+
     '<button class="btn btn-ghost" onclick="showScreen(\'leave\');showLeaveTab(\'log\')">Request Leave</button>'+
-    '<button class="btn btn-ghost" onclick="showScreen(\'overtime\');showOTTab(\'compoff\')">Comp Off</button>'+
-    '<button class="btn btn-ghost" onclick="showScreen(\'projects\');showProjectTab(\'log\')">Log Project Session</button>'+
+    '<button class="btn btn-ghost" onclick="showScreen(\'leave\');showLeaveTab(\'compoff\')">Comp Off</button>'+
     (isManager?'<button id="monthly-report-btn" class="btn btn-ghost" onclick="downloadMonthlyReport()">Monthly OT Report</button>':'')+
     (isManager?'<button class="btn btn-ghost" onclick="showScreen(\'approvals\')">Approvals</button>':'')+
     '</div></div>';
@@ -75,7 +74,7 @@ async function renderDashboard() {
 
   html += '<div class="card" style="margin-bottom:20px"><div class="flex-between mb-4">'+
     '<div class="card-title" style="margin-bottom:0">Recent OT Sessions</div>'+
-    '<button class="btn btn-sm btn-ghost" onclick="showScreen(\'overtime\');showOTTab(\'sessions\')">View All</button></div>';
+    '<button class="btn btn-sm btn-ghost" onclick="showScreen(\'projects\');showProjectTab(\'otsessions\')">View All</button></div>';
   if (recent.length) {
     html += '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Band</th><th>Rate</th><th>Credited</th></tr></thead><tbody>';
     recent.forEach(function(r){
