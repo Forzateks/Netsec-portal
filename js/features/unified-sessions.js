@@ -449,11 +449,6 @@ async function saveEditUS() {
   if (!date || !start || !end) return fail('Date and times required.');
   if (!info) return fail('Session info required.');
 
-  var sp = start.split(':').map(Number);
-  var ep = end.split(':').map(Number);
-  var sf = sp[0] + sp[1]/60, ef = ep[0] + ep[1]/60;
-  var totalHours = r2(ef <= sf ? ef + 24 - sf : ef - sf);
-
   var isEng = (type === 'project' || type === 'poc' || type === 'amc');
   var engId = null;
   if (isEng && engagement) {
@@ -461,32 +456,129 @@ async function saveEditUS() {
     if (engRow) engId = engRow.id;
   }
 
+  // Read OLD row (need original employee for region-correct OT split + linked OT id)
+  var oldRes = await sb.from('unified_sessions').select('*').eq('id', id).single();
+  if (oldRes.error || !oldRes.data) return fail('Could not load existing session.');
+  var oldRow = oldRes.data;
+  var sessionEmployee = oldRow.employee;
+  var oldOtId = oldRow.linked_ot_session_id;
+
+  // Read OLD linked OT row (if any) so we can detect approved status
+  var oldOt = null;
+  if (oldOtId) {
+    var oldOtRes = await sb.from('ot_sessions').select('*').eq('id', oldOtId).single();
+    if (!oldOtRes.error) oldOt = oldOtRes.data;
+  }
+
+  // Recompute hours under the session OWNER's region (not currentUser - manager edits!)
+  var split = splitSessionHours(date, start, end, sessionEmployee);
+  if (!split) return fail('Could not compute hours.');
+
+  // Approved-OT warning
+  if (oldOt && oldOt.status === 'approved') {
+    var msg = 'WARNING: This session has APPROVED OT linked to it ('+oldOt.credited_hours+'h credited).\n\nSaving will recalculate the OT and reset its status to PENDING. The manager will need to re-approve it. Comp-off balance for ' + sessionEmployee + ' may change.\n\nContinue?';
+    if (!confirm(msg)) return;
+  }
+
   var payload = {
-    session_type:  type,
-    session_date:  date,
-    start_time:    start,
-    end_time:      end,
-    session_info:  info,
-    customer_name: isEng ? (customer || null) : null,
+    session_type:    type,
+    session_date:    date,
+    start_time:      start,
+    end_time:        end,
+    session_info:    info,
+    customer_name:   isEng ? (customer || null) : null,
     engagement_name: isEng ? (engagement || null) : null,
-    engagement_id: engId,
-    activity_type: isEng ? (actType || null) : null,
-    team_members:  isEng ? team : null,
-    stake_holders: isEng ? stake : null,
-    mode:          isEng ? mode : null,
-    remarks:       remarks,
-    total_hours:   totalHours,
+    engagement_id:   engId,
+    activity_type:   isEng ? (actType || null) : null,
+    team_members:    isEng ? team : null,
+    stake_holders:   isEng ? stake : null,
+    mode:            isEng ? mode : null,
+    remarks:         remarks,
+    total_hours:     split.total,
+    office_hours:    split.office,
+    ot_hours:        split.ot,
   };
 
-  var res = await sb.from('unified_sessions').update(payload).eq('id', id);
-  if (res.error) return fail('Save failed: ' + res.error.message);
+  var upd = await sb.from('unified_sessions').update(payload).eq('id', id);
+  if (upd.error) return fail('Save failed: ' + upd.error.message);
+
+  // === Cascade to linked ot_sessions ===
+  var activityLabel = isEng
+    ? ((customer || '') + ' / ' + (engagement || '-') + ' — ' + info)
+    : info;
+
+  if (split.ot > 0 && split.otCalc) {
+    var c = split.otCalc;
+    var otPayload = {
+      activity:       activityLabel,
+      ot_date:        date,
+      start_time:     start,
+      end_time:       end,
+      day_name:       c.dayName,
+      band:           c.band,
+      rate:           c.rate,
+      duration_hours: c.duration,
+      credited_hours: c.credited,
+      customer_name:  isEng ? (customer || null) : null,
+      project_name:   isEng ? (engagement || null) : null,
+      activity_type:  isEng ? (actType || null) : null,
+    };
+    if (oldOt && oldOt.status === 'approved') {
+      // Reset to pending — manager re-approves
+      otPayload.status          = 'pending';
+      otPayload.manager_comment = null;
+      otPayload.reviewed_by     = null;
+      otPayload.reviewed_at     = null;
+    }
+    if (oldOtId) {
+      // Update existing OT row
+      await sb.from('ot_sessions').update(otPayload).eq('id', oldOtId);
+    } else {
+      // Create a new OT row (session previously had no OT)
+      otPayload.employee          = sessionEmployee;
+      otPayload.status            = 'pending';
+      otPayload.source            = 'unified';
+      otPayload.source_session_id = id;
+      var ins = await sb.from('ot_sessions').insert(otPayload).select().single();
+      if (!ins.error) {
+        await sb.from('unified_sessions').update({ linked_ot_session_id: ins.data.id }).eq('id', id);
+      }
+    }
+  } else if (oldOtId) {
+    // No more OT — delete the now-stale OT row
+    await sb.from('ot_sessions').delete().eq('id', oldOtId);
+    await sb.from('unified_sessions').update({ linked_ot_session_id: null }).eq('id', id);
+  }
+
   closeEditUS();
   renderUSSessions();
 }
 
 async function deleteUS(id) {
-  if (!confirm('Delete this session?')) return;
-  var res = await sb.from('unified_sessions').delete().eq('id', id);
-  if (res.error) { alert('Error: ' + res.error.message); return; }
+  // Read the row to find any linked OT and its status
+  var res = await sb.from('unified_sessions').select('linked_ot_session_id,employee').eq('id', id).single();
+  if (res.error) { alert('Could not load session.'); return; }
+  var oldOtId = res.data.linked_ot_session_id;
+  var sessionEmployee = res.data.employee;
+
+  var oldOt = null;
+  if (oldOtId) {
+    var otRes = await sb.from('ot_sessions').select('status,credited_hours,band').eq('id', oldOtId).single();
+    if (!otRes.error) oldOt = otRes.data;
+  }
+
+  var msg = 'Delete this session?';
+  if (oldOt && oldOt.status === 'approved') {
+    msg = 'WARNING: This session has APPROVED OT linked to it ('+oldOt.credited_hours+'h credited as ' + oldOt.band + ').\n\nDeleting will also remove that OT row, reducing ' + sessionEmployee + '\'s comp-off balance.\n\nContinue?';
+  } else if (oldOtId) {
+    msg = 'Delete this session?\n\nThe linked ' + (oldOt ? oldOt.status : 'pending') + ' OT record will also be deleted.';
+  }
+  if (!confirm(msg)) return;
+
+  if (oldOtId) {
+    await sb.from('ot_sessions').delete().eq('id', oldOtId);
+  }
+  var del = await sb.from('unified_sessions').delete().eq('id', id);
+  if (del.error) { alert('Error: ' + del.error.message); return; }
   renderUSSessions();
 }
