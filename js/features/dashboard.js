@@ -45,9 +45,33 @@ function dashSkeleton() {
     '<div class="card"><div class="skeleton skel-line tall" style="width:140px;margin-bottom:14px"></div><div class="skeleton skel-line"></div><div class="skeleton skel-line med"></div></div>';
 }
 
-// == DASHBOARD ====================================================
+// Render a date relative to today: "today", "yesterday", weekday name for
+// other days within ±6 days, or "N days ago" / "in N days" further out.
+function relDate(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(String(dateStr).split('T')[0] + 'T00:00:00');
+  var today = new Date(); today.setHours(0,0,0,0);
+  var diff = Math.round((d - today) / 86400000);
+  if (diff === 0)  return 'today';
+  if (diff === 1)  return 'tomorrow';
+  if (diff === -1) return 'yesterday';
+  if (diff > 1 && diff < 7)   return 'on ' + d.toLocaleDateString('en-US',{weekday:'long'});
+  if (diff < -1 && diff > -7) return 'last ' + d.toLocaleDateString('en-US',{weekday:'long'});
+  if (diff >= 7)   return 'in ' + diff + ' days';
+  return Math.abs(diff) + ' days ago';
+}
+
+// == DASHBOARD ROUTER =============================================
 async function renderDashboard() {
   document.getElementById('dash-content').innerHTML = dashSkeleton();
+  if (isManager) {
+    return renderManagerDashboard();
+  }
+  return renderEmployeeDashboard();
+}
+
+// == EMPLOYEE DASHBOARD ===========================================
+async function renderEmployeeDashboard() {
   var year  = new Date().getFullYear().toString();
   var month = new Date().toISOString().slice(0,7);
   var monthName = new Date().toLocaleString('default',{month:'long'});
@@ -62,7 +86,7 @@ async function renderDashboard() {
     sb.from('comp_off_requests').select('*').eq('employee',currentUser).order('created_at',{ascending:false}),
     sb.from('leave_requests').select('*').eq('employee',currentUser).order('created_at',{ascending:false}),
     sb.from('annual_leave').select('working_days').eq('employee',currentUser).gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
-    sb.from('project_sessions').select('duration_hours,team_members,session_date').gte('session_date',prevMonth+'-01').lte('session_date',month+'-31'),
+    sb.from('unified_sessions').select('total_hours,team_members,employee,session_date').gte('session_date',prevMonth+'-01').lte('session_date',month+'-31'),
   ]);
   var sessions=results[0].data, compoffs=results[1].data, coReqs=results[2].data;
   var lvReqs=results[3].data, alData=results[4].data, pjSess=results[5].data;
@@ -78,8 +102,9 @@ async function renderDashboard() {
   var fn = (currentUser||'').split(' ')[0].toLowerCase();
   var pjHrsMonth = 0, pjHrsPrev = 0;
   (pjSess||[]).forEach(function(r){
-    if(!(r.team_members||'').toLowerCase().includes(fn)) return;
-    var hrs = parseFloat(r.duration_hours||0);
+    var team = (r.team_members||r.employee||'').toLowerCase();
+    if(!team.includes(fn)) return;
+    var hrs = parseFloat(r.total_hours||0);
     var d = (r.session_date||'');
     if (d.startsWith(month))      pjHrsMonth += hrs;
     else if (d.startsWith(prevMonth)) pjHrsPrev += hrs;
@@ -96,35 +121,14 @@ async function renderDashboard() {
   var today = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   var firstName = (currentUser||'').split(' ')[0] || '';
 
-  // Manager: combined pending approvals across all three queues
-  var teamPending = 0;
-  if (isManager) {
-    var ar = await Promise.all([
-      sb.from('comp_off_requests').select('id').eq('status','pending'),
-      sb.from('leave_requests').select('id').eq('status','pending'),
-      sb.from('ot_sessions').select('id').eq('status','pending')
-    ]);
-    teamPending = (ar[0].data||[]).length + (ar[1].data||[]).length + (ar[2].data||[]).length;
-  }
-
-  // === HEADER BAND ===
+  // === GREETING ===
   var html = '<div class="dash-hero">'+
     '<div class="dash-hero-text">'+
       '<h2>'+greet+', '+firstName+'</h2>'+
       '<div class="dash-hero-date">'+today+'</div>'+
-    '</div>'+
-    (isManager && teamPending>0 ?
-      '<button class="dash-hero-pill" onclick="showScreen(\'approvals\')">'+
-        '<span class="dash-hero-pill-num">'+teamPending+'</span>'+
-        '<span>awaiting your review</span>'+
-        '<span class="dash-hero-pill-arrow">&rarr;</span>'+
-      '</button>' : '')+
-    '</div>';
+    '</div></div>';
 
-  // === STATS GRID ===
-  var pjTarget = 160;
-  var pjPct = Math.max(0, Math.min(100, Math.round((pjHrsMonth / pjTarget) * 100)));
-
+  // === STATS GRID === (no 160h target progress bar — that was aspirational)
   html += '<div class="dash-stats">'+
     '<div class="stat-card green"><div class="stat-label">CO Balance</div>'+
       '<div class="stat-value" style="color:'+balColor+'">'+fmtNum(s.balance)+'</div>'+
@@ -137,11 +141,10 @@ async function renderDashboard() {
       '<div class="stat-sub">'+fmtNum(otHrsThisMonth)+'h credited</div></div>'+
     '<div class="stat-card eve"><div class="stat-label">Project Hours &mdash; '+monthName+'</div>'+
       '<div class="stat-value">'+fmtNum(pjHrsMonth)+'<span class="stat-unit">h</span>'+trendPill(pjHrsMonth, pjHrsPrev, 'h')+'</div>'+
-      '<div class="stat-bar"><div class="stat-bar-fill" style="width:'+pjPct+'%"></div></div>'+
-      '<div class="stat-sub">'+pjPct+'% of '+pjTarget+'h target</div></div>'+
+      '<div class="stat-sub">vs '+fmtNum(pjHrsPrev)+'h last month</div></div>'+
     '</div>';
 
-  // === QUICK ACTIONS (3 essentials) ===
+  // === QUICK ACTIONS ===
   html += '<div class="card"><div class="card-title">Quick Actions</div>'+
     '<div class="quick-actions-wrap">'+
     '<button class="btn btn-primary" onclick="showScreen(\'projects\');showProjectTab(\'uslog\')">Log Session</button>'+
@@ -182,29 +185,194 @@ async function renderDashboard() {
   }
   html += '</div>';
 
-  // === MANAGER: REPORTS & BACKUP ===
-  if (isManager) {
-    html += '<div class="card dash-backup">'+
-      '<div class="card-title">Reports &amp; Backup</div>'+
-      '<div style="font-size:13px;color:var(--muted);margin-bottom:14px">Download the full database snapshot, the monthly OT report, or a single-table export.</div>'+
-      '<div class="dash-backup-row">'+
-        '<button class="btn btn-primary" onclick="backupExcel(\'all\')">⬇ Full Backup (all sheets)</button>'+
-        '<button class="btn btn-ghost" id="monthly-report-btn" onclick="downloadMonthlyReport()">📄 Monthly OT Report</button>'+
-      '</div>'+
-      '<details class="dash-backup-details">'+
-        '<summary>Export a specific section</summary>'+
-        '<div class="dash-backup-grid">'+
-          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'ot_sessions\')">OT Sessions</button>'+
-          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'project_sessions\')">Project Sessions</button>'+
-          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'inventory\')">Inventory</button>'+
-          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'leave\')">Leaves</button>'+
-          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'comp_off\')">Comp Offs</button>'+
-          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'kb_articles\')">Knowledge Base</button>'+
-          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'directory\')">Customers + Projects</button>'+
+  document.getElementById('dash-content').innerHTML = html;
+}
+
+// == MANAGER DASHBOARD ============================================
+async function renderManagerDashboard() {
+  var now = new Date();
+  var monthName = now.toLocaleString('default',{month:'long'});
+  var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+  var todayISO   = now.toISOString().slice(0,10);
+  var sevenAgo   = new Date(now.getTime() - 7*86400000).toISOString().slice(0,10);
+  var thirtyAhead= new Date(now.getTime() + 30*86400000).toISOString().slice(0,10);
+
+  var hr = now.getHours();
+  var greet = hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
+  var todayLabel = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  var firstName = (currentUser||'').split(' ')[0] || '';
+
+  var results = await Promise.all([
+    // Pending approval queues (3 sources)
+    sb.from('comp_off_requests').select('id').eq('status','pending'),
+    sb.from('leave_requests').select('id').eq('status','pending'),
+    sb.from('ot_sessions').select('id').eq('status','pending'),
+    // Team OT this month (approved only)
+    sb.from('ot_sessions').select('credited_hours,employee').eq('status','approved').gte('ot_date', monthStart),
+    // Upcoming approved leave in next 30 days
+    sb.from('annual_leave').select('employee,start_date,end_date,working_days,reason').gte('start_date', todayISO).lte('start_date', thirtyAhead),
+    // Active engagements
+    sb.from('engagements').select('id,name,status').eq('status','active'),
+    // Sessions this week (last 7 days)
+    sb.from('unified_sessions').select('id,employee,team_members,session_date,total_hours,engagement_name').gte('session_date', sevenAgo),
+    // Recent OT submissions for activity feed (last 7 days)
+    sb.from('ot_sessions').select('id,employee,ot_date,credited_hours,band,activity,status,created_at').gte('created_at', sevenAgo+'T00:00:00').order('created_at',{ascending:false})
+  ]);
+  var coPending = (results[0].data||[]).length;
+  var lvPending = (results[1].data||[]).length;
+  var otPending = (results[2].data||[]).length;
+  var teamPending = coPending + lvPending + otPending;
+
+  var teamOTHrs = (results[3].data||[]).reduce(function(a,r){return a+parseFloat(r.credited_hours||0);},0);
+  var upcomingLeaves = results[4].data || [];
+  var upcomingLeaveDays = upcomingLeaves.reduce(function(a,r){return a+parseFloat(r.working_days||0);},0);
+  var activeProjects = results[5].data || [];
+  var weekSessions = results[6].data || [];
+  var recentOT = results[7].data || [];
+
+  var shortName = function(emp) {
+    return (typeof empShortName === 'function') ? empShortName(emp) : (emp||'').split(' ')[0];
+  };
+
+  // === GREETING ===
+  var html = '<div class="dash-hero">'+
+    '<div class="dash-hero-text">'+
+      '<h2>'+greet+', '+firstName+'</h2>'+
+      '<div class="dash-hero-date">'+todayLabel+'</div>'+
+    '</div></div>';
+
+  // === PENDING APPROVALS HERO CARD ===
+  if (teamPending > 0) {
+    html += '<div class="card" style="background:linear-gradient(135deg,#0A1F5C 0%,#1E3A8A 100%);color:#fff;margin-bottom:16px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">'+
+        '<div>'+
+          '<div style="font-size:13px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;font-weight:600">Pending Approvals</div>'+
+          '<div style="font-size:36px;font-weight:700;font-family:DM Mono,monospace;line-height:1.1;margin-top:4px">'+teamPending+'</div>'+
+          '<div style="font-size:13px;opacity:.85;margin-top:4px">'+
+            (otPending>0?otPending+' OT &middot; ':'')+
+            (coPending>0?coPending+' Comp Off &middot; ':'')+
+            (lvPending>0?lvPending+' Leave':'')+
+          '</div>'+
         '</div>'+
-      '</details>'+
-      '</div>';
+        '<button class="btn" style="background:#fff;color:var(--navy);font-weight:600" onclick="showScreen(\'approvals\')">Review Approvals &rarr;</button>'+
+      '</div>'+
+    '</div>';
+  } else {
+    html += '<div class="card" style="margin-bottom:16px;text-align:center;padding:20px">'+
+      '<div style="font-size:14px;color:var(--muted)">'+
+        '<span style="color:var(--success);font-size:18px;margin-right:6px">✓</span>'+
+        'All caught up — no pending approvals'+
+      '</div>'+
+    '</div>';
   }
+
+  // === TEAM STATS GRID ===
+  html += '<div class="dash-stats">'+
+    '<div class="stat-card navy"><div class="stat-label">Team OT &mdash; '+monthName+'</div>'+
+      '<div class="stat-value">'+fmtNum(teamOTHrs)+'<span class="stat-unit">h</span></div>'+
+      '<div class="stat-sub">credited across the team</div></div>'+
+    '<div class="stat-card teal"><div class="stat-label">Leave next 30 days</div>'+
+      '<div class="stat-value">'+fmtNum(upcomingLeaveDays)+'</div>'+
+      '<div class="stat-sub">'+upcomingLeaves.length+' approved request'+(upcomingLeaves.length===1?'':'s')+'</div></div>'+
+    '<div class="stat-card green"><div class="stat-label">Active Projects</div>'+
+      '<div class="stat-value">'+fmtNum(activeProjects.length)+'</div>'+
+      '<div class="stat-sub">engagements in flight</div></div>'+
+    '<div class="stat-card eve"><div class="stat-label">Sessions this week</div>'+
+      '<div class="stat-value">'+fmtNum(weekSessions.length)+'</div>'+
+      '<div class="stat-sub">logged in last 7 days</div></div>'+
+    '</div>';
+
+  // === MANAGER QUICK ACTIONS ===
+  html += '<div class="card"><div class="card-title">Quick Actions</div>'+
+    '<div class="quick-actions-wrap">'+
+    '<button class="btn btn-primary" onclick="showScreen(\'approvals\')">Review Approvals'+(teamPending>0?' <span class="badge badge-pending" style="margin-left:6px">'+teamPending+'</span>':'')+'</button>'+
+    '<button class="btn btn-ghost" onclick="backupExcel(\'all\')">⬇ Run Backup</button>'+
+    '<button class="btn btn-ghost" onclick="showScreen(\'projects\');showProjectTab(\'manage\')">Manage Projects</button>'+
+    '</div></div>';
+
+  // === ACTIVITY FEED — last 7 days ===
+  // Merge three sources into one chronological feed:
+  //   - OT submissions (created_at)
+  //   - Upcoming approved leave (start_date)
+  //   - Project / unified sessions logged (session_date)
+  var feed = [];
+
+  recentOT.forEach(function(r){
+    var statusBit = r.status === 'pending' ? '<span class="badge badge-pending" style="margin-left:6px">pending</span>' :
+                    r.status === 'approved' ? '<span class="badge badge-approved" style="margin-left:6px">approved</span>' :
+                    r.status === 'rejected' ? '<span class="badge badge-rejected" style="margin-left:6px">rejected</span>' : '';
+    var when = relDate(r.ot_date);
+    feed.push({
+      ts: r.created_at || r.ot_date,
+      html: '<div class="request-card" style="margin-bottom:8px;cursor:pointer" onclick="showScreen(\'approvals\')">'+
+        '<strong>'+esc2(shortName(r.employee))+'</strong> submitted '+
+        fmtNum(r.credited_hours||0)+'h <span class="badge badge-'+r.band+'">'+r.band+'</span> OT '+when+
+        statusBit+
+      '</div>'
+    });
+  });
+
+  upcomingLeaves.forEach(function(r){
+    var when = relDate(r.start_date);
+    var days = parseFloat(r.working_days||0);
+    feed.push({
+      ts: r.start_date,
+      html: '<div class="request-card" style="margin-bottom:8px">'+
+        '<strong>'+esc2(shortName(r.employee))+'</strong> starts annual leave '+when+' ('+fmtNum(days)+' day'+(days===1?'':'s')+')'+
+      '</div>'
+    });
+  });
+
+  weekSessions.forEach(function(r){
+    var loggers = (r.team_members && r.team_members.trim()) ? r.team_members.split(',').map(function(s){return s.trim();}).filter(Boolean) : [r.employee];
+    var primary = loggers[0] || r.employee;
+    var others = loggers.length > 1 ? ' +'+(loggers.length-1) : '';
+    var when = relDate(r.session_date);
+    feed.push({
+      ts: r.session_date,
+      html: '<div class="request-card" style="margin-bottom:8px">'+
+        '<strong>'+esc2(shortName(primary))+others+'</strong> logged '+
+        fmtNum(r.total_hours||0)+'h on <strong>'+esc2(r.engagement_name||'(unspecified)')+'</strong> '+when+
+      '</div>'
+    });
+  });
+
+  feed.sort(function(a,b){ return (b.ts||'') > (a.ts||'') ? 1 : -1; });
+  var topFeed = feed.slice(0, 8);
+
+  html += '<div class="card"><div class="card-title">What\'s happening this week</div>';
+  if (topFeed.length === 0) {
+    html += '<div class="dash-empty">'+
+      '<div class="dash-empty-icon">🌤</div>'+
+      '<div class="dash-empty-title">Quiet week</div>'+
+      '<div class="dash-empty-sub">No OT submissions, leave starts, or session logs in the last 7 days.</div>'+
+    '</div>';
+  } else {
+    html += topFeed.map(function(it){ return it.html; }).join('');
+  }
+  html += '</div>';
+
+  // === REPORTS & BACKUP (manager-only) ===
+  html += '<div class="card dash-backup">'+
+    '<div class="card-title">Reports &amp; Backup</div>'+
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:14px">Download the full database snapshot, the monthly OT report, or a single-table export.</div>'+
+    '<div class="dash-backup-row">'+
+      '<button class="btn btn-primary" onclick="backupExcel(\'all\')">⬇ Full Backup (all sheets)</button>'+
+      '<button class="btn btn-ghost" id="monthly-report-btn" onclick="downloadMonthlyReport()">📄 Monthly OT Report</button>'+
+    '</div>'+
+    '<details class="dash-backup-details">'+
+      '<summary>Export a specific section</summary>'+
+      '<div class="dash-backup-grid">'+
+        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'ot_sessions\')">OT Sessions</button>'+
+        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'project_sessions\')">Project Sessions</button>'+
+        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'inventory\')">Inventory</button>'+
+        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'leave\')">Leaves</button>'+
+        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'comp_off\')">Comp Offs</button>'+
+        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'kb_articles\')">Knowledge Base</button>'+
+        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'directory\')">Customers + Projects</button>'+
+      '</div>'+
+    '</details>'+
+    '</div>';
 
   document.getElementById('dash-content').innerHTML = html;
 }
