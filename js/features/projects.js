@@ -518,6 +518,8 @@ async function renderPjEmployeeSummary() {
   } else if (year !== 'all') {
     q = q.gte('session_date', year+'-01-01').lte('session_date', year+'-12-31');
   }
+  // PostgREST default cap is 1000 rows; lift it so per-employee totals are complete.
+  q = q.range(0, 49999);
   const {data} = await q;
   document.getElementById('pj-employee-loading').style.display='none';
 

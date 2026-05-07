@@ -328,6 +328,8 @@ async function renderUSSessions() {
   if (fEng)  q = q.eq('engagement_name', fEng);
   if (fFrom) q = q.gte('session_date', fFrom);
   if (fTo)   q = q.lte('session_date', fTo);
+  // PostgREST default cap is 1000 rows; lift it so all rows reach the client.
+  q = q.range(0, 49999);
   var res = await q;
   document.getElementById('us-sess-loading').style.display = 'none';
   var rows = res.data || [];
@@ -619,6 +621,8 @@ async function renderEngagementSummary() {
   } else if (year && year !== 'all') {
     q = q.gte('session_date', year + '-01-01').lte('session_date', year + '-12-31');
   }
+  // PostgREST default cap is 1000 rows; lift it so the chart aggregates all rows.
+  q = q.range(0, 49999);
   var res = await q;
   document.getElementById('pj-eng-loading').style.display = 'none';
   var rows = res.data || [];
@@ -792,6 +796,8 @@ async function renderUnifiedTypeSummary(typeKey) {
   } else if (year && year !== 'all') {
     q = q.gte('session_date', year + '-01-01').lte('session_date', year + '-12-31');
   }
+  // PostgREST default cap is 1000 rows; lift it so per-type aggregations are complete.
+  q = q.range(0, 49999);
   var res = await q;
   document.getElementById(ui.loading).style.display = 'none';
   var rows = res.data || [];
