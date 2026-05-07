@@ -6,6 +6,7 @@
 <title>NetSec Portal</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -110,74 +111,74 @@
   </div>
 
   <div class="sidebar-section-label">Overview</div>
-  <div class="sidebar-item active" id="tab-dashboard" onclick="showScreen('dashboard');closeSidebarOnMobile()"><span class="sidebar-icon">🏠</span>Dashboard</div>
+  <div class="sidebar-item active" id="tab-dashboard" onclick="showScreen('dashboard');closeSidebarOnMobile()"><i data-lucide="layout-dashboard" class="sidebar-icon"></i>Dashboard</div>
 
   <div class="sidebar-section-label">Time Off</div>
   <div class="sidebar-group" id="sbg-leave">
     <div class="sidebar-item has-children" id="tab-leave" onclick="showScreen('leave');closeSidebarOnMobile()">
-      <span class="sidebar-icon">🏖️</span>Leave<span class="sidebar-chevron">›</span>
+      <i data-lucide="palmtree" class="sidebar-icon"></i>Leave<span class="sidebar-chevron">›</span>
     </div>
     <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-leave-log"     onclick="navigateSub('leave','log')">Request Time Off</div>
-      <div class="sidebar-subitem" id="sbi-leave-history" onclick="navigateSub('leave','history')"><span id="sbi-leave-history-label">My Requests</span></div>
-      <div class="sidebar-subitem" id="sbi-leave-team"    onclick="navigateSub('leave','team')"><span id="sbi-leave-team-label">Team Overview</span></div>
+      <div class="sidebar-subitem" id="sbi-leave-log"     onclick="navigateSub('leave','log')"><i data-lucide="pencil-line" class="sidebar-subicon"></i>Request Time Off</div>
+      <div class="sidebar-subitem" id="sbi-leave-history" onclick="navigateSub('leave','history')"><i data-lucide="clipboard-list" class="sidebar-subicon"></i><span id="sbi-leave-history-label">My Requests</span></div>
+      <div class="sidebar-subitem" id="sbi-leave-team"    onclick="navigateSub('leave','team')"><i data-lucide="users" class="sidebar-subicon"></i><span id="sbi-leave-team-label">Team Overview</span></div>
     </div>
   </div>
 
   <div class="sidebar-section-label">Work</div>
   <div class="sidebar-group" id="sbg-projects">
     <div class="sidebar-item has-children" id="tab-projects" onclick="showScreen('projects');closeSidebarOnMobile()">
-      <span class="sidebar-icon">📋</span>Sessions<span class="sidebar-chevron">›</span>
+      <i data-lucide="briefcase" class="sidebar-icon"></i>Sessions<span class="sidebar-chevron">›</span>
     </div>
     <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-projects-uslog"      onclick="navigateSub('projects','uslog')">➕ Log Session</div>
-      <div class="sidebar-subitem" id="sbi-projects-ussess"     onclick="navigateSub('projects','ussess')">📋 My Sessions</div>
-      <div class="sidebar-subitem" id="sbi-projects-otsessions" onclick="navigateSub('projects','otsessions')">⏱ OT Sessions</div>
-      <div class="sidebar-subitem" id="sbi-projects-otsummary"  onclick="navigateSub('projects','otsummary')">📊 OT Summary</div>
-      <div class="sidebar-subitem" id="sbi-projects-engagement" onclick="navigateSub('projects','engagement')">📊 Engagement Summary</div>
-      <div class="sidebar-subitem" id="sbi-projects-employee"   onclick="navigateSub('projects','employee')">👥 Employee Summary</div>
-      <div class="sidebar-subitem" id="sbi-projects-otpolicy"   onclick="navigateSub('projects','otpolicy')">📖 OT Policy</div>
-      <div class="sidebar-subitem" id="sbi-projects-otmanager"  onclick="navigateSub('projects','otmanager')" style="display:none">👔 Manager View</div>
-      <div class="sidebar-subitem" id="sbi-projects-manage"     onclick="navigateSub('projects','manage')" style="display:none">⚙️ Manage Engagements</div>
+      <div class="sidebar-subitem" id="sbi-projects-uslog"      onclick="navigateSub('projects','uslog')"><i data-lucide="plus-circle" class="sidebar-subicon"></i>Log Session</div>
+      <div class="sidebar-subitem" id="sbi-projects-ussess"     onclick="navigateSub('projects','ussess')"><i data-lucide="list" class="sidebar-subicon"></i>My Sessions</div>
+      <div class="sidebar-subitem" id="sbi-projects-otsessions" onclick="navigateSub('projects','otsessions')"><i data-lucide="timer" class="sidebar-subicon"></i>OT Sessions</div>
+      <div class="sidebar-subitem" id="sbi-projects-otsummary"  onclick="navigateSub('projects','otsummary')"><i data-lucide="bar-chart-2" class="sidebar-subicon"></i>OT Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-engagement" onclick="navigateSub('projects','engagement')"><i data-lucide="bar-chart-3" class="sidebar-subicon"></i>Engagement Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-employee"   onclick="navigateSub('projects','employee')"><i data-lucide="users-round" class="sidebar-subicon"></i>Employee Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-otpolicy"   onclick="navigateSub('projects','otpolicy')"><i data-lucide="book-open" class="sidebar-subicon"></i>OT Policy</div>
+      <div class="sidebar-subitem" id="sbi-projects-otmanager"  onclick="navigateSub('projects','otmanager')" style="display:none"><i data-lucide="shield-check" class="sidebar-subicon"></i>Manager View</div>
+      <div class="sidebar-subitem" id="sbi-projects-manage"     onclick="navigateSub('projects','manage')" style="display:none"><i data-lucide="settings-2" class="sidebar-subicon"></i>Manage Engagements</div>
     </div>
   </div>
 
   <div class="sidebar-section-label" id="sidebar-approvals-label" style="display:none">Approvals</div>
   <div class="sidebar-group" id="sbg-approvals" style="display:none">
     <div class="sidebar-item has-children" id="tab-approvals" onclick="showScreen('approvals');closeSidebarOnMobile()">
-      <span class="sidebar-icon">🔔</span>Approvals<span class="notif-badge" id="notif-badge" style="display:none">0</span><span class="sidebar-chevron">›</span>
+      <i data-lucide="bell" class="sidebar-icon"></i>Approvals<span class="notif-badge" id="notif-badge" style="display:none">0</span><span class="sidebar-chevron">›</span>
     </div>
     <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-approvals-leave" onclick="navigateSub('approvals','leave')">📅 Time Off Requests</div>
-      <div class="sidebar-subitem" id="sbi-approvals-ot"    onclick="navigateSub('approvals','ot')">⏱ OT Sessions</div>
+      <div class="sidebar-subitem" id="sbi-approvals-leave" onclick="navigateSub('approvals','leave')"><i data-lucide="calendar-check" class="sidebar-subicon"></i>Time Off Requests</div>
+      <div class="sidebar-subitem" id="sbi-approvals-ot"    onclick="navigateSub('approvals','ot')"><i data-lucide="timer" class="sidebar-subicon"></i>OT Sessions</div>
     </div>
   </div>
 
   <div class="sidebar-section-label">Assets</div>
   <div class="sidebar-group" id="sbg-inventory">
     <div class="sidebar-item has-children" id="tab-inventory" onclick="showScreen('inventory');closeSidebarOnMobile()">
-      <span class="sidebar-icon">📦</span>Inventory<span class="sidebar-chevron">›</span>
+      <i data-lucide="package" class="sidebar-icon"></i>Inventory<span class="sidebar-chevron">›</span>
     </div>
     <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-inventory-devices" onclick="navigateSub('inventory','devices')">📋 Devices</div>
-      <div class="sidebar-subitem" id="sbi-inventory-add"     onclick="navigateSub('inventory','add')">➕ Add Device</div>
-      <div class="sidebar-subitem" id="sbi-inventory-log"     onclick="navigateSub('inventory','log')">📜 Activity Log</div>
+      <div class="sidebar-subitem" id="sbi-inventory-devices" onclick="navigateSub('inventory','devices')"><i data-lucide="monitor" class="sidebar-subicon"></i>Devices</div>
+      <div class="sidebar-subitem" id="sbi-inventory-add"     onclick="navigateSub('inventory','add')"><i data-lucide="plus-circle" class="sidebar-subicon"></i>Add Device</div>
+      <div class="sidebar-subitem" id="sbi-inventory-log"     onclick="navigateSub('inventory','log')"><i data-lucide="history" class="sidebar-subicon"></i>Activity Log</div>
     </div>
   </div>
   <div class="sidebar-group" id="sbg-kb">
     <div class="sidebar-item has-children" id="tab-kb" onclick="showScreen('kb');closeSidebarOnMobile()">
-      <span class="sidebar-icon">📚</span>Knowledge Base<span class="sidebar-chevron">›</span>
+      <i data-lucide="book-open-text" class="sidebar-icon"></i>Knowledge Base<span class="sidebar-chevron">›</span>
     </div>
     <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-kb-browse" onclick="navigateSub('kb','browse')">🔍 Browse</div>
-      <div class="sidebar-subitem" id="sbi-kb-submit" onclick="navigateSub('kb','submit')">📝 Submit Article</div>
-      <div class="sidebar-subitem" id="sbi-kb-mine"   onclick="navigateSub('kb','mine')">📄 My Articles</div>
+      <div class="sidebar-subitem" id="sbi-kb-browse" onclick="navigateSub('kb','browse')"><i data-lucide="search" class="sidebar-subicon"></i>Browse</div>
+      <div class="sidebar-subitem" id="sbi-kb-submit" onclick="navigateSub('kb','submit')"><i data-lucide="file-plus-2" class="sidebar-subicon"></i>Submit Article</div>
+      <div class="sidebar-subitem" id="sbi-kb-mine"   onclick="navigateSub('kb','mine')"><i data-lucide="file-text" class="sidebar-subicon"></i>My Articles</div>
     </div>
   </div>
 
   <div class="sidebar-section-label">System</div>
-  <div class="sidebar-item" onclick="openChangePasswordModal();closeSidebarOnMobile()"><span class="sidebar-icon">🔑</span>Change Password</div>
-  <div class="sidebar-item sidebar-item-logout" onclick="doLogout()"><span class="sidebar-icon">⏻</span>Logout</div>
+  <div class="sidebar-item" onclick="openChangePasswordModal();closeSidebarOnMobile()"><i data-lucide="key-round" class="sidebar-icon"></i>Change Password</div>
+  <div class="sidebar-item sidebar-item-logout" onclick="doLogout()"><i data-lucide="log-out" class="sidebar-icon"></i>Logout</div>
 </aside>
 
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar(false)"></div>

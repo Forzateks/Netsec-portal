@@ -199,11 +199,11 @@ async function initApp(user) {
   if (sbgApprovals) sbgApprovals.style.display = isManager ? '' : 'none';
   var apprLabel = document.getElementById('sidebar-approvals-label');
   if (apprLabel) apprLabel.style.display = isManager ? '' : 'none';
-  // Leave sub-tab labels depend on role
+  // Leave sub-tab labels depend on role (icons render separately via Lucide)
   var teamLabel = document.getElementById('sbi-leave-team-label');
-  if (teamLabel) teamLabel.textContent = isManager ? '👔 Team Overview' : '🏖️ My Leave Overview';
+  if (teamLabel) teamLabel.textContent = isManager ? 'Team Overview' : 'My Leave Overview';
   var histLabel = document.getElementById('sbi-leave-history-label');
-  if (histLabel) histLabel.textContent = isManager ? '📋 All Requests' : '📋 My Requests';
+  if (histLabel) histLabel.textContent = isManager ? 'All Requests' : 'My Requests';
 
   // Manager can filter employees; employees cannot
   document.querySelectorAll('.manager-only-el').forEach(function(el) {

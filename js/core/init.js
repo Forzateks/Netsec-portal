@@ -8,9 +8,17 @@ function initLoginBgVideo() {
   if (p && p.catch) p.catch(function(){ /* autoplay blocked, video will sit on first frame */ });
 }
 
+// Render all <i data-lucide="..."> icons currently in the DOM.
+function renderIcons() {
+  if (window.lucide && typeof lucide.createIcons === 'function') {
+    try { lucide.createIcons(); } catch(e) { /* lucide not ready yet */ }
+  }
+}
+
 // == INIT ==========================================================
 window.onload = async function() {
   initLoginBgVideo();
+  renderIcons();
   // Supabase puts the link type in the URL hash:
   //   type=recovery            -> forgot-password reset link
   //   type=invite | type=signup -> invitation from manager (first-time login)
