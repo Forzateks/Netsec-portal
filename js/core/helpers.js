@@ -26,6 +26,25 @@ function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
 function statusIcon(s){return s==='approved'?'✅':s==='rejected'?'❌':'🟡';}
 function esc2(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
+// Paginate through a Supabase query in chunks of 1000 to work around the
+// platform's server-side row cap. Pass a function that builds a fresh query
+// (with filters/orders applied) — we append .range() per page and concat.
+async function fetchAllRows(buildQuery) {
+  var pageSize = 1000;
+  var page = 0;
+  var all = [];
+  while (true) {
+    var res = await buildQuery().range(page * pageSize, (page + 1) * pageSize - 1);
+    if (res.error) return res;
+    var rows = res.data || [];
+    all = all.concat(rows);
+    if (rows.length < pageSize) break;
+    page++;
+    if (page > 100) { console.warn('fetchAllRows: 100k-row safety cap hit'); break; }
+  }
+  return { data: all, error: null };
+}
+
 // Attach a synced horizontal scrollbar above a .table-wrap so users don't
 // have to scroll to the bottom of a long table to find the native scrollbar.
 // No-op when the inner table fits without overflow.

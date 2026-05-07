@@ -511,16 +511,18 @@ async function renderPjEmployeeSummary() {
   // Reads unified_sessions (Phase 6 cutover). Aggregates by employee
   // (the `employee` column on the unified row, which is the logger),
   // with a per-type breakdown column. Date range overrides year.
-  let q = sb.from('unified_sessions').select('*');
-  if (fFrom || fTo) {
-    if (fFrom) q = q.gte('session_date', fFrom);
-    if (fTo)   q = q.lte('session_date', fTo);
-  } else if (year !== 'all') {
-    q = q.gte('session_date', year+'-01-01').lte('session_date', year+'-12-31');
-  }
-  // PostgREST default cap is 1000 rows; lift it so per-employee totals are complete.
-  q = q.range(0, 49999);
-  const {data} = await q;
+  // Paginated to bypass the Supabase server-side 1000-row cap.
+  const res = await fetchAllRows(function() {
+    let q = sb.from('unified_sessions').select('*');
+    if (fFrom || fTo) {
+      if (fFrom) q = q.gte('session_date', fFrom);
+      if (fTo)   q = q.lte('session_date', fTo);
+    } else if (year !== 'all') {
+      q = q.gte('session_date', year+'-01-01').lte('session_date', year+'-12-31');
+    }
+    return q;
+  });
+  const data = res.data;
   document.getElementById('pj-employee-loading').style.display='none';
 
   const rows = data || [];

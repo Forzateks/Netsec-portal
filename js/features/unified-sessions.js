@@ -322,15 +322,16 @@ async function renderUSSessions() {
 
   // Newest-logged first (created_at), with session_date / start_time as
   // secondary keys for legacy rows that don't have a created_at value.
-  var q = sb.from('unified_sessions').select('*').order('created_at',{ascending:false,nullsFirst:false}).order('session_date',{ascending:false}).order('start_time',{ascending:false});
-  if (fType) q = q.eq('session_type', fType);
-  if (fCust) q = q.eq('customer_name', fCust);
-  if (fEng)  q = q.eq('engagement_name', fEng);
-  if (fFrom) q = q.gte('session_date', fFrom);
-  if (fTo)   q = q.lte('session_date', fTo);
-  // PostgREST default cap is 1000 rows; lift it so all rows reach the client.
-  q = q.range(0, 49999);
-  var res = await q;
+  // Paginated to bypass the Supabase server-side 1000-row cap.
+  var res = await fetchAllRows(function() {
+    var q = sb.from('unified_sessions').select('*').order('created_at',{ascending:false,nullsFirst:false}).order('session_date',{ascending:false}).order('start_time',{ascending:false});
+    if (fType) q = q.eq('session_type', fType);
+    if (fCust) q = q.eq('customer_name', fCust);
+    if (fEng)  q = q.eq('engagement_name', fEng);
+    if (fFrom) q = q.gte('session_date', fFrom);
+    if (fTo)   q = q.lte('session_date', fTo);
+    return q;
+  });
   document.getElementById('us-sess-loading').style.display = 'none';
   var rows = res.data || [];
 
@@ -609,21 +610,23 @@ async function renderEngagementSummary() {
   var toVal   = (document.getElementById('pj-eng-to')||{}).value   || '';
   var year    = (yearEl && yearEl.value) || 'all';
 
-  var q = sb.from('unified_sessions').select('*');
-  if (typeKey === 'all') {
-    q = q.in('session_type', ['project','poc','amc','presales']);
-  } else {
-    q = q.eq('session_type', typeKey);
-  }
-  if (fromVal || toVal) {
-    if (fromVal) q = q.gte('session_date', fromVal);
-    if (toVal)   q = q.lte('session_date', toVal);
-  } else if (year && year !== 'all') {
-    q = q.gte('session_date', year + '-01-01').lte('session_date', year + '-12-31');
-  }
-  // PostgREST default cap is 1000 rows; lift it so the chart aggregates all rows.
-  q = q.range(0, 49999);
-  var res = await q;
+  // Paginated to bypass the Supabase server-side 1000-row cap so the
+  // chart aggregates the full dataset, not just the first 1000 rows.
+  var res = await fetchAllRows(function() {
+    var q = sb.from('unified_sessions').select('*');
+    if (typeKey === 'all') {
+      q = q.in('session_type', ['project','poc','amc','presales']);
+    } else {
+      q = q.eq('session_type', typeKey);
+    }
+    if (fromVal || toVal) {
+      if (fromVal) q = q.gte('session_date', fromVal);
+      if (toVal)   q = q.lte('session_date', toVal);
+    } else if (year && year !== 'all') {
+      q = q.gte('session_date', year + '-01-01').lte('session_date', year + '-12-31');
+    }
+    return q;
+  });
   document.getElementById('pj-eng-loading').style.display = 'none';
   var rows = res.data || [];
 
@@ -789,16 +792,17 @@ async function renderUnifiedTypeSummary(typeKey) {
   var fromVal = ui.from ? ((document.getElementById(ui.from)||{}).value || '') : '';
   var toVal   = ui.to   ? ((document.getElementById(ui.to)||{}).value   || '') : '';
   var year = (yearEl && yearEl.value) || 'all';
-  var q = sb.from('unified_sessions').select('*').eq('session_type', typeKey);
-  if (fromVal || toVal) {
-    if (fromVal) q = q.gte('session_date', fromVal);
-    if (toVal)   q = q.lte('session_date', toVal);
-  } else if (year && year !== 'all') {
-    q = q.gte('session_date', year + '-01-01').lte('session_date', year + '-12-31');
-  }
-  // PostgREST default cap is 1000 rows; lift it so per-type aggregations are complete.
-  q = q.range(0, 49999);
-  var res = await q;
+  // Paginated to bypass the Supabase server-side 1000-row cap.
+  var res = await fetchAllRows(function() {
+    var q = sb.from('unified_sessions').select('*').eq('session_type', typeKey);
+    if (fromVal || toVal) {
+      if (fromVal) q = q.gte('session_date', fromVal);
+      if (toVal)   q = q.lte('session_date', toVal);
+    } else if (year && year !== 'all') {
+      q = q.gte('session_date', year + '-01-01').lte('session_date', year + '-12-31');
+    }
+    return q;
+  });
   document.getElementById(ui.loading).style.display = 'none';
   var rows = res.data || [];
 
