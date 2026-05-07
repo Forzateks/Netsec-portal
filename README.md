@@ -120,6 +120,24 @@ Push to `master` → GitHub → Cloudflare Pages auto-deploys (usually < 60 seco
 > **Always read `BACKEND.md` before asking for or making any Supabase changes.**  
 > It contains the full current schema, table definitions, and RLS policies.
 
+## Bulk-import gotcha
+
+When importing legacy data via SQL the assistant typically gives you:
+
+1. A **dry-run SELECT** — preview only, returns sample rows but writes nothing.
+2. One or more **batch INSERT** statements — the actual writes.
+
+**Do not run the dry-run as `INSERT INTO ... SELECT ...`.** The batch INSERTs
+already include those preview rows. Running the dry-run as an INSERT creates
+duplicate rows for whatever the dry-run previewed (typically the first 5).
+The dry-run is a `SELECT` — just check that it returns rows with the engagement
+joined, then run the batch INSERT(s) once each.
+
+Always tag every imported row with a unique marker in the `remarks` column
+(e.g. `Imported 2026-05-09 from MASHREQ-IBG legacy log`) so a single
+`DELETE … WHERE remarks = '…'` rolls the entire import back if anything
+goes wrong.
+
 ## Supporting Docs
 
 - Feature reference: [docs/features/README.md](/d:/Netsec-portal/docs/features/README.md)
