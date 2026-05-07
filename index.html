@@ -134,10 +134,7 @@
       <div class="sidebar-subitem" id="sbi-projects-ussess"     onclick="navigateSub('projects','ussess')">📋 My Sessions</div>
       <div class="sidebar-subitem" id="sbi-projects-otsessions" onclick="navigateSub('projects','otsessions')">⏱ OT Sessions</div>
       <div class="sidebar-subitem" id="sbi-projects-otsummary"  onclick="navigateSub('projects','otsummary')">📊 OT Summary</div>
-      <div class="sidebar-subitem" id="sbi-projects-project"    onclick="navigateSub('projects','project')">📊 Project Summary</div>
-      <div class="sidebar-subitem" id="sbi-projects-poc"        onclick="navigateSub('projects','poc')">🎯 POC Summary</div>
-      <div class="sidebar-subitem" id="sbi-projects-amc"        onclick="navigateSub('projects','amc')">🛠️ AMC Summary</div>
-      <div class="sidebar-subitem" id="sbi-projects-presales"   onclick="navigateSub('projects','presales')">💼 Pre-Sales Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-engagement" onclick="navigateSub('projects','engagement')">📊 Engagement Summary</div>
       <div class="sidebar-subitem" id="sbi-projects-employee"   onclick="navigateSub('projects','employee')">👥 Employee Summary</div>
       <div class="sidebar-subitem" id="sbi-projects-otpolicy"   onclick="navigateSub('projects','otpolicy')">📖 OT Policy</div>
       <div class="sidebar-subitem" id="sbi-projects-otmanager"  onclick="navigateSub('projects','otmanager')" style="display:none">👔 Manager View</div>
@@ -424,80 +421,31 @@
     </div>
   </div>
 
-  <!-- PROJECT SUMMARY -->
-  <div id="pjtab-project" style="display:none">
+  <!-- ENGAGEMENT SUMMARY (unified Project / POC / AMC / Pre-Sales) -->
+  <div id="pjtab-engagement" style="display:none">
     <div class="card">
       <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">📊 Project Summary</div>
-        <select id="pj-sum-year" onchange="renderUnifiedTypeSummary('project')" style="width:auto;padding:7px 12px"></select>
+        <div class="card-title" style="margin-bottom:0">📊 Engagement Summary</div>
+        <select id="pj-eng-year" onchange="renderEngagementSummary()" style="width:auto;padding:7px 12px"></select>
       </div>
       <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
-        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
-        <input type="date" id="pj-sum-from" onchange="renderUnifiedTypeSummary('project')" style="width:auto;padding:6px 8px;font-size:13px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">Type:</label>
+        <select id="pj-eng-type" onchange="renderEngagementSummary()" style="width:auto;padding:6px 10px;font-size:13px">
+          <option value="all">All Types</option>
+          <option value="project">📁 Project</option>
+          <option value="poc">🎯 POC</option>
+          <option value="amc">🛠️ AMC</option>
+          <option value="presales">💼 Pre-Sales</option>
+        </select>
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0;margin-left:6px">From:</label>
+        <input type="date" id="pj-eng-from" onchange="renderEngagementSummary()" style="width:auto;padding:6px 8px;font-size:13px">
         <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
-        <input type="date" id="pj-sum-to" onchange="renderUnifiedTypeSummary('project')" style="width:auto;padding:6px 8px;font-size:13px">
-        <button class="btn btn-sm btn-ghost" onclick="clearTypeSummaryFilters('project')">✕ Clear dates</button>
+        <input type="date" id="pj-eng-to" onchange="renderEngagementSummary()" style="width:auto;padding:6px 8px;font-size:13px">
+        <button class="btn btn-sm btn-ghost" onclick="clearEngagementFilters()">✕ Clear</button>
         <span style="font-size:11px;color:var(--muted);margin-left:auto">Date range overrides the year picker.</span>
       </div>
-      <div id="pj-project-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <div id="pj-project-content"></div>
-    </div>
-  </div>
-
-  <!-- POC SUMMARY -->
-  <div id="pjtab-poc" style="display:none">
-    <div class="card">
-      <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">🎯 POC Summary</div>
-        <select id="pj-poc-year" onchange="renderUnifiedTypeSummary('poc')" style="width:auto;padding:7px 12px"></select>
-      </div>
-      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
-        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
-        <input type="date" id="pj-poc-from" onchange="renderUnifiedTypeSummary('poc')" style="width:auto;padding:6px 8px;font-size:13px">
-        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
-        <input type="date" id="pj-poc-to" onchange="renderUnifiedTypeSummary('poc')" style="width:auto;padding:6px 8px;font-size:13px">
-        <button class="btn btn-sm btn-ghost" onclick="clearTypeSummaryFilters('poc')">✕ Clear dates</button>
-      </div>
-      <div id="pj-poc-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <div id="pj-poc-content"></div>
-    </div>
-  </div>
-
-  <!-- AMC SUMMARY -->
-  <div id="pjtab-amc" style="display:none">
-    <div class="card">
-      <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">🛠️ AMC Summary</div>
-        <select id="pj-amc-year" onchange="renderUnifiedTypeSummary('amc')" style="width:auto;padding:7px 12px"></select>
-      </div>
-      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
-        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
-        <input type="date" id="pj-amc-from" onchange="renderUnifiedTypeSummary('amc')" style="width:auto;padding:6px 8px;font-size:13px">
-        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
-        <input type="date" id="pj-amc-to" onchange="renderUnifiedTypeSummary('amc')" style="width:auto;padding:6px 8px;font-size:13px">
-        <button class="btn btn-sm btn-ghost" onclick="clearTypeSummaryFilters('amc')">✕ Clear dates</button>
-      </div>
-      <div id="pj-amc-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <div id="pj-amc-content"></div>
-    </div>
-  </div>
-
-  <!-- PRE-SALES SUMMARY -->
-  <div id="pjtab-presales" style="display:none">
-    <div class="card">
-      <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">💼 Pre-Sales Summary</div>
-        <select id="pj-presales-year" onchange="renderUnifiedTypeSummary('presales')" style="width:auto;padding:7px 12px"></select>
-      </div>
-      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
-        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
-        <input type="date" id="pj-presales-from" onchange="renderUnifiedTypeSummary('presales')" style="width:auto;padding:6px 8px;font-size:13px">
-        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
-        <input type="date" id="pj-presales-to" onchange="renderUnifiedTypeSummary('presales')" style="width:auto;padding:6px 8px;font-size:13px">
-        <button class="btn btn-sm btn-ghost" onclick="clearTypeSummaryFilters('presales')">✕ Clear dates</button>
-      </div>
-      <div id="pj-presales-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <div id="pj-presales-content"></div>
+      <div id="pj-eng-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div id="pj-eng-content"></div>
     </div>
   </div>
 

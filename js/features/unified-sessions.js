@@ -565,17 +565,188 @@ async function saveEditUS() {
 // Generic renderer driven by session_type. Mirrors renderPjProjectSummary
 // in shape but reads from unified_sessions and uses engagement_name as
 // the grouping key.
-function clearTypeSummaryFilters(typeKey) {
-  var pairs = {
-    project:  ['pj-sum-from','pj-sum-to'],
-    poc:      ['pj-poc-from','pj-poc-to'],
-    amc:      ['pj-amc-from','pj-amc-to'],
-    presales: ['pj-presales-from','pj-presales-to']
-  };
-  (pairs[typeKey]||[]).forEach(function(id){
+function clearEngagementFilters() {
+  ['pj-eng-from','pj-eng-to'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
-  renderUnifiedTypeSummary(typeKey);
+  var t = document.getElementById('pj-eng-type'); if (t) t.value = 'all';
+  renderEngagementSummary();
+}
+
+// Unified Engagement Summary — replaces the four per-type summaries.
+// Reads pj-eng-type / pj-eng-from / pj-eng-to / pj-eng-year. Type 'all'
+// covers Project + POC + AMC + Pre-Sales (excludes Internal which is not
+// engagement-based).
+async function renderEngagementSummary() {
+  var typeEl = document.getElementById('pj-eng-type');
+  var typeKey = (typeEl && typeEl.value) || 'all';
+
+  // Year picker setup (lazy, mirrors the old per-type setup)
+  var yearEl = document.getElementById('pj-eng-year');
+  if (yearEl && !yearEl.options.length) {
+    var allOpt = document.createElement('option');
+    allOpt.value = 'all'; allOpt.textContent = 'All Years'; allOpt.selected = true;
+    yearEl.appendChild(allOpt);
+    var thisYear = new Date().getFullYear();
+    for (var y = thisYear; y >= 2023; y--) {
+      var o = document.createElement('option'); o.value = y; o.textContent = y; yearEl.appendChild(o);
+    }
+  }
+
+  document.getElementById('pj-eng-loading').style.display = 'flex';
+  document.getElementById('pj-eng-content').innerHTML = '';
+
+  var fromVal = (document.getElementById('pj-eng-from')||{}).value || '';
+  var toVal   = (document.getElementById('pj-eng-to')||{}).value   || '';
+  var year    = (yearEl && yearEl.value) || 'all';
+
+  var q = sb.from('unified_sessions').select('*');
+  if (typeKey === 'all') {
+    q = q.in('session_type', ['project','poc','amc','presales']);
+  } else {
+    q = q.eq('session_type', typeKey);
+  }
+  if (fromVal || toVal) {
+    if (fromVal) q = q.gte('session_date', fromVal);
+    if (toVal)   q = q.lte('session_date', toVal);
+  } else if (year && year !== 'all') {
+    q = q.gte('session_date', year + '-01-01').lte('session_date', year + '-12-31');
+  }
+  var res = await q;
+  document.getElementById('pj-eng-loading').style.display = 'none';
+  var rows = res.data || [];
+
+  var TYPE_LABELS = { project:'Project', poc:'POC', amc:'AMC', presales:'Pre-Sales' };
+  var typeLabel   = typeKey==='all' ? 'Engagement' : TYPE_LABELS[typeKey] || typeKey;
+
+  if (!rows.length) {
+    document.getElementById('pj-eng-content').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">📊</div>'+
+      '<div class="empty-title">No '+esc2(typeLabel)+' sessions in this period</div></div>';
+    return;
+  }
+
+  // Aggregate by engagement_name (with type when "All", so engagement names
+  // that exist under multiple types stay distinct).
+  var byEng = {};
+  rows.forEach(function(r){
+    var key = (r.engagement_name || '(unspecified)') + (typeKey==='all' ? ' · '+(TYPE_LABELS[r.session_type]||r.session_type) : '');
+    if (!byEng[key]) byEng[key] = { sessions: 0, hours: 0, members: {}, customer: r.customer_name || '-', sessionType: r.session_type };
+    byEng[key].sessions += 1;
+    byEng[key].hours    += parseFloat(r.total_hours || 0);
+    if (r.team_members) {
+      r.team_members.split(',').forEach(function(name){
+        name = name.trim();
+        if (!name) return;
+        byEng[key].members[name] = (byEng[key].members[name] || 0) + parseFloat(r.total_hours || 0);
+      });
+    } else if (r.employee) {
+      byEng[key].members[r.employee] = (byEng[key].members[r.employee] || 0) + parseFloat(r.total_hours || 0);
+    }
+  });
+  var sorted = Object.keys(byEng).sort(function(a,b){ return byEng[b].hours - byEng[a].hours; });
+  var totalHours    = sorted.reduce(function(s,k){ return s + byEng[k].hours; }, 0);
+  var totalSessions = sorted.reduce(function(s,k){ return s + byEng[k].sessions; }, 0);
+
+  // Aggregate by customer
+  var byCust = {};
+  rows.forEach(function(r){
+    var cust = (r.customer_name || '').trim() || '(no customer)';
+    if (!byCust[cust]) byCust[cust] = { hours: 0, sessions: 0 };
+    byCust[cust].hours    += parseFloat(r.total_hours || 0);
+    byCust[cust].sessions += 1;
+  });
+  var sortedCust = Object.keys(byCust).sort(function(a,b){ return byCust[b].hours - byCust[a].hours; });
+
+  var TYPE_BADGE = {
+    project:  '<span class="badge" style="background:#EFF6FF;color:#2563EB">PROJECT</span>',
+    poc:      '<span class="badge" style="background:#F5F3FF;color:#7C3AED">POC</span>',
+    amc:      '<span class="badge" style="background:#FFFBEB;color:#B45309">AMC</span>',
+    presales: '<span class="badge" style="background:#FDF2F8;color:#BE185D">PRE-SALES</span>'
+  };
+
+  var tableRows = sorted.map(function(name){
+    var d = byEng[name];
+    var cleanName = name.replace(/ · (Project|POC|AMC|Pre-Sales)$/, '');
+    var memberBreakdown = Object.keys(d.members).map(function(m){
+      var label = (typeof empShortName === 'function') ? empShortName(m) : m.split(' ')[0];
+      return '<span class="badge" style="background:#f0f4ff;color:var(--navy);margin:1px">'+label+': '+r2(d.members[m])+'h</span>';
+    }).join(' ');
+    var typeBadge = (typeKey==='all') ? (TYPE_BADGE[d.sessionType]||'') : '';
+    return '<tr>'+
+      '<td><strong>'+esc2(cleanName)+'</strong>'+(typeBadge?' '+typeBadge:'')+'</td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+esc2(d.customer)+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+d.sessions+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:15px">'+r2(d.hours)+'h</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px;color:var(--muted)">'+r2(d.hours/8)+' days</td>'+
+      '<td style="font-size:12px">'+memberBreakdown+'</td>'+
+    '</tr>';
+  }).join('');
+
+  var PIE_COLORS = ['#0A1F5C','#00A0D2','#C8A832','#3B82F6','#10B981','#8B5CF6','#F59E0B','#EF4444'];
+  var pieData = sorted.slice(0,8).map(function(name,i){
+    var clean = name.replace(/ · (Project|POC|AMC|Pre-Sales)$/, '');
+    return { label: clean, value: byEng[name].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
+  });
+  var custPieData = sortedCust.slice(0,8).map(function(cust,i){
+    return { label: cust, value: byCust[cust].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
+  });
+  var pie     = (typeof buildPieChart === 'function') ? buildPieChart(pieData,     'h') : '';
+  var custPie = (typeof buildPieChart === 'function') ? buildPieChart(custPieData, 'h') : '';
+
+  // Type-mix mini-bar (only when All Types is selected)
+  var typeMixHtml = '';
+  if (typeKey === 'all') {
+    var byType = { project:0, poc:0, amc:0, presales:0 };
+    rows.forEach(function(r){ if (byType[r.session_type] !== undefined) byType[r.session_type] += parseFloat(r.total_hours||0); });
+    var mixTotal = byType.project + byType.poc + byType.amc + byType.presales;
+    if (mixTotal > 0) {
+      var seg = function(k, color, label){
+        var pct = (byType[k]/mixTotal)*100;
+        if (pct < 0.5) return '';
+        return '<div style="background:'+color+';height:100%;width:'+pct.toFixed(2)+'%;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700" title="'+label+': '+r2(byType[k])+'h ('+pct.toFixed(0)+'%)">'+(pct>=8?Math.round(pct)+'%':'')+'</div>';
+      };
+      typeMixHtml =
+        '<div class="card" style="margin-bottom:20px"><div class="card-title">Time Mix Across Types</div>'+
+          '<div style="display:flex;height:28px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f1f5f9">'+
+            seg('project',  '#2563EB','Project')+
+            seg('poc',      '#7C3AED','POC')+
+            seg('amc',      '#B45309','AMC')+
+            seg('presales', '#BE185D','Pre-Sales')+
+          '</div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--muted)">'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Project '+r2(byType.project)+'h</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#7C3AED;border-radius:2px;margin-right:6px;vertical-align:middle"></span>POC '+r2(byType.poc)+'h</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:6px;vertical-align:middle"></span>AMC '+r2(byType.amc)+'h</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#BE185D;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Pre-Sales '+r2(byType.presales)+'h</span>'+
+          '</div>'+
+        '</div>';
+    }
+  }
+
+  var rangeNote = (fromVal || toVal)
+    ? 'Period: ' + (fromVal || '…') + ' → ' + (toVal || '…')
+    : ('Year: ' + (year==='all' ? 'All Years' : year));
+  var typeNote  = typeKey==='all' ? 'All engagement types' : (TYPE_LABELS[typeKey] + ' only');
+
+  document.getElementById('pj-eng-content').innerHTML =
+    typeMixHtml +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">'+
+      '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by '+esc2(typeLabel)+' (Top 8)</div>'+pie+'</div>'+
+      '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by Customer (Top 8)</div>'+custPie+'</div>'+
+    '</div>'+
+    '<div class="card" style="margin-bottom:20px"><div class="card-title">Quick Stats</div>'+
+      '<div class="summary-grid">'+
+        '<div class="stat-card navy"><div class="stat-label">Total '+esc2(typeLabel)+'s</div><div class="stat-value">'+sorted.length+'</div></div>'+
+        '<div class="stat-card teal"><div class="stat-label">Total Hours</div><div class="stat-value" style="font-size:20px">'+r2(totalHours)+'h</div></div>'+
+        '<div class="stat-card eve"><div class="stat-label">Total Sessions</div><div class="stat-value">'+totalSessions+'</div></div>'+
+        '<div class="stat-card wknd"><div class="stat-label">Total Customers</div><div class="stat-value">'+sortedCust.length+'</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="table-wrap"><table>'+
+      '<thead><tr><th>Engagement</th><th>Customer</th><th>Sessions</th><th>Total Hours</th><th>Working Days</th><th>Team Breakdown</th></tr></thead>'+
+      '<tbody>'+tableRows+'</tbody></table></div>'+
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">'+typeNote+' &middot; '+rangeNote+' &middot; Working days = hours / 8</div>';
 }
 
 async function renderUnifiedTypeSummary(typeKey) {

@@ -475,7 +475,7 @@ function initProjectTab() {
 
   // Populate year selectors
   const currentYear = new Date().getFullYear();
-  ['pj-sum-year','pj-emp-year'].forEach(function(id) {
+  ['pj-eng-year','pj-emp-year'].forEach(function(id) {
     const el = document.getElementById(id);
     if (!el || el.options.length) return;
     // Add "All Years" as first option (default)
@@ -691,13 +691,18 @@ function buildPieChart(data, unit) {
 
 
 function showProjectTab(tab) {
-  ['uslog','ussess','otsessions','otsummary','project','poc','amc','presales','employee','otpolicy','otmanager','manage'].forEach(function(t) {
+  // Backward-compat: redirect the old per-type summaries to the unified
+  // Engagement Summary, pre-selecting the type.
+  var typePreset = null;
+  if (tab==='project' || tab==='poc' || tab==='amc' || tab==='presales') {
+    typePreset = tab; tab = 'engagement';
+  }
+  ['uslog','ussess','otsessions','otsummary','engagement','employee','otpolicy','otmanager','manage'].forEach(function(t) {
     const el  = document.getElementById('pjtab-'+t);
     const sub = document.getElementById('pjsub-'+t);
     if (!el) return;
     el.style.display = t===tab ? 'block' : 'none';
     if (!sub) return;
-    // Always keep manager sub-tab hidden for non-managers regardless of cssText changes
     if (t==='otmanager' && !isManager) { sub.style.display='none'; return; }
     if (t===tab) {
       sub.classList.add('active');
@@ -711,10 +716,14 @@ function showProjectTab(tab) {
   if (tab==='ussess')     { initProjectTab(); populateUSFilters(); renderUSSessions(); }
   if (tab==='otsessions') { renderSessions(); }
   if (tab==='otsummary')  { buildSummaryFilters(); }
-  if (tab==='project')    { initProjectTab(); renderUnifiedTypeSummary('project'); }
-  if (tab==='poc')        { initProjectTab(); renderUnifiedTypeSummary('poc'); }
-  if (tab==='amc')        { initProjectTab(); renderUnifiedTypeSummary('amc'); }
-  if (tab==='presales')   { initProjectTab(); renderUnifiedTypeSummary('presales'); }
+  if (tab==='engagement') {
+    initProjectTab();
+    if (typePreset) {
+      var typeEl = document.getElementById('pj-eng-type');
+      if (typeEl) typeEl.value = typePreset;
+    }
+    renderEngagementSummary();
+  }
   if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
   if (tab==='otmanager')  { renderManager(); }
   if (tab==='manage')     { populateProjectDropdowns(); renderCustomersList(); renderManageProjects(); }
