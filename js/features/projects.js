@@ -92,6 +92,21 @@ async function addEngagement() {
   });
   if (error) { alert('Error: '+error.message); return; }
 
+  // Adopt any orphan sessions that share this engagement name.
+  // Strategy:
+  //   - customer_name: only fill where it's currently null (don't overwrite real data)
+  //   - session_type (unified_sessions only): align unconditionally — registering an
+  //     orphan as TYPE means TYPE is now authoritative for those rows.
+  // Errors are logged so the engagement insert above isn't rolled back if backfill fails.
+  var pjB   = await sb.from('project_sessions').update({ customer_name: customer }).eq('project_name', name).is('customer_name', null);
+  var otB   = await sb.from('ot_sessions').update({ customer_name: customer }).eq('project_name', name).is('customer_name', null);
+  var usCB  = await sb.from('unified_sessions').update({ customer_name: customer }).eq('engagement_name', name).is('customer_name', null);
+  var usTB  = await sb.from('unified_sessions').update({ session_type: type }).eq('engagement_name', name);
+  if (pjB.error)  console.error('project_sessions backfill failed:', pjB.error);
+  if (otB.error)  console.error('ot_sessions backfill failed:', otB.error);
+  if (usCB.error) console.error('unified_sessions customer backfill failed:', usCB.error);
+  if (usTB.error) console.error('unified_sessions type backfill failed:', usTB.error);
+
   document.getElementById('pj-new-name').value = '';
   document.getElementById('pj-new-status').value = 'active';
   document.getElementById('pj-new-customer').value = '';
