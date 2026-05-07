@@ -59,7 +59,7 @@ function kbCatClass(cat) {
 function renderKBArticles(data) {
   var wrap = document.getElementById('kb-articles-wrap');
   if (!data.length) {
-    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📁š</div><div class="empty-title">No articles found</div><div>Be the first to submit one!</div></div>';
+    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-title">No articles found</div><div>Be the first to submit one!</div></div>';
     return;
   }
   var cards = data.map(function(a) {
