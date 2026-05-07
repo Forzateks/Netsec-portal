@@ -6,7 +6,16 @@ function showAlert(id){
   setTimeout(function(){el.classList.remove('show');},3500);
   return true;
 }
-function fmtDate(str){if(!str)return '';const s=str.split('T')[0].split('-');return s[2]+'/'+s[1]+'/'+s[0];}
+// Display format: 01-Jan-2026. Accepts ISO (YYYY-MM-DD) or ISO timestamps.
+function fmtDate(str){
+  if(!str) return '';
+  const s = String(str).split('T')[0].split('-');
+  if (s.length !== 3) return String(str);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const m = parseInt(s[1],10);
+  const monthName = (m>=1 && m<=12) ? months[m-1] : s[1];
+  return s[2]+'-'+monthName+'-'+s[0];
+}
 function r2(n){return Math.round((n||0)*100)/100;}
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
 function statusIcon(s){return s==='approved'?'✅':s==='rejected'?'❌':'🟡';}

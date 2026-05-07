@@ -66,7 +66,7 @@ function fmtNotifAge(iso) {
   if (hrs < 24)  return hrs + ' hr ago';
   var days = Math.floor(hrs / 24);
   if (days < 7)  return days + ' day' + (days===1?'':'s') + ' ago';
-  return new Date(iso).toLocaleDateString();
+  return (typeof fmtDate === 'function') ? fmtDate(iso) : new Date(iso).toLocaleDateString();
 }
 
 async function markNotificationRead(id) {

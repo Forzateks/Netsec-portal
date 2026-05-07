@@ -100,7 +100,7 @@ function renderInventoryTable(data) {
       '<td class="hide-mobile">'+esc2(d.current_partner||'—')+'</td>'+
       '<td class="hide-mobile">'+esc2(d.current_end_user||'—')+'</td>'+
       '<td class="hide-mobile">'+esc2(d.ids_ps||'—')+'</td>'+
-      '<td class="hide-mobile" style="font-size:11px;color:var(--muted);line-height:1.3">'+esc2(d.last_updated_by||'—')+'<br><span style="font-size:10px">'+(d.updated_at?new Date(d.updated_at).toLocaleDateString():'')+'</span></td>'+
+      '<td class="hide-mobile" style="font-size:11px;color:var(--muted);line-height:1.3">'+esc2(d.last_updated_by||'—')+'<br><span style="font-size:10px">'+(d.updated_at?fmtDate(d.updated_at):'')+'</span></td>'+
       '<td>'+
         '<div style="display:flex;gap:6px">'+
         '<button class="btn btn-sm btn-ghost" onclick="openEditDeviceModal('+d.id+')">✏️ Edit</button>'+
