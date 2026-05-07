@@ -312,19 +312,33 @@ async function saveEditProject() {
   var custRow = (CUSTOMERS||[]).find(function(c){ return c.name === customer; });
   var customer_id = custRow ? custRow.id : null;
 
-  // Read OLD name so we can cascade renames to session tables
-  var oldRes = await sb.from('engagements').select('name').eq('id', id).single();
+  // Read OLD row so we can cascade renames + customer reassignments to session tables
+  var oldRes = await sb.from('engagements').select('name,customer_id').eq('id', id).single();
   var oldName = oldRes.data ? oldRes.data.name : null;
+  var oldCustomerId = oldRes.data ? oldRes.data.customer_id : null;
 
   var {error} = await sb.from('engagements').update({ name: name, status: status, customer_id: customer_id, type: type }).eq('id', id);
   if (error) { alert('Error: '+error.message); return; }
 
-  // If renamed, cascade to session tables so historical rows match
+  // If renamed, cascade the new name to every session table that snapshots it
   if (oldName && oldName !== name) {
-    var pjRes = await sb.from('project_sessions').update({ project_name: name }).eq('project_name', oldName);
-    var otRes = await sb.from('ot_sessions').update({ project_name: name }).eq('project_name', oldName);
+    var pjRes  = await sb.from('project_sessions').update({ project_name: name }).eq('project_name', oldName);
+    var otRes  = await sb.from('ot_sessions').update({ project_name: name }).eq('project_name', oldName);
+    var usRes  = await sb.from('unified_sessions').update({ engagement_name: name }).eq('engagement_name', oldName);
     if (pjRes.error) console.error('project_sessions cascade failed:', pjRes.error);
     if (otRes.error) console.error('ot_sessions cascade failed:', otRes.error);
+    if (usRes.error) console.error('unified_sessions cascade failed:', usRes.error);
+  }
+
+  // If reassigned to a different customer, refresh the snapshotted customer_name too.
+  // Match by the (possibly new) engagement name to catch sessions just renamed above.
+  if (oldCustomerId !== customer_id) {
+    var pjC = await sb.from('project_sessions').update({ customer_name: customer }).eq('project_name', name);
+    var otC = await sb.from('ot_sessions').update({ customer_name: customer }).eq('project_name', name);
+    var usC = await sb.from('unified_sessions').update({ customer_name: customer }).eq('engagement_name', name);
+    if (pjC.error) console.error('project_sessions customer cascade failed:', pjC.error);
+    if (otC.error) console.error('ot_sessions customer cascade failed:', otC.error);
+    if (usC.error) console.error('unified_sessions customer cascade failed:', usC.error);
   }
 
   closeEditProjectModal();
