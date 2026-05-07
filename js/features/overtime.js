@@ -128,7 +128,7 @@ function explainOT(session) {
   lines.push('--- How this was calculated ---');
   lines.push('Region: ' + region + (region==='KSA' ? ' (block 8:00 AM - 7:00 PM, Eve from 7:00 PM)' : ' (block 7:30 AM - 6:30 PM, Eve from 6:30 PM)'));
   lines.push('Day: ' + (session.day_name || '') + (isWknd ? ' (weekend - no block)' : ' (weekday)'));
-  lines.push('Time: ' + session.start_time + ' to ' + session.end_time + '  (raw: ' + rawDur.toFixed(2) + 'h)');
+  lines.push('Time: ' + fmtTime(session.start_time) + ' to ' + fmtTime(session.end_time) + '  (raw: ' + rawDur.toFixed(2) + 'h)');
   lines.push('');
 
   if (isWknd) {
@@ -368,8 +368,8 @@ async function renderSessions() {
     '<td><strong>'+s.employee+'</strong></td>'+
     '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+s.activity+'">'+s.activity+'</td>'+
     '<td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fmtDate(s.ot_date)+'<br><span style="font-size:11px;color:var(--muted)">'+(s.day_name||'')+'</span></td>'+
-    '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+s.start_time+'</td>'+
-    '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+s.end_time+'</td>'+
+    '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+fmtTime(s.start_time)+'</td>'+
+    '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+fmtTime(s.end_time)+'</td>'+
     '<td style="font-family:\'DM Mono\',monospace">'+s.duration_hours+'h</td>'+
     '<td><span class="badge badge-'+s.band+'">'+s.band+'</span></td>'+
     '<td><span class="badge '+(s.rate==='1:2'?'badge-12':'badge-11')+'">'+s.rate+'</span></td>'+
@@ -709,7 +709,7 @@ async function previewReevalArchived() {
     var s = c.row, r = c.newRes;
     return '<tr><td>'+s.employee+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+s.ot_date+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+s.start_time+' to '+s.end_time+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtTime(s.start_time)+' to '+fmtTime(s.end_time)+'</td>'+
       '<td style="font-family:DM Mono,monospace">'+s.credited_hours+'h -> <strong>'+r.credited+'h</strong></td>'+
       '<td><span class="badge badge-'+r.band+'">'+r.band+'</span></td>'+
       '</tr>';

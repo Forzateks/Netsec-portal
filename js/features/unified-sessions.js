@@ -348,7 +348,7 @@ async function renderUSSessions() {
       '<td style="font-size:12px;color:var(--navy);font-weight:600">'+(r.customer_name||'-')+'</td>'+
       '<td style="font-size:12px"><strong>'+(r.engagement_name||'-')+'</strong></td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtDate(r.session_date)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r.start_time+'-'+r.end_time+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+r.total_hours+'h</td>'+
       '<td><span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+(r.activity_type||'-')+'</span></td>'+
       '<td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(r.session_info||'')+'">'+(r.session_info||'-')+'</td>'+

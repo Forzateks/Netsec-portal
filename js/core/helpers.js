@@ -16,6 +16,11 @@ function fmtDate(str){
   const monthName = (m>=1 && m<=12) ? months[m-1] : s[1];
   return s[2]+'-'+monthName+'-'+s[0];
 }
+// Trim a Postgres TIME (HH:MM:SS) or HH:MM string to HH:MM. Returns '' for null.
+function fmtTime(t){
+  if(!t) return '';
+  return String(t).slice(0,5);
+}
 function r2(n){return Math.round((n||0)*100)/100;}
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
 function statusIcon(s){return s==='approved'?'✅':s==='rejected'?'❌':'🟡';}
