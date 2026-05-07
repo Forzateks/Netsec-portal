@@ -1,33 +1,11 @@
-// == LOGIN BACKGROUND VIDEO (HLS) ==================================
+// == LOGIN BACKGROUND VIDEO ========================================
 function initLoginBgVideo() {
   var v = document.getElementById('login-bg-video');
   if (!v) return;
-  var src = 'https://stream.mux.com/01yW6GoUz01OTXk5w1Rt1MHkJWlCGIwj46SUONJZ4DJUE.m3u8';
-  function tryPlay(){ var p = v.play(); if (p && p.catch) p.catch(function(){ /* autoplay blocked */ }); }
-  // Safari plays HLS natively
-  if (v.canPlayType('application/vnd.apple.mpegurl')) {
-    v.src = src;
-    v.addEventListener('loadedmetadata', tryPlay, { once: true });
-    return;
-  }
-  // Other browsers need hls.js
-  if (window.Hls && Hls.isSupported()) {
-    var hls = new Hls({
-      enableWorker: true,
-      lowLatencyMode: false,
-      capLevelToPlayerSize: false,
-      startLevel: -1,           // -1 = pick automatically based on bandwidth
-      autoStartLoad: true,
-      maxBufferLength: 30
-    });
-    hls.loadSource(src);
-    hls.attachMedia(v);
-    hls.on(Hls.Events.MANIFEST_PARSED, function(){
-      // Force the highest available quality after the manifest lists levels
-      if (hls.levels && hls.levels.length) hls.currentLevel = hls.levels.length - 1;
-      tryPlay();
-    });
-  }
+  // Some browsers' autoplay policies need an explicit play() — even when
+  // the video is already muted via the `muted` attribute.
+  var p = v.play();
+  if (p && p.catch) p.catch(function(){ /* autoplay blocked, video will sit on first frame */ });
 }
 
 // == INIT ==========================================================
