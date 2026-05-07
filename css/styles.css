@@ -59,7 +59,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .login-sub{font-size:13.5px;color:var(--muted);margin-bottom:24px;line-height:1.5}
 
 .login-field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
-.login-field label{font-size:11px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.7px}
+.login-field label{font-size:12px;font-weight:500;color:#4B5563;text-transform:none;letter-spacing:normal}
 .login-field input{width:100%;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);background:#fafbfc;transition:border-color .15s,background .15s,box-shadow .15s;outline:none}
 .login-field input::placeholder{color:#9ca3af}
 .login-field input:hover{background:white;border-color:#cbd5e1}
@@ -168,10 +168,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .form-group{display:flex;flex-direction:column;gap:6px}
 .form-group.full{grid-column:1/-1}
-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-input,select,textarea{border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);background:white;transition:border-color .15s ease,box-shadow .18s ease,background .15s ease;outline:none;width:100%}
+/* Form labels: subtle and legible. Was uppercase 11/600 muted; now sentence
+   case 12/500 in #4B5563 so the field input is the visual anchor, not the
+   label. Required indicator: wrap a <span class="req">•</span> after the
+   label text where the field is required. */
+label{font-size:12px;font-weight:500;color:#4B5563;text-transform:none;letter-spacing:normal}
+.req{color:#EF4444;margin-left:3px}
+input,select,textarea{border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);background:white;transition:border-color .15s ease,box-shadow .18s ease,background .15s ease;outline:none;width:100%}
 input:hover,select:hover,textarea:hover{border-color:#cbd5e1}
-input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 4px rgba(0,160,210,.12)}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,160,210,.1)}
+/* Full-width primary button helper for single-action forms (Request Leave,
+   Submit Article, Log Session). Add class="btn btn-primary btn-block" to
+   the button to opt in. */
+.btn-block{width:100%;justify-content:center}
 input[readonly]{background:#f9fafb;color:var(--muted)}
 .preview-box{background:linear-gradient(135deg,#f8faff,#eef4ff);border:1.5px solid #c7d7f5;border-radius:10px;padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
 .preview-item{text-align:center}

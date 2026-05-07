@@ -9,7 +9,16 @@ function showLeaveTab(tab) {
     if (t===tab){sub.classList.add('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--teal);color:var(--navy);white-space:nowrap';}
     else{sub.classList.remove('active');sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap';}
   });
-  if (tab==='log')     onLeaveTypeChange();
+  if (tab==='log') {
+    // Pre-fill the date pickers with today so users don't have to click the
+    // calendar to enter a same-day request. Skip if already filled.
+    var todayISO = new Date().toISOString().split('T')[0];
+    var lvStart = document.getElementById('lv-start');
+    var lvEnd   = document.getElementById('lv-end');
+    if (lvStart && !lvStart.value) lvStart.value = todayISO;
+    if (lvEnd   && !lvEnd.value)   lvEnd.value   = todayISO;
+    onLeaveTypeChange();
+  }
   if (tab==='history') renderLeaveHistory();
   if (tab==='team')    renderLeaveTeam();
   setSidebarSubActive('leave', tab);
