@@ -196,10 +196,10 @@ input[readonly]{background:#f9fafb;color:var(--muted)}
 ::-webkit-scrollbar-thumb:hover{background:#94a3b8;background-clip:content-box;border:2px solid transparent}
 ::-webkit-scrollbar-corner{background:transparent}
 
-/* Sidebar gets an extra-slim scrollbar that fades in only on hover */
-.sidebar::-webkit-scrollbar{width:6px}
-.sidebar::-webkit-scrollbar-thumb{background:transparent;border:none;background-clip:padding-box}
-.sidebar:hover::-webkit-scrollbar-thumb{background:#cbd5e1}
+/* Sidebar: hide the scrollbar entirely. Wheel + touch still scroll the
+   element; mouse users get edge-hover auto-scroll wired in JS. */
+.sidebar{scrollbar-width:none;-ms-overflow-style:none}
+.sidebar::-webkit-scrollbar{width:0;height:0;display:none}
 
 /* Horizontal scrollbar inside .table-wrap — branded teal gradient,
    taller so it's easy to grab. */

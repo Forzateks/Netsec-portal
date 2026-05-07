@@ -15,10 +15,56 @@ function renderIcons() {
   }
 }
 
+// Edge-hover auto-scroll on the sidebar. The native scrollbar is hidden;
+// when the mouse hovers near the top or bottom edge of the sidebar,
+// content scrolls in that direction at a speed proportional to how
+// close the cursor is to the edge. Wheel + touch scroll still work.
+function initSidebarEdgeScroll() {
+  var sb = document.getElementById('sidebar');
+  if (!sb) return;
+  var ZONE = 70;       // px from top/bottom edge that triggers auto-scroll
+  var MAX_PX_PER_FRAME = 14;
+  var direction = 0;   // -1 up, 0 none, 1 down
+  var speed = 0;
+  var rafId = null;
+
+  function step() {
+    if (!direction) { rafId = null; return; }
+    sb.scrollTop += direction * speed;
+    rafId = requestAnimationFrame(step);
+  }
+
+  sb.addEventListener('mousemove', function(e) {
+    // Only treat real mouse hovers (not synthesised touch events)
+    if (e.pointerType === 'touch') return;
+    var rect = sb.getBoundingClientRect();
+    var y = e.clientY;
+    var fromTop = y - rect.top;
+    var fromBot = rect.bottom - y;
+    if (fromTop < ZONE && sb.scrollTop > 0) {
+      direction = -1;
+      speed = MAX_PX_PER_FRAME * (1 - Math.max(fromTop, 0) / ZONE);
+    } else if (fromBot < ZONE && sb.scrollTop + sb.clientHeight < sb.scrollHeight) {
+      direction = 1;
+      speed = MAX_PX_PER_FRAME * (1 - Math.max(fromBot, 0) / ZONE);
+    } else {
+      direction = 0;
+      speed = 0;
+    }
+    if (direction && rafId == null) rafId = requestAnimationFrame(step);
+  });
+
+  sb.addEventListener('mouseleave', function(){
+    direction = 0;
+    speed = 0;
+  });
+}
+
 // == INIT ==========================================================
 window.onload = async function() {
   initLoginBgVideo();
   renderIcons();
+  initSidebarEdgeScroll();
   // Supabase puts the link type in the URL hash:
   //   type=recovery            -> forgot-password reset link
   //   type=invite | type=signup -> invitation from manager (first-time login)
