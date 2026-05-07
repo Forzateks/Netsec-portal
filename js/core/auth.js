@@ -15,23 +15,35 @@ function showLoginSuccess(msg) {
   setTimeout(function(){ e.style.display = 'none'; }, 6000);
 }
 
+// Reset every login button to its idle state. doLogin keeps the Sign In
+// button in its loading state on success (screen is swapping to the app),
+// so coming back to the login screen — e.g. after logout — has to clear it
+// so it doesn't read "Signing in…" forever.
+function resetLoginButtons() {
+  ['login-signin-btn','login-forgot-btn','login-reset-btn'].forEach(function(id){
+    if (typeof clearLoginBtnLoading === 'function') clearLoginBtnLoading(id);
+  });
+}
 function showSigninForm() {
   document.getElementById('login-form-signin').style.display='block';
   document.getElementById('login-form-forgot').style.display='none';
   document.getElementById('login-form-reset').style.display='none';
   document.getElementById('login-sub').textContent = 'Sign in to continue';
+  resetLoginButtons();
 }
 function showForgotForm() {
   document.getElementById('login-form-signin').style.display='none';
   document.getElementById('login-form-forgot').style.display='block';
   document.getElementById('login-form-reset').style.display='none';
   document.getElementById('login-sub').textContent = 'Forgot your password?';
+  resetLoginButtons();
 }
 function showResetForm() {
   document.getElementById('login-form-signin').style.display='none';
   document.getElementById('login-form-forgot').style.display='none';
   document.getElementById('login-form-reset').style.display='block';
   document.getElementById('login-sub').textContent = 'Set a new password';
+  resetLoginButtons();
 }
 
 // Toggle a login button into a disabled "loading" state with a spinner +
