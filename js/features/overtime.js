@@ -340,7 +340,9 @@ async function renderSessions() {
   const filter=isManager?document.getElementById('sessions-emp-filter').value:currentUser;
   const fFrom = (document.getElementById('sessions-date-from')||{}).value || '';
   const fTo   = (document.getElementById('sessions-date-to')||{}).value   || '';
-  let q=sb.from('ot_sessions').select('*').order('ot_date',{ascending:false});
+  // Newest-logged first (created_at), with ot_date as a secondary key for
+  // any imported rows that don't have a created_at timestamp.
+  let q=sb.from('ot_sessions').select('*').order('created_at',{ascending:false,nullsFirst:false}).order('ot_date',{ascending:false});
   if (filter) q=q.eq('employee',filter);
   if (fFrom)  q=q.gte('ot_date', fFrom);
   if (fTo)    q=q.lte('ot_date', fTo);

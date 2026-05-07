@@ -320,7 +320,9 @@ async function renderUSSessions() {
   var fFrom  = (document.getElementById('us-flt-from')||{}).value || '';
   var fTo    = (document.getElementById('us-flt-to')||{}).value || '';
 
-  var q = sb.from('unified_sessions').select('*').order('session_date',{ascending:false}).order('start_time',{ascending:false});
+  // Newest-logged first (created_at), with session_date / start_time as
+  // secondary keys for legacy rows that don't have a created_at value.
+  var q = sb.from('unified_sessions').select('*').order('created_at',{ascending:false,nullsFirst:false}).order('session_date',{ascending:false}).order('start_time',{ascending:false});
   if (fType) q = q.eq('session_type', fType);
   if (fCust) q = q.eq('customer_name', fCust);
   if (fEng)  q = q.eq('engagement_name', fEng);
