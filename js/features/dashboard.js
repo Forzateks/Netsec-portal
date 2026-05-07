@@ -1,4 +1,4 @@
-﻿function exportCSV() {
+function exportCSV() {
   const data=window._sessionsData||[];
   if (!data.length) return;
   const rows=[['Employee','Activity','Date','Day','Start','End','Duration','Band','Rate','Credited']];
@@ -8,7 +8,7 @@
   a.download='Gulfit_OT_Sessions.csv'; a.click();
 }
 
-// == DASHBOARD ====================================================
+// == DASHBOARD ====================================================
 async function renderDashboard() {
   document.getElementById('dash-content').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   var year  = new Date().getFullYear().toString();
@@ -29,7 +29,9 @@ async function renderDashboard() {
   var s = calcSummary(sessions||[], compoffs||[], currentUser);
   var leaveUsed = (alData||[]).reduce(function(a,r){return a+parseFloat(r.working_days||0);},0);
   var leaveBalance = LEAVE_ALLOWANCE - leaveUsed;
-  var otThisMonth = (sessions||[]).filter(function(x){return (x.ot_date||'').startsWith(month) && (x.status==='approved'||!x.status);}).length;
+  var monthApproved = (sessions||[]).filter(function(x){return (x.ot_date||'').startsWith(month) && (x.status==='approved'||!x.status);});
+  var otThisMonth = monthApproved.length;
+  var otHrsThisMonth = monthApproved.reduce(function(a,x){return a+parseFloat(x.credited_hours||0);},0);
   var pjHrsMonth = 0;
   (pjSess||[]).forEach(function(r){
     var fn = currentUser.split(' ')[0].toLowerCase();
@@ -44,35 +46,73 @@ async function renderDashboard() {
   var lvColor   = leaveBalance<=5?'var(--danger)':leaveBalance<=10?'var(--gold)':'var(--success)';
   var hr = new Date().getHours();
   var greet = hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
+  var today = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  var firstName = (currentUser||'').split(' ')[0] || '';
 
-  var html = '<div style="margin-bottom:20px"><h2 style="font-size:20px;font-weight:700;color:var(--navy)">'+greet+', '+currentUser.split(' ')[0]+'</h2>'+
-    '<div style="font-size:13px;color:var(--muted)">Here\'s your overview</div></div>';
+  // Manager: combined pending approvals across all three queues
+  var teamPending = 0;
+  if (isManager) {
+    var ar = await Promise.all([
+      sb.from('comp_off_requests').select('id').eq('status','pending'),
+      sb.from('leave_requests').select('id').eq('status','pending'),
+      sb.from('ot_sessions').select('id').eq('status','pending')
+    ]);
+    teamPending = (ar[0].data||[]).length + (ar[1].data||[]).length + (ar[2].data||[]).length;
+  }
 
-  html += '<div class="summary-grid" style="margin-bottom:20px">'+
-    '<div class="stat-card green"><div class="stat-label">CO Balance</div><div class="stat-value" style="color:'+balColor+'">'+s.balance+'</div><div class="stat-sub">Earned: '+s.totalCO+' | Used: '+s.used+'</div></div>'+
-    '<div class="stat-card teal"><div class="stat-label">Leave Remaining</div><div class="stat-value" style="color:'+lvColor+'">'+leaveBalance+'</div><div class="stat-sub">of '+LEAVE_ALLOWANCE+' days ('+year+')</div></div>'+
-    '<div class="stat-card navy"><div class="stat-label">OT Sessions ('+monthName+')</div><div class="stat-value">'+otThisMonth+'</div><div class="stat-sub">sessions this month</div></div>'+
-    '<div class="stat-card eve"><div class="stat-label">Project Hrs ('+monthName+')</div><div class="stat-value" style="font-size:20px">'+r2(pjHrsMonth)+'h</div><div class="stat-sub">this month</div></div>'+
+  // === HEADER BAND ===
+  var html = '<div class="dash-hero">'+
+    '<div class="dash-hero-text">'+
+      '<h2>'+greet+', '+firstName+'</h2>'+
+      '<div class="dash-hero-date">'+today+'</div>'+
+    '</div>'+
+    (isManager && teamPending>0 ?
+      '<button class="dash-hero-pill" onclick="showScreen(\'approvals\')">'+
+        '<span class="dash-hero-pill-num">'+teamPending+'</span>'+
+        '<span>awaiting your review</span>'+
+        '<span class="dash-hero-pill-arrow">&rarr;</span>'+
+      '</button>' : '')+
     '</div>';
 
-  html += '<div class="card" style="margin-bottom:20px"><div class="card-title">Quick Actions</div>'+
+  // === STATS GRID ===
+  var pjTarget = 160;
+  var pjPct = Math.max(0, Math.min(100, Math.round((pjHrsMonth / pjTarget) * 100)));
+
+  html += '<div class="dash-stats">'+
+    '<div class="stat-card green"><div class="stat-label">CO Balance</div>'+
+      '<div class="stat-value" style="color:'+balColor+'">'+s.balance+'</div>'+
+      '<div class="stat-sub">Earned '+s.totalCO+' &middot; Used '+s.used+'</div></div>'+
+    '<div class="stat-card teal"><div class="stat-label">Annual Leave</div>'+
+      '<div class="stat-value" style="color:'+lvColor+'">'+leaveBalance+'</div>'+
+      '<div class="stat-sub">of '+LEAVE_ALLOWANCE+' days &middot; '+year+'</div></div>'+
+    '<div class="stat-card navy"><div class="stat-label">OT &mdash; '+monthName+'</div>'+
+      '<div class="stat-value">'+otThisMonth+'</div>'+
+      '<div class="stat-sub">'+r2(otHrsThisMonth)+'h credited</div></div>'+
+    '<div class="stat-card eve"><div class="stat-label">Project Hours &mdash; '+monthName+'</div>'+
+      '<div class="stat-value">'+r2(pjHrsMonth)+'<span class="stat-unit">h</span></div>'+
+      '<div class="stat-bar"><div class="stat-bar-fill" style="width:'+pjPct+'%"></div></div>'+
+      '<div class="stat-sub">'+pjPct+'% of '+pjTarget+'h target</div></div>'+
+    '</div>';
+
+  // === QUICK ACTIONS (3 essentials) ===
+  html += '<div class="card"><div class="card-title">Quick Actions</div>'+
     '<div class="quick-actions-wrap">'+
     '<button class="btn btn-primary" onclick="showScreen(\'projects\');showProjectTab(\'uslog\')">Log Session</button>'+
     '<button class="btn btn-ghost" onclick="showScreen(\'leave\');showLeaveTab(\'log\')">Request Leave</button>'+
     '<button class="btn btn-ghost" onclick="showScreen(\'leave\');showLeaveTab(\'log\');document.getElementById(\'lv-type\').value=\'compoff_full\';onLeaveTypeChange()">Comp Off</button>'+
-    (isManager?'<button id="monthly-report-btn" class="btn btn-ghost" onclick="downloadMonthlyReport()">Monthly OT Report</button>':'')+
-    (isManager?'<button class="btn btn-ghost" onclick="showScreen(\'approvals\')">Approvals</button>':'')+
     '</div></div>';
 
+  // === MY PENDING REQUESTS ===
   if (pendingCO.length || pendingLV.length || pendingOT.length) {
-    html += '<div class="card" style="margin-bottom:20px;border-left:4px solid var(--gold)"><div class="card-title">My Pending Requests</div>';
-    pendingOT.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">OT Session - '+r.activity+' on '+fmtDate(r.ot_date)+' ('+r.band+' '+r.duration_hours+'h)<span class="badge badge-pending" style="margin-left:8px">Awaiting Approval</span></div>'; });
-    pendingCO.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">Comp Off - '+r.type+' on '+fmtDate(r.request_date)+'<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
-    pendingLV.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">Leave - '+fmtDate(r.start_date)+' to '+fmtDate(r.end_date)+' ('+r.working_days+' days)<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
+    html += '<div class="card"><div class="card-title">My Pending Requests</div>';
+    pendingOT.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">OT Session &middot; '+r.activity+' &middot; '+fmtDate(r.ot_date)+' ('+r.band+' '+r.duration_hours+'h)<span class="badge badge-pending" style="margin-left:8px">Awaiting approval</span></div>'; });
+    pendingCO.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">Comp Off &middot; '+r.type+' &middot; '+fmtDate(r.request_date)+'<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
+    pendingLV.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">Leave &middot; '+fmtDate(r.start_date)+' to '+fmtDate(r.end_date)+' &middot; '+r.working_days+' days<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
     html += '</div>';
   }
 
-  html += '<div class="card" style="margin-bottom:20px"><div class="flex-between mb-4">'+
+  // === RECENT OT SESSIONS ===
+  html += '<div class="card"><div class="flex-between mb-4">'+
     '<div class="card-title" style="margin-bottom:0">Recent OT Sessions</div>'+
     '<button class="btn btn-sm btn-ghost" onclick="showScreen(\'projects\');showProjectTab(\'otsessions\')">View All</button></div>';
   if (recent.length) {
@@ -85,42 +125,44 @@ async function renderDashboard() {
         '<td><strong style="color:var(--teal)">'+r.credited_hours+'h</strong>'+creditDriftMarker(r)+'</td></tr>';
     });
     html += '</tbody></table></div>';
-  } else { html += '<div class="empty-state" style="padding:16px"><div class="empty-title">No OT sessions yet</div></div>'; }
+  } else {
+    html += '<div class="dash-empty">'+
+      '<div class="dash-empty-icon">⏱</div>'+
+      '<div class="dash-empty-title">No OT logged yet</div>'+
+      '<div class="dash-empty-sub">When you put in extra hours, log them here so they count toward your comp off.</div>'+
+      '<button class="btn btn-primary" onclick="showScreen(\'projects\');showProjectTab(\'uslog\')">Log a session</button>'+
+      '</div>';
+  }
   html += '</div>';
 
+  // === MANAGER: REPORTS & BACKUP ===
   if (isManager) {
-    var approvalResults = await Promise.all([
-      sb.from('comp_off_requests').select('id').eq('status','pending'),
-      sb.from('leave_requests').select('id').eq('status','pending')
-    ]);
-    var total = (approvalResults[0].data||[]).length + (approvalResults[1].data||[]).length;
-    if (total>0) {
-      html += '<div class="card" style="margin-bottom:20px;border-left:4px solid var(--gold)"><div class="flex-between">'+
-        '<div><div class="card-title" style="margin-bottom:4px">'+total+' Pending Approvals</div>'+
-        '<div style="font-size:13px;color:var(--muted)">'+(approvalResults[0].data||[]).length+' comp off | '+(approvalResults[1].data||[]).length+' leave requests</div></div>'+
-        '<button class="btn btn-primary" onclick="showScreen(\'approvals\')">Review</button></div></div>';
-    }
-
-    // Backup card (manager only)
-    html += '<div class="card" style="border-left:4px solid var(--teal)">'+
-      '<div class="card-title" style="margin-bottom:6px">📦 Data Backup (Excel)</div>'+
-      '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">Download a snapshot of any section as .xlsx, or grab a full backup with every table on its own sheet.</div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
-      '<button class="btn btn-primary" onclick="backupExcel(\'all\')">⬇ Full Backup (all sheets)</button>'+
-      '<button class="btn btn-ghost" onclick="backupExcel(\'ot_sessions\')">OT Sessions</button>'+
-      '<button class="btn btn-ghost" onclick="backupExcel(\'project_sessions\')">Project Sessions</button>'+
-      '<button class="btn btn-ghost" onclick="backupExcel(\'inventory\')">Inventory</button>'+
-      '<button class="btn btn-ghost" onclick="backupExcel(\'leave\')">Leaves</button>'+
-      '<button class="btn btn-ghost" onclick="backupExcel(\'comp_off\')">Comp Offs</button>'+
-      '<button class="btn btn-ghost" onclick="backupExcel(\'kb_articles\')">Knowledge Base</button>'+
-      '<button class="btn btn-ghost" onclick="backupExcel(\'directory\')">Customers + Projects</button>'+
-      '</div></div>';
+    html += '<div class="card dash-backup">'+
+      '<div class="card-title">Reports &amp; Backup</div>'+
+      '<div style="font-size:13px;color:var(--muted);margin-bottom:14px">Download the full database snapshot, the monthly OT report, or a single-table export.</div>'+
+      '<div class="dash-backup-row">'+
+        '<button class="btn btn-primary" onclick="backupExcel(\'all\')">⬇ Full Backup (all sheets)</button>'+
+        '<button class="btn btn-ghost" id="monthly-report-btn" onclick="downloadMonthlyReport()">📄 Monthly OT Report</button>'+
+      '</div>'+
+      '<details class="dash-backup-details">'+
+        '<summary>Export a specific section</summary>'+
+        '<div class="dash-backup-grid">'+
+          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'ot_sessions\')">OT Sessions</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'project_sessions\')">Project Sessions</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'inventory\')">Inventory</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'leave\')">Leaves</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'comp_off\')">Comp Offs</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'kb_articles\')">Knowledge Base</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'directory\')">Customers + Projects</button>'+
+        '</div>'+
+      '</details>'+
+      '</div>';
   }
 
   document.getElementById('dash-content').innerHTML = html;
 }
 
-// ── EXCEL BACKUP ─────────────────────────────────────────────────────────
+// == EXCEL BACKUP =================================================
 async function backupExcel(scope) {
   if (typeof XLSX === 'undefined') { alert('Excel library not loaded. Refresh the page and try again.'); return; }
   var stamp = new Date().toISOString().split('T')[0];
