@@ -12,10 +12,21 @@ function initLoginBgVideo() {
   }
   // Other browsers need hls.js
   if (window.Hls && Hls.isSupported()) {
-    var hls = new Hls({ enableWorker: true, lowLatencyMode: false, capLevelToPlayerSize: true });
+    var hls = new Hls({
+      enableWorker: true,
+      lowLatencyMode: false,
+      capLevelToPlayerSize: false,
+      startLevel: -1,           // -1 = pick automatically based on bandwidth
+      autoStartLoad: true,
+      maxBufferLength: 30
+    });
     hls.loadSource(src);
     hls.attachMedia(v);
-    hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
+    hls.on(Hls.Events.MANIFEST_PARSED, function(){
+      // Force the highest available quality after the manifest lists levels
+      if (hls.levels && hls.levels.length) hls.currentLevel = hls.levels.length - 1;
+      tryPlay();
+    });
   }
 }
 
