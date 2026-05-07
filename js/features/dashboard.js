@@ -82,7 +82,7 @@ async function renderDashboard() {
         '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.activity+'</td>'+
         '<td><span class="badge badge-'+r.band+'">'+r.band+'</span></td>'+
         '<td><span class="badge '+(r.rate==='1:2'?'badge-12':'badge-11')+'">'+r.rate+'</span></td>'+
-        '<td><strong style="color:var(--teal)">'+r.credited_hours+'h</strong></td></tr>';
+        '<td><strong style="color:var(--teal)">'+r.credited_hours+'h</strong>'+creditDriftMarker(r)+'</td></tr>';
     });
     html += '</tbody></table></div>';
   } else { html += '<div class="empty-state" style="padding:16px"><div class="empty-title">No OT sessions yet</div></div>'; }

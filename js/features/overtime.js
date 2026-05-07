@@ -184,6 +184,22 @@ function explainOT(session) {
 }
 
 // == SUMMARY CALC =================================================
+// == POLICY-DRIFT MARKER ==========================================
+// Compare the stored credited_hours against what calcOT() returns under
+// current policy. If they disagree, return a small warning span that
+// explains the drift on hover. The CO-balance helper still uses the
+// stored value, so the manager can spot rows that need Policy Recompute.
+function creditDriftMarker(s) {
+  if (!s || !s.ot_date || !s.start_time || !s.end_time) return '';
+  var c = calcOT(s.ot_date, s.start_time, s.end_time, s.employee);
+  if (!c) return '';
+  var stored = parseFloat(s.credited_hours || 0);
+  var live   = parseFloat(c.credited);
+  if (Math.abs(stored - live) < 0.01) return '';
+  var txt = 'Stored ' + stored + 'h, current policy gives ' + live + 'h. Run Policy Recompute to align.';
+  return '<span title="' + txt.replace(/"/g,'&quot;') + '" style="cursor:help;color:var(--gold);font-size:12px;margin-left:4px;vertical-align:middle" aria-label="Policy drift">&#9888;&#65039;</span>';
+}
+
 function calcSummary(sessions, compoffs, employee) {
   // Only approved sessions count toward CO
   const s = sessions.filter(function(x){ return x.employee===employee && (x.status==='approved' || x.status===null || x.status===undefined); });
@@ -225,7 +241,8 @@ async function renderSessions() {
     var stBadge='<span class="badge '+badgeClass+'" style="font-size:10px" title="'+(esc2(s.manager_comment||'')||'')+'">'+icon+' '+label+'</span>';
     var explainTxt = explainOT(s).replace(/"/g, '&quot;');
     var infoIcon = '<span title="'+explainTxt+'" style="cursor:help;color:var(--teal);font-size:11px;margin-left:4px;border:1px solid var(--teal);border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;line-height:1">i</span>';
-    var creditedDisplay = (st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.credited_hours+'h</strong>' : '<span style="color:var(--muted);font-size:12px;text-decoration:line-through">'+s.credited_hours+'h</span>') + infoIcon;
+    var driftMark = creditDriftMarker(s);
+    var creditedDisplay = (st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.credited_hours+'h</strong>' : '<span style="color:var(--muted);font-size:12px;text-decoration:line-through">'+s.credited_hours+'h</span>') + driftMark + infoIcon;
     var rowOpacity = (st==='rejected'||st==='archived') ? 'opacity:0.55' : '';
     return '<tr style="'+rowOpacity+'" title="'+(st==='archived'||st==='rejected'?(esc2(s.manager_comment||'')):'')+'">'+
     '<td style="color:var(--muted);font-family:\'DM Mono\',monospace">'+(i+1)+'</td>'+
