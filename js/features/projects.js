@@ -312,10 +312,11 @@ async function saveEditProject() {
   var custRow = (CUSTOMERS||[]).find(function(c){ return c.name === customer; });
   var customer_id = custRow ? custRow.id : null;
 
-  // Read OLD row so we can cascade renames + customer reassignments to session tables
-  var oldRes = await sb.from('engagements').select('name,customer_id').eq('id', id).single();
+  // Read OLD row so we can cascade renames / customer / type changes to session tables
+  var oldRes = await sb.from('engagements').select('name,customer_id,type').eq('id', id).single();
   var oldName = oldRes.data ? oldRes.data.name : null;
   var oldCustomerId = oldRes.data ? oldRes.data.customer_id : null;
+  var oldType = oldRes.data ? oldRes.data.type : null;
 
   var {error} = await sb.from('engagements').update({ name: name, status: status, customer_id: customer_id, type: type }).eq('id', id);
   if (error) { alert('Error: '+error.message); return; }
@@ -339,6 +340,14 @@ async function saveEditProject() {
     if (pjC.error) console.error('project_sessions customer cascade failed:', pjC.error);
     if (otC.error) console.error('ot_sessions customer cascade failed:', otC.error);
     if (usC.error) console.error('unified_sessions customer cascade failed:', usC.error);
+  }
+
+  // If type changed (e.g. project -> amc), cascade to unified_sessions.session_type
+  // so historical sessions show under the correct summary tab. session_type only
+  // exists on unified_sessions; ot_sessions/project_sessions don't carry it.
+  if (oldType && oldType !== type) {
+    var usT = await sb.from('unified_sessions').update({ session_type: type }).eq('engagement_name', name);
+    if (usT.error) console.error('unified_sessions session_type cascade failed:', usT.error);
   }
 
   closeEditProjectModal();
