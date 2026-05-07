@@ -155,8 +155,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .screen{display:none}.screen.active{display:block}
 .card{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(10,31,92,.04);transition:box-shadow .2s ease,border-color .15s ease}
 .card:hover{box-shadow:0 4px 14px rgba(10,31,92,.06)}
-.card-title{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .card-title::before{content:'';width:3px;height:16px;background:var(--teal);border-radius:2px}
+
+/* Typography hierarchy — utility classes for consistent sizing across screens.
+   Use .page-title for h1, .section-header for h2-style headers within a screen,
+   .card-title for in-card headings (already styled above), and .meta for
+   captions / metadata text. */
+.page-title{font-size:24px;font-weight:700;color:var(--navy);letter-spacing:-.3px;line-height:1.2;margin:0 0 16px}
+.section-header{font-size:17px;font-weight:600;color:var(--navy);letter-spacing:-.1px;line-height:1.3;margin:0 0 12px}
+.meta{font-size:12px;font-weight:400;color:var(--muted);line-height:1.4}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .form-group{display:flex;flex-direction:column;gap:6px}
 .form-group.full{grid-column:1/-1}
@@ -254,7 +262,7 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
 @keyframes modalBg{from{opacity:0}to{opacity:1}}
 .modal{background:white;border-radius:16px;padding:28px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 80px rgba(10,31,92,.35),0 0 0 1px rgba(10,31,92,.05);animation:modalIn .22s cubic-bezier(.2,.8,.2,1) both}
 @keyframes modalIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-.modal-title{font-size:17px;font-weight:700;color:var(--navy);margin-bottom:20px}
+.modal-title{font-size:17px;font-weight:600;color:var(--navy);margin-bottom:20px;letter-spacing:-.1px}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
 .flex-between{display:flex;justify-content:space-between;align-items:center}
 .mb-4{margin-bottom:16px}
