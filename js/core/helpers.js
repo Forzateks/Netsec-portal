@@ -26,6 +26,33 @@ function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
 function statusIcon(s){return s==='approved'?'✅':s==='rejected'?'❌':'🟡';}
 function esc2(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
+// Render the band badge(s) for an OT session row. Stored band is one of the
+// five enum values (Eve / Early / Mid / Wknd / Day), but a session that
+// covers BOTH morning Early OT and evening Eve OT is stored as 'Eve' for
+// schema simplicity — calcOT() picks Eve as the umbrella label and credits
+// both portions correctly. Recompute morningOT/eveningOT here so mixed
+// sessions render as TWO badges (Early + Eve) instead of hiding the morning
+// part behind a single Eve label. Stored .credited_hours is unaffected.
+function bandBadge(s) {
+  if (!s) return '';
+  var b = s.band || '';
+  if (b !== 'Eve') return '<span class="badge badge-'+b+'">'+b+'</span>';
+  if (!s.start_time || !s.end_time) return '<span class="badge badge-Eve">Eve</span>';
+  var emp = s.employee || '';
+  var t = (typeof getOTThresholds === 'function') ? getOTThresholds(emp) : { eveStart: 18.5, morningBlock: 7.5 };
+  var sp = String(s.start_time).split(':').map(Number);
+  var ep = String(s.end_time).split(':').map(Number);
+  var sf = sp[0] + (sp[1]||0)/60;
+  var ef = ep[0] + (ep[1]||0)/60;
+  if (ef <= sf) return '<span class="badge badge-Eve">Eve</span>';
+  var morningOT = (sf < t.morningBlock) ? Math.max(0, Math.min(ef, t.morningBlock) - sf) : 0;
+  var eveningOT = (ef > t.eveStart)     ? Math.max(0, ef - Math.max(sf, t.eveStart))     : 0;
+  if (morningOT > 0 && eveningOT > 0) {
+    return '<span class="badge badge-Early">Early</span> <span class="badge badge-Eve">Eve</span>';
+  }
+  return '<span class="badge badge-Eve">Eve</span>';
+}
+
 // Paginate through a Supabase query in chunks of 1000 to work around the
 // platform's server-side row cap. Pass a function that builds a fresh query
 // (with filters/orders applied) — we append .range() per page and concat.

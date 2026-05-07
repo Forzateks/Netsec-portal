@@ -371,7 +371,7 @@ async function renderSessions() {
     '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+fmtTime(s.start_time)+'</td>'+
     '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+fmtTime(s.end_time)+'</td>'+
     '<td style="font-family:\'DM Mono\',monospace">'+s.duration_hours+'h</td>'+
-    '<td><span class="badge badge-'+s.band+'">'+s.band+'</span></td>'+
+    '<td>'+bandBadge(s)+'</td>'+
     '<td><span class="badge '+(s.rate==='1:2'?'badge-12':'badge-11')+'">'+s.rate+'</span></td>'+
     '<td>'+creditedDisplay+'</td>'+
     '<td>'+stBadge+'</td>'+
@@ -711,7 +711,7 @@ async function previewReevalArchived() {
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+s.ot_date+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtTime(s.start_time)+' to '+fmtTime(s.end_time)+'</td>'+
       '<td style="font-family:DM Mono,monospace">'+s.credited_hours+'h -> <strong>'+r.credited+'h</strong></td>'+
-      '<td><span class="badge badge-'+r.band+'">'+r.band+'</span></td>'+
+      '<td>'+bandBadge({band:r.band,start_time:s.start_time,end_time:s.end_time,employee:s.employee})+'</td>'+
       '</tr>';
   }).join('');
 

@@ -124,13 +124,30 @@ async function doResetPassword() {
 }
 
 async function doLogout() {
-  await sb.auth.signOut();
-  currentUser = ''; currentEmail = ''; isManager = false;
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-password').value = '';
-  showSigninForm();
+  // Lock the logout entry to prevent double-clicks and surface progress —
+  // the signOut round trip can take a beat on a slow connection.
+  var btn = document.querySelector('.sidebar-item-logout');
+  var original = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.style.pointerEvents = 'none';
+    btn.style.opacity = '.7';
+    btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Logging out…';
+  }
+  try {
+    await sb.auth.signOut();
+  } finally {
+    currentUser = ''; currentEmail = ''; isManager = false;
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-password').value = '';
+    showSigninForm();
+    if (btn) {
+      btn.innerHTML = original;
+      btn.style.pointerEvents = '';
+      btn.style.opacity = '';
+    }
+  }
 }
 
 // In-app change password (user is already signed in)

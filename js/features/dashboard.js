@@ -170,7 +170,7 @@ async function renderEmployeeDashboard() {
     recent.forEach(function(r){
       html += '<tr><td style="font-size:12px">'+fmtDate(r.ot_date)+'</td>'+
         '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.activity+'</td>'+
-        '<td><span class="badge badge-'+r.band+'">'+r.band+'</span></td>'+
+        '<td>'+bandBadge(r)+'</td>'+
         '<td><span class="badge '+(r.rate==='1:2'?'badge-12':'badge-11')+'">'+r.rate+'</span></td>'+
         '<td><strong style="color:var(--teal)">'+r.credited_hours+'h</strong>'+creditDriftMarker(r)+'</td></tr>';
     });
@@ -306,7 +306,7 @@ async function renderManagerDashboard() {
       ts: r.created_at || r.ot_date,
       html: '<div class="request-card" style="margin-bottom:8px;cursor:pointer" onclick="showScreen(\'approvals\')">'+
         '<strong>'+esc2(shortName(r.employee))+'</strong> submitted '+
-        fmtNum(r.credited_hours||0)+'h <span class="badge badge-'+r.band+'">'+r.band+'</span> OT '+when+
+        fmtNum(r.credited_hours||0)+'h '+bandBadge(r)+' OT '+when+
         statusBit+
       '</div>'
     });

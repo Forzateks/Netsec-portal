@@ -57,7 +57,7 @@ function otApprovalCard(r) {
   var info='<strong>'+r.employee+'</strong> — '+esc2(r.activity)+'<br>'+
     '<span style="font-size:12px;color:var(--muted)">'+fmtDate(r.ot_date)+' ('+r.day_name+') &nbsp;·&nbsp; '+
     fmtTime(r.start_time)+'–'+fmtTime(r.end_time)+' &nbsp;·&nbsp; '+r.duration_hours+'h &nbsp;·&nbsp; '+
-    '<span class="badge badge-'+r.band+'">'+r.band+'</span> &nbsp; '+r.rate+' &nbsp;·&nbsp; Credited: <strong>'+r.credited_hours+'h</strong>'+creditDriftMarker(r)+'</span>';
+    bandBadge(r)+' &nbsp; '+r.rate+' &nbsp;·&nbsp; Credited: <strong>'+r.credited_hours+'h</strong>'+creditDriftMarker(r)+'</span>';
   return '<div class="request-card '+st+'" style="margin-bottom:10px">'+
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'+
     '<div style="font-size:13px;line-height:1.6">'+info+
