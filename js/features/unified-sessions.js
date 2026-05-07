@@ -666,21 +666,44 @@ async function renderUnifiedTypeSummary(typeKey) {
     return { label: name, value: byEng[name].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
   });
 
-  var pie = (typeof buildPieChart === 'function') ? buildPieChart(pieData,'h') : '';
+  // Aggregate by customer for the second pie
+  var byCust = {};
+  rows.forEach(function(r){
+    var cust = (r.customer_name || '').trim() || '(no customer)';
+    if (!byCust[cust]) byCust[cust] = { hours: 0, sessions: 0 };
+    byCust[cust].hours    += parseFloat(r.total_hours || 0);
+    byCust[cust].sessions += 1;
+  });
+  var sortedCust = Object.keys(byCust).sort(function(a,b){ return byCust[b].hours - byCust[a].hours; });
+  var custPieData = sortedCust.slice(0,8).map(function(cust,i){
+    return { label: cust, value: byCust[cust].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
+  });
+
+  var pie     = (typeof buildPieChart === 'function') ? buildPieChart(pieData,     'h') : '';
+  var custPie = (typeof buildPieChart === 'function') ? buildPieChart(custPieData, 'h') : '';
+
+  // Footnote: prefer the date range over the year if a range is set
+  var rangeNote = (fromVal || toVal)
+    ? 'Period: ' + (fromVal || '…') + ' → ' + (toVal || '…')
+    : ('Year: ' + (year==='all' ? 'All Years' : year));
 
   document.getElementById(ui.content).innerHTML =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">'+
-    '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by '+ui.heading+' (Top 8)</div>'+pie+'</div>'+
-    '<div class="card" style="margin-bottom:0"><div class="card-title">Quick Stats</div>'+
-    '<div class="summary-grid">'+
-    '<div class="stat-card navy"><div class="stat-label">Total '+typeKey.toUpperCase()+'s</div><div class="stat-value">'+sorted.length+'</div></div>'+
-    '<div class="stat-card teal"><div class="stat-label">Total Hours</div><div class="stat-value" style="font-size:20px">'+r2(totalHours)+'h</div></div>'+
-    '<div class="stat-card eve"><div class="stat-label">Total Sessions</div><div class="stat-value">'+totalSessions+'</div></div>'+
-    '</div></div></div>'+
+      '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by '+ui.heading+' (Top 8)</div>'+pie+'</div>'+
+      '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by Customer (Top 8)</div>'+custPie+'</div>'+
+    '</div>'+
+    '<div class="card" style="margin-bottom:20px"><div class="card-title">Quick Stats</div>'+
+      '<div class="summary-grid">'+
+        '<div class="stat-card navy"><div class="stat-label">Total '+typeKey.toUpperCase()+'s</div><div class="stat-value">'+sorted.length+'</div></div>'+
+        '<div class="stat-card teal"><div class="stat-label">Total Hours</div><div class="stat-value" style="font-size:20px">'+r2(totalHours)+'h</div></div>'+
+        '<div class="stat-card eve"><div class="stat-label">Total Sessions</div><div class="stat-value">'+totalSessions+'</div></div>'+
+        '<div class="stat-card wknd"><div class="stat-label">Total Customers</div><div class="stat-value">'+sortedCust.length+'</div></div>'+
+      '</div>'+
+    '</div>'+
     '<div class="table-wrap"><table>'+
-    '<thead><tr><th>Engagement</th><th>Customer</th><th>Sessions</th><th>Total Hours</th><th>Working Days</th><th>Team Breakdown</th></tr></thead>'+
-    '<tbody>'+tableRows+'</tbody></table></div>'+
-    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | * Working days = hours / 8</div>';
+      '<thead><tr><th>Engagement</th><th>Customer</th><th>Sessions</th><th>Total Hours</th><th>Working Days</th><th>Team Breakdown</th></tr></thead>'+
+      '<tbody>'+tableRows+'</tbody></table></div>'+
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">'+rangeNote+' &middot; Working days = hours / 8</div>';
 }
 
 async function deleteUS(id) {
