@@ -322,13 +322,28 @@ function calcSummary(sessions, compoffs, employee) {
 
 // == RENDER SESSIONS ==============================================
 var _otSessionsById = {};
+function clearSessionsFilters() {
+  ['sessions-date-from','sessions-date-to'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  if (isManager) {
+    var emp = document.getElementById('sessions-emp-filter');
+    if (emp) emp.value = '';
+  }
+  renderSessions();
+}
+
 async function renderSessions() {
   document.getElementById('sessions-loading').style.display='flex';
   document.getElementById('sessions-table').style.display='none';
   document.getElementById('sessions-empty').style.display='none';
   const filter=isManager?document.getElementById('sessions-emp-filter').value:currentUser;
+  const fFrom = (document.getElementById('sessions-date-from')||{}).value || '';
+  const fTo   = (document.getElementById('sessions-date-to')||{}).value   || '';
   let q=sb.from('ot_sessions').select('*').order('ot_date',{ascending:false});
   if (filter) q=q.eq('employee',filter);
+  if (fFrom)  q=q.gte('ot_date', fFrom);
+  if (fTo)    q=q.lte('ot_date', fTo);
   const {data}=await q;
   document.getElementById('sessions-loading').style.display='none';
   if (!data||!data.length){document.getElementById('sessions-empty').style.display='block';return;}

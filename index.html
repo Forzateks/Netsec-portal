@@ -567,14 +567,22 @@
     <div class="card">
       <div class="flex-between mb-4">
         <div class="card-title" style="margin-bottom:0">OT Sessions</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <select id="sessions-emp-filter" onchange="renderSessions()" style="width:auto;padding:7px 12px" class="manager-only-el">
-            <option value="">All Employees</option>
+        <button class="btn btn-sm btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+        <span class="manager-only-el" style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">Employee:</label>
+          <select id="sessions-emp-filter" onchange="renderSessions()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">All</option>
             <option>Ahmed Ali</option><option>Venkatesan</option><option>Prasanth</option>
             <option>Salman Aziz</option><option>Mohammed Afsal</option><option>Mohammed Nasif</option>
           </select>
-          <button class="btn btn-sm btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
-        </div>
+        </span>
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0;margin-left:6px">From:</label>
+        <input type="date" id="sessions-date-from" onchange="renderSessions()" style="width:auto;padding:6px 8px;font-size:13px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
+        <input type="date" id="sessions-date-to" onchange="renderSessions()" style="width:auto;padding:6px 8px;font-size:13px">
+        <button class="btn btn-sm btn-ghost" onclick="clearSessionsFilters()">✕ Clear</button>
       </div>
       <div id="sessions-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div class="table-wrap" id="sessions-table" style="display:none">
