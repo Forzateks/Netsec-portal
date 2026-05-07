@@ -200,6 +200,105 @@ function creditDriftMarker(s) {
   return '<span title="' + txt.replace(/"/g,'&quot;') + '" style="cursor:help;color:var(--gold);font-size:12px;margin-left:4px;vertical-align:middle" aria-label="Policy drift">&#9888;&#65039;</span>';
 }
 
+// == OT EXPLAIN POPOVER ===========================================
+// Click-triggered floating panel that replaces the old hover tooltip.
+// One popover element is reused across rows; outside-click and Esc close it.
+var _otPopoverEl = null;
+var _otPopoverInit = false;
+
+function _ensureOTPopover() {
+  if (_otPopoverEl) return _otPopoverEl;
+  var p = document.createElement('div');
+  p.id = 'ot-explain-popover';
+  p.className = 'ot-popover';
+  p.setAttribute('role','dialog');
+  p.setAttribute('aria-label','OT calculation details');
+  p.innerHTML =
+    '<div class="ot-popover-head">'+
+      '<span>How this was calculated</span>'+
+      '<button type="button" class="ot-popover-close" aria-label="Close">&times;</button>'+
+    '</div>'+
+    '<div class="ot-popover-body" id="ot-popover-body"></div>';
+  document.body.appendChild(p);
+  p.querySelector('.ot-popover-close').addEventListener('click', hideOTExplainPopover);
+  if (!_otPopoverInit) {
+    document.addEventListener('mousedown', function(e){
+      if (!_otPopoverEl || !_otPopoverEl.classList.contains('show')) return;
+      if (_otPopoverEl.contains(e.target)) return;
+      if (e.target.closest && e.target.closest('.ot-info-btn')) return;
+      hideOTExplainPopover();
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape') hideOTExplainPopover();
+    });
+    window.addEventListener('resize', hideOTExplainPopover);
+    window.addEventListener('scroll', hideOTExplainPopover, true);
+    _otPopoverInit = true;
+  }
+  _otPopoverEl = p;
+  return p;
+}
+
+function hideOTExplainPopover() {
+  if (_otPopoverEl) _otPopoverEl.classList.remove('show');
+}
+
+function showOTExplainPopover(btn, sessionId) {
+  var s = _otSessionsById[sessionId];
+  if (!s) return;
+  var p = _ensureOTPopover();
+
+  // Build a structured body from explainOT()'s multi-line output.
+  var raw = explainOT(s) || '';
+  var lines = raw.split('\n').filter(function(l){ return l.indexOf('---') < 0; });
+  var rowsHtml = '';
+  var creditedHtml = '';
+  lines.forEach(function(ln){
+    if (!ln) { rowsHtml += '<div class="ot-popover-gap"></div>'; return; }
+    var ix = ln.indexOf(':');
+    if (ix > 0 && ix < 18) {
+      var key = ln.slice(0, ix);
+      var val = ln.slice(ix+1).trim();
+      if (key === 'Credited') {
+        creditedHtml = '<div class="ot-popover-credit"><span>Credited</span><strong>'+esc2(val)+'</strong></div>';
+        return;
+      }
+      rowsHtml += '<div class="ot-popover-kv"><span>'+esc2(key)+'</span><span>'+esc2(val)+'</span></div>';
+    } else {
+      rowsHtml += '<div class="ot-popover-line">'+esc2(ln)+'</div>';
+    }
+  });
+  var driftNote = '';
+  var c = calcOT(s.ot_date, s.start_time, s.end_time, s.employee);
+  if (c) {
+    var stored = parseFloat(s.credited_hours || 0);
+    var live   = parseFloat(c.credited);
+    if (Math.abs(stored - live) > 0.01) {
+      driftNote = '<div class="ot-popover-drift">⚠ Stored '+stored+'h, current policy gives '+live+'h. Run Policy Recompute to align.</div>';
+    }
+  }
+  document.getElementById('ot-popover-body').innerHTML = rowsHtml + creditedHtml + driftNote;
+
+  // Position: prefer below the icon, flip up if not enough room.
+  p.classList.remove('flip-up');
+  p.classList.add('show');
+  var rect = btn.getBoundingClientRect();
+  var pw = p.offsetWidth;
+  var ph = p.offsetHeight;
+  var top  = window.scrollY + rect.bottom + 8;
+  var left = window.scrollX + rect.left + (rect.width/2) - (pw/2);
+  var minLeft = window.scrollX + 8;
+  var maxLeft = window.scrollX + window.innerWidth - pw - 8;
+  if (left < minLeft) left = minLeft;
+  if (left > maxLeft) left = maxLeft;
+  if (rect.bottom + 8 + ph > window.innerHeight) {
+    top = window.scrollY + rect.top - ph - 8;
+    p.classList.add('flip-up');
+  }
+  p.style.top  = top  + 'px';
+  p.style.left = left + 'px';
+}
+
 function calcSummary(sessions, compoffs, employee) {
   // Only approved sessions count toward CO
   const s = sessions.filter(function(x){ return x.employee===employee && (x.status==='approved' || x.status===null || x.status===undefined); });
@@ -222,6 +321,7 @@ function calcSummary(sessions, compoffs, employee) {
 }
 
 // == RENDER SESSIONS ==============================================
+var _otSessionsById = {};
 async function renderSessions() {
   document.getElementById('sessions-loading').style.display='flex';
   document.getElementById('sessions-table').style.display='none';
@@ -232,6 +332,9 @@ async function renderSessions() {
   const {data}=await q;
   document.getElementById('sessions-loading').style.display='none';
   if (!data||!data.length){document.getElementById('sessions-empty').style.display='block';return;}
+  // Cache so the info popover can look up a row by id without refetching
+  _otSessionsById = {};
+  data.forEach(function(s){ _otSessionsById[s.id] = s; });
   document.getElementById('sessions-table').style.display='block';
   document.getElementById('sessions-tbody').innerHTML=data.map(function(s,i){
     var st=s.status||'approved';
@@ -239,8 +342,7 @@ async function renderSessions() {
     var label = st==='archived' ? 'Archived' : cap(st);
     var badgeClass = st==='archived' ? 'badge-rejected' : 'badge-'+st; // reuse muted badge styling
     var stBadge='<span class="badge '+badgeClass+'" style="font-size:10px" title="'+(esc2(s.manager_comment||'')||'')+'">'+icon+' '+label+'</span>';
-    var explainTxt = explainOT(s).replace(/"/g, '&quot;');
-    var infoIcon = '<span title="'+explainTxt+'" style="cursor:help;color:var(--teal);font-size:11px;margin-left:4px;border:1px solid var(--teal);border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;line-height:1">i</span>';
+    var infoIcon = '<button type="button" class="ot-info-btn" onclick="showOTExplainPopover(this,'+s.id+')" aria-label="Calculation details">i</button>';
     var driftMark = creditDriftMarker(s);
     var creditedDisplay = (st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.credited_hours+'h</strong>' : '<span style="color:var(--muted);font-size:12px;text-decoration:line-through">'+s.credited_hours+'h</span>') + driftMark + infoIcon;
     var rowOpacity = (st==='rejected'||st==='archived') ? 'opacity:0.55' : '';

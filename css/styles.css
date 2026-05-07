@@ -201,6 +201,29 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .leave-sub{padding:10px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
 .leave-sub:hover{color:var(--navy)}.leave-sub.active{color:var(--navy);border-bottom-color:var(--teal);font-weight:600}
+/* ── OT info button + click popover ── */
+.ot-info-btn{cursor:pointer;color:var(--teal);background:white;font-size:11px;font-weight:700;line-height:1;margin-left:6px;border:1px solid var(--teal);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;padding:0;font-family:'DM Sans',sans-serif;vertical-align:middle;transition:background .15s,color .15s,transform .15s}
+.ot-info-btn:hover{background:var(--teal);color:white;transform:scale(1.1)}
+.ot-info-btn:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+.ot-popover{position:absolute;top:0;left:0;z-index:300;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(10,31,92,.18),0 0 0 1px rgba(10,31,92,.04);width:340px;max-width:calc(100vw - 16px);font-size:13px;color:var(--text);opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .15s ease,transform .15s ease}
+.ot-popover.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.ot-popover.flip-up{transform:translateY(4px)}
+.ot-popover.flip-up.show{transform:translateY(0)}
+.ot-popover-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--navy);background:linear-gradient(180deg,#fbfcfe 0%,#f4f6fb 100%);border-radius:12px 12px 0 0}
+.ot-popover-close{background:transparent;border:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0 4px;border-radius:4px;transition:color .15s,background .15s}
+.ot-popover-close:hover{color:var(--navy);background:rgba(10,31,92,.06)}
+.ot-popover-body{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.ot-popover-kv{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;line-height:1.45}
+.ot-popover-kv span:first-child{color:var(--muted);font-weight:600;flex-shrink:0}
+.ot-popover-kv span:last-child{color:var(--text);text-align:right;font-family:'DM Mono',monospace;font-size:12px}
+.ot-popover-line{font-size:12.5px;color:var(--text);line-height:1.5}
+.ot-popover-gap{height:4px}
+.ot-popover-credit{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#ecfeff,#f0f9ff);border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-top:8px}
+.ot-popover-credit span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.ot-popover-credit strong{font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--teal)}
+.ot-popover-drift{margin-top:8px;padding:8px 10px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:8px;font-size:11.5px;line-height:1.45}
+
 .request-card{border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;background:white}
 .request-card.pending{border-left:4px solid var(--gold)}
 .request-card.approved{border-left:4px solid var(--success)}
