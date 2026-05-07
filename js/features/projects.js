@@ -604,10 +604,20 @@ async function renderPjEmployeeSummary() {
 }
 
 // ── PIE CHART HELPERS ────────────────────────────────────────────
+// Short label for an employee. Returns "Ahmed" / "Salman" when the first
+// name is unique across EMPLOYEES, and "Mohammed A." / "Mohammed N." when
+// the first name collides (so the two Mohammeds don't both render as
+// "Mohammed"). Falls back to the raw value for unknown / free-text names.
 function empShortName(emp) {
-  var parts = emp.split(' ');
-  if (parts.length > 2) return parts[parts.length-1]; // Last name for Mohammed X
-  return parts[0]; // First name for others
+  if (!emp) return '';
+  var parts = String(emp).trim().split(/\s+/);
+  var first = parts[0] || emp;
+  var team = (typeof EMPLOYEES !== 'undefined' && EMPLOYEES) ? EMPLOYEES : [];
+  var collide = team.some(function(e){ return e !== emp && (e||'').split(/\s+/)[0] === first; });
+  if (collide && parts.length > 1) {
+    return first + ' ' + parts[parts.length-1].charAt(0).toUpperCase() + '.';
+  }
+  return first;
 }
 
 function empColor(emp) {

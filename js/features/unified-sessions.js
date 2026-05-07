@@ -132,7 +132,7 @@ function buildUSTeamCheckboxes() {
       label.style.borderColor = 'var(--teal)';
     }
     label.appendChild(cb);
-    label.appendChild(document.createTextNode(emp.split(' ')[0]));
+    label.appendChild(document.createTextNode((typeof empShortName === 'function') ? empShortName(emp) : emp.split(' ')[0]));
     box.appendChild(label);
   });
 }
@@ -649,7 +649,8 @@ async function renderUnifiedTypeSummary(typeKey) {
   var tableRows = sorted.map(function(name){
     var d = byEng[name];
     var memberBreakdown = Object.keys(d.members).map(function(m){
-      return '<span class="badge" style="background:#f0f4ff;color:var(--navy);margin:1px">'+m.split(' ')[0]+': '+r2(d.members[m])+'h</span>';
+      var label = (typeof empShortName === 'function') ? empShortName(m) : m.split(' ')[0];
+      return '<span class="badge" style="background:#f0f4ff;color:var(--navy);margin:1px">'+label+': '+r2(d.members[m])+'h</span>';
     }).join(' ');
     return '<tr>'+
       '<td><strong>'+esc2(name)+'</strong></td>'+
