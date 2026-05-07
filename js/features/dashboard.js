@@ -8,12 +8,53 @@ function exportCSV() {
   a.download='Gulfit_OT_Sessions.csv'; a.click();
 }
 
+// == DASHBOARD HELPERS ============================================
+function fmtNum(n) {
+  // 1234 -> "1,234". Floats keep up to 2 decimals, no trailing zeros.
+  if (n === null || n === undefined || isNaN(n)) return '0';
+  var v = Number(n);
+  if (Math.abs(v - Math.round(v)) < 0.005) {
+    return Math.round(v).toLocaleString('en-US');
+  }
+  return v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+}
+
+function trendPill(curr, prev, suffix) {
+  // Renders a small +/-N pill comparing current vs previous period.
+  // Hidden when prev is 0 and curr is 0 to avoid noise on empty months.
+  if (curr === 0 && prev === 0) return '';
+  var diff = curr - prev;
+  if (Math.abs(diff) < 0.01) return '<span class="stat-trend flat">— vs last</span>';
+  var sign = diff > 0 ? '+' : '−';
+  var cls  = diff > 0 ? 'up' : 'down';
+  var arrow = diff > 0 ? '▲' : '▼';
+  return '<span class="stat-trend '+cls+'">'+arrow+' '+sign+fmtNum(Math.abs(diff))+(suffix||'')+'</span>';
+}
+
+function dashSkeleton() {
+  return '<div class="dash-hero"><div class="dash-hero-text">'+
+      '<div class="skeleton skel-line lg" style="width:240px"></div>'+
+      '<div class="skeleton skel-line short" style="width:180px;margin-top:4px"></div>'+
+    '</div></div>'+
+    '<div class="dash-stats">'+
+      '<div class="skeleton skel-stat"><div class="skeleton skel-line short"></div><div class="skeleton skel-line lg" style="width:60%"></div><div class="skeleton skel-line med"></div></div>'+
+      '<div class="skeleton skel-stat"><div class="skeleton skel-line short"></div><div class="skeleton skel-line lg" style="width:60%"></div><div class="skeleton skel-line med"></div></div>'+
+      '<div class="skeleton skel-stat"><div class="skeleton skel-line short"></div><div class="skeleton skel-line lg" style="width:60%"></div><div class="skeleton skel-line med"></div></div>'+
+      '<div class="skeleton skel-stat"><div class="skeleton skel-line short"></div><div class="skeleton skel-line lg" style="width:60%"></div><div class="skeleton skel-line med"></div></div>'+
+    '</div>'+
+    '<div class="card"><div class="skeleton skel-line tall" style="width:140px;margin-bottom:14px"></div><div class="skeleton skel-line"></div><div class="skeleton skel-line med"></div></div>';
+}
+
 // == DASHBOARD ====================================================
 async function renderDashboard() {
-  document.getElementById('dash-content').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+  document.getElementById('dash-content').innerHTML = dashSkeleton();
   var year  = new Date().getFullYear().toString();
   var month = new Date().toISOString().slice(0,7);
   var monthName = new Date().toLocaleString('default',{month:'long'});
+
+  // Previous month's YYYY-MM for trend deltas
+  var prevDate = new Date(); prevDate.setDate(1); prevDate.setMonth(prevDate.getMonth()-1);
+  var prevMonth = prevDate.toISOString().slice(0,7);
 
   var results = await Promise.all([
     sb.from('ot_sessions').select('*').eq('employee',currentUser),
@@ -21,7 +62,7 @@ async function renderDashboard() {
     sb.from('comp_off_requests').select('*').eq('employee',currentUser).order('created_at',{ascending:false}),
     sb.from('leave_requests').select('*').eq('employee',currentUser).order('created_at',{ascending:false}),
     sb.from('annual_leave').select('working_days').eq('employee',currentUser).gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
-    sb.from('project_sessions').select('duration_hours,team_members').gte('session_date',month+'-01').lte('session_date',month+'-31'),
+    sb.from('project_sessions').select('duration_hours,team_members,session_date').gte('session_date',prevMonth+'-01').lte('session_date',month+'-31'),
   ]);
   var sessions=results[0].data, compoffs=results[1].data, coReqs=results[2].data;
   var lvReqs=results[3].data, alData=results[4].data, pjSess=results[5].data;
@@ -30,12 +71,18 @@ async function renderDashboard() {
   var leaveUsed = (alData||[]).reduce(function(a,r){return a+parseFloat(r.working_days||0);},0);
   var leaveBalance = LEAVE_ALLOWANCE - leaveUsed;
   var monthApproved = (sessions||[]).filter(function(x){return (x.ot_date||'').startsWith(month) && (x.status==='approved'||!x.status);});
+  var prevMonthApproved = (sessions||[]).filter(function(x){return (x.ot_date||'').startsWith(prevMonth) && (x.status==='approved'||!x.status);});
   var otThisMonth = monthApproved.length;
+  var otLastMonth = prevMonthApproved.length;
   var otHrsThisMonth = monthApproved.reduce(function(a,x){return a+parseFloat(x.credited_hours||0);},0);
-  var pjHrsMonth = 0;
+  var fn = (currentUser||'').split(' ')[0].toLowerCase();
+  var pjHrsMonth = 0, pjHrsPrev = 0;
   (pjSess||[]).forEach(function(r){
-    var fn = currentUser.split(' ')[0].toLowerCase();
-    if((r.team_members||'').toLowerCase().includes(fn)) pjHrsMonth += parseFloat(r.duration_hours||0);
+    if(!(r.team_members||'').toLowerCase().includes(fn)) return;
+    var hrs = parseFloat(r.duration_hours||0);
+    var d = (r.session_date||'');
+    if (d.startsWith(month))      pjHrsMonth += hrs;
+    else if (d.startsWith(prevMonth)) pjHrsPrev += hrs;
   });
 
   var recent = (sessions||[]).filter(function(x){return x.status==='approved'||!x.status;}).sort(function(a,b){return a.ot_date>b.ot_date?-1:1;}).slice(0,5);
@@ -80,16 +127,16 @@ async function renderDashboard() {
 
   html += '<div class="dash-stats">'+
     '<div class="stat-card green"><div class="stat-label">CO Balance</div>'+
-      '<div class="stat-value" style="color:'+balColor+'">'+s.balance+'</div>'+
-      '<div class="stat-sub">Earned '+s.totalCO+' &middot; Used '+s.used+'</div></div>'+
+      '<div class="stat-value" style="color:'+balColor+'">'+fmtNum(s.balance)+'</div>'+
+      '<div class="stat-sub">Earned '+fmtNum(s.totalCO)+' &middot; Used '+fmtNum(s.used)+'</div></div>'+
     '<div class="stat-card teal"><div class="stat-label">Annual Leave</div>'+
-      '<div class="stat-value" style="color:'+lvColor+'">'+leaveBalance+'</div>'+
+      '<div class="stat-value" style="color:'+lvColor+'">'+fmtNum(leaveBalance)+'</div>'+
       '<div class="stat-sub">of '+LEAVE_ALLOWANCE+' days &middot; '+year+'</div></div>'+
     '<div class="stat-card navy"><div class="stat-label">OT &mdash; '+monthName+'</div>'+
-      '<div class="stat-value">'+otThisMonth+'</div>'+
-      '<div class="stat-sub">'+r2(otHrsThisMonth)+'h credited</div></div>'+
+      '<div class="stat-value">'+fmtNum(otThisMonth)+trendPill(otThisMonth, otLastMonth, '')+'</div>'+
+      '<div class="stat-sub">'+fmtNum(otHrsThisMonth)+'h credited</div></div>'+
     '<div class="stat-card eve"><div class="stat-label">Project Hours &mdash; '+monthName+'</div>'+
-      '<div class="stat-value">'+r2(pjHrsMonth)+'<span class="stat-unit">h</span></div>'+
+      '<div class="stat-value">'+fmtNum(pjHrsMonth)+'<span class="stat-unit">h</span>'+trendPill(pjHrsMonth, pjHrsPrev, 'h')+'</div>'+
       '<div class="stat-bar"><div class="stat-bar-fill" style="width:'+pjPct+'%"></div></div>'+
       '<div class="stat-sub">'+pjPct+'% of '+pjTarget+'h target</div></div>'+
     '</div>';
