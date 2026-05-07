@@ -9,25 +9,75 @@
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
 /* ── LOGIN SCREEN ── */
-.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,#1a3a7a 100%);position:relative;overflow:hidden}
-.login-bg-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none}
-.login-bg-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,31,92,.78) 0%,rgba(10,31,92,.55) 60%,rgba(0,160,210,.45) 100%);z-index:1;pointer-events:none}
-.login-card{background:white;border-radius:20px;padding:40px;width:90%;max-width:380px;box-shadow:0 24px 60px rgba(0,0,0,0.3);text-align:center;position:relative;z-index:2}
-.login-logo{width:60px;height:60px;background:var(--teal);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;margin:0 auto 16px}
-.login-title{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:4px}
-.login-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
-.emp-select{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);margin-bottom:16px;outline:none}
-.emp-select:focus{border-color:var(--teal)}
-.pin-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;text-align:left}
-.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-.pin-btn{padding:16px;font-size:18px;font-weight:600;border:1.5px solid var(--border);border-radius:10px;background:white;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace}
-.pin-btn:hover{background:var(--bg);border-color:var(--teal)}
-.pin-btn:active{transform:scale(.95)}
-.pin-btn.wide{grid-column:span 2}
-.pin-display{background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px;font-family:'DM Mono',monospace;font-size:24px;letter-spacing:8px;text-align:center;margin-bottom:12px;min-height:52px;color:var(--navy)}
-.login-btn{width:100%;padding:14px;background:var(--navy);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
-.login-btn:hover{background:#0d2870}
-.login-error{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px;display:none}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#05102e;position:relative;overflow:hidden;padding:24px}
+.login-bg-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;filter:saturate(110%)}
+.login-bg-overlay{position:absolute;inset:0;background:radial-gradient(120% 80% at 20% 0%,rgba(0,160,210,.28) 0%,transparent 55%),linear-gradient(135deg,rgba(5,16,46,.82) 0%,rgba(10,31,92,.7) 50%,rgba(0,40,80,.7) 100%);z-index:1;pointer-events:none}
+.login-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,.45) 100%);z-index:1;pointer-events:none}
+
+/* Layout: hero on the left (desktop) + glass card on the right */
+.login-stage{position:relative;z-index:2;width:100%;max-width:1080px;display:grid;grid-template-columns:1.05fr 1fr;gap:64px;align-items:center;animation:loginFade .6s ease-out both}
+@keyframes loginFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.login-hero{color:white;padding-right:8px}
+.login-hero-eyebrow{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,.75);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 14px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.login-hero-title{font-size:56px;font-weight:700;line-height:1.05;letter-spacing:-1.5px;color:white;margin:18px 0 14px}
+.login-hero-title span{background:linear-gradient(135deg,#5ad1ff 0%,var(--teal) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.login-hero-tag{font-size:15px;line-height:1.65;color:rgba(255,255,255,.78);max-width:440px;margin-bottom:24px}
+.login-hero-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;font-size:13.5px;color:rgba(255,255,255,.78)}
+.login-hero-list li{display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.login-hero-list li::before{content:'';flex-shrink:0;width:6px;height:6px;border-radius:50%;background:var(--teal);margin-top:8px;box-shadow:0 0 0 3px rgba(0,160,210,.18)}
+
+/* Glass card */
+.login-card{background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.5);border-radius:20px;padding:36px 36px 28px;width:100%;max-width:420px;justify-self:end;box-shadow:0 30px 80px rgba(5,16,46,.55),0 0 0 1px rgba(255,255,255,.05);text-align:left;position:relative;backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)}
+.login-card-brand{display:flex;align-items:center;gap:12px;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid rgba(10,31,92,.08)}
+.login-card-logo{height:38px;width:auto;border-radius:6px;object-fit:contain;flex-shrink:0}
+.login-card-brand-text{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.login-card-name{font-size:14px;font-weight:700;color:var(--navy);letter-spacing:.2px}
+.login-card-name span{color:var(--teal)}
+.login-card-by{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px}
+
+.login-heading{font-size:24px;font-weight:700;color:var(--navy);letter-spacing:-.4px;line-height:1.2;margin-bottom:6px}
+.login-sub{font-size:13.5px;color:var(--muted);margin-bottom:24px;line-height:1.5}
+
+.login-field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.login-field label{font-size:11px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.7px}
+.login-field input{width:100%;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);background:#fafbfc;transition:border-color .15s,background .15s,box-shadow .15s;outline:none}
+.login-field input::placeholder{color:#9ca3af}
+.login-field input:hover{background:white;border-color:#cbd5e1}
+.login-field input:focus{background:white;border-color:var(--teal);box-shadow:0 0 0 4px rgba(0,160,210,.12)}
+
+.login-row{display:flex;justify-content:space-between;align-items:center;margin:6px 0 18px;font-size:13px}
+.login-check{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--navy);font-weight:500;user-select:none}
+.login-check input[type="checkbox"]{width:16px;height:16px;accent-color:var(--teal);cursor:pointer;margin:0}
+.login-link{color:var(--teal);font-weight:600;text-decoration:none;transition:color .15s}
+.login-link:hover{color:var(--navy)}
+
+.login-btn{width:100%;padding:13px 16px;background:linear-gradient(135deg,var(--navy) 0%,#0d2a7a 100%);color:white;border:none;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:transform .15s,box-shadow .2s,filter .15s;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.2px;box-shadow:0 4px 14px rgba(10,31,92,.25)}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(10,31,92,.35);filter:brightness(1.08)}
+.login-btn:active{transform:translateY(0);filter:brightness(.96)}
+.login-btn-arrow{transition:transform .2s ease}
+.login-btn:hover .login-btn-arrow{transform:translateX(3px)}
+.login-btn-secondary{width:100%;padding:11px 16px;background:transparent;color:var(--muted);border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;margin-top:10px}
+.login-btn-secondary:hover{border-color:var(--navy);color:var(--navy);background:#fafbfc}
+
+.login-helper{font-size:12.5px;color:var(--muted);line-height:1.55;margin:4px 0 18px}
+.login-foot{font-size:11px;color:var(--muted);text-align:center;margin-top:24px;padding-top:18px;border-top:1px solid rgba(10,31,92,.06);letter-spacing:.2px}
+
+.login-error{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;display:none;line-height:1.5}
+.login-success{background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;line-height:1.5}
+
+/* Mobile: stack hero above card, soften */
+@media(max-width:880px){
+  .login-stage{grid-template-columns:1fr;gap:32px;max-width:480px}
+  .login-hero{display:none}
+  .login-card{justify-self:center;max-width:100%}
+}
+@media(max-width:480px){
+  .login-screen{padding:16px}
+  .login-card{padding:28px 22px 22px;border-radius:16px}
+  .login-heading{font-size:21px}
+  .login-card-logo{height:32px}
+}
 
 /* ── APP SHELL (sidebar layout) ── */
 .app-shell{display:flex;min-height:100vh;align-items:stretch}
@@ -208,10 +258,6 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
   /* Dashboard stat cards — 2 per row */
   .summary-grid[style*="margin-bottom:20px"]{grid-template-columns:1fr 1fr}
 
-  /* Pin keypad on login */
-  .pin-btn{padding:12px;font-size:16px}
-  .login-card{padding:24px 20px}
-
   /* Quick actions — wrap buttons */
   .quick-actions-wrap{display:flex;flex-wrap:wrap;gap:8px}
 
@@ -334,14 +380,6 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
   .table-wrap th:nth-last-child(-n+1),
   .table-wrap td:nth-last-child(-n+1){position:sticky;right:0;background:white}
 
-  /* Login screen: use full available width on small phones */
-  .login-card{padding:22px 18px;width:94%}
-  .login-title{font-size:20px}
-  .login-sub{font-size:12px;margin-bottom:18px}
-  #login-form-signin .form-group input,
-  #login-form-forgot .form-group input,
-  #login-form-reset .form-group input{padding:12px !important}
-
   /* Modal action buttons: full-width-ish on small screens */
   .modal-actions{flex-direction:column-reverse;gap:8px}
   .modal-actions .btn{width:100%;justify-content:center}
@@ -362,8 +400,6 @@ tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
   .preview-label{font-size:9px}
   .modal{padding:16px 12px}
   .modal-title{font-size:14px}
-  .login-card{padding:20px 14px}
-  .pin-display{font-size:20px;letter-spacing:6px;padding:10px}
   .request-card{padding:10px}
   /* Quick actions: 2 buttons per row */
   .quick-actions-wrap .btn{flex:1 1 calc(50% - 4px);font-size:12px;padding:10px 8px;justify-content:center}
