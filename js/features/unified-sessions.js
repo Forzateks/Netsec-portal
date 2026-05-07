@@ -565,12 +565,25 @@ async function saveEditUS() {
 // Generic renderer driven by session_type. Mirrors renderPjProjectSummary
 // in shape but reads from unified_sessions and uses engagement_name as
 // the grouping key.
+function clearTypeSummaryFilters(typeKey) {
+  var pairs = {
+    project:  ['pj-sum-from','pj-sum-to'],
+    poc:      ['pj-poc-from','pj-poc-to'],
+    amc:      ['pj-amc-from','pj-amc-to'],
+    presales: ['pj-presales-from','pj-presales-to']
+  };
+  (pairs[typeKey]||[]).forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderUnifiedTypeSummary(typeKey);
+}
+
 async function renderUnifiedTypeSummary(typeKey) {
   var ids = {
-    project:  { year: 'pj-sum-year',       loading: 'pj-project-loading',  content: 'pj-project-content',  heading: 'Project' },
-    poc:      { year: 'pj-poc-year',       loading: 'pj-poc-loading',      content: 'pj-poc-content',      heading: 'POC Engagements' },
-    amc:      { year: 'pj-amc-year',       loading: 'pj-amc-loading',      content: 'pj-amc-content',      heading: 'AMC Engagements' },
-    presales: { year: 'pj-presales-year',  loading: 'pj-presales-loading', content: 'pj-presales-content', heading: 'Pre-Sales Engagements' },
+    project:  { year: 'pj-sum-year',      from: 'pj-sum-from',      to: 'pj-sum-to',      loading: 'pj-project-loading',  content: 'pj-project-content',  heading: 'Project' },
+    poc:      { year: 'pj-poc-year',      from: 'pj-poc-from',      to: 'pj-poc-to',      loading: 'pj-poc-loading',      content: 'pj-poc-content',      heading: 'POC Engagements' },
+    amc:      { year: 'pj-amc-year',      from: 'pj-amc-from',      to: 'pj-amc-to',      loading: 'pj-amc-loading',      content: 'pj-amc-content',      heading: 'AMC Engagements' },
+    presales: { year: 'pj-presales-year', from: 'pj-presales-from', to: 'pj-presales-to', loading: 'pj-presales-loading', content: 'pj-presales-content', heading: 'Pre-Sales Engagements' },
   };
   var ui = ids[typeKey];
   if (!ui) return;
@@ -590,9 +603,15 @@ async function renderUnifiedTypeSummary(typeKey) {
   document.getElementById(ui.loading).style.display = 'flex';
   document.getElementById(ui.content).innerHTML = '';
 
+  // Date range overrides the year picker. Empty range falls back to year.
+  var fromVal = ui.from ? ((document.getElementById(ui.from)||{}).value || '') : '';
+  var toVal   = ui.to   ? ((document.getElementById(ui.to)||{}).value   || '') : '';
   var year = (yearEl && yearEl.value) || 'all';
   var q = sb.from('unified_sessions').select('*').eq('session_type', typeKey);
-  if (year && year !== 'all') {
+  if (fromVal || toVal) {
+    if (fromVal) q = q.gte('session_date', fromVal);
+    if (toVal)   q = q.lte('session_date', toVal);
+  } else if (year && year !== 'all') {
     q = q.gte('session_date', year + '-01-01').lte('session_date', year + '-12-31');
   }
   var res = await q;

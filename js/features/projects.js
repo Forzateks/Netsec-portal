@@ -494,16 +494,28 @@ function initProjectTab() {
   if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
 }
 
+function clearEmployeeSummaryFilters() {
+  ['pj-emp-from','pj-emp-to'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderPjEmployeeSummary();
+}
+
 async function renderPjEmployeeSummary() {
   document.getElementById('pj-employee-loading').style.display='flex';
   document.getElementById('pj-employee-content').innerHTML='';
   const year = document.getElementById('pj-emp-year').value || 'all';
+  const fFrom = (document.getElementById('pj-emp-from')||{}).value || '';
+  const fTo   = (document.getElementById('pj-emp-to')||{}).value   || '';
 
   // Reads unified_sessions (Phase 6 cutover). Aggregates by employee
   // (the `employee` column on the unified row, which is the logger),
-  // with a per-type breakdown column.
+  // with a per-type breakdown column. Date range overrides year.
   let q = sb.from('unified_sessions').select('*');
-  if (year !== 'all') {
+  if (fFrom || fTo) {
+    if (fFrom) q = q.gte('session_date', fFrom);
+    if (fTo)   q = q.lte('session_date', fTo);
+  } else if (year !== 'all') {
     q = q.gte('session_date', year+'-01-01').lte('session_date', year+'-12-31');
   }
   const {data} = await q;

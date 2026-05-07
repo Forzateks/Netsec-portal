@@ -385,14 +385,36 @@ async function deleteSession(id) {
 }
 
 // == RENDER SUMMARY ================================================
+var _summaryActiveEmp = null;
+function clearOTSummaryFilters() {
+  ['summary-date-from','summary-date-to'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderCurrentSummary();
+}
+function renderCurrentSummary() {
+  if (_summaryActiveEmp) renderSummary(_summaryActiveEmp);
+}
+
 async function renderSummary(emp) {
+  _summaryActiveEmp = emp;
   document.getElementById('summary-loading').style.display='flex';
   document.getElementById('summary-content').innerHTML='';
-  const [{data:sessions},{data:compoffs}]=await Promise.all([
-    sb.from('ot_sessions').select('*'),
-    sb.from('comp_off_register').select('*')
-  ]);
+  const fFrom = (document.getElementById('summary-date-from')||{}).value || '';
+  const fTo   = (document.getElementById('summary-date-to')||{}).value   || '';
+  let sQ = sb.from('ot_sessions').select('*');
+  if (fFrom) sQ = sQ.gte('ot_date', fFrom);
+  if (fTo)   sQ = sQ.lte('ot_date', fTo);
+  let cQ = sb.from('comp_off_register').select('*');
+  if (fFrom) cQ = cQ.gte('date_taken', fFrom);
+  if (fTo)   cQ = cQ.lte('date_taken', fTo);
+  const [{data:sessions},{data:compoffs}]=await Promise.all([sQ, cQ]);
   document.getElementById('summary-loading').style.display='none';
+  var noteEl = document.getElementById('summary-period-note');
+  if (noteEl) {
+    if (fFrom || fTo) noteEl.textContent = 'Period: ' + (fFrom || '…') + ' → ' + (fTo || '…');
+    else noteEl.textContent = 'Period: lifetime (all sessions)';
+  }
   const s=calcSummary(sessions||[],compoffs||[],emp);
   const bc=s.balance>0?'green':s.balance<0?'red':'navy';
   document.getElementById('summary-content').innerHTML=

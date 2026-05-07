@@ -429,9 +429,15 @@
     <div class="card">
       <div class="flex-between mb-4">
         <div class="card-title" style="margin-bottom:0">📊 Project Summary</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <select id="pj-sum-year" onchange="renderPjProjectSummary()" style="width:auto;padding:7px 12px"></select>
-        </div>
+        <select id="pj-sum-year" onchange="renderUnifiedTypeSummary('project')" style="width:auto;padding:7px 12px"></select>
+      </div>
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
+        <input type="date" id="pj-sum-from" onchange="renderUnifiedTypeSummary('project')" style="width:auto;padding:6px 8px;font-size:13px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
+        <input type="date" id="pj-sum-to" onchange="renderUnifiedTypeSummary('project')" style="width:auto;padding:6px 8px;font-size:13px">
+        <button class="btn btn-sm btn-ghost" onclick="clearTypeSummaryFilters('project')">✕ Clear dates</button>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">Date range overrides the year picker.</span>
       </div>
       <div id="pj-project-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="pj-project-content"></div>
@@ -445,6 +451,13 @@
         <div class="card-title" style="margin-bottom:0">🎯 POC Summary</div>
         <select id="pj-poc-year" onchange="renderUnifiedTypeSummary('poc')" style="width:auto;padding:7px 12px"></select>
       </div>
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
+        <input type="date" id="pj-poc-from" onchange="renderUnifiedTypeSummary('poc')" style="width:auto;padding:6px 8px;font-size:13px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
+        <input type="date" id="pj-poc-to" onchange="renderUnifiedTypeSummary('poc')" style="width:auto;padding:6px 8px;font-size:13px">
+        <button class="btn btn-sm btn-ghost" onclick="clearTypeSummaryFilters('poc')">✕ Clear dates</button>
+      </div>
       <div id="pj-poc-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="pj-poc-content"></div>
     </div>
@@ -456,6 +469,13 @@
       <div class="flex-between mb-4">
         <div class="card-title" style="margin-bottom:0">🛠️ AMC Summary</div>
         <select id="pj-amc-year" onchange="renderUnifiedTypeSummary('amc')" style="width:auto;padding:7px 12px"></select>
+      </div>
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
+        <input type="date" id="pj-amc-from" onchange="renderUnifiedTypeSummary('amc')" style="width:auto;padding:6px 8px;font-size:13px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
+        <input type="date" id="pj-amc-to" onchange="renderUnifiedTypeSummary('amc')" style="width:auto;padding:6px 8px;font-size:13px">
+        <button class="btn btn-sm btn-ghost" onclick="clearTypeSummaryFilters('amc')">✕ Clear dates</button>
       </div>
       <div id="pj-amc-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="pj-amc-content"></div>
@@ -469,6 +489,13 @@
         <div class="card-title" style="margin-bottom:0">💼 Pre-Sales Summary</div>
         <select id="pj-presales-year" onchange="renderUnifiedTypeSummary('presales')" style="width:auto;padding:7px 12px"></select>
       </div>
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
+        <input type="date" id="pj-presales-from" onchange="renderUnifiedTypeSummary('presales')" style="width:auto;padding:6px 8px;font-size:13px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
+        <input type="date" id="pj-presales-to" onchange="renderUnifiedTypeSummary('presales')" style="width:auto;padding:6px 8px;font-size:13px">
+        <button class="btn btn-sm btn-ghost" onclick="clearTypeSummaryFilters('presales')">✕ Clear dates</button>
+      </div>
       <div id="pj-presales-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="pj-presales-content"></div>
     </div>
@@ -480,6 +507,13 @@
       <div class="flex-between mb-4">
         <div class="card-title" style="margin-bottom:0">👥 Employee Summary</div>
         <select id="pj-emp-year" onchange="renderPjEmployeeSummary()" style="width:auto;padding:7px 12px"></select>
+      </div>
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
+        <input type="date" id="pj-emp-from" onchange="renderPjEmployeeSummary()" style="width:auto;padding:6px 8px;font-size:13px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
+        <input type="date" id="pj-emp-to" onchange="renderPjEmployeeSummary()" style="width:auto;padding:6px 8px;font-size:13px">
+        <button class="btn btn-sm btn-ghost" onclick="clearEmployeeSummaryFilters()">✕ Clear dates</button>
       </div>
       <div id="pj-employee-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="pj-employee-content"></div>
@@ -596,6 +630,14 @@
   <!-- SUMMARY -->
   <div id="pjtab-otsummary" style="display:none">
     <div class="emp-filter" id="summary-emp-filter"></div>
+    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+      <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
+      <input type="date" id="summary-date-from" onchange="renderCurrentSummary()" style="width:auto;padding:6px 8px;font-size:13px">
+      <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
+      <input type="date" id="summary-date-to" onchange="renderCurrentSummary()" style="width:auto;padding:6px 8px;font-size:13px">
+      <button class="btn btn-sm btn-ghost" onclick="clearOTSummaryFilters()">✕ Clear dates</button>
+      <span id="summary-period-note" style="font-size:11px;color:var(--muted);margin-left:auto"></span>
+    </div>
     <div id="summary-loading" class="loading"><div class="spinner"></div>Loading...</div>
     <div id="summary-content"></div>
   </div>
