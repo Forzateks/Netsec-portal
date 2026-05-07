@@ -62,7 +62,7 @@
           </label>
           <a class="login-link" href="#" onclick="showForgotForm();return false">Forgot password?</a>
         </div>
-        <button class="login-btn" onclick="doLogin()"><span>Sign In</span><span class="login-btn-arrow">→</span></button>
+        <button class="login-btn" id="login-signin-btn" onclick="doLogin()"><span>Sign In</span><span class="login-btn-arrow">→</span></button>
       </div>
 
       <!-- Forgot password form -->
@@ -72,7 +72,7 @@
           <input type="email" id="forgot-email" placeholder="you@gulfitd.com">
         </div>
         <p class="login-helper">We'll send a password reset link to your email.</p>
-        <button class="login-btn" onclick="doForgot()">Send Reset Link</button>
+        <button class="login-btn" id="login-forgot-btn" onclick="doForgot()">Send Reset Link</button>
         <button class="login-btn-secondary" onclick="showSigninForm()">← Back to Sign In</button>
       </div>
 
@@ -86,7 +86,7 @@
           <label for="reset-password2">Confirm New Password</label>
           <input type="password" id="reset-password2" placeholder="Re-enter password" autocomplete="new-password">
         </div>
-        <button class="login-btn" onclick="doResetPassword()">Set Password</button>
+        <button class="login-btn" id="login-reset-btn" onclick="doResetPassword()">Set Password</button>
       </div>
 
       <div class="login-foot">© 2026 Gulfit Network Distribution FZC</div>

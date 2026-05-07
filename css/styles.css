@@ -76,6 +76,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .login-btn:active{transform:translateY(0);filter:brightness(.96)}
 .login-btn-arrow{transition:transform .2s ease}
 .login-btn:hover .login-btn-arrow{transform:translateX(3px)}
+.login-btn:disabled,.login-btn.is-loading{cursor:wait;filter:saturate(.65);transform:none !important;box-shadow:0 4px 14px rgba(10,31,92,.18) !important}
+.login-btn:disabled:hover,.login-btn.is-loading:hover{transform:none;filter:saturate(.65)}
+.login-btn-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:white;border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0;vertical-align:middle}
 .login-btn-secondary{width:100%;padding:11px 16px;background:transparent;color:var(--muted);border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;margin-top:10px}
 .login-btn-secondary:hover{border-color:var(--navy);color:var(--navy);background:#fafbfc}
 

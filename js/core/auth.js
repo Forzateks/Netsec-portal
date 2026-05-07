@@ -34,31 +34,63 @@ function showResetForm() {
   document.getElementById('login-sub').textContent = 'Set a new password';
 }
 
+// Toggle a login button into a disabled "loading" state with a spinner +
+// custom label. Returns the button so callers can clear it on error.
+function setLoginBtnLoading(btnId, label) {
+  var btn = document.getElementById(btnId);
+  if (!btn) return null;
+  if (btn.dataset.original == null) btn.dataset.original = btn.innerHTML;
+  btn.disabled = true;
+  btn.classList.add('is-loading');
+  btn.innerHTML = '<span class="login-btn-spinner" aria-hidden="true"></span><span>'+label+'</span>';
+  return btn;
+}
+function clearLoginBtnLoading(btnId) {
+  var btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = false;
+  btn.classList.remove('is-loading');
+  if (btn.dataset.original != null) {
+    btn.innerHTML = btn.dataset.original;
+    delete btn.dataset.original;
+  }
+}
+
 async function doLogin() {
+  var btn = document.getElementById('login-signin-btn');
+  if (btn && btn.disabled) return; // re-entry guard (e.g. Enter pressed while in flight)
   const email    = (document.getElementById('login-email').value||'').trim().toLowerCase();
   const password = document.getElementById('login-password').value;
   const remember = document.getElementById('login-remember').checked;
   if (!email || !password) { showLoginError('Please enter email and password.'); return; }
 
-  const {data, error} = await sb.auth.signInWithPassword({ email: email, password: password });
-  if (error) { showLoginError(error.message || 'Sign in failed.'); return; }
-  if (!data || !data.user) { showLoginError('Sign in failed.'); return; }
+  setLoginBtnLoading('login-signin-btn', 'Signing in…');
+  try {
+    const {data, error} = await sb.auth.signInWithPassword({ email: email, password: password });
+    if (error)               { clearLoginBtnLoading('login-signin-btn'); showLoginError(error.message || 'Sign in failed.'); return; }
+    if (!data || !data.user) { clearLoginBtnLoading('login-signin-btn'); showLoginError('Sign in failed.'); return; }
 
-  // If "Remember me" is unchecked, sign out when window closes.
-  // (Supabase persists by default; this opt-out gives session-scope behavior.)
-  if (!remember) {
-    window.addEventListener('beforeunload', function(){ sb.auth.signOut(); });
+    // If "Remember me" is unchecked, sign out when window closes.
+    if (!remember) {
+      window.addEventListener('beforeunload', function(){ sb.auth.signOut(); });
+    }
+
+    // Keep the button in its loading state — we're transitioning to the app.
+    await initAppFromUser(data.user);
+  } catch (err) {
+    clearLoginBtnLoading('login-signin-btn');
+    showLoginError((err && err.message) || 'Sign in failed.');
   }
-
-  await initAppFromUser(data.user);
 }
 
 async function doForgot() {
   const email = (document.getElementById('forgot-email').value||'').trim().toLowerCase();
   if (!email) { showLoginError('Please enter your email.'); return; }
+  setLoginBtnLoading('login-forgot-btn', 'Sending…');
   const redirectTo = window.location.origin + window.location.pathname;
   const {error} = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirectTo });
-  if (error) { showLoginError(error.message || 'Could not send reset link.'); return; }
+  if (error) { clearLoginBtnLoading('login-forgot-btn'); showLoginError(error.message || 'Could not send reset link.'); return; }
+  clearLoginBtnLoading('login-forgot-btn');
   showLoginSuccess('Reset link sent. Check your email inbox.');
   setTimeout(showSigninForm, 1500);
 }
@@ -68,9 +100,10 @@ async function doResetPassword() {
   const p2 = document.getElementById('reset-password2').value;
   if (p1.length < 8) { showLoginError('Password must be at least 8 characters.'); return; }
   if (p1 !== p2)     { showLoginError('Passwords do not match.'); return; }
+  setLoginBtnLoading('login-reset-btn', 'Saving…');
   const {error} = await sb.auth.updateUser({ password: p1 });
-  if (error) { showLoginError(error.message || 'Could not update password.'); return; }
-  showLoginSuccess('Password set! Signing you in...');
+  if (error) { clearLoginBtnLoading('login-reset-btn'); showLoginError(error.message || 'Could not update password.'); return; }
+  showLoginSuccess('Password set! Signing you in…');
   // After updateUser the session is already active — go straight in.
   const {data} = await sb.auth.getUser();
   if (data && data.user) {
