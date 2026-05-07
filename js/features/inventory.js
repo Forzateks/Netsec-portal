@@ -85,7 +85,8 @@ function applyInventoryFilters() {
 function renderInventoryTable(data) {
   var wrap = document.getElementById('inv-table-wrap');
   if (!data.length) {
-    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📁¦</div><div class="empty-title">No devices found</div><div>Try adjusting your filters</div></div>';
+    wrap.innerHTML = '<div class="empty-state"><i data-lucide="package" class="empty-icon-svg"></i><div class="empty-title">No devices found</div><div>Try adjusting your filters</div></div>';
+    if (typeof renderIcons === 'function') renderIcons();
     return;
   }
   var rows = '';
@@ -170,7 +171,7 @@ async function saveNewDevice() {
     } else {
       alert('Error saving device: ' + res.error.message);
     }
-    btn.disabled = false; btn.textContent = '💾 Save Device'; return;
+    btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Device'; if (typeof renderIcons === 'function') renderIcons(); return;
   }
 
   await sb.from('inventory_activity_log').insert({
@@ -181,7 +182,7 @@ async function saveNewDevice() {
     field_changes: payload,
   });
 
-  btn.disabled = false; btn.textContent = '💾 Save Device';
+  btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Device'; if (typeof renderIcons === 'function') renderIcons();
   showInventoryTab('devices');
   showAlert('inv-add-success');
 }
@@ -260,7 +261,7 @@ async function saveEditDevice() {
   var res = await sb.from('inventory').update(newData).eq('id', _invEditId);
   if (res.error) {
     alert('Error updating device: ' + res.error.message);
-    btn.disabled = false; btn.textContent = '💾 Save Changes'; return;
+    btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Changes'; if (typeof renderIcons === 'function') renderIcons(); return;
   }
 
   if (Object.keys(changes).length > 0) {
@@ -273,7 +274,7 @@ async function saveEditDevice() {
     });
   }
 
-  btn.disabled = false; btn.textContent = '💾 Save Changes';
+  btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Changes'; if (typeof renderIcons === 'function') renderIcons();
   closeEditDeviceModal();
   loadInventory();
 }
@@ -307,7 +308,8 @@ async function loadActivityLog() {
   }
   var data = res.data || [];
   if (!data.length) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📁œ</div><div class="empty-title">No activity yet</div></div>';
+    container.innerHTML = '<div class="empty-state"><i data-lucide="history" class="empty-icon-svg"></i><div class="empty-title">No activity yet</div></div>';
+    if (typeof renderIcons === 'function') renderIcons();
     return;
   }
 

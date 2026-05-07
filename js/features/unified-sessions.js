@@ -241,7 +241,7 @@ async function saveUnifiedSession() {
 
   var res = await sb.from('unified_sessions').insert(payload).select().single();
   if (res.error) {
-    btn.disabled = false; btn.innerHTML = '💾 Save Session';
+    btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Session'; if (typeof renderIcons === 'function') renderIcons();
     return fail('Save failed: ' + res.error.message);
   }
   var unifiedId = res.data.id;
@@ -282,7 +282,7 @@ async function saveUnifiedSession() {
     }
   }
 
-  btn.disabled = false; btn.innerHTML = '💾 Save Session';
+  btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Session'; if (typeof renderIcons === 'function') renderIcons();
 
   // Reset form
   ['us-info','us-stake','us-remarks','us-start','us-end'].forEach(function(id){
@@ -635,8 +635,9 @@ async function renderEngagementSummary() {
 
   if (!rows.length) {
     document.getElementById('pj-eng-content').innerHTML =
-      '<div class="empty-state"><div class="empty-icon">📊</div>'+
+      '<div class="empty-state"><i data-lucide="bar-chart-3" class="empty-icon-svg"></i>'+
       '<div class="empty-title">No '+esc2(typeLabel)+' sessions in this period</div></div>';
+    if (typeof renderIcons === 'function') renderIcons();
     return;
   }
 
@@ -808,7 +809,8 @@ async function renderUnifiedTypeSummary(typeKey) {
 
   if (!rows.length) {
     document.getElementById(ui.content).innerHTML =
-      '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No '+typeKey.toUpperCase()+' sessions for '+year+'</div></div>';
+      '<div class="empty-state"><i data-lucide="bar-chart-3" class="empty-icon-svg"></i><div class="empty-title">No '+typeKey.toUpperCase()+' sessions for '+year+'</div></div>';
+    if (typeof renderIcons === 'function') renderIcons();
     return;
   }
 

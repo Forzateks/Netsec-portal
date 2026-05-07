@@ -181,6 +181,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 
    Submit Article, Log Session). Add class="btn btn-primary btn-block" to
    the button to opt in. */
 .btn-block{width:100%;justify-content:center}
+/* Inline Lucide icon inside a button label. Sized at 16px to sit cleanly
+   on the text baseline; stroke-width 2 matches the sidebar icon weight. */
+.btn-icon{width:16px;height:16px;stroke-width:2;display:inline-block;vertical-align:middle;margin-right:7px;flex-shrink:0}
+/* Empty-state Lucide icon — replaces the big emoji glyphs in empty cards. */
+.empty-icon-svg{width:42px;height:42px;stroke-width:1.5;display:inline-block;color:#9CA3AF;margin-bottom:12px}
 input[readonly]{background:#f9fafb;color:var(--muted)}
 .preview-box{background:linear-gradient(135deg,#f8faff,#eef4ff);border:1.5px solid #c7d7f5;border-radius:10px;padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
 .preview-item{text-align:center}

@@ -255,7 +255,8 @@ async function renderManageProjects() {
   const rows = data || [];
   if (!rows.length) {
     document.getElementById('pj-manage-content').innerHTML =
-      '<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-title">No engagements found</div></div>';
+      '<div class="empty-state"><i data-lucide="folder-open" class="empty-icon-svg"></i><div class="empty-title">No engagements found</div></div>';
+    if (typeof renderIcons === 'function') renderIcons();
     return;
   }
 

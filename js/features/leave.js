@@ -132,7 +132,7 @@ async function submitLeaveRequest() {
     employee:currentUser,start_date:start,end_date:end,working_days:days,
     reason,status:'pending',leave_type:ltype
   });
-  btn.disabled=false; btn.innerHTML='📁¤ Submit Request';
+  btn.disabled=false; btn.innerHTML='<i data-lucide="send" class="btn-icon"></i>Submit Request'; if (typeof renderIcons === 'function') renderIcons();
   if (error){
     if (emailWindow) try { emailWindow.close(); } catch(e){}
     alert('Error: '+error.message); return;
@@ -217,7 +217,7 @@ async function submitCompOffViaLeaveForm(ltype) {
     employee:currentUser, request_date:date, type:typeLabel,
     days, related_activity:'', remarks:reason, status:'pending'
   });
-  btn.disabled=false; btn.innerHTML='📤 Submit Request';
+  btn.disabled=false; btn.innerHTML='<i data-lucide="send" class="btn-icon"></i>Submit Request'; if (typeof renderIcons === 'function') renderIcons();
   if (error){
     if (emailWindow) try { emailWindow.close(); } catch(e){}
     alert('Error: '+error.message); return;

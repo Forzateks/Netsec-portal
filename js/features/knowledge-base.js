@@ -59,7 +59,8 @@ function kbCatClass(cat) {
 function renderKBArticles(data) {
   var wrap = document.getElementById('kb-articles-wrap');
   if (!data.length) {
-    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-title">No articles found</div><div>Be the first to submit one!</div></div>';
+    wrap.innerHTML='<div class="empty-state"><i data-lucide="folder-open" class="empty-icon-svg"></i><div class="empty-title">No articles found</div><div>Be the first to submit one!</div></div>';
+    if (typeof renderIcons === 'function') renderIcons();
     return;
   }
   var cards = data.map(function(a) {
@@ -130,7 +131,7 @@ async function submitKBArticle() {
     file_url:document.getElementById('kb-url').value.trim()||null,
     submitted_by:currentUser
   });
-  btn.disabled=false; btn.textContent='📁¤ Publish Article';
+  btn.disabled=false; btn.innerHTML='<i data-lucide="send" class="btn-icon"></i>Publish Article'; if (typeof renderIcons === 'function') renderIcons();
   if (error){alert('Error: '+error.message);return;}
   showAlert('kb-submit-success');
   resetKBForm();
@@ -143,7 +144,8 @@ async function loadMyKBArticles() {
   var {data,error}=await sb.from('kb_articles').select('*').eq('submitted_by',currentUser).order('created_at',{ascending:false});
   if (error){wrap.innerHTML='<div class="alert alert-error show">Error: '+error.message+'</div>';return;}
   if (!data||!data.length){
-    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-title">No articles yet</div><div>Submit your first article!</div></div>';
+    wrap.innerHTML='<div class="empty-state"><i data-lucide="folder-open" class="empty-icon-svg"></i><div class="empty-title">No articles yet</div><div>Submit your first article!</div></div>';
+    if (typeof renderIcons === 'function') renderIcons();
     return;
   }
   // Update _kbData so openKBArticle works from My Articles tab
@@ -196,7 +198,7 @@ async function saveKBEdit() {
     file_url:document.getElementById('kb-edit-url').value.trim()||null,
     updated_at:new Date().toISOString()
   }).eq('id',id);
-  btn.disabled=false; btn.textContent='💾 Save';
+  btn.disabled=false; btn.innerHTML='<i data-lucide="save" class="btn-icon"></i>Save'; if (typeof renderIcons === 'function') renderIcons();
   if (error){alert('Error: '+error.message);return;}
   closeKBEditModal();
   refreshKBViews();

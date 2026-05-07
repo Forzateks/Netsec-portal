@@ -211,7 +211,7 @@
 <div id="backup-banner" style="display:none;background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-bottom:1px solid #F59E0B;padding:10px 16px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
   <div style="font-size:13px;color:#92400E;font-weight:500">⚠️ Weekly backup is due — last backup was over 7 days ago.</div>
   <div style="display:flex;gap:8px">
-    <button class="btn btn-sm" style="background:#F59E0B;color:white;border:none" onclick="downloadBackup(this)">💾 Download Backup Now</button>
+    <button class="btn btn-sm" style="background:#F59E0B;color:white;border:none" onclick="downloadBackup(this)"><i data-lucide="download" class="btn-icon"></i>Download Backup Now</button>
     <button class="btn btn-sm btn-ghost" onclick="dismissBackup()" style="font-size:12px">Dismiss</button>
   </div>
 </div>
@@ -261,7 +261,7 @@
         <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Used This Year</div><div style="font-size:22px;font-weight:700;color:var(--navy);font-family:DM Mono,monospace" id="lv-prev-used">—</div></div>
         <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Balance After</div><div style="font-size:22px;font-weight:700;font-family:DM Mono,monospace" id="lv-prev-bal">—</div></div>
       </div>
-      <button class="btn btn-primary btn-block" id="lv-save-btn" onclick="submitLeaveRequest()">📤 Submit Request</button>
+      <button class="btn btn-primary btn-block" id="lv-save-btn" onclick="submitLeaveRequest()"><i data-lucide="send" class="btn-icon"></i>Submit Request</button>
     </div>
   </div>
 
@@ -364,16 +364,16 @@
       </div>
       <div style="background:linear-gradient(135deg,#f8faff,#eef4ff);border:1.5px solid #c7d7f5;border-radius:10px;padding:16px;margin-top:16px">
         <div style="display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px;align-items:center">
-          <div style="color:var(--muted);font-weight:600">📁 Total</div>
+          <div style="color:var(--muted);font-weight:600;display:inline-flex;align-items:center;gap:8px"><i data-lucide="clock-3" style="width:14px;height:14px;stroke-width:2"></i>Total</div>
           <div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--navy)" id="us-preview-total">—</div>
-          <div style="color:var(--muted);font-weight:600">🏢 Office</div>
+          <div style="color:var(--muted);font-weight:600;display:inline-flex;align-items:center;gap:8px"><i data-lucide="building-2" style="width:14px;height:14px;stroke-width:2"></i>Office</div>
           <div style="font-family:'DM Mono',monospace;font-weight:700" id="us-preview-office">—</div>
-          <div style="color:var(--muted);font-weight:600">⏱ OT detected</div>
+          <div style="color:var(--muted);font-weight:600;display:inline-flex;align-items:center;gap:8px"><i data-lucide="timer" style="width:14px;height:14px;stroke-width:2"></i>OT detected</div>
           <div id="us-preview-ot" style="font-family:'DM Mono',monospace;font-weight:700;color:var(--gold)">—</div>
         </div>
       </div>
       <div style="margin-top:20px">
-        <button class="btn btn-primary btn-block" id="us-save-btn" onclick="saveUnifiedSession()">💾 Save Session</button>
+        <button class="btn btn-primary btn-block" id="us-save-btn" onclick="saveUnifiedSession()"><i data-lucide="save" class="btn-icon"></i>Save Session</button>
       </div>
     </div>
   </div>
@@ -482,7 +482,7 @@
           <label>New Customer Name *</label>
           <input type="text" id="cust-new-name" placeholder="e.g. Etisalat" onkeydown="if(event.key==='Enter')addCustomer()">
         </div>
-        <button class="btn btn-primary" onclick="addCustomer()">💾 Add Customer</button>
+        <button class="btn btn-primary" onclick="addCustomer()"><i data-lucide="plus" class="btn-icon"></i>Add Customer</button>
       </div>
       <div id="cust-list-content" style="display:flex;flex-wrap:wrap;gap:8px"></div>
     </div>
@@ -519,7 +519,7 @@
           </select>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="addEngagement()">💾 Add Engagement</button>
+      <button class="btn btn-primary" onclick="addEngagement()"><i data-lucide="plus" class="btn-icon"></i>Add Engagement</button>
     </div>
     <div class="card">
       <div class="flex-between mb-4">
@@ -550,7 +550,7 @@
     <div class="card">
       <div class="flex-between mb-4">
         <div class="card-title" style="margin-bottom:0">OT Sessions</div>
-        <button class="btn btn-sm btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn btn-sm btn-ghost" onclick="exportCSV()"><i data-lucide="download" class="btn-icon"></i>Export CSV</button>
       </div>
       <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
         <span class="manager-only-el" style="display:flex;align-items:center;gap:6px">
@@ -788,7 +788,7 @@
         </select>
       </div>
       <div style="display:flex;align-items:flex-end">
-        <button class="btn btn-sm btn-ghost" onclick="exportInventoryCSV()">⬇ Export CSV</button>
+        <button class="btn btn-sm btn-ghost" onclick="exportInventoryCSV()"><i data-lucide="download" class="btn-icon"></i>Export CSV</button>
       </div>
     </div>
 
@@ -887,7 +887,7 @@
         </div>
       </div>
       <div style="display:flex;gap:10px">
-        <button class="btn btn-primary" id="inv-add-save-btn" onclick="saveNewDevice()">💾 Save Device</button>
+        <button class="btn btn-primary" id="inv-add-save-btn" onclick="saveNewDevice()"><i data-lucide="save" class="btn-icon"></i>Save Device</button>
         <button class="btn btn-ghost" onclick="resetAddDeviceForm()">Clear</button>
       </div>
     </div>
@@ -973,7 +973,7 @@
         </div>
       </div>
       <div style="display:flex;gap:10px">
-        <button class="btn btn-primary" id="kb-submit-btn" onclick="submitKBArticle()">📤 Publish Article</button>
+        <button class="btn btn-primary" id="kb-submit-btn" onclick="submitKBArticle()"><i data-lucide="send" class="btn-icon"></i>Publish Article</button>
         <button class="btn btn-ghost" onclick="resetKBForm()">Clear</button>
       </div>
     </div>
@@ -1059,7 +1059,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeKBEditModal()">Cancel</button>
-      <button class="btn btn-primary" id="kb-edit-save-btn" onclick="saveKBEdit()">💾 Save</button>
+      <button class="btn btn-primary" id="kb-edit-save-btn" onclick="saveKBEdit()"><i data-lucide="save" class="btn-icon"></i>Save</button>
     </div>
   </div>
 </div>
@@ -1145,7 +1145,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeEditDeviceModal()">Cancel</button>
-      <button class="btn btn-primary" id="inv-edit-save-btn" onclick="saveEditDevice()">💾 Save Changes</button>
+      <button class="btn btn-primary" id="inv-edit-save-btn" onclick="saveEditDevice()"><i data-lucide="save" class="btn-icon"></i>Save Changes</button>
     </div>
   </div>
 </div>
@@ -1197,7 +1197,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeEditOT()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEditOT()">💾 Save Changes</button>
+      <button class="btn btn-primary" onclick="saveEditOT()"><i data-lucide="save" class="btn-icon"></i>Save Changes</button>
     </div>
   </div>
 </div>

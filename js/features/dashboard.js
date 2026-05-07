@@ -177,7 +177,7 @@ async function renderEmployeeDashboard() {
     html += '</tbody></table></div>';
   } else {
     html += '<div class="dash-empty">'+
-      '<div class="dash-empty-icon">⏱</div>'+
+      '<i data-lucide="clock" class="empty-icon-svg"></i>'+
       '<div class="dash-empty-title">No OT logged yet</div>'+
       '<div class="dash-empty-sub">When you put in extra hours, log them here so they count toward your comp off.</div>'+
       '<button class="btn btn-primary" onclick="showScreen(\'projects\');showProjectTab(\'uslog\')">Log a session</button>'+
@@ -186,6 +186,7 @@ async function renderEmployeeDashboard() {
   html += '</div>';
 
   document.getElementById('dash-content').innerHTML = html;
+  if (typeof renderIcons === 'function') renderIcons();
 }
 
 // == MANAGER DASHBOARD ============================================
@@ -286,7 +287,7 @@ async function renderManagerDashboard() {
   html += '<div class="card"><div class="card-title">Quick Actions</div>'+
     '<div class="quick-actions-wrap">'+
     '<button class="btn btn-primary" onclick="showScreen(\'approvals\')">Review Approvals'+(teamPending>0?' <span class="badge badge-pending" style="margin-left:6px">'+teamPending+'</span>':'')+'</button>'+
-    '<button class="btn btn-ghost" onclick="backupExcel(\'all\')">⬇ Run Backup</button>'+
+    '<button class="btn btn-ghost" onclick="backupExcel(\'all\')"><i data-lucide="download" class="btn-icon"></i>Run Backup</button>'+
     '<button class="btn btn-ghost" onclick="showScreen(\'projects\');showProjectTab(\'manage\')">Manage Projects</button>'+
     '</div></div>';
 
@@ -343,7 +344,7 @@ async function renderManagerDashboard() {
   html += '<div class="card"><div class="card-title">What\'s happening this week</div>';
   if (topFeed.length === 0) {
     html += '<div class="dash-empty">'+
-      '<div class="dash-empty-icon">🌤</div>'+
+      '<i data-lucide="coffee" class="empty-icon-svg"></i>'+
       '<div class="dash-empty-title">Quiet week</div>'+
       '<div class="dash-empty-sub">No OT submissions, leave starts, or session logs in the last 7 days.</div>'+
     '</div>';
@@ -357,8 +358,8 @@ async function renderManagerDashboard() {
     '<div class="card-title">Reports &amp; Backup</div>'+
     '<div style="font-size:13px;color:var(--muted);margin-bottom:14px">Download the full database snapshot, the monthly OT report, or a single-table export.</div>'+
     '<div class="dash-backup-row">'+
-      '<button class="btn btn-primary" onclick="backupExcel(\'all\')">⬇ Full Backup (all sheets)</button>'+
-      '<button class="btn btn-ghost" id="monthly-report-btn" onclick="downloadMonthlyReport()">📄 Monthly OT Report</button>'+
+      '<button class="btn btn-primary" onclick="backupExcel(\'all\')"><i data-lucide="download" class="btn-icon"></i>Full Backup (all sheets)</button>'+
+      '<button class="btn btn-ghost" id="monthly-report-btn" onclick="downloadMonthlyReport()"><i data-lucide="file-text" class="btn-icon"></i>Monthly OT Report</button>'+
     '</div>'+
     '<details class="dash-backup-details">'+
       '<summary>Export a specific section</summary>'+
@@ -375,6 +376,7 @@ async function renderManagerDashboard() {
     '</div>';
 
   document.getElementById('dash-content').innerHTML = html;
+  if (typeof renderIcons === 'function') renderIcons();
 }
 
 // == EXCEL BACKUP =================================================

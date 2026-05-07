@@ -208,7 +208,7 @@ async function downloadBackup(btnEl) {
     const banner = document.getElementById('backup-banner');
     if (banner) banner.style.display='none';
     btn.textContent = '✅ Downloaded!';
-    setTimeout(function(){ btn.textContent='💾 Download Backup Now'; btn.disabled=false; }, 2000);
+    setTimeout(function(){ btn.innerHTML='<i data-lucide="download" class="btn-icon"></i>Download Backup Now'; btn.disabled=false; if (typeof renderIcons === 'function') renderIcons(); }, 2000);
 
   } catch(e) {
     btn.textContent = '❌ Error';

@@ -34,7 +34,8 @@ async function renderOTApprovals() {
   const {data,error}=await q;
   document.getElementById('ot-approvals-load').style.display='none';
   if (error||!data||!data.length){
-    document.getElementById('ot-approvals-content').innerHTML='<div class="empty-state"><div class="empty-icon">⏱</div><div class="empty-title">No OT sessions match the filters</div></div>';
+    document.getElementById('ot-approvals-content').innerHTML='<div class="empty-state"><i data-lucide="clock" class="empty-icon-svg"></i><div class="empty-title">No OT sessions match the filters</div></div>';
+    if (typeof renderIcons === 'function') renderIcons();
     return;
   }
   const pending=data.filter(function(r){return r.status==='pending';});

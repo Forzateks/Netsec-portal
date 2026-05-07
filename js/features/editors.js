@@ -96,6 +96,6 @@ async function downloadMonthlyReport() {
   var a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
   a.download='GulfIT_OT_Report_'+monthName+'_'+reportYear+'.csv'; a.click();
-  if (btn){btn.disabled=false;btn.innerHTML='📁„ Monthly OT Report';}
+  if (btn){btn.disabled=false;btn.innerHTML='<i data-lucide="file-text" class="btn-icon"></i>Monthly OT Report'; if (typeof renderIcons === 'function') renderIcons();}
 }
 
