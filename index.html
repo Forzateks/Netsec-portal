@@ -594,6 +594,12 @@
 
   <!-- MANAGER VIEW -->
   <div id="pjtab-otmanager" style="display:none">
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">All Employees — OT &amp; Comp Off Summary</div>
+      <div id="manager-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div id="manager-content"></div>
+    </div>
+
     <div class="card" style="margin-bottom:16px;border-left:3px solid var(--gold);background:#FFFBEB">
       <div class="card-title" style="margin-bottom:6px">⚙️ Policy Recompute (one-time)</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
@@ -651,11 +657,6 @@
         <button class="btn btn-danger-solid" onclick="purgeOldArchived()">🗑 Purge &gt; 1 Year</button>
       </div>
       <div id="purge-result" style="margin-top:14px;display:none;font-size:13px"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">All Employees — OT & Comp Off Summary</div>
-      <div id="manager-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <div id="manager-content"></div>
     </div>
   </div>
 
