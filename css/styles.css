@@ -226,10 +226,18 @@ input[readonly]{background:#f9fafb;color:var(--muted)}
 .table-wrap-top-scroll::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#0089b4,var(--teal));background-clip:content-box;border:2px solid #eef2f7}
 .table-wrap-top-scroll-spacer{height:1px}
 table{width:100%;border-collapse:collapse;font-size:13px}
+/* Sticky header so the column labels stay visible while scrolling long tables. */
+thead{position:sticky;top:0;z-index:2}
 th{background:#f8fafc;padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
 td{padding:10px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
-tr:hover td{background:#fafbff}tr:last-child td{border-bottom:none}
-.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+tr:hover td{background:#F8FAFC;cursor:default}tr:last-child td{border-bottom:none}
+/* Numeric / right-aligned cells — pair .num on td and th for consistent edge. */
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+/* Muted placeholder for empty values rendered as "—" or "-". */
+.dim{color:#9CA3AF}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
+/* Status badges keep the pill shape — they read as notifications, not categories. */
+.badge-pending,.badge-approved,.badge-rejected{border-radius:20px;padding:3px 8px}
 .badge-Eve{background:#EFF6FF;color:var(--eve)}.badge-Early{background:#ECFDF5;color:var(--early)}
 .badge-Mid{background:#F5F3FF;color:var(--mid)}.badge-Wknd{background:#FFFBEB;color:var(--wknd)}
 .badge-Day{background:#F9FAFB;color:var(--day)}.badge-12{background:#FFFBEB;color:var(--gold)}
