@@ -9,8 +9,10 @@
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
 /* ── LOGIN SCREEN ── */
-.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,#1a3a7a 100%)}
-.login-card{background:white;border-radius:20px;padding:40px;width:90%;max-width:380px;box-shadow:0 24px 60px rgba(0,0,0,0.3);text-align:center}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,#1a3a7a 100%);position:relative;overflow:hidden}
+.login-bg-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none}
+.login-bg-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,31,92,.78) 0%,rgba(10,31,92,.55) 60%,rgba(0,160,210,.45) 100%);z-index:1;pointer-events:none}
+.login-card{background:white;border-radius:20px;padding:40px;width:90%;max-width:380px;box-shadow:0 24px 60px rgba(0,0,0,0.3);text-align:center;position:relative;z-index:2}
 .login-logo{width:60px;height:60px;background:var(--teal);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;margin:0 auto 16px}
 .login-title{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:4px}
 .login-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
