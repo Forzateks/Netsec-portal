@@ -21,6 +21,49 @@ function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
 function statusIcon(s){return s==='approved'?'✅':s==='rejected'?'❌':'🟡';}
 function esc2(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
+// Attach a synced horizontal scrollbar above a .table-wrap so users don't
+// have to scroll to the bottom of a long table to find the native scrollbar.
+// No-op when the inner table fits without overflow.
+function attachTopScroll(wrap) {
+  if (!wrap) return;
+  var inner = wrap.querySelector('table');
+  if (!inner) return;
+  var sw = inner.scrollWidth;
+  var cw = wrap.clientWidth;
+
+  // Existing top mirror? Resize its spacer (e.g. after a re-render or filter).
+  var prev = wrap.previousElementSibling;
+  if (prev && prev.classList && prev.classList.contains('table-wrap-top-scroll')) {
+    if (sw <= cw + 4) { prev.parentNode.removeChild(prev); return; }
+    if (prev.firstElementChild) prev.firstElementChild.style.width = sw + 'px';
+    return;
+  }
+
+  // Only add when the table actually overflows
+  if (sw <= cw + 4) return;
+
+  var top = document.createElement('div');
+  top.className = 'table-wrap-top-scroll';
+  var spacer = document.createElement('div');
+  spacer.className = 'table-wrap-top-scroll-spacer';
+  spacer.style.width = sw + 'px';
+  top.appendChild(spacer);
+  wrap.parentNode.insertBefore(top, wrap);
+
+  // Two-way sync with re-entrancy guard
+  var lock = false;
+  top.addEventListener('scroll', function(){
+    if (lock) return; lock = true;
+    wrap.scrollLeft = top.scrollLeft;
+    requestAnimationFrame(function(){ lock = false; });
+  });
+  wrap.addEventListener('scroll', function(){
+    if (lock) return; lock = true;
+    top.scrollLeft = wrap.scrollLeft;
+    requestAnimationFrame(function(){ lock = false; });
+  });
+}
+
 
 
 // == WEEKLY BACKUP ================================================

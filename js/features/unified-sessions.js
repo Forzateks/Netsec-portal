@@ -358,6 +358,11 @@ async function renderUSSessions() {
       '</td>'+
       '</tr>';
   }).join('');
+  // Synced top horizontal scrollbar so the user can scroll the wide table
+  // without having to scroll the page to find the bottom scrollbar.
+  if (typeof attachTopScroll === 'function') {
+    requestAnimationFrame(function(){ attachTopScroll(document.getElementById('us-sess-table')); });
+  }
 }
 
 function clearUSFilters() {

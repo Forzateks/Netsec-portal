@@ -378,6 +378,9 @@ async function renderSessions() {
     '<td style="white-space:nowrap">'+((isManager||s.employee===currentUser)?'<button class="btn btn-sm btn-ghost" onclick="openEditOT('+s.id+',\''+s.employee+'\',\''+esc2(s.activity)+'\',\''+s.ot_date+'\',\''+s.start_time+'\',\''+s.end_time+'\',\''+esc2(s.customer_name||'')+'\',\''+esc2(s.project_name||'')+'\',\''+esc2(s.activity_type||'')+'\')" style="margin-right:4px">✏️</button>':'')+(isManager?'<button class="btn btn-sm btn-danger" onclick="deleteSession('+s.id+')">✕</button>':'')+'</td></tr>';
   }).join('');
   window._sessionsData=data;
+  if (typeof attachTopScroll === 'function') {
+    requestAnimationFrame(function(){ attachTopScroll(document.getElementById('sessions-table')); });
+  }
 }
 
 async function deleteSession(id) {
