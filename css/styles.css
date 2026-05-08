@@ -608,6 +608,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-status-completed{background:#EDE9FE;color:#5B21B6}
 .trk-status-on-demand-request{background:#F3F4F6;color:#374151}
 .trk-status-pilot{background:#FFE4E6;color:#9F1239}
+.trk-status-budgetary-phase{background:#FFEDD5;color:#9A3412}
+.trk-status-ended{background:#E5E7EB;color:#1F2937}
+.trk-status-cancelled{background:#FEE2E2;color:#991B1B}
+.trk-status-lost{background:#FFE4E6;color:#831843}
 
 .trk-detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 18px}
 .trk-field{padding:10px 12px;background:#F8FAFC;border-radius:8px;border:1px solid #EEF2F7}
