@@ -5,8 +5,8 @@
 const SESSION_TYPE_BADGES = {
   project:  { bg: '#EFF6FF', color: '#2563EB', label: '📁 Project' },
   poc:      { bg: '#F5F3FF', color: '#7C3AED', label: '🎯 POC' },
-  amc:      { bg: '#FFFBEB', color: '#B45309', label: '🛠️ AMC' },
-  presales: { bg: '#FDF2F8', color: '#BE185D', label: '💼 Pre-Sales' },
+  amc:      { bg: '#FFFBEB', color: '#B45309', label: '🛠️ Support/AMC' },
+  presales: { bg: '#FDF2F8', color: '#BE185D', label: '💼 Pre-Sales-Task' },
   internal: { bg: '#F3F4F6', color: '#6B7280', label: '🔧 Internal' },
 };
 
@@ -630,7 +630,7 @@ async function renderEngagementSummary() {
   document.getElementById('pj-eng-loading').style.display = 'none';
   var rows = res.data || [];
 
-  var TYPE_LABELS = { project:'Project', poc:'POC', amc:'AMC', presales:'Pre-Sales' };
+  var TYPE_LABELS = { project:'Project', poc:'POC', amc:'Support/AMC', presales:'Pre-Sales-Task' };
   var typeLabel   = typeKey==='all' ? 'Engagement' : TYPE_LABELS[typeKey] || typeKey;
 
   if (!rows.length) {
@@ -676,13 +676,13 @@ async function renderEngagementSummary() {
   var TYPE_BADGE = {
     project:  '<span class="badge" style="background:#EFF6FF;color:#2563EB">PROJECT</span>',
     poc:      '<span class="badge" style="background:#F5F3FF;color:#7C3AED">POC</span>',
-    amc:      '<span class="badge" style="background:#FFFBEB;color:#B45309">AMC</span>',
-    presales: '<span class="badge" style="background:#FDF2F8;color:#BE185D">PRE-SALES</span>'
+    amc:      '<span class="badge" style="background:#FFFBEB;color:#B45309">SUPPORT/AMC</span>',
+    presales: '<span class="badge" style="background:#FDF2F8;color:#BE185D">PRE-SALES-TASK</span>'
   };
 
   var tableRows = sorted.map(function(name){
     var d = byEng[name];
-    var cleanName = name.replace(/ · (Project|POC|AMC|Pre-Sales)$/, '');
+    var cleanName = name.replace(/ · (Project|POC|Support\/AMC|Pre-Sales-Task)$/, '');
     var memberBreakdown = Object.keys(d.members).map(function(m){
       var label = (typeof empShortName === 'function') ? empShortName(m) : m.split(' ')[0];
       return '<span class="badge" style="background:#f0f4ff;color:var(--navy);margin:1px">'+label+': '+r2(d.members[m])+'h</span>';
@@ -700,7 +700,7 @@ async function renderEngagementSummary() {
 
   var PIE_COLORS = ['#0A1F5C','#00A0D2','#C8A832','#3B82F6','#10B981','#8B5CF6','#F59E0B','#EF4444'];
   var pieData = sorted.slice(0,8).map(function(name,i){
-    var clean = name.replace(/ · (Project|POC|AMC|Pre-Sales)$/, '');
+    var clean = name.replace(/ · (Project|POC|Support\/AMC|Pre-Sales-Task)$/, '');
     return { label: clean, value: byEng[name].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
   });
   var custPieData = sortedCust.slice(0,8).map(function(cust,i){
@@ -726,14 +726,14 @@ async function renderEngagementSummary() {
           '<div style="display:flex;height:28px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f1f5f9">'+
             seg('project',  '#2563EB','Project')+
             seg('poc',      '#7C3AED','POC')+
-            seg('amc',      '#B45309','AMC')+
-            seg('presales', '#BE185D','Pre-Sales')+
+            seg('amc',      '#B45309','Support/AMC')+
+            seg('presales', '#BE185D','Pre-Sales-Task')+
           '</div>'+
           '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--muted)">'+
             '<span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Project '+r2(byType.project)+'h</span>'+
             '<span><span style="display:inline-block;width:10px;height:10px;background:#7C3AED;border-radius:2px;margin-right:6px;vertical-align:middle"></span>POC '+r2(byType.poc)+'h</span>'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:6px;vertical-align:middle"></span>AMC '+r2(byType.amc)+'h</span>'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#BE185D;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Pre-Sales '+r2(byType.presales)+'h</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Support/AMC '+r2(byType.amc)+'h</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#BE185D;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Pre-Sales-Task '+r2(byType.presales)+'h</span>'+
           '</div>'+
         '</div>';
     }
@@ -768,8 +768,8 @@ async function renderUnifiedTypeSummary(typeKey) {
   var ids = {
     project:  { year: 'pj-sum-year',      from: 'pj-sum-from',      to: 'pj-sum-to',      loading: 'pj-project-loading',  content: 'pj-project-content',  heading: 'Project' },
     poc:      { year: 'pj-poc-year',      from: 'pj-poc-from',      to: 'pj-poc-to',      loading: 'pj-poc-loading',      content: 'pj-poc-content',      heading: 'POC Engagements' },
-    amc:      { year: 'pj-amc-year',      from: 'pj-amc-from',      to: 'pj-amc-to',      loading: 'pj-amc-loading',      content: 'pj-amc-content',      heading: 'AMC Engagements' },
-    presales: { year: 'pj-presales-year', from: 'pj-presales-from', to: 'pj-presales-to', loading: 'pj-presales-loading', content: 'pj-presales-content', heading: 'Pre-Sales Engagements' },
+    amc:      { year: 'pj-amc-year',      from: 'pj-amc-from',      to: 'pj-amc-to',      loading: 'pj-amc-loading',      content: 'pj-amc-content',      heading: 'Support/AMC Engagements' },
+    presales: { year: 'pj-presales-year', from: 'pj-presales-from', to: 'pj-presales-to', loading: 'pj-presales-loading', content: 'pj-presales-content', heading: 'Pre-Sales-Task Engagements' },
   };
   var ui = ids[typeKey];
   if (!ui) return;

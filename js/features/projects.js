@@ -269,8 +269,8 @@ async function renderManageProjects() {
   const TYPE_BADGES = {
     'project':  {bg:'#EFF6FF',color:'#2563EB',label:'PROJECT'},
     'poc':      {bg:'#F5F3FF',color:'#7C3AED',label:'POC'},
-    'amc':      {bg:'#FFFBEB',color:'#B45309',label:'AMC'},
-    'presales': {bg:'#FDF2F8',color:'#BE185D',label:'PRE-SALES'},
+    'amc':      {bg:'#FFFBEB',color:'#B45309',label:'SUPPORT/AMC'},
+    'presales': {bg:'#FDF2F8',color:'#BE185D',label:'PRE-SALES-TASK'},
   };
 
   var custById = {}; (CUSTOMERS||[]).forEach(function(c){ custById[c.id] = c.name; });
@@ -598,7 +598,7 @@ async function renderPjEmployeeSummary() {
     buildPieChart(EMPLOYEES.map(function(e){ return {label:empShortName(e),value:empData[e].sessions,color:empColor(e)}; }).filter(function(d){return d.value>0;}),'')+
     '</div></div>'+
     '<div class="table-wrap"><table>'+
-    '<thead><tr><th>Employee</th><th>Sessions</th><th>Total</th><th>📁 Project</th><th>🎯 POC</th><th>🛠️ AMC</th><th>💼 Pre-Sales</th><th>🔧 Internal</th><th>Working Days</th><th>Top Engagements</th></tr></thead>'+
+    '<thead><tr><th>Employee</th><th>Sessions</th><th>Total</th><th>📁 Project</th><th>🎯 POC</th><th>🛠️ Support/AMC</th><th>💼 Pre-Sales-Task</th><th>🔧 Internal</th><th>Working Days</th><th>Top Engagements</th></tr></thead>'+
     '<tbody>'+tableRows+
     '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>-</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+r2(totalHours)+'h</td>'+
