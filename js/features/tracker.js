@@ -6,9 +6,47 @@
 var _trkData      = [];
 var _trkActiveTab = 'all';   // 'all' | 'projects' | 'pocs'
 
+// Type-aware status options. Projects flow through delivery phases (HLD →
+// LLD → Pilot Sites Rollout → Migration → KT → Sign-off) so the project
+// status set mirrors the activity types + a few terminal states. POCs follow
+// a simpler sales-cycle vocabulary.
+var TRK_PROJECT_STATUSES = [
+  'Yet to start','Kick-off',
+  'HLD Discussion','HLD Documentation',
+  'LLD Discussion','LLD Documentation',
+  'Initial Configuration','Pilot Sites Rollout',
+  'Migration','KT / Training','As-Built Documentation','Troubleshooting',
+  'Ongoing','Onhold','Budgetary Phase','On demand request',
+  'Completed','Ended','Cancelled','Lost'
+];
+var TRK_POC_STATUSES = [
+  'Yet to start','Initial Phase','Ongoing','Pilot','Onhold',
+  'Budgetary Phase','On demand request',
+  'Completed','Ended','Cancelled','Lost'
+];
+function trkStatusesFor(type) {
+  if (type === 'project') return TRK_PROJECT_STATUSES.slice();
+  if (type === 'poc')     return TRK_POC_STATUSES.slice();
+  // 'all' (or unspecified) → union, preserving project ordering first
+  var seen = {};
+  var union = [];
+  TRK_PROJECT_STATUSES.concat(TRK_POC_STATUSES).forEach(function(s){
+    if (!seen[s]) { seen[s] = 1; union.push(s); }
+  });
+  return union;
+}
+
 function showTrackerTab(tab) {
   _trkActiveTab = tab;
   setSidebarSubActive('tracker', tab);
+  // Refresh the status filter so its option list matches the tab. Selection
+  // values that aren't valid for the new type are dropped automatically by
+  // msInit's validity filter.
+  if (typeof msInit === 'function' && document.getElementById('trk-filter-status')) {
+    var items = trkStatusesFor(tab === 'projects' ? 'project' : (tab === 'pocs' ? 'poc' : 'all'))
+      .map(function(v){return {value:v,label:v};});
+    msInit('trk-filter-status', items, applyTrackerFilters);
+  }
   renderTracker();
 }
 
@@ -60,11 +98,11 @@ function populateTrackerFilters() {
   msInit('trk-filter-country', toItems(countries), applyTrackerFilters);
   msInit('trk-filter-partner', toItems(partners),  applyTrackerFilters);
   msInit('trk-filter-owner',   toItems(owners),    applyTrackerFilters);
-  // Status is a fixed enum.
-  msInit('trk-filter-status', [
-    'Yet to start','Initial Phase','Ongoing','Pilot','Onhold',
-    'Budgetary Phase','On demand request','Completed','Ended','Cancelled','Lost'
-  ].map(function(v){return {value:v,label:v};}), applyTrackerFilters);
+  // Status options change with the active tab — see showTrackerTab.
+  var typeKey = _trkActiveTab === 'projects' ? 'project' : (_trkActiveTab === 'pocs' ? 'poc' : 'all');
+  msInit('trk-filter-status',
+    trkStatusesFor(typeKey).map(function(v){return {value:v,label:v};}),
+    applyTrackerFilters);
 }
 
 function clearTrackerFilters() {
@@ -84,7 +122,7 @@ function _trkFilteredRows() {
   var statuses  = msGetValues('trk-filter-status');
   var owners    = msGetValues('trk-filter-owner');
 
-  return _trkData.filter(function(r){
+  var filtered = _trkData.filter(function(r){
     if (_trkActiveTab === 'projects' && r.type !== 'project') return false;
     if (_trkActiveTab === 'pocs'     && r.type !== 'poc')     return false;
     if (countries.length && countries.indexOf(r.country)        === -1) return false;
@@ -98,6 +136,42 @@ function _trkFilteredRows() {
     }
     return true;
   });
+
+  // Active engagements bubble to the top so day-to-day work is visible
+  // first; concluded/dormant rows fall below. Within each band we keep the
+  // tracker_updated_at-desc order from the initial fetch.
+  var activeStatusOrder = {
+    'Ongoing': 0,
+    'Pilot Sites Rollout': 1,
+    'Migration': 2,
+    'KT / Training': 3,
+    'Initial Configuration': 4,
+    'HLD Documentation': 5, 'HLD Discussion': 5,
+    'LLD Documentation': 6, 'LLD Discussion': 6,
+    'As-Built Documentation': 7,
+    'Troubleshooting': 8,
+    'Kick-off': 9,
+    'Initial Phase': 10,
+    'Pilot': 11,
+    'Yet to start': 20,
+    'Onhold': 21,
+    'Budgetary Phase': 22,
+    'On demand request': 23,
+    'Completed': 50,
+    'Ended': 51,
+    'Cancelled': 52,
+    'Lost': 53
+  };
+  filtered.sort(function(a,b){
+    var ao = activeStatusOrder[a.tracker_status] != null ? activeStatusOrder[a.tracker_status] : 99;
+    var bo = activeStatusOrder[b.tracker_status] != null ? activeStatusOrder[b.tracker_status] : 99;
+    if (ao !== bo) return ao - bo;
+    // Same band → most recently updated first
+    var at = a.tracker_updated_at ? new Date(a.tracker_updated_at).getTime() : 0;
+    var bt = b.tracker_updated_at ? new Date(b.tracker_updated_at).getTime() : 0;
+    return bt - at;
+  });
+  return filtered;
 }
 
 function trkStatusBadge(s) {
@@ -333,12 +407,25 @@ function _trkGet(id) {
 function _trkDateOrNull(v) { return v ? v : null; }
 function _trkTextOrNull(v) { var t = (v||'').trim(); return t || null; }
 
+function _trkPopulateStatusOptions(type) {
+  var sel = document.getElementById('trk-edit-tracker-status');
+  if (!sel) return;
+  var current = sel.value;
+  var html = '<option value="">— None —</option>';
+  trkStatusesFor(type).forEach(function(v){
+    html += '<option>'+esc2(v)+'</option>';
+  });
+  sel.innerHTML = html;
+  sel.value = current;
+}
+
 function openTrackerEditModal(id) {
   if (!isManager) { alert('Manager access only.'); return; }
   var r = _trkData.find(function(x){return x.id===id;});
   if (!r) return;
   closeTrackerDetail();
   _trkPopulateOwnerOptions();
+  _trkPopulateStatusOptions(r.type);
 
   document.getElementById('trk-edit-title').textContent    = r.name || 'Edit Engagement';
   document.getElementById('trk-edit-subtitle').textContent =
