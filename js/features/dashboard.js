@@ -217,7 +217,11 @@ async function renderManagerDashboard() {
     // Sessions this week (last 7 days)
     sb.from('unified_sessions').select('id,employee,team_members,session_date,total_hours,engagement_name').gte('session_date', sevenAgo),
     // Recent OT submissions for activity feed (last 7 days)
-    sb.from('ot_sessions').select('id,employee,ot_date,credited_hours,band,activity,status,created_at').gte('created_at', sevenAgo+'T00:00:00').order('created_at',{ascending:false})
+    sb.from('ot_sessions').select('id,employee,ot_date,credited_hours,band,activity,status,created_at').gte('created_at', sevenAgo+'T00:00:00').order('created_at',{ascending:false}),
+    // Engagements with license expiry in the past or within 30 days
+    sb.from('engagements').select('id,name,type,license_expiry,customer_id').not('license_expiry','is',null).lte('license_expiry', thirtyAhead).order('license_expiry',{ascending:true}),
+    // Customers (for license banner display name lookup)
+    sb.from('customers').select('id,name')
   ]);
   var coPending = (results[0].data||[]).length;
   var lvPending = (results[1].data||[]).length;
@@ -230,6 +234,9 @@ async function renderManagerDashboard() {
   var activeProjects = results[5].data || [];
   var weekSessions = results[6].data || [];
   var recentOT = results[7].data || [];
+  var expiringEngagements = results[8].data || [];
+  var custMap = {};
+  (results[9].data||[]).forEach(function(c){ custMap[c.id] = c.name; });
 
   var shortName = function(emp) {
     return (typeof empShortName === 'function') ? empShortName(emp) : (emp||'').split(' ')[0];
@@ -241,6 +248,51 @@ async function renderManagerDashboard() {
       '<h2>'+greet+', '+firstName+'</h2>'+
       '<div class="dash-hero-date">'+todayLabel+'</div>'+
     '</div></div>';
+
+  // === LICENSE EXPIRY BANNER ===
+  if (expiringEngagements.length) {
+    var nExpired = 0, nSoon = 0;
+    var rowsHtml = expiringEngagements.map(function(e){
+      var d = Math.floor((new Date(e.license_expiry) - new Date(todayISO+'T00:00:00')) / 86400000);
+      var customer = custMap[e.customer_id] || '';
+      var dayLabel, severity;
+      if (d < 0)        { dayLabel = 'expired ' + Math.abs(d) + ' day' + (Math.abs(d)===1?'':'s') + ' ago'; severity='expired'; nExpired++; }
+      else if (d === 0) { dayLabel = 'expires today'; severity='expired'; nExpired++; }
+      else              { dayLabel = 'expires in ' + d + ' day' + (d===1?'':'s'); severity='soon'; nSoon++; }
+      var typeBadge = (e.type==='poc')?'<span class="lic-type lic-type-poc">POC</span>':'<span class="lic-type lic-type-project">Project</span>';
+      return '<div class="lic-row lic-'+severity+'" onclick="openEngagementInTracker('+e.id+')">'+
+        '<div class="lic-row-main">'+
+          typeBadge+
+          '<div class="lic-row-text">'+
+            '<div class="lic-row-name">'+esc2(e.name)+'</div>'+
+            (customer ? '<div class="lic-row-cust">'+esc2(customer)+'</div>' : '')+
+          '</div>'+
+        '</div>'+
+        '<div class="lic-row-meta">'+
+          '<div class="lic-row-days">'+dayLabel+'</div>'+
+          '<div class="lic-row-date num">'+fmtDate(e.license_expiry)+'</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+
+    var headerCls = nExpired ? 'lic-banner-expired' : 'lic-banner-soon';
+    var headline = nExpired
+      ? (nExpired+' license'+(nExpired===1?'':'s')+' expired'+(nSoon?' · '+nSoon+' more expiring soon':''))
+      : (nSoon+' license'+(nSoon===1?'':'s')+' expiring within 30 days');
+    var icon = nExpired ? 'alert-triangle' : 'alarm-clock';
+
+    html += '<div class="lic-banner '+headerCls+'">'+
+      '<div class="lic-banner-head">'+
+        '<i data-lucide="'+icon+'" class="lic-banner-icon"></i>'+
+        '<div class="lic-banner-text">'+
+          '<div class="lic-banner-title">License Renewal Required</div>'+
+          '<div class="lic-banner-sub">'+headline+'</div>'+
+        '</div>'+
+        '<button class="btn btn-sm btn-ghost" onclick="showScreen(\'tracker\')" style="margin-left:auto"><i data-lucide="external-link" class="btn-icon"></i>Open Tracker</button>'+
+      '</div>'+
+      '<div class="lic-rows">'+rowsHtml+'</div>'+
+    '</div>';
+  }
 
   // === PENDING APPROVALS HERO CARD ===
   if (teamPending > 0) {

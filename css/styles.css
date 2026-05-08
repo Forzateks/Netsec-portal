@@ -615,6 +615,43 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-field-value{font-size:13px;color:#1F2937;font-weight:500;word-break:break-word}
 .trk-remarks-block{margin-top:14px;padding:14px;background:#FFFBEB;border-left:3px solid var(--gold);border-radius:6px}
 
+/* License expiry banner (manager dashboard) */
+.lic-banner{border-radius:12px;padding:14px 16px;margin-bottom:16px;border:1px solid;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.lic-banner-expired{background:linear-gradient(135deg,#FEF2F2,#FEE2E2);border-color:#FCA5A5}
+.lic-banner-soon{background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-color:#FCD34D}
+.lic-banner-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.lic-banner-icon{width:24px;height:24px;stroke-width:2;flex-shrink:0}
+.lic-banner-expired .lic-banner-icon{color:#B91C1C}
+.lic-banner-soon .lic-banner-icon{color:#B45309}
+.lic-banner-text{flex:1;min-width:0}
+.lic-banner-title{font-size:14px;font-weight:700;color:var(--navy);line-height:1.2}
+.lic-banner-sub{font-size:12px;font-weight:500;margin-top:2px}
+.lic-banner-expired .lic-banner-sub{color:#991B1B}
+.lic-banner-soon .lic-banner-sub{color:#92400E}
+
+.lic-rows{display:flex;flex-direction:column;gap:6px}
+.lic-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(255,255,255,.7);border:1px solid rgba(0,0,0,.06);border-radius:8px;cursor:pointer;transition:background .15s,border-color .15s}
+.lic-row:hover{background:#fff;border-color:rgba(0,0,0,.12)}
+.lic-row-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.lic-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:3px 7px;border-radius:4px;white-space:nowrap}
+.lic-type-poc{background:#FEF3C7;color:#92400E}
+.lic-type-project{background:#DBEAFE;color:#1E3A8A}
+.lic-row-text{flex:1;min-width:0}
+.lic-row-name{font-size:13px;font-weight:600;color:var(--navy);word-break:break-word}
+.lic-row-cust{font-size:11px;color:var(--muted);margin-top:1px}
+.lic-row-meta{text-align:right;flex-shrink:0}
+.lic-row-days{font-size:12px;font-weight:600;line-height:1.2}
+.lic-row-date{font-size:11px;color:var(--muted);margin-top:2px}
+.lic-expired .lic-row-days{color:#B91C1C}
+.lic-soon .lic-row-days{color:#B45309}
+
+@media(max-width:640px){
+  .lic-row{padding:8px 10px}
+  .lic-row-name{font-size:12px}
+  .lic-row-meta{text-align:right}
+  .lic-banner-head{gap:8px}
+}
+
 /* Milestones */
 .trk-ms-progress{padding:12px 14px;background:linear-gradient(135deg,#F0F9FF,#E0F2FE);border:1px solid #BAE6FD;border-radius:10px;margin-bottom:14px}
 .trk-ms-progress-text{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px}

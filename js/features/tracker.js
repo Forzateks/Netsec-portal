@@ -292,6 +292,16 @@ function closeTrackerDetail() {
   document.getElementById('trk-detail-modal').classList.remove('show');
 }
 
+// Open the tracker screen and immediately surface a specific engagement's
+// detail modal — used by the dashboard license-expiry banner.
+async function openEngagementInTracker(id) {
+  showScreen('tracker');
+  // showScreen kicks off loadTracker but doesn't return its promise; await
+  // a fresh load here so _trkData is populated before opening the modal.
+  await loadTracker();
+  openTrackerDetail(id);
+}
+
 // ── EDIT MODAL ─────────────────────────────────────────────────────
 
 function _trkPopulateOwnerOptions() {
