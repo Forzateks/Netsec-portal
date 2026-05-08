@@ -303,7 +303,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .dash-hero-pill-arrow{transition:transform .2s;font-weight:700}
 .dash-hero-pill:hover .dash-hero-pill-arrow{transform:translateX(2px)}
 
-.dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.dash-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
 .stat-unit{font-size:14px;font-weight:500;color:var(--muted);margin-left:2px;font-family:'DM Sans',sans-serif}
 .stat-bar{height:4px;background:#f1f5f9;border-radius:2px;overflow:hidden;margin:10px 0 6px}
 .stat-bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),#5ad1ff);border-radius:2px;transition:width .4s ease}
@@ -332,6 +332,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .dash-backup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
 .dash-backup-grid .btn{width:100%;justify-content:center}
 
+@media(max-width:1100px){
+  .dash-stats{grid-template-columns:repeat(3,1fr)}
+}
 @media(max-width:880px){
   .dash-stats{grid-template-columns:1fr 1fr}
 }
@@ -618,6 +621,34 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-field-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
 .trk-field-value{font-size:13px;color:#1F2937;font-weight:500;word-break:break-word}
 .trk-remarks-block{margin-top:14px;padding:14px;background:#FFFBEB;border-left:3px solid var(--gold);border-radius:6px}
+
+/* POC conversion insights (manager dashboard) */
+.poc-insights-card{margin-bottom:16px}
+.poc-mini-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+.poc-mini{padding:12px 14px;background:#F8FAFC;border:1px solid var(--border);border-radius:8px}
+.poc-mini-rate{background:linear-gradient(135deg,#F0F9FF,#E0F2FE);border-color:#BAE6FD}
+.poc-mini-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.poc-mini-value{font-size:22px;font-weight:700;color:var(--navy);font-family:'DM Mono',monospace;line-height:1.1}
+
+.poc-insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.poc-insight-block{background:white;border:1px solid var(--border);border-radius:8px;padding:12px}
+.poc-insight-head{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px;display:flex;align-items:baseline;gap:8px}
+.poc-insight-table{width:100%;border-collapse:collapse}
+.poc-insight-table thead th{background:#F8FAFC;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
+.poc-insight-table tbody td{padding:8px 10px;border-bottom:1px solid #F1F5F9;font-size:12px}
+.poc-insight-table tbody tr:last-child td{border-bottom:none}
+
+@media(max-width:1100px){
+  .poc-mini-stats{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:880px){
+  .poc-insight-grid{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .poc-mini-stats{grid-template-columns:1fr 1fr;gap:8px}
+  .poc-mini{padding:10px}
+  .poc-mini-value{font-size:18px}
+}
 
 /* License expiry banner (manager dashboard) */
 .lic-banner{border-radius:12px;padding:14px 16px;margin-bottom:16px;border:1px solid;box-shadow:0 1px 3px rgba(15,23,42,.04)}

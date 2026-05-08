@@ -212,8 +212,8 @@ async function renderManagerDashboard() {
     sb.from('ot_sessions').select('credited_hours,employee').eq('status','approved').gte('ot_date', monthStart),
     // Upcoming approved leave in next 30 days
     sb.from('annual_leave').select('employee,start_date,end_date,working_days,reason').gte('start_date', todayISO).lte('start_date', thirtyAhead),
-    // Active engagements
-    sb.from('engagements').select('id,name,status').eq('status','active'),
+    // All non-archived engagements (split into active projects/POCs + POC outcomes downstream)
+    sb.from('engagements').select('id,name,type,status,tracker_status,partner,country').neq('status','archived'),
     // Sessions this week (last 7 days)
     sb.from('unified_sessions').select('id,employee,team_members,session_date,total_hours,engagement_name').gte('session_date', sevenAgo),
     // Recent OT submissions for activity feed (last 7 days)
@@ -231,7 +231,9 @@ async function renderManagerDashboard() {
   var teamOTHrs = (results[3].data||[]).reduce(function(a,r){return a+parseFloat(r.credited_hours||0);},0);
   var upcomingLeaves = results[4].data || [];
   var upcomingLeaveDays = upcomingLeaves.reduce(function(a,r){return a+parseFloat(r.working_days||0);},0);
-  var activeProjects = results[5].data || [];
+  var allEngagements = results[5].data || [];
+  var activeProjects = allEngagements.filter(function(e){return e.type==='project' && e.status==='active';});
+  var activePocs     = allEngagements.filter(function(e){return e.type==='poc'     && e.status==='active';});
   var weekSessions = results[6].data || [];
   var recentOT = results[7].data || [];
   var expiringEngagements = results[8].data || [];
@@ -327,13 +329,105 @@ async function renderManagerDashboard() {
     '<div class="stat-card teal"><div class="stat-label">Leave next 30 days</div>'+
       '<div class="stat-value">'+fmtNum(upcomingLeaveDays)+'</div>'+
       '<div class="stat-sub">'+upcomingLeaves.length+' approved request'+(upcomingLeaves.length===1?'':'s')+'</div></div>'+
-    '<div class="stat-card green"><div class="stat-label">Active Projects</div>'+
+    '<div class="stat-card green" style="cursor:pointer" onclick="showScreen(\'tracker\');showTrackerTab(\'projects\')"><div class="stat-label">Active Projects</div>'+
       '<div class="stat-value">'+fmtNum(activeProjects.length)+'</div>'+
-      '<div class="stat-sub">engagements in flight</div></div>'+
+      '<div class="stat-sub">in flight</div></div>'+
+    '<div class="stat-card mid" style="cursor:pointer" onclick="showScreen(\'tracker\');showTrackerTab(\'pocs\')"><div class="stat-label">Active POCs</div>'+
+      '<div class="stat-value">'+fmtNum(activePocs.length)+'</div>'+
+      '<div class="stat-sub">in flight</div></div>'+
     '<div class="stat-card eve"><div class="stat-label">Sessions this week</div>'+
       '<div class="stat-value">'+fmtNum(weekSessions.length)+'</div>'+
       '<div class="stat-sub">logged in last 7 days</div></div>'+
     '</div>';
+
+  // === POC CONVERSION INSIGHTS ===
+  // Group POCs by partner / region and compute won/lost/win-rate using
+  // tracker_status. Won = Completed; Lost = Lost/Cancelled/Ended; rest is
+  // "in progress" and excluded from the rate calculation.
+  var pocsAll = allEngagements.filter(function(e){return e.type==='poc';});
+  var isWon  = function(s){return s==='Completed';};
+  var isLost = function(s){return s==='Lost' || s==='Cancelled' || s==='Ended';};
+  var pocWon = pocsAll.filter(function(p){return isWon(p.tracker_status);}).length;
+  var pocLost = pocsAll.filter(function(p){return isLost(p.tracker_status);}).length;
+  var pocConcluded = pocWon + pocLost;
+  var pocInProgress = pocsAll.length - pocConcluded;
+  var winRate = pocConcluded ? Math.round(pocWon/pocConcluded*100) : null;
+
+  function groupPocs(key) {
+    var map = {};
+    pocsAll.forEach(function(p){
+      var k = (p[key] || '').trim() || 'Unknown';
+      if (!map[k]) map[k] = {name:k, total:0, won:0, lost:0, ip:0};
+      map[k].total++;
+      if (isWon(p.tracker_status))      map[k].won++;
+      else if (isLost(p.tracker_status)) map[k].lost++;
+      else                               map[k].ip++;
+    });
+    return Object.keys(map).map(function(k){
+      var g = map[k];
+      g.concluded = g.won + g.lost;
+      g.rate = g.concluded ? Math.round(g.won/g.concluded*100) : null;
+      return g;
+    }).sort(function(a,b){
+      // Sort by total desc, then win rate desc as tiebreaker
+      if (b.total !== a.total) return b.total - a.total;
+      return (b.rate||0) - (a.rate||0);
+    });
+  }
+
+  function rateColor(r) {
+    if (r === null || r === undefined) return 'var(--muted)';
+    if (r >= 70) return '#059669';
+    if (r >= 40) return '#D97706';
+    return '#DC2626';
+  }
+
+  function pocBreakdownTable(rows, label, max) {
+    if (!rows.length) return '';
+    var top = rows.slice(0, max||5);
+    var body = top.map(function(g){
+      var rateLbl = g.rate==null ? '<span class="dim">—</span>'
+                                 : '<span style="color:'+rateColor(g.rate)+';font-weight:600">'+g.rate+'%</span>';
+      return '<tr>'+
+        '<td style="font-weight:600;color:var(--navy)">'+esc2(g.name)+'</td>'+
+        '<td class="num">'+g.total+'</td>'+
+        '<td class="num" style="color:#059669">'+g.won+'</td>'+
+        '<td class="num" style="color:#DC2626">'+g.lost+'</td>'+
+        '<td class="num">'+g.ip+'</td>'+
+        '<td class="num">'+rateLbl+'</td>'+
+      '</tr>';
+    }).join('');
+    return '<div class="poc-insight-block">'+
+      '<div class="poc-insight-head">'+label+' <span class="dim" style="font-weight:400;font-size:11px">(top '+top.length+' of '+rows.length+')</span></div>'+
+      '<div class="table-wrap"><table class="poc-insight-table">'+
+        '<thead><tr><th>Name</th><th class="num">POCs</th><th class="num">Won</th><th class="num">Lost</th><th class="num">In&nbsp;Prog</th><th class="num">Rate</th></tr></thead>'+
+        '<tbody>'+body+'</tbody>'+
+      '</table></div>'+
+    '</div>';
+  }
+
+  if (pocsAll.length) {
+    html += '<div class="card poc-insights-card">'+
+      '<div class="flex-between mb-4" style="flex-wrap:wrap;gap:8px">'+
+        '<div class="card-title" style="margin-bottom:0">POC Conversion Insights</div>'+
+        '<button class="btn btn-sm btn-ghost" onclick="showScreen(\'tracker\');showTrackerTab(\'pocs\')"><i data-lucide="external-link" class="btn-icon"></i>Open POC List</button>'+
+      '</div>'+
+      '<div class="poc-mini-stats">'+
+        '<div class="poc-mini"><div class="poc-mini-label">Total POCs</div><div class="poc-mini-value num">'+pocsAll.length+'</div></div>'+
+        '<div class="poc-mini"><div class="poc-mini-label">Won</div><div class="poc-mini-value num" style="color:#059669">'+pocWon+'</div></div>'+
+        '<div class="poc-mini"><div class="poc-mini-label">Lost</div><div class="poc-mini-value num" style="color:#DC2626">'+pocLost+'</div></div>'+
+        '<div class="poc-mini"><div class="poc-mini-label">In Progress</div><div class="poc-mini-value num">'+pocInProgress+'</div></div>'+
+        '<div class="poc-mini poc-mini-rate"><div class="poc-mini-label">Win Rate</div>'+
+          '<div class="poc-mini-value num" style="color:'+rateColor(winRate)+'">'+(winRate==null?'—':(winRate+'%'))+'</div>'+
+          '<div class="dim" style="font-size:10px">of '+pocConcluded+' concluded</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="poc-insight-grid">'+
+        pocBreakdownTable(groupPocs('partner'), 'By Partner', 6)+
+        pocBreakdownTable(groupPocs('country'), 'By Region', 6)+
+      '</div>'+
+    '</div>';
+  }
 
   // === MANAGER QUICK ACTIONS ===
   html += '<div class="card"><div class="card-title">Quick Actions</div>'+
