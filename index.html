@@ -745,6 +745,89 @@
   <div id="trk-content"></div>
 </div>
 
+<!-- TRACKER EDIT MODAL (manager only) -->
+<div class="modal-overlay" id="trk-edit-modal">
+  <div class="modal" style="max-width:760px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px">
+      <div style="flex:1;min-width:0">
+        <div class="modal-title" id="trk-edit-title" style="margin-bottom:2px;word-break:break-word">Edit Engagement</div>
+        <div id="trk-edit-subtitle" style="font-size:12px;color:var(--muted)"></div>
+      </div>
+      <button class="btn btn-ghost" onclick="closeTrackerEditModal()" style="font-size:18px;padding:4px 10px">×</button>
+    </div>
+    <input type="hidden" id="trk-edit-id">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Country</label>
+        <input type="text" id="trk-edit-country" placeholder="UAE / KSA / Oman / Kenya...">
+      </div>
+      <div class="form-group">
+        <label>Partner</label>
+        <input type="text" id="trk-edit-partner" placeholder="Alpha Data / GULFIT / HelpAG...">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" id="trk-edit-category" placeholder="SDWAN / SASE / WANOP">
+      </div>
+      <div class="form-group">
+        <label>Project Order No.</label>
+        <input type="text" id="trk-edit-project-order-no">
+      </div>
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" id="trk-edit-start-date">
+      </div>
+      <div class="form-group">
+        <label>End Date</label>
+        <input type="date" id="trk-edit-end-date">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="trk-edit-tracker-status" onchange="onTrackerStatusChange()">
+          <option value="">— None —</option>
+          <option>Initial Phase</option>
+          <option>Ongoing</option>
+          <option>Pilot</option>
+          <option>Onhold</option>
+          <option>On demand request</option>
+          <option>Completed</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Owner</label>
+        <select id="trk-edit-owner">
+          <option value="">— None —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Orch. Version</label>
+        <input type="text" id="trk-edit-orch-version">
+      </div>
+      <div class="form-group">
+        <label>EC Version</label>
+        <input type="text" id="trk-edit-ec-version">
+      </div>
+      <div class="form-group">
+        <label>License Expiry</label>
+        <input type="date" id="trk-edit-license-expiry">
+      </div>
+      <div class="form-group">
+        <label>Sign Off Date</label>
+        <input type="date" id="trk-edit-signed-off-on" onchange="onTrackerSignOffChange()">
+      </div>
+      <div class="form-group full">
+        <label>Remarks</label>
+        <textarea id="trk-edit-remarks" rows="5" placeholder="Latest status notes..."></textarea>
+      </div>
+    </div>
+    <div id="trk-edit-info" style="display:none;margin-top:8px;padding:10px 12px;background:#EDE9FE;border-left:3px solid #7C3AED;border-radius:6px;font-size:12px;color:#5B21B6"></div>
+    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+      <button class="btn btn-primary" id="trk-edit-save-btn" onclick="saveTrackerEdit()"><i data-lucide="save" class="btn-icon"></i>Save Changes</button>
+      <button class="btn btn-ghost" onclick="closeTrackerEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- TRACKER DETAIL MODAL -->
 <div class="modal-overlay" id="trk-detail-modal">
   <div class="modal" style="max-width:720px">

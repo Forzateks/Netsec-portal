@@ -279,7 +279,7 @@ function openTrackerDetail(id) {
     '<div class="trk-detail-grid">'+fieldHtml+'</div>'+
     remarksHtml +
     '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">'+
-      (isManager ? '<button class="btn btn-ghost" onclick="alert(\'Edit form coming in Phase 4.\')"><i data-lucide="pencil" class="btn-icon"></i>Edit</button>' : '')+
+      (isManager ? '<button class="btn btn-primary" onclick="openTrackerEditModal('+r.id+')"><i data-lucide="pencil" class="btn-icon"></i>Edit</button>' : '')+
       '<button class="btn btn-ghost" onclick="alert(\'Milestones coming in Phase 5.\')"><i data-lucide="list-checks" class="btn-icon"></i>Milestones</button>'+
       '<button class="btn btn-ghost" onclick="closeTrackerDetail()" style="margin-left:auto">Close</button>'+
     '</div>';
@@ -290,4 +290,135 @@ function openTrackerDetail(id) {
 
 function closeTrackerDetail() {
   document.getElementById('trk-detail-modal').classList.remove('show');
+}
+
+// ── EDIT MODAL ─────────────────────────────────────────────────────
+
+function _trkPopulateOwnerOptions() {
+  var sel = document.getElementById('trk-edit-owner');
+  if (!sel) return;
+  var current = sel.value;
+  var html = '<option value="">— None —</option>';
+  (typeof EMPLOYEES !== 'undefined' ? EMPLOYEES : []).forEach(function(e){
+    html += '<option value="'+esc2(e)+'">'+esc2(e)+'</option>';
+  });
+  sel.innerHTML = html;
+  sel.value = current;
+}
+
+function _trkSet(id, val) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.value = (val == null) ? '' : val;
+}
+function _trkGet(id) {
+  var el = document.getElementById(id);
+  return el ? el.value : '';
+}
+function _trkDateOrNull(v) { return v ? v : null; }
+function _trkTextOrNull(v) { var t = (v||'').trim(); return t || null; }
+
+function openTrackerEditModal(id) {
+  if (!isManager) { alert('Manager access only.'); return; }
+  var r = _trkData.find(function(x){return x.id===id;});
+  if (!r) return;
+  closeTrackerDetail();
+  _trkPopulateOwnerOptions();
+
+  document.getElementById('trk-edit-title').textContent    = r.name || 'Edit Engagement';
+  document.getElementById('trk-edit-subtitle').textContent =
+    (r.customer_name||'—') + ' · ' + (r.type||'').toUpperCase();
+  _trkSet('trk-edit-id',                String(r.id));
+  _trkSet('trk-edit-country',           r.country);
+  _trkSet('trk-edit-partner',           r.partner);
+  _trkSet('trk-edit-category',          r.category);
+  _trkSet('trk-edit-project-order-no',  r.project_order_no);
+  _trkSet('trk-edit-start-date',        r.start_date);
+  _trkSet('trk-edit-end-date',          r.end_date);
+  _trkSet('trk-edit-tracker-status',    r.tracker_status);
+  _trkSet('trk-edit-owner',             r.owner_employee);
+  _trkSet('trk-edit-orch-version',      r.orch_version);
+  _trkSet('trk-edit-ec-version',        r.ec_version);
+  _trkSet('trk-edit-license-expiry',    r.license_expiry);
+  _trkSet('trk-edit-signed-off-on',     r.signed_off_on);
+  _trkSet('trk-edit-remarks',           r.tracker_remarks);
+  document.getElementById('trk-edit-info').style.display = 'none';
+
+  document.getElementById('trk-edit-modal').classList.add('show');
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+function closeTrackerEditModal() {
+  document.getElementById('trk-edit-modal').classList.remove('show');
+}
+
+// Show a hint when status 'Completed' or sign-off date is set, since both
+// auto-flip the engagement.status field to 'completed' on save.
+function _trkRefreshAutoCompleteHint() {
+  var status   = _trkGet('trk-edit-tracker-status');
+  var signedOn = _trkGet('trk-edit-signed-off-on');
+  var box = document.getElementById('trk-edit-info');
+  if (!box) return;
+  if (status === 'Completed' || signedOn) {
+    box.style.display = 'block';
+    box.innerHTML = '<i data-lucide="info" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>'+
+      'Saving will mark this engagement as <strong>Completed</strong> across the app (status flips to <code>completed</code>).';
+    if (typeof renderIcons === 'function') renderIcons();
+  } else {
+    box.style.display = 'none';
+  }
+}
+function onTrackerStatusChange() { _trkRefreshAutoCompleteHint(); }
+function onTrackerSignOffChange() {
+  // If user picks a sign-off date and status isn't already Completed, prefill
+  // the status select so the intent is explicit before saving.
+  if (_trkGet('trk-edit-signed-off-on') && _trkGet('trk-edit-tracker-status') !== 'Completed') {
+    _trkSet('trk-edit-tracker-status', 'Completed');
+  }
+  _trkRefreshAutoCompleteHint();
+}
+
+async function saveTrackerEdit() {
+  if (!isManager) { alert('Manager access only.'); return; }
+  var btn = document.getElementById('trk-edit-save-btn');
+  var id  = parseInt(_trkGet('trk-edit-id'), 10);
+  if (!id) { alert('Missing engagement id.'); return; }
+
+  var trackerStatus = _trkGet('trk-edit-tracker-status');
+  var signedOn      = _trkGet('trk-edit-signed-off-on');
+
+  var patch = {
+    country:           _trkTextOrNull(_trkGet('trk-edit-country')),
+    partner:           _trkTextOrNull(_trkGet('trk-edit-partner')),
+    category:          _trkTextOrNull(_trkGet('trk-edit-category')),
+    project_order_no:  _trkTextOrNull(_trkGet('trk-edit-project-order-no')),
+    start_date:        _trkDateOrNull(_trkGet('trk-edit-start-date')),
+    end_date:          _trkDateOrNull(_trkGet('trk-edit-end-date')),
+    tracker_status:    trackerStatus || null,
+    orch_version:      _trkTextOrNull(_trkGet('trk-edit-orch-version')),
+    ec_version:        _trkTextOrNull(_trkGet('trk-edit-ec-version')),
+    license_expiry:    _trkDateOrNull(_trkGet('trk-edit-license-expiry')),
+    signed_off_on:     _trkDateOrNull(signedOn),
+    owner_employee:    _trkTextOrNull(_trkGet('trk-edit-owner')),
+    tracker_remarks:   _trkTextOrNull(_trkGet('trk-edit-remarks')),
+    tracker_updated_at: new Date().toISOString()
+  };
+
+  // Sign-off OR tracker_status='Completed' flips engagement.status to
+  // 'completed' across the app (engagement summary, dropdowns, dashboards).
+  if (trackerStatus === 'Completed' || signedOn) {
+    patch.status = 'completed';
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Saving…';
+  var { error } = await sb.from('engagements').update(patch).eq('id', id);
+  btn.disabled = false;
+  btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Changes';
+  if (typeof renderIcons === 'function') renderIcons();
+
+  if (error) { alert('Error saving: ' + error.message); return; }
+
+  closeTrackerEditModal();
+  await loadTracker();
 }

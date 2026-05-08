@@ -386,11 +386,15 @@ async function backupExcel(scope) {
   var wb = XLSX.utils.book_new();
 
   async function addSheet(name, table, orderBy) {
-    var q = sb.from(table).select('*');
-    if (orderBy) q = q.order(orderBy, {ascending: false});
-    var {data, error} = await q;
-    if (error) { console.error('Backup error for '+table+':', error); return; }
-    var rows = data || [];
+    // Paginate through 1000-row chunks so large tables (unified_sessions,
+    // ot_sessions, project_sessions) export in full.
+    var res = await fetchAllRows(function(){
+      var q = sb.from(table).select('*');
+      if (orderBy) q = q.order(orderBy, {ascending: false});
+      return q;
+    });
+    if (res.error) { console.error('Backup error for '+table+':', res.error); return; }
+    var rows = res.data || [];
     var ws;
     if (rows.length) {
       ws = XLSX.utils.json_to_sheet(rows);
@@ -402,7 +406,8 @@ async function backupExcel(scope) {
 
   var jobs = [];
   if (scope === 'all' || scope === 'ot_sessions')      jobs.push(addSheet('OT Sessions',      'ot_sessions',      'ot_date'));
-  if (scope === 'all' || scope === 'project_sessions') jobs.push(addSheet('Project Sessions', 'project_sessions', 'session_date'));
+  if (scope === 'all' || scope === 'project_sessions') jobs.push(addSheet('Project Sessions', 'unified_sessions', 'session_date'));
+  if (scope === 'all' || scope === 'project_sessions') jobs.push(addSheet('Project Sessions (legacy)', 'project_sessions', 'session_date'));
   if (scope === 'all' || scope === 'inventory')        jobs.push(addSheet('Inventory',        'inventory',        'serial_number'));
   if (scope === 'all' || scope === 'inventory')        jobs.push(addSheet('Inventory Activity Log', 'inventory_activity_log', 'changed_at'));
   if (scope === 'all' || scope === 'leave')            jobs.push(addSheet('Leave Requests',   'leave_requests',   'created_at'));
@@ -411,7 +416,9 @@ async function backupExcel(scope) {
   if (scope === 'all' || scope === 'comp_off')         jobs.push(addSheet('Comp Off Register','comp_off_register','date_taken'));
   if (scope === 'all' || scope === 'kb_articles')      jobs.push(addSheet('Knowledge Base',   'kb_articles',      'created_at'));
   if (scope === 'all' || scope === 'directory')        jobs.push(addSheet('Customers',        'customers',        'name'));
-  if (scope === 'all' || scope === 'directory')        jobs.push(addSheet('Projects',         'projects',         'name'));
+  if (scope === 'all' || scope === 'directory')        jobs.push(addSheet('Engagements',      'engagements',      'name'));
+  if (scope === 'all' || scope === 'directory')        jobs.push(addSheet('Engagement Milestones', 'engagement_milestones', 'engagement_id'));
+  if (scope === 'all' || scope === 'directory')        jobs.push(addSheet('Projects (legacy)','projects',         'name'));
   if (scope === 'all')                                 jobs.push(addSheet('User Profiles',    'user_profiles',    'employee_name'));
 
   await Promise.all(jobs);
