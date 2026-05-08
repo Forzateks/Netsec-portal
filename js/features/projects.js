@@ -163,21 +163,25 @@ async function addCustomer() {
 function renderCustomersList() {
   var el = document.getElementById('cust-list-content');
   if (!el) return;
-  var rows = CUSTOMERS || [];
+  var rows = (CUSTOMERS || []).slice().sort(function(a,b){
+    return String(a.name||'').toLowerCase().localeCompare(String(b.name||'').toLowerCase());
+  });
   if (!rows.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px">No customers yet.</div>'; return; }
-  // Count engagements per customer for delete-blocking display
+  // Count engagements per customer (helps the manager see what cascades on delete)
   var counts = {};
   (ENGAGEMENTS||[]).forEach(function(e){ counts[e.customer_id] = (counts[e.customer_id]||0) + 1; });
   el.innerHTML = rows.map(function(c){
     var n = counts[c.id] || 0;
     var archived = c.status === 'archived';
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:1.5px solid var(--border);border-radius:20px;background:'+(archived?'#F3F4F6':'white')+';font-size:13px">'
-      + '<strong style="'+(archived?'color:var(--muted);text-decoration:line-through':'color:var(--navy)')+'">'+esc2(c.name)+'</strong>'
-      + (n ? '<span style="font-size:11px;color:var(--muted)">('+n+')</span>' : '')
-      + '<button class="btn btn-sm btn-ghost" onclick="openEditCustomer('+c.id+')" title="Edit" style="padding:2px 6px;min-height:0">✏</button>'
-      + '<button class="btn btn-sm btn-danger" onclick="deleteCustomer('+c.id+",'"+c.name.replace(/'/g,"'")+"'"+')" title="Delete" style="padding:2px 6px;min-height:0">×</button>'
+    var safeName = (c.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return '<div class="cust-chip'+(archived?' cust-chip-archived':'')+'">'
+      + '<span class="cust-chip-name">'+esc2(c.name)+'</span>'
+      + (n ? '<span class="cust-chip-count">'+n+'</span>' : '')
+      + '<button class="cust-chip-btn" onclick="openEditCustomer('+c.id+')" title="Edit"><i data-lucide="pencil-line"></i></button>'
+      + '<button class="cust-chip-btn cust-chip-btn-danger" onclick="deleteCustomer('+c.id+",'"+safeName+"'"+')" title="Delete"><i data-lucide="x"></i></button>'
       + '</div>';
   }).join('');
+  if (typeof renderIcons === 'function') renderIcons();
 }
 
 async function openEditCustomer(id) {
@@ -210,10 +214,11 @@ async function saveEditCustomer() {
   var {error} = await sb.from('customers').update({ name: name, status: status }).eq('id', id);
   if (error) { errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
 
-  // If renamed, cascade to session tables that snapshot customer_name
+  // If renamed, cascade to every session table that snapshots customer_name
   if (oldName && oldName !== name) {
     await sb.from('project_sessions').update({ customer_name: name }).eq('customer_name', oldName);
     await sb.from('ot_sessions').update({ customer_name: name }).eq('customer_name', oldName);
+    await sb.from('unified_sessions').update({ customer_name: name }).eq('customer_name', oldName);
   }
   closeEditCustomerModal();
   _projectsLoaded = false;
@@ -221,22 +226,54 @@ async function saveEditCustomer() {
   populateProjectDropdowns();
   renderCustomersList();
   renderManageProjects();
+  if (typeof loadTracker === 'function' && document.getElementById('screen-tracker') && document.getElementById('screen-tracker').classList.contains('active')) {
+    loadTracker();
+  }
 }
 
 async function deleteCustomer(id, name) {
-  var inUse = (ENGAGEMENTS||[]).filter(function(e){ return e.customer_id === id; }).length;
-  if (inUse) {
-    alert('Cannot delete "'+name+'" - it has '+inUse+' engagement(s) attached. Edit or remove those engagements first, or set the customer to Archived to hide it.');
-    return;
+  // Cascade: customer → engagements → milestones (FK CASCADE handles milestones).
+  // Sessions snapshot customer_name/engagement_name as text, so the historical
+  // logs stay readable even after the customer + engagements are gone.
+  var custEngagements = (ENGAGEMENTS||[]).filter(function(e){ return e.customer_id === id; });
+
+  // Count milestones cascade so the warning is accurate
+  var msCount = 0;
+  if (custEngagements.length) {
+    var msRes = await sb.from('engagement_milestones')
+      .select('id', { count:'exact', head:true })
+      .in('engagement_id', custEngagements.map(function(e){return e.id;}));
+    msCount = msRes.count || 0;
   }
-  if (!confirm('Delete customer "'+name+'"?\n\nThis is permanent. Existing OT/Project sessions that referenced it stay unchanged (the snapshot text remains).')) return;
+
+  var msg = 'Delete customer "'+name+'"?\n\n';
+  if (custEngagements.length) {
+    msg += 'This will also delete:\n';
+    msg += '  • '+custEngagements.length+' engagement'+(custEngagements.length===1?'':'s')+'\n';
+    if (msCount) msg += '  • '+msCount+' milestone'+(msCount===1?'':'s')+' under those engagements\n';
+    msg += '\nLogged sessions referencing this customer keep their snapshot text but will be unlinked.\n\n';
+  }
+  msg += 'This cannot be undone.';
+  if (!confirm(msg)) return;
+
+  // Delete engagements first; engagement_milestones cascade via FK.
+  if (custEngagements.length) {
+    var ids = custEngagements.map(function(e){return e.id;});
+    var de = await sb.from('engagements').delete().in('id', ids);
+    if (de.error) { alert('Error deleting engagements: '+de.error.message); return; }
+  }
   var {error} = await sb.from('customers').delete().eq('id', id);
   if (error) { alert('Error: '+error.message); return; }
+
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
   renderCustomersList();
   renderManageProjects();
+  // Refresh tracker too if it has been viewed in this session
+  if (typeof loadTracker === 'function' && document.getElementById('screen-tracker') && document.getElementById('screen-tracker').classList.contains('active')) {
+    loadTracker();
+  }
 }
 
 // ── RENDER MANAGE ENGAGEMENTS LIST ───────────────────────────────

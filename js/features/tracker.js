@@ -434,6 +434,16 @@ async function saveTrackerEdit() {
 
   if (error) { alert('Error saving: ' + error.message); return; }
 
+  // Invalidate the projects cache so engagement dropdowns + Manage Engagements
+  // reflect the change without a full reload.
+  if (typeof _projectsLoaded !== 'undefined') {
+    _projectsLoaded = false;
+    if (typeof loadProjects === 'function') {
+      try { await loadProjects(); } catch(e){}
+      if (typeof populateProjectDropdowns === 'function') populateProjectDropdowns();
+    }
+  }
+
   closeTrackerEditModal();
   await loadTracker();
 }
@@ -452,6 +462,15 @@ async function deleteTrackerEngagement() {
   var { error } = await sb.from('engagements').delete().eq('id', id);
   if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="trash-2" class="btn-icon"></i>Delete Engagement'; if (typeof renderIcons === 'function') renderIcons(); }
   if (error) { alert('Error deleting: '+error.message); return; }
+  // Invalidate the projects cache so the deleted engagement disappears from
+  // session dropdowns / Manage Engagements / Engagement Summary everywhere.
+  if (typeof _projectsLoaded !== 'undefined') {
+    _projectsLoaded = false;
+    if (typeof loadProjects === 'function') {
+      try { await loadProjects(); } catch(e){}
+      if (typeof populateProjectDropdowns === 'function') populateProjectDropdowns();
+    }
+  }
   closeTrackerEditModal();
   await loadTracker();
 }
