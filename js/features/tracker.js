@@ -52,26 +52,25 @@ function populateTrackerFilters() {
     if (r.partner) partners[r.partner] = 1;
     if (r.owner_employee) owners[r.owner_employee] = 1;
   });
-  var fillSelect = function(id, values) {
-    var sel = document.getElementById(id);
-    if (!sel) return;
-    var current = sel.value;
-    var html = '<option value="">All</option>';
-    Object.keys(values).sort().forEach(function(v){
-      html += '<option value="'+esc2(v)+'">'+esc2(v)+'</option>';
-    });
-    sel.innerHTML = html;
-    sel.value = current;
+  var toItems = function(obj){
+    return Object.keys(obj).sort().map(function(v){return {value:v,label:v};});
   };
-  fillSelect('trk-filter-country', countries);
-  fillSelect('trk-filter-partner', partners);
-  fillSelect('trk-filter-owner',   owners);
+  // Multi-select dropdowns; selection persists across re-init via the
+  // element's _selected Set (msInit drops values no longer present).
+  msInit('trk-filter-country', toItems(countries), applyTrackerFilters);
+  msInit('trk-filter-partner', toItems(partners),  applyTrackerFilters);
+  msInit('trk-filter-owner',   toItems(owners),    applyTrackerFilters);
+  // Status is a fixed enum.
+  msInit('trk-filter-status', [
+    'Yet to start','Initial Phase','Ongoing','Pilot','Onhold',
+    'Budgetary Phase','On demand request','Completed','Ended','Cancelled','Lost'
+  ].map(function(v){return {value:v,label:v};}), applyTrackerFilters);
 }
 
 function clearTrackerFilters() {
-  ['trk-search','trk-filter-country','trk-filter-partner','trk-filter-status','trk-filter-owner'].forEach(function(id){
-    var el = document.getElementById(id);
-    if (el) el.value = '';
+  var search = document.getElementById('trk-search'); if (search) search.value = '';
+  ['trk-filter-country','trk-filter-partner','trk-filter-status','trk-filter-owner'].forEach(function(id){
+    msSetValues(id, []);
   });
   renderTracker();
 }
@@ -79,19 +78,19 @@ function clearTrackerFilters() {
 function applyTrackerFilters() { renderTracker(); }
 
 function _trkFilteredRows() {
-  var search   = ((document.getElementById('trk-search')||{}).value||'').toLowerCase().trim();
-  var country  = (document.getElementById('trk-filter-country')||{}).value || '';
-  var partner  = (document.getElementById('trk-filter-partner')||{}).value || '';
-  var status   = (document.getElementById('trk-filter-status')||{}).value  || '';
-  var owner    = (document.getElementById('trk-filter-owner')||{}).value   || '';
+  var search    = ((document.getElementById('trk-search')||{}).value||'').toLowerCase().trim();
+  var countries = msGetValues('trk-filter-country');
+  var partners  = msGetValues('trk-filter-partner');
+  var statuses  = msGetValues('trk-filter-status');
+  var owners    = msGetValues('trk-filter-owner');
 
   return _trkData.filter(function(r){
     if (_trkActiveTab === 'projects' && r.type !== 'project') return false;
     if (_trkActiveTab === 'pocs'     && r.type !== 'poc')     return false;
-    if (country && r.country !== country) return false;
-    if (partner && r.partner !== partner) return false;
-    if (status  && r.tracker_status !== status) return false;
-    if (owner   && r.owner_employee !== owner) return false;
+    if (countries.length && countries.indexOf(r.country)        === -1) return false;
+    if (partners.length  && partners.indexOf(r.partner)         === -1) return false;
+    if (statuses.length  && statuses.indexOf(r.tracker_status)  === -1) return false;
+    if (owners.length    && owners.indexOf(r.owner_employee)    === -1) return false;
     if (search) {
       var hay = [r.name, r.customer_name, r.partner, r.country, r.owner_employee, r.tracker_remarks, r.category, r.project_order_no]
         .map(function(x){return (x||'').toLowerCase();}).join(' ');

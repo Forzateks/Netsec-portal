@@ -72,6 +72,103 @@ async function fetchAllRows(buildQuery) {
   return { data: all, error: null };
 }
 
+// Reusable multi-select dropdown. Wrap an empty <div class="ms" id="..."></div>
+// then call msInit(id, items, onChange). items is [{value,label}]; the chosen
+// values are stored on the element as a Set. Read via msGetValues(id), reset
+// via msSetValues(id, values). A global click handler closes any open ms when
+// the user clicks outside of it.
+function msInit(id, items, onChange) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('ms');
+  el.innerHTML = '<button class="ms-btn" type="button">'+
+      '<span class="ms-label">All</span>'+
+      '<span class="ms-caret">▾</span>'+
+    '</button>'+
+    '<div class="ms-pop">'+
+      '<div class="ms-pop-head">'+
+        '<input class="ms-search" placeholder="Search...">'+
+        '<button class="ms-clear" type="button">Clear</button>'+
+      '</div>'+
+      '<div class="ms-list"></div>'+
+    '</div>';
+  el._items = items || [];
+  if (!el._selected) el._selected = new Set();
+  // Drop selections that are no longer in the items list (e.g. after a data
+  // refresh removes a partner from the universe of values).
+  var validValues = new Set(el._items.map(function(i){return i.value;}));
+  Array.from(el._selected).forEach(function(v){ if (!validValues.has(v)) el._selected.delete(v); });
+  el._onChange = onChange;
+
+  el.querySelector('.ms-btn').addEventListener('click', function(e){
+    e.stopPropagation();
+    var wasOpen = el.classList.contains('open');
+    document.querySelectorAll('.ms.open').forEach(function(o){ o.classList.remove('open'); });
+    if (!wasOpen) el.classList.add('open');
+  });
+  el.querySelector('.ms-search').addEventListener('input', function(){ msRenderList(el); });
+  el.querySelector('.ms-search').addEventListener('click', function(e){ e.stopPropagation(); });
+  el.querySelector('.ms-clear').addEventListener('click', function(e){
+    e.stopPropagation();
+    el._selected.clear();
+    msRenderList(el);
+    msUpdateLabel(el);
+    if (el._onChange) el._onChange();
+  });
+  msRenderList(el);
+  msUpdateLabel(el);
+}
+
+function msRenderList(el) {
+  var search = ((el.querySelector('.ms-search')||{}).value||'').toLowerCase();
+  var list = el.querySelector('.ms-list');
+  var filtered = el._items.filter(function(it){
+    return !search || (String(it.label||'').toLowerCase().indexOf(search) !== -1);
+  });
+  if (!filtered.length) { list.innerHTML = '<div class="ms-empty">No matches</div>'; return; }
+  list.innerHTML = filtered.map(function(it){
+    var checked = el._selected.has(it.value) ? 'checked' : '';
+    var v = String(it.value).replace(/"/g,'&quot;');
+    return '<label class="ms-opt"><input type="checkbox" '+checked+' value="'+v+'"> <span>'+esc2(it.label)+'</span></label>';
+  }).join('');
+  list.querySelectorAll('input[type="checkbox"]').forEach(function(cb){
+    cb.addEventListener('change', function(){
+      if (cb.checked) el._selected.add(cb.value);
+      else            el._selected.delete(cb.value);
+      msUpdateLabel(el);
+      if (el._onChange) el._onChange();
+    });
+  });
+}
+
+function msUpdateLabel(el) {
+  var label = el.querySelector('.ms-label');
+  var n = el._selected.size;
+  if (n === 0)      label.textContent = 'All';
+  else if (n === 1) label.textContent = Array.from(el._selected)[0];
+  else              label.textContent = n + ' selected';
+}
+
+function msGetValues(id) {
+  var el = document.getElementById(id);
+  return (el && el._selected) ? Array.from(el._selected) : [];
+}
+
+function msSetValues(id, values) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el._selected = new Set(values || []);
+  if (el.querySelector('.ms-list')) msRenderList(el);
+  if (el.querySelector('.ms-label')) msUpdateLabel(el);
+}
+
+// Close any open multi-select when the user clicks outside it.
+document.addEventListener('click', function(e){
+  document.querySelectorAll('.ms.open').forEach(function(el){
+    if (!el.contains(e.target)) el.classList.remove('open');
+  });
+});
+
 // Attach a synced horizontal scrollbar above a .table-wrap so users don't
 // have to scroll to the bottom of a long table to find the native scrollbar.
 // No-op when the inner table fits without overflow.
