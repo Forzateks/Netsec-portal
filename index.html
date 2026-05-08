@@ -143,6 +143,18 @@
     </div>
   </div>
 
+  <div class="sidebar-section-label">Tracker</div>
+  <div class="sidebar-group" id="sbg-tracker">
+    <div class="sidebar-item has-children" id="tab-tracker" onclick="showScreen('tracker');closeSidebarOnMobile()">
+      <i data-lucide="kanban-square" class="sidebar-icon"></i>Project Tracker<span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
+      <div class="sidebar-subitem" id="sbi-tracker-all"      onclick="navigateSub('tracker','all')"><i data-lucide="layers" class="sidebar-subicon"></i>All</div>
+      <div class="sidebar-subitem" id="sbi-tracker-projects" onclick="navigateSub('tracker','projects')"><i data-lucide="folder-kanban" class="sidebar-subicon"></i>Projects</div>
+      <div class="sidebar-subitem" id="sbi-tracker-pocs"     onclick="navigateSub('tracker','pocs')"><i data-lucide="target" class="sidebar-subicon"></i>POCs</div>
+    </div>
+  </div>
+
   <div class="sidebar-section-label" id="sidebar-approvals-label" style="display:none">Approvals</div>
   <div class="sidebar-group" id="sbg-approvals" style="display:none">
     <div class="sidebar-item has-children" id="tab-approvals" onclick="showScreen('approvals');closeSidebarOnMobile()">
@@ -683,6 +695,70 @@
 
 </div>
 
+
+<!-- ══ TRACKER SCREEN ══ -->
+<div class="screen" id="screen-tracker">
+  <div class="tracker-filter-bar">
+    <div class="form-group" style="flex:2;min-width:200px">
+      <label>Search</label>
+      <input type="text" id="trk-search" placeholder="Name, customer, partner, owner, remarks..." oninput="applyTrackerFilters()">
+    </div>
+    <div class="form-group">
+      <label>Country</label>
+      <select id="trk-filter-country" onchange="applyTrackerFilters()">
+        <option value="">All</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Partner</label>
+      <select id="trk-filter-partner" onchange="applyTrackerFilters()">
+        <option value="">All</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="trk-filter-status" onchange="applyTrackerFilters()">
+        <option value="">All</option>
+        <option>Initial Phase</option>
+        <option>Ongoing</option>
+        <option>Onhold</option>
+        <option>Completed</option>
+        <option>On demand request</option>
+        <option>Pilot</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Owner</label>
+      <select id="trk-filter-owner" onchange="applyTrackerFilters()">
+        <option value="">All</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:6px">
+      <button class="btn btn-sm btn-ghost" onclick="clearTrackerFilters()">✕ Clear</button>
+      <button class="btn btn-sm btn-ghost" onclick="loadTracker()"><i data-lucide="refresh-cw" class="btn-icon"></i>Refresh</button>
+    </div>
+  </div>
+
+  <div class="tracker-stat-row" id="trk-stat-row"></div>
+
+  <div id="trk-load" class="loading"><div class="spinner"></div>Loading engagements...</div>
+  <div id="trk-content"></div>
+</div>
+
+<!-- TRACKER DETAIL MODAL -->
+<div class="modal-overlay" id="trk-detail-modal">
+  <div class="modal" style="max-width:720px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:12px">
+      <div style="flex:1;min-width:0">
+        <div id="trk-detail-type" style="margin-bottom:8px"></div>
+        <div id="trk-detail-name" class="modal-title" style="margin-bottom:4px;word-break:break-word"></div>
+        <div id="trk-detail-customer" style="font-size:13px;color:var(--muted)"></div>
+      </div>
+      <button class="btn btn-ghost" onclick="closeTrackerDetail()" style="font-size:18px;padding:4px 10px">×</button>
+    </div>
+    <div id="trk-detail-body"></div>
+  </div>
+</div>
 
 <!-- ══ APPROVALS SCREEN (manager only) ══ -->
 <div class="screen" id="screen-approvals">
@@ -1482,6 +1558,7 @@
 <script src="js/features/inventory.js"></script>
 <script src="js/features/approvals.js"></script>
 <script src="js/features/knowledge-base.js"></script>
+<script src="js/features/tracker.js"></script>
 <script src="js/core/init.js"></script>
 </body>
 </html>

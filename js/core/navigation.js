@@ -50,6 +50,7 @@ function showScreen(name) {
   if (name==='approvals')  showApprovalsTab('leave');
   if (name==='inventory')  showInventoryTab('devices');
   if (name==='kb')         showKBTab('browse');
+  if (name==='tracker')    { if (typeof showTrackerTab === 'function') showTrackerTab('all'); if (typeof loadTracker === 'function') loadTracker(); }
 }
 
 // Sidebar drove navigation: jump to a screen + a specific sub-tab.
@@ -67,6 +68,7 @@ function navigateSub(screen, subTab) {
   else if (screen==='approvals') showApprovalsTab(subTab);
   else if (screen==='inventory') showInventoryTab(subTab);
   else if (screen==='kb')        showKBTab(subTab);
+  else if (screen==='tracker')   showTrackerTab(subTab);
   closeSidebarOnMobile();
 }
 
