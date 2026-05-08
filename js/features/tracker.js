@@ -16,8 +16,8 @@ var TRK_PROJECT_STATUSES = [
   'LLD Discussion','LLD Documentation',
   'Initial Configuration','Pilot Sites Rollout',
   'Migration','KT / Training','As-Built Documentation','Troubleshooting',
-  'Ongoing','Onhold','Budgetary Phase','On demand request',
-  'Completed','Ended','Cancelled','Lost'
+  'Onhold','On demand request',
+  'Completed'
 ];
 var TRK_POC_STATUSES = [
   'Yet to start','Initial Phase','Ongoing','Pilot','Onhold',
@@ -407,16 +407,23 @@ function _trkGet(id) {
 function _trkDateOrNull(v) { return v ? v : null; }
 function _trkTextOrNull(v) { var t = (v||'').trim(); return t || null; }
 
-function _trkPopulateStatusOptions(type) {
+function _trkPopulateStatusOptions(type, currentValue) {
   var sel = document.getElementById('trk-edit-tracker-status');
   if (!sel) return;
-  var current = sel.value;
+  var preserve = (typeof currentValue === 'string' && currentValue) ? currentValue : sel.value;
+  var statuses = trkStatusesFor(type);
   var html = '<option value="">— None —</option>';
-  trkStatusesFor(type).forEach(function(v){
+  // If the engagement is already on a status that's no longer in the standard
+  // list (e.g. a legacy 'Ongoing' on a project), keep it as a selectable
+  // "(legacy)" option so the row stays editable without forcing reclassification.
+  if (preserve && statuses.indexOf(preserve) === -1) {
+    html += '<option value="'+esc2(preserve)+'" selected>'+esc2(preserve)+' (legacy)</option>';
+  }
+  statuses.forEach(function(v){
     html += '<option>'+esc2(v)+'</option>';
   });
   sel.innerHTML = html;
-  sel.value = current;
+  if (preserve && statuses.indexOf(preserve) !== -1) sel.value = preserve;
 }
 
 function openTrackerEditModal(id) {
@@ -425,7 +432,7 @@ function openTrackerEditModal(id) {
   if (!r) return;
   closeTrackerDetail();
   _trkPopulateOwnerOptions();
-  _trkPopulateStatusOptions(r.type);
+  _trkPopulateStatusOptions(r.type, r.tracker_status);
 
   document.getElementById('trk-edit-title').textContent    = r.name || 'Edit Engagement';
   document.getElementById('trk-edit-subtitle').textContent =
