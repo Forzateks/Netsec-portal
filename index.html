@@ -745,6 +745,75 @@
   <div id="trk-content"></div>
 </div>
 
+<!-- TRACKER MILESTONES MODAL -->
+<div class="modal-overlay" id="trk-ms-modal">
+  <div class="modal" style="max-width:760px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Milestones</div>
+        <div class="modal-title" id="trk-ms-eng-name" style="margin-bottom:2px;word-break:break-word">—</div>
+        <div id="trk-ms-eng-meta" style="font-size:12px;color:var(--muted)"></div>
+      </div>
+      <button class="btn btn-ghost" onclick="closeMilestonesModal()" style="font-size:18px;padding:4px 10px">×</button>
+    </div>
+    <input type="hidden" id="trk-ms-eng-id">
+
+    <div id="trk-ms-progress" class="trk-ms-progress" style="display:none">
+      <div class="trk-ms-progress-text">
+        <span id="trk-ms-progress-label">0 of 0 milestones complete</span>
+        <span id="trk-ms-progress-pct" class="num">0%</span>
+      </div>
+      <div class="trk-ms-progress-bar"><div class="trk-ms-progress-fill" id="trk-ms-progress-fill" style="width:0%"></div></div>
+    </div>
+
+    <div id="trk-ms-load" class="loading" style="display:none"><div class="spinner"></div>Loading milestones...</div>
+    <div id="trk-ms-list"></div>
+
+    <div class="trk-ms-add-card" id="trk-ms-add-card" style="display:none">
+      <div class="card-title" style="font-size:13px;margin-bottom:10px"><i data-lucide="plus-circle" class="btn-icon"></i>Add New Milestone</div>
+      <div class="form-grid mb-4">
+        <div class="form-group full">
+          <label>Name *</label>
+          <input type="text" id="trk-ms-new-name" placeholder="e.g. Phase 1 site rollout / HLD signoff / Pilot completion">
+        </div>
+        <div class="form-group">
+          <label>Target Date</label>
+          <input type="date" id="trk-ms-new-target-date">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="trk-ms-new-status">
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="blocked">Blocked</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Target Count <span class="dim" style="font-weight:400;font-size:11px">(optional)</span></label>
+          <input type="number" id="trk-ms-new-target-count" min="0" placeholder="e.g. 188 sites">
+        </div>
+        <div class="form-group">
+          <label>Actual Count</label>
+          <input type="number" id="trk-ms-new-actual-count" min="0" placeholder="0">
+        </div>
+        <div class="form-group full">
+          <label>Notes</label>
+          <textarea id="trk-ms-new-notes" rows="2" placeholder="Optional context..."></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="trk-ms-add-btn" onclick="addMilestone()"><i data-lucide="plus" class="btn-icon"></i>Add Milestone</button>
+        <button class="btn btn-ghost" onclick="resetMilestoneForm()">Clear</button>
+      </div>
+    </div>
+
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeMilestonesModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- TRACKER EDIT MODAL (manager only) -->
 <div class="modal-overlay" id="trk-edit-modal">
   <div class="modal" style="max-width:760px">

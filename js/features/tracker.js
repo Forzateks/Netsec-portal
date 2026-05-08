@@ -280,7 +280,7 @@ function openTrackerDetail(id) {
     remarksHtml +
     '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">'+
       (isManager ? '<button class="btn btn-primary" onclick="openTrackerEditModal('+r.id+')"><i data-lucide="pencil" class="btn-icon"></i>Edit</button>' : '')+
-      '<button class="btn btn-ghost" onclick="alert(\'Milestones coming in Phase 5.\')"><i data-lucide="list-checks" class="btn-icon"></i>Milestones</button>'+
+      '<button class="btn btn-ghost" onclick="openMilestonesModal('+r.id+')"><i data-lucide="list-checks" class="btn-icon"></i>Milestones</button>'+
       '<button class="btn btn-ghost" onclick="closeTrackerDetail()" style="margin-left:auto">Close</button>'+
     '</div>';
 
@@ -421,4 +421,291 @@ async function saveTrackerEdit() {
 
   closeTrackerEditModal();
   await loadTracker();
+}
+
+// ── MILESTONES MODAL ───────────────────────────────────────────────
+
+var _msEngagementId = null;
+var _msData         = [];
+
+async function openMilestonesModal(engagementId) {
+  var eng = _trkData.find(function(x){return x.id===engagementId;});
+  if (!eng) return;
+  _msEngagementId = engagementId;
+  closeTrackerDetail();
+
+  document.getElementById('trk-ms-eng-name').textContent = eng.name || '';
+  document.getElementById('trk-ms-eng-meta').textContent =
+    (eng.customer_name||'—') + ' · ' + (eng.type||'').toUpperCase() +
+    (eng.tracker_status?(' · '+eng.tracker_status):'');
+  document.getElementById('trk-ms-eng-id').value = String(engagementId);
+  document.getElementById('trk-ms-add-card').style.display = isManager ? 'block' : 'none';
+  resetMilestoneForm();
+
+  document.getElementById('trk-ms-modal').classList.add('show');
+  await loadMilestones();
+}
+
+function closeMilestonesModal() {
+  document.getElementById('trk-ms-modal').classList.remove('show');
+  _msEngagementId = null;
+  _msData = [];
+}
+
+async function loadMilestones() {
+  var load = document.getElementById('trk-ms-load');
+  var list = document.getElementById('trk-ms-list');
+  load.style.display = 'flex';
+  list.innerHTML = '';
+  var { data, error } = await sb.from('engagement_milestones')
+    .select('*')
+    .eq('engagement_id', _msEngagementId)
+    .order('sequence', {ascending:true})
+    .order('id',       {ascending:true});
+  load.style.display = 'none';
+  if (error) {
+    list.innerHTML = '<div class="alert alert-error show">Error: '+esc2(error.message)+'</div>';
+    return;
+  }
+  _msData = data || [];
+  renderMilestones();
+}
+
+function _msStatusBadge(s) {
+  var map = {
+    pending:     {label:'Pending',     cls:'trk-ms-st-pending'},
+    in_progress: {label:'In Progress', cls:'trk-ms-st-progress'},
+    completed:   {label:'Completed',   cls:'trk-ms-st-completed'},
+    blocked:     {label:'Blocked',     cls:'trk-ms-st-blocked'}
+  };
+  var m = map[s] || {label:s||'—', cls:''};
+  return '<span class="trk-ms-status '+m.cls+'">'+esc2(m.label)+'</span>';
+}
+
+function renderMilestones() {
+  var list = document.getElementById('trk-ms-list');
+  var prog = document.getElementById('trk-ms-progress');
+  if (!_msData.length) {
+    prog.style.display = 'none';
+    list.innerHTML =
+      '<div class="empty-state" style="padding:32px 16px">'+
+        '<i data-lucide="list-checks" class="empty-icon-svg"></i>'+
+        '<div class="empty-title">No milestones yet</div>'+
+        '<div>'+(isManager?'Add your first milestone below.':'A manager can add milestones.')+'</div>'+
+      '</div>';
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
+
+  // Top-level progress: ratio of completed milestones.
+  var done = _msData.filter(function(m){return m.status==='completed';}).length;
+  var pct  = Math.round((done / _msData.length) * 100);
+  document.getElementById('trk-ms-progress-label').textContent = done+' of '+_msData.length+' milestones complete';
+  document.getElementById('trk-ms-progress-pct').textContent   = pct+'%';
+  document.getElementById('trk-ms-progress-fill').style.width  = pct+'%';
+  prog.style.display = 'block';
+
+  list.innerHTML = _msData.map(function(m, idx){
+    var hasCount = (m.target_count!=null && m.target_count>0);
+    var actual   = m.actual_count||0;
+    var countPct = hasCount ? Math.min(100, Math.round((actual/m.target_count)*100)) : 0;
+    var target   = m.target_date ? fmtDate(m.target_date) : '';
+    var doneDate = m.completed_date ? fmtDate(m.completed_date) : '';
+    var canEdit  = isManager;
+    var sequence = m.sequence || (idx+1);
+
+    var countBlock = hasCount
+      ? '<div class="trk-ms-count">'+
+          '<div class="trk-ms-count-text"><span class="num">'+actual+' / '+m.target_count+'</span> <span class="dim">('+countPct+'%)</span></div>'+
+          '<div class="trk-ms-count-bar"><div class="trk-ms-count-fill" style="width:'+countPct+'%"></div></div>'+
+        '</div>'
+      : '';
+
+    var notesBlock = m.notes
+      ? '<div class="trk-ms-notes">'+esc2(m.notes)+'</div>'
+      : '';
+
+    var actions = canEdit
+      ? '<div class="trk-ms-actions">'+
+          (m.status!=='completed'
+            ? '<button class="btn btn-sm" style="background:var(--success);color:white;border:none" onclick="markMilestoneComplete('+m.id+')" title="Mark Complete"><i data-lucide="check" class="btn-icon" style="margin-right:0"></i></button>'
+            : '<button class="btn btn-sm btn-ghost" onclick="reopenMilestone('+m.id+')" title="Reopen"><i data-lucide="rotate-ccw" class="btn-icon" style="margin-right:0"></i></button>')+
+          '<button class="btn btn-sm btn-ghost" onclick="editMilestoneInline('+m.id+')" title="Edit"><i data-lucide="pencil" class="btn-icon" style="margin-right:0"></i></button>'+
+          '<button class="btn btn-sm btn-ghost" onclick="moveMilestone('+m.id+',-1)" title="Move up" '+(idx===0?'disabled':'')+'><i data-lucide="arrow-up" class="btn-icon" style="margin-right:0"></i></button>'+
+          '<button class="btn btn-sm btn-ghost" onclick="moveMilestone('+m.id+',1)" title="Move down" '+(idx===_msData.length-1?'disabled':'')+'><i data-lucide="arrow-down" class="btn-icon" style="margin-right:0"></i></button>'+
+          '<button class="btn btn-sm btn-danger" onclick="deleteMilestone('+m.id+')" title="Delete"><i data-lucide="trash-2" class="btn-icon" style="margin-right:0"></i></button>'+
+        '</div>'
+      : '';
+
+    return '<div class="trk-ms-card '+(m.status==='completed'?'is-done':'')+'" id="trk-ms-card-'+m.id+'">'+
+      '<div class="trk-ms-card-head">'+
+        '<div class="trk-ms-seq num">'+sequence+'</div>'+
+        '<div class="trk-ms-name">'+esc2(m.name)+'</div>'+
+        _msStatusBadge(m.status)+
+      '</div>'+
+      '<div class="trk-ms-meta">'+
+        (target   ? '<span><i data-lucide="calendar" class="trk-ms-meta-icon"></i>Target: <span class="num">'+target+'</span></span>'   : '')+
+        (doneDate ? '<span><i data-lucide="check-circle-2" class="trk-ms-meta-icon"></i>Completed: <span class="num">'+doneDate+'</span></span>' : '')+
+      '</div>'+
+      countBlock +
+      notesBlock +
+      actions +
+    '</div>';
+  }).join('');
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+function resetMilestoneForm() {
+  ['trk-ms-new-name','trk-ms-new-target-date','trk-ms-new-target-count','trk-ms-new-actual-count','trk-ms-new-notes'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var st = document.getElementById('trk-ms-new-status'); if (st) st.value = 'pending';
+}
+
+async function addMilestone() {
+  if (!isManager) { alert('Manager access only.'); return; }
+  var name = (document.getElementById('trk-ms-new-name').value||'').trim();
+  if (!name) { alert('Milestone name is required.'); return; }
+  var btn = document.getElementById('trk-ms-add-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Adding…';
+
+  var status = document.getElementById('trk-ms-new-status').value || 'pending';
+  var targetDate  = document.getElementById('trk-ms-new-target-date').value || null;
+  var targetCount = parseInt(document.getElementById('trk-ms-new-target-count').value, 10);
+  var actualCount = parseInt(document.getElementById('trk-ms-new-actual-count').value, 10);
+  var notes = (document.getElementById('trk-ms-new-notes').value||'').trim() || null;
+  var nextSeq = _msData.length
+    ? Math.max.apply(null, _msData.map(function(m){return m.sequence||0;})) + 1
+    : 1;
+
+  var payload = {
+    engagement_id: _msEngagementId,
+    sequence:      nextSeq,
+    name:          name,
+    target_date:   targetDate,
+    status:        status,
+    target_count:  isNaN(targetCount) ? null : targetCount,
+    actual_count:  isNaN(actualCount) ? null : actualCount,
+    notes:         notes
+  };
+  if (status === 'completed') payload.completed_date = new Date().toISOString().split('T')[0];
+
+  var { error } = await sb.from('engagement_milestones').insert(payload);
+  btn.disabled = false;
+  btn.innerHTML = '<i data-lucide="plus" class="btn-icon"></i>Add Milestone';
+  if (typeof renderIcons === 'function') renderIcons();
+  if (error) { alert('Error: '+error.message); return; }
+  resetMilestoneForm();
+  await loadMilestones();
+}
+
+async function markMilestoneComplete(id) {
+  if (!isManager) return;
+  var today = new Date().toISOString().split('T')[0];
+  var { error } = await sb.from('engagement_milestones').update({
+    status: 'completed', completed_date: today, updated_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) { alert('Error: '+error.message); return; }
+  await loadMilestones();
+}
+
+async function reopenMilestone(id) {
+  if (!isManager) return;
+  var { error } = await sb.from('engagement_milestones').update({
+    status: 'in_progress', completed_date: null, updated_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) { alert('Error: '+error.message); return; }
+  await loadMilestones();
+}
+
+async function moveMilestone(id, delta) {
+  if (!isManager) return;
+  var idx = _msData.findIndex(function(m){return m.id===id;});
+  if (idx < 0) return;
+  var swapIdx = idx + delta;
+  if (swapIdx < 0 || swapIdx >= _msData.length) return;
+  var a = _msData[idx], b = _msData[swapIdx];
+  // Use distinct sequence values so the order is stable after refresh.
+  var aSeq = a.sequence || (idx+1);
+  var bSeq = b.sequence || (swapIdx+1);
+  if (aSeq === bSeq) { aSeq = idx+1; bSeq = swapIdx+1; }
+  var ts = new Date().toISOString();
+  var r1 = await sb.from('engagement_milestones').update({sequence:bSeq, updated_at:ts}).eq('id', a.id);
+  if (r1.error) { alert('Error: '+r1.error.message); return; }
+  var r2 = await sb.from('engagement_milestones').update({sequence:aSeq, updated_at:ts}).eq('id', b.id);
+  if (r2.error) { alert('Error: '+r2.error.message); return; }
+  await loadMilestones();
+}
+
+async function deleteMilestone(id) {
+  if (!isManager) return;
+  var m = _msData.find(function(x){return x.id===id;});
+  if (!m) return;
+  if (!confirm('Delete milestone "'+m.name+'"? This cannot be undone.')) return;
+  var { error } = await sb.from('engagement_milestones').delete().eq('id', id);
+  if (error) { alert('Error: '+error.message); return; }
+  await loadMilestones();
+}
+
+function editMilestoneInline(id) {
+  if (!isManager) return;
+  var m = _msData.find(function(x){return x.id===id;});
+  if (!m) return;
+  var card = document.getElementById('trk-ms-card-'+id);
+  if (!card) return;
+  // Build markup without user-supplied content; populate values via DOM
+  // afterward to sidestep HTML/JS escaping issues for names with quotes.
+  card.innerHTML =
+    '<div class="form-grid mb-4">'+
+      '<div class="form-group full"><label>Name</label><input type="text" id="trk-ms-edit-name-'+id+'"></div>'+
+      '<div class="form-group"><label>Target Date</label><input type="date" id="trk-ms-edit-target-'+id+'"></div>'+
+      '<div class="form-group"><label>Status</label><select id="trk-ms-edit-status-'+id+'">'+
+        ['pending','in_progress','completed','blocked'].map(function(s){
+          return '<option value="'+s+'">'+s.replace('_',' ')+'</option>';
+        }).join('')+
+      '</select></div>'+
+      '<div class="form-group"><label>Target Count</label><input type="number" id="trk-ms-edit-target-count-'+id+'" min="0"></div>'+
+      '<div class="form-group"><label>Actual Count</label><input type="number" id="trk-ms-edit-actual-count-'+id+'" min="0"></div>'+
+      '<div class="form-group full"><label>Notes</label><textarea id="trk-ms-edit-notes-'+id+'" rows="2"></textarea></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button class="btn btn-primary btn-sm" onclick="saveMilestoneInline('+id+')"><i data-lucide="save" class="btn-icon"></i>Save</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="loadMilestones()">Cancel</button>'+
+    '</div>';
+  document.getElementById('trk-ms-edit-name-'+id).value         = m.name || '';
+  document.getElementById('trk-ms-edit-target-'+id).value       = m.target_date || '';
+  document.getElementById('trk-ms-edit-status-'+id).value       = m.status || 'pending';
+  document.getElementById('trk-ms-edit-target-count-'+id).value = (m.target_count==null?'':m.target_count);
+  document.getElementById('trk-ms-edit-actual-count-'+id).value = (m.actual_count==null?'':m.actual_count);
+  document.getElementById('trk-ms-edit-notes-'+id).value        = m.notes || '';
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+async function saveMilestoneInline(id) {
+  if (!isManager) return;
+  var name = (document.getElementById('trk-ms-edit-name-'+id).value||'').trim();
+  if (!name) { alert('Name is required.'); return; }
+  var status = document.getElementById('trk-ms-edit-status-'+id).value;
+  var tgt    = document.getElementById('trk-ms-edit-target-'+id).value || null;
+  var tc     = parseInt(document.getElementById('trk-ms-edit-target-count-'+id).value, 10);
+  var ac     = parseInt(document.getElementById('trk-ms-edit-actual-count-'+id).value, 10);
+  var notes  = (document.getElementById('trk-ms-edit-notes-'+id).value||'').trim() || null;
+  var patch = {
+    name: name, status: status, target_date: tgt,
+    target_count: isNaN(tc) ? null : tc,
+    actual_count: isNaN(ac) ? null : ac,
+    notes: notes,
+    updated_at: new Date().toISOString()
+  };
+  // Auto-stamp completed_date when flipping to completed; clear when leaving.
+  var existing = _msData.find(function(x){return x.id===id;});
+  if (status === 'completed' && existing && existing.status !== 'completed') {
+    patch.completed_date = new Date().toISOString().split('T')[0];
+  } else if (status !== 'completed') {
+    patch.completed_date = null;
+  }
+  var { error } = await sb.from('engagement_milestones').update(patch).eq('id', id);
+  if (error) { alert('Error: '+error.message); return; }
+  await loadMilestones();
 }

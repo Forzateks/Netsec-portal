@@ -615,6 +615,41 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-field-value{font-size:13px;color:#1F2937;font-weight:500;word-break:break-word}
 .trk-remarks-block{margin-top:14px;padding:14px;background:#FFFBEB;border-left:3px solid var(--gold);border-radius:6px}
 
+/* Milestones */
+.trk-ms-progress{padding:12px 14px;background:linear-gradient(135deg,#F0F9FF,#E0F2FE);border:1px solid #BAE6FD;border-radius:10px;margin-bottom:14px}
+.trk-ms-progress-text{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px}
+.trk-ms-progress-bar{height:8px;background:rgba(255,255,255,.6);border-radius:4px;overflow:hidden}
+.trk-ms-progress-fill{height:100%;background:linear-gradient(90deg,var(--teal),#5ad1ff);border-radius:4px;transition:width .3s ease-out}
+
+.trk-ms-card{padding:14px 16px;background:white;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;transition:border-color .15s,box-shadow .15s}
+.trk-ms-card:hover{border-color:#CBD5E1;box-shadow:0 1px 4px rgba(15,23,42,.06)}
+.trk-ms-card.is-done{background:#F8FFFB;border-color:#BBF7D0}
+.trk-ms-card-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.trk-ms-seq{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--navy);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.trk-ms-card.is-done .trk-ms-seq{background:var(--success)}
+.trk-ms-name{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--navy);word-break:break-word}
+
+.trk-ms-status{font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:3px 9px;border-radius:10px;font-weight:600;white-space:nowrap}
+.trk-ms-st-pending{background:#F1F5F9;color:#475569}
+.trk-ms-st-progress{background:#DBEAFE;color:#1E3A8A}
+.trk-ms-st-completed{background:#D1FAE5;color:#065F46}
+.trk-ms-st-blocked{background:#FEE2E2;color:#991B1B}
+
+.trk-ms-meta{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.trk-ms-meta-icon{width:13px;height:13px;stroke-width:2;display:inline-block;vertical-align:-2px;margin-right:4px}
+
+.trk-ms-count{margin:8px 0}
+.trk-ms-count-text{font-size:12px;color:#1F2937;font-weight:500;margin-bottom:4px}
+.trk-ms-count-bar{height:6px;background:#F1F5F9;border-radius:3px;overflow:hidden}
+.trk-ms-count-fill{height:100%;background:linear-gradient(90deg,var(--teal),#5ad1ff);border-radius:3px;transition:width .3s ease-out}
+
+.trk-ms-notes{margin-top:6px;padding:8px 10px;background:#F8FAFC;border-left:3px solid #CBD5E1;border-radius:4px;font-size:12px;color:#1F2937;white-space:pre-wrap;line-height:1.5}
+
+.trk-ms-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.trk-ms-actions .btn{padding:6px 9px}
+
+.trk-ms-add-card{margin-top:18px;padding:16px;background:#FAFBFC;border:1px dashed var(--border);border-radius:10px}
+
 @media(max-width:900px){
   .tracker-stat-row{grid-template-columns:repeat(3,1fr)}
   .trk-detail-grid{grid-template-columns:1fr}
