@@ -220,11 +220,17 @@ function renderTracker() {
   }).join('');
 
   content.innerHTML = tabBar +
-    '<div class="card" style="padding:0;overflow:hidden">'+
+    '<div class="card trk-table-card" style="padding:0">'+
       '<div class="table-wrap"><table class="trk-table"><thead>'+th+'</thead><tbody>'+body+'</tbody></table></div>'+
     '</div>'+
     '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Showing '+rows.length+' of '+_trkData.length+' engagements</div>';
   if (typeof renderIcons === 'function') renderIcons();
+  // Add a synced top scrollbar so users see horizontal overflow without
+  // having to scroll to the bottom of long tables.
+  if (typeof attachTopScroll === 'function') {
+    var wrap = content.querySelector('.table-wrap');
+    if (wrap) attachTopScroll(wrap);
+  }
 }
 
 function openTrackerDetail(id) {
