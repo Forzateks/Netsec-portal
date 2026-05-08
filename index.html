@@ -719,15 +719,16 @@
       <label>Status</label>
       <select id="trk-filter-status" onchange="applyTrackerFilters()">
         <option value="">All</option>
+        <option>Yet to start</option>
         <option>Initial Phase</option>
         <option>Ongoing</option>
         <option>Pilot</option>
         <option>Onhold</option>
-        <option>Completed</option>
-        <option>On demand request</option>
         <option>Budgetary Phase</option>
-        <option>Cancelled</option>
+        <option>On demand request</option>
+        <option>Completed</option>
         <option>Ended</option>
+        <option>Cancelled</option>
         <option>Lost</option>
       </select>
     </div>
@@ -858,6 +859,7 @@
         <label>Status</label>
         <select id="trk-edit-tracker-status" onchange="onTrackerStatusChange()">
           <option value="">— None —</option>
+          <option>Yet to start</option>
           <option>Initial Phase</option>
           <option>Ongoing</option>
           <option>Pilot</option>
@@ -898,9 +900,10 @@
       </div>
     </div>
     <div id="trk-edit-info" style="display:none;margin-top:8px;padding:10px 12px;background:#EDE9FE;border-left:3px solid #7C3AED;border-radius:6px;font-size:12px;color:#5B21B6"></div>
-    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-primary" id="trk-edit-save-btn" onclick="saveTrackerEdit()"><i data-lucide="save" class="btn-icon"></i>Save Changes</button>
       <button class="btn btn-ghost" onclick="closeTrackerEditModal()">Cancel</button>
+      <button class="btn btn-danger" id="trk-edit-delete-btn" onclick="deleteTrackerEngagement()" style="margin-left:auto"><i data-lucide="trash-2" class="btn-icon"></i>Delete Engagement</button>
     </div>
   </div>
 </div>

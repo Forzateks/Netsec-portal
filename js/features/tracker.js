@@ -433,6 +433,24 @@ async function saveTrackerEdit() {
   await loadTracker();
 }
 
+async function deleteTrackerEngagement() {
+  if (!isManager) { alert('Manager access only.'); return; }
+  var id = parseInt(_trkGet('trk-edit-id'), 10);
+  if (!id) return;
+  var r = _trkData.find(function(x){return x.id===id;});
+  if (!r) return;
+  // Two-step confirm: this also cascade-deletes any milestones via the FK.
+  var msg = 'Delete engagement "'+r.name+'"?\n\nThis will also delete its milestones (cascade) and cannot be undone.\n\nNote: any logged sessions referencing this engagement keep their snapshotted name and remain intact.';
+  if (!confirm(msg)) return;
+  var btn = document.getElementById('trk-edit-delete-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Deleting…'; }
+  var { error } = await sb.from('engagements').delete().eq('id', id);
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="trash-2" class="btn-icon"></i>Delete Engagement'; if (typeof renderIcons === 'function') renderIcons(); }
+  if (error) { alert('Error deleting: '+error.message); return; }
+  closeTrackerEditModal();
+  await loadTracker();
+}
+
 // ── MILESTONES MODAL ───────────────────────────────────────────────
 
 var _msEngagementId = null;

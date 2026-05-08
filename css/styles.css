@@ -605,6 +605,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-type-project{background:#DBEAFE;color:#1E3A8A}
 
 .badge.trk-status{font-size:11px;padding:3px 9px;border-radius:12px;text-transform:none;letter-spacing:0}
+.trk-status-yet-to-start{background:#F1F5F9;color:#475569}
 .trk-status-initial-phase{background:#E0F2FE;color:#075985}
 .trk-status-ongoing{background:#D1FAE5;color:#065F46}
 .trk-status-onhold{background:#FEF3C7;color:#92400E}
