@@ -10,13 +10,14 @@
 // Bump CACHE_VERSION whenever the shell changes meaningfully so old clients
 // drop stale assets on activate.
 
-var CACHE_VERSION = 'netsec-v1';
+var CACHE_VERSION = 'netsec-v2';
 var SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/icon.svg',
   '/icon-maskable.svg',
+  '/favicon.svg',
   '/css/styles.css',
   '/js/core/state.js',
   '/js/core/auth.js',
