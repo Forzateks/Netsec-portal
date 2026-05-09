@@ -882,17 +882,37 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-field-value{font-size:13px;color:#1F2937;font-weight:500;word-break:break-word}
 .trk-remarks-block{margin-top:14px;padding:14px;background:#FFFBEB;border-left:3px solid var(--gold);border-radius:6px}
 
-/* Customer chips (Manage Engagements → Customers) */
-.cust-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 6px 6px 12px;border:1px solid var(--border);border-radius:20px;background:white;font-size:13px;transition:border-color .15s,box-shadow .15s}
-.cust-chip:hover{border-color:#94A3B8;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+/* Customer chips (Manage Engagements → Customers)
+   Compact pill that stays clean by default. Action buttons (edit / delete)
+   are hidden until the chip is hovered or focused; on touch devices they
+   stay visible since :hover doesn't apply. */
+.cust-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;background:white;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s,padding .15s}
+.cust-chip:hover{border-color:#94A3B8;background:#F8FAFC;box-shadow:0 1px 3px rgba(15,23,42,.06);padding-right:6px}
+.cust-chip:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,160,210,.12);padding-right:6px}
 .cust-chip-archived{background:#F3F4F6}
 .cust-chip-archived .cust-chip-name{color:var(--muted);text-decoration:line-through}
 .cust-chip-name{color:var(--navy);font-weight:600}
 .cust-chip-count{font-size:11px;color:var(--muted);background:#F1F5F9;padding:1px 7px;border-radius:10px;font-weight:600;font-family:'DM Mono',monospace}
-.cust-chip-btn{padding:4px;min-height:0;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:6px;cursor:pointer;color:var(--muted);transition:background .12s,color .12s,border-color .12s}
-.cust-chip-btn i{width:13px;height:13px;stroke-width:2}
+
+/* Action buttons fade in on hover/focus. Use opacity + width transitions
+   instead of display:none so the layout doesn't jump when they appear. */
+.cust-chip-btn{
+  padding:0;min-height:0;width:0;height:22px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;border:1px solid transparent;border-radius:6px;cursor:pointer;color:var(--muted);
+  opacity:0;overflow:hidden;
+  transition:opacity .15s ease,width .15s ease,background .12s,color .12s,border-color .12s
+}
+.cust-chip-btn i{width:13px;height:13px;stroke-width:2;flex-shrink:0}
+.cust-chip:hover .cust-chip-btn,
+.cust-chip:focus-within .cust-chip-btn{opacity:1;width:22px}
 .cust-chip-btn:hover{background:#F1F5F9;color:var(--navy);border-color:var(--border)}
 .cust-chip-btn-danger:hover{background:#FEE2E2;color:#991B1B;border-color:#FCA5A5}
+
+/* Touch devices: keep actions visible since hover isn't reliable. */
+@media (hover: none) {
+  .cust-chip-btn{opacity:1;width:22px}
+}
 
 /* Reusable multi-select dropdown (filter bars) */
 .ms{position:relative;font-size:13px}
