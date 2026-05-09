@@ -136,17 +136,89 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(10,31,92,.45);z-index:110;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
 .sidebar-overlay.show{display:block}
 
-/* ── TOP BAR (slim, inside main-area) ── */
-.top-bar{background:var(--navy);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(10,31,92,.15)}
-.hamburger{background:transparent;border:none;color:white;font-size:22px;cursor:pointer;padding:6px 10px;display:none;line-height:1}
-.top-bar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
-.db-status{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.7)}
-.db-dot{width:6px;height:6px;border-radius:50%;background:#ef4444}.db-dot.connected{background:#10b981}
-.user-info{display:flex;align-items:center;gap:8px}
-.user-name{color:white;font-size:13px;font-weight:500}
-.role-badge{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
-.role-badge.manager{background:var(--gold);color:var(--navy)}
-.role-badge.employee{background:rgba(255,255,255,.15);color:white}
+/* ── TOP BAR — Aero-inspired glass surface ──
+   Multi-layer build: a base navy gradient that goes from slightly lifted
+   blue at the top to deep navy at the bottom, plus a ::before pseudo-element
+   that paints a soft top-half highlight (the classic Win7 glass reflection),
+   plus a ::after that drifts a low-opacity shimmer across the bar every
+   ~14s. Inset highlight + cyan-tinted drop shadow finish the depth. */
+.top-bar{
+  position:relative;
+  height:54px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;
+  position:sticky;top:0;z-index:100;
+  background:
+    linear-gradient(180deg, #1B3478 0%, #0F286A 35%, #0A1F5C 65%, #061745 100%);
+  border-bottom:1px solid rgba(0,0,0,.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    inset 0 -1px 0 rgba(0,0,0,.28),
+    0 1px 0 rgba(0,160,210,.18),
+    0 4px 14px rgba(10,31,92,.28);
+  overflow:hidden;
+  isolation:isolate;
+}
+/* Top reflection — translucent highlight occupying the upper half */
+.top-bar::before{
+  content:'';
+  position:absolute;left:0;right:0;top:0;height:50%;
+  background:linear-gradient(180deg,
+    rgba(255,255,255,.16) 0%,
+    rgba(255,255,255,.06) 70%,
+    rgba(255,255,255,0) 100%);
+  pointer-events:none;
+  z-index:0;
+}
+/* Slow lateral shimmer (Aero glass) — disabled for users who prefer reduced motion */
+.top-bar::after{
+  content:'';
+  position:absolute;top:0;bottom:0;left:-40%;width:35%;
+  background:linear-gradient(100deg,
+    transparent 0%,
+    rgba(255,255,255,.06) 35%,
+    rgba(255,255,255,.16) 50%,
+    rgba(255,255,255,.06) 65%,
+    transparent 100%);
+  transform:skewX(-18deg);
+  animation:topbar-shimmer 14s ease-in-out infinite;
+  pointer-events:none;
+  z-index:0;
+}
+@keyframes topbar-shimmer{
+  0%   { left:-40%;  opacity:0;   }
+  10%  { opacity:.9; }
+  55%  { left:120%;  opacity:.9;  }
+  60%  { left:120%;  opacity:0;   }
+  100% { left:120%;  opacity:0;   }
+}
+@media (prefers-reduced-motion: reduce){
+  .top-bar::after{ animation:none; opacity:0; }
+}
+/* Lift the actual children above the pseudo layers so clicks register */
+.top-bar > *{ position:relative; z-index:1; }
+
+.hamburger{background:transparent;border:none;color:white;font-size:22px;cursor:pointer;padding:6px 10px;display:none;line-height:1;transition:background .15s,color .15s}
+.hamburger:hover{background:rgba(255,255,255,.12)}
+.top-bar-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.db-status{display:flex;align-items:center;gap:7px;font-size:12px;color:rgba(255,255,255,.78);padding:4px 9px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);transition:background .15s,border-color .15s}
+.db-status:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.14)}
+.db-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.5)}
+.db-dot.connected{background:#10b981;box-shadow:0 0 0 0 rgba(16,185,129,.5);animation:db-dot-pulse 2.4s ease-in-out infinite}
+@keyframes db-dot-pulse{
+  0%   { box-shadow:0 0 0 0   rgba(16,185,129,.55); }
+  60%  { box-shadow:0 0 0 6px rgba(16,185,129,0);   }
+  100% { box-shadow:0 0 0 0   rgba(16,185,129,0);   }
+}
+@media (prefers-reduced-motion: reduce){
+  .db-dot.connected{animation:none}
+}
+.user-info{display:flex;align-items:center;gap:9px;padding:3px 10px 3px 6px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);transition:background .15s,border-color .15s,box-shadow .15s}
+.user-info:hover{background:rgba(255,255,255,.11);border-color:rgba(0,160,210,.35);box-shadow:0 0 0 3px rgba(0,160,210,.10)}
+.user-name{color:white;font-size:13px;font-weight:500;letter-spacing:.1px}
+.role-badge{padding:3px 10px;border-radius:12px;font-size:10.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.role-badge.manager{background:linear-gradient(180deg,#E8C75A,#C8A832);color:var(--navy);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 1px 2px rgba(0,0,0,.15)}
+.role-badge.employee{background:rgba(255,255,255,.15);color:white;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
 
 .notif-badge{margin-left:auto;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
 
