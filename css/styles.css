@@ -107,8 +107,54 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 /* ── SIDEBAR ── */
 .sidebar{width:240px;background:var(--card);padding:0 0 8px;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:120;display:flex;flex-direction:column;box-shadow:1px 0 0 var(--border),4px 0 14px rgba(10,31,92,.04)}
-.sidebar-brand{height:52px;padding:0 18px;display:flex;align-items:center;gap:12px;background:var(--navy);flex-shrink:0}
-.sidebar-brand img{width:30px;height:30px;border-radius:6px;object-fit:contain;flex-shrink:0}
+/* Sidebar brand — full mirror of the top bar so the two read as one
+   continuous header band. Same gradient, same reflection, same shimmer
+   timing, same box-shadow stack. */
+.sidebar-brand{
+  position:relative;
+  height:54px;
+  padding:0 18px;
+  display:flex;align-items:center;gap:12px;
+  flex-shrink:0;
+  background:linear-gradient(180deg, #1B3478 0%, #0F286A 35%, #0A1F5C 65%, #061745 100%);
+  border-bottom:1px solid rgba(0,0,0,.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    inset 0 -1px 0 rgba(0,0,0,.28),
+    0 1px 0 rgba(0,160,210,.18),
+    0 4px 14px rgba(10,31,92,.28);
+  overflow:hidden;
+  isolation:isolate;
+}
+.sidebar-brand::before{
+  content:'';
+  position:absolute;left:0;right:0;top:0;height:50%;
+  background:linear-gradient(180deg,
+    rgba(255,255,255,.16) 0%,
+    rgba(255,255,255,.06) 70%,
+    rgba(255,255,255,0) 100%);
+  pointer-events:none;
+  z-index:0;
+}
+.sidebar-brand::after{
+  content:'';
+  position:absolute;top:0;bottom:0;left:-40%;width:35%;
+  background:linear-gradient(100deg,
+    transparent 0%,
+    rgba(255,255,255,.06) 35%,
+    rgba(255,255,255,.16) 50%,
+    rgba(255,255,255,.06) 65%,
+    transparent 100%);
+  transform:skewX(-18deg);
+  animation:topbar-shimmer 14s ease-in-out infinite;
+  pointer-events:none;
+  z-index:0;
+}
+@media (prefers-reduced-motion: reduce){
+  .sidebar-brand::after{ animation:none; opacity:0; }
+}
+.sidebar-brand > *{ position:relative; z-index:1; }
+.sidebar-brand img{width:30px;height:30px;border-radius:6px;object-fit:contain;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.25)}
 .sidebar-brand-text{flex:1;min-width:0}
 .sidebar-brand-text h1{font-size:15px;color:white;font-weight:700;line-height:1.1;letter-spacing:.2px}
 .sidebar-brand-text h1 span{color:var(--teal)}
