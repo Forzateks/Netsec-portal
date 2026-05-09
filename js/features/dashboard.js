@@ -353,15 +353,21 @@ async function renderManagerDashboard() {
   var pocInProgress = pocsAll.length - pocConcluded;
   var winRate = pocConcluded ? Math.round(pocWon/pocConcluded*100) : null;
 
+  // Group POCs by partner / region. Uses a case-insensitive key so 'Qatar',
+  // 'QATAR', and 'QAT' collapse into the same row even if the underlying
+  // data hasn't been cleaned yet. Display name is the first non-empty
+  // variant seen (preserves user-preferred casing).
   function groupPocs(key) {
     var map = {};
     pocsAll.forEach(function(p){
-      var k = (p[key] || '').trim() || 'Unknown';
-      if (!map[k]) map[k] = {name:k, total:0, won:0, lost:0, ip:0};
-      map[k].total++;
-      if (isWon(p.tracker_status))      map[k].won++;
-      else if (isLost(p.tracker_status)) map[k].lost++;
-      else                               map[k].ip++;
+      var raw = (p[key] || '').trim();
+      var display = raw || 'Unknown';
+      var canon = display.toLowerCase();
+      if (!map[canon]) map[canon] = {name:display, total:0, won:0, lost:0, ip:0};
+      map[canon].total++;
+      if (isWon(p.tracker_status))      map[canon].won++;
+      else if (isLost(p.tracker_status)) map[canon].lost++;
+      else                               map[canon].ip++;
     });
     return Object.keys(map).map(function(k){
       var g = map[k];
@@ -369,7 +375,6 @@ async function renderManagerDashboard() {
       g.rate = g.concluded ? Math.round(g.won/g.concluded*100) : null;
       return g;
     }).sort(function(a,b){
-      // Sort by total desc, then win rate desc as tiebreaker
       if (b.total !== a.total) return b.total - a.total;
       return (b.rate||0) - (a.rate||0);
     });
