@@ -1,3 +1,15 @@
+// == PWA SERVICE WORKER ============================================
+// Register the service worker once the page is idle so it doesn't block
+// first paint. SW caches the app shell + CDN libs so repeat visits load
+// instantly and the app stays usable when the network drops mid-session.
+function initServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
+  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+    console.warn('SW registration failed:', err);
+  });
+}
+
 // == LOGIN BACKGROUND VIDEO ========================================
 function initLoginBgVideo() {
   var v = document.getElementById('login-bg-video');
@@ -62,6 +74,7 @@ function initSidebarEdgeScroll() {
 
 // == INIT ==========================================================
 window.onload = async function() {
+  initServiceWorker();
   initLoginBgVideo();
   renderIcons();
   initSidebarEdgeScroll();
