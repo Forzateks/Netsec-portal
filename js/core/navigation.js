@@ -35,15 +35,34 @@ function showApprovalsTab(tab) {
 }
 
 function showScreen(name) {
+  var grp        = document.getElementById('sbg-'+name);
+  var screenEl   = document.getElementById('screen-'+name);
+  var alreadyOn  = screenEl && screenEl.classList.contains('active');
+  var groupOpen  = grp && grp.classList.contains('open');
+
+  // Toggle: clicking the parent of the screen you're already on, while its
+  // submenu is open, just collapses the submenu (no navigation, no refetch).
+  // Click again to re-expand. Top-level items without a group (Dashboard)
+  // skip this because grp is null.
+  if (alreadyOn && groupOpen) {
+    grp.classList.remove('open');
+    return;
+  }
+
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.querySelectorAll('.sidebar-item').forEach(function(t){t.classList.remove('active');});
-  document.getElementById('screen-'+name).classList.add('active');
+  if (screenEl) screenEl.classList.add('active');
   var tab = document.getElementById('tab-'+name);
   if (tab) tab.classList.add('active');
   // Accordion: open the matching group, collapse the rest
   document.querySelectorAll('.sidebar-group').forEach(function(g){ g.classList.remove('open'); });
-  var grp = document.getElementById('sbg-'+name);
   if (grp) grp.classList.add('open');
+
+  // If the user was already on this screen and is just re-expanding the
+  // collapsed accordion, don't re-run the data loaders. Saves a refetch
+  // on every accordion toggle.
+  if (alreadyOn) return;
+
   if (name==='dashboard') renderDashboard();
   if (name==='leave')     showLeaveTab('log');
   if (name==='projects')  { initProjectTab(); showProjectTab('uslog'); };
