@@ -18,12 +18,16 @@ let ENGAGEMENTS = []; // [{id, customer_id, name, type, status, ...}] — full n
 let PROJECT_CUSTOMER = {}; // { engagementName: customerName }
 
 async function loadProjects() {
-  const cRes = await sb.from('customers').select('id,name,status').order('name');
+  // Customers and engagements don't depend on each other — fire in parallel.
+  // Cuts ~one round trip off every login on slow networks.
+  const [cRes, eRes] = await Promise.all([
+    sb.from('customers').select('id,name,status').order('name'),
+    sb.from('engagements').select('id,customer_id,name,type,status,created_by,created_at').order('name')
+  ]);
   if (!cRes.error && cRes.data) {
     CUSTOMERS = cRes.data.filter(function(c){ return c.status !== 'archived'; });
   }
   // Engagements is the new source of truth (replaces projects)
-  const eRes = await sb.from('engagements').select('id,customer_id,name,type,status,created_by,created_at').order('name');
   if (!eRes.error && eRes.data) {
     ENGAGEMENTS = eRes.data;
     // PROJECTS array keeps backward-compat with existing OT/Project log forms —

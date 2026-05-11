@@ -194,7 +194,12 @@ async function loadAllProfiles() {
 }
 
 async function initAppFromUser(authUser) {
-  const profile = await fetchUserProfile(authUser);
+  // fetchUserProfile + loadAllProfiles don't depend on each other — fire
+  // them together so we wait once instead of twice on slow networks.
+  const [profile] = await Promise.all([
+    fetchUserProfile(authUser),
+    loadAllProfiles()
+  ]);
   if (!profile) {
     showLoginError('Your account is not set up yet. Ask the manager to add your profile.');
     await sb.auth.signOut();
@@ -203,7 +208,6 @@ async function initAppFromUser(authUser) {
   currentUser  = profile.employee_name;
   currentEmail = profile.email || authUser.email;
   isManager    = !!profile.is_manager;
-  await loadAllProfiles();
   await initApp(currentUser);
 }
 
@@ -239,9 +243,15 @@ async function initApp(user) {
     el.style.display = isManager ? '' : 'none';
   });
 
-  await loadProjects();
-  checkConnection();
+  // Render the dashboard immediately. loadProjects (customers + engagements)
+  // is needed for session-log dropdowns and Manage Engagements, but the
+  // dashboard fetches its own data — no need to block on it. checkConnection
+  // is also a fire-and-forget status ping.
   showScreen('dashboard');
+  checkConnection();
+  loadProjects().then(function(){
+    if (typeof populateProjectDropdowns === 'function') populateProjectDropdowns();
+  });
   if (isManager) updateNotifBadge();
   if (typeof startNotifPolling === 'function') startNotifPolling();
 }
