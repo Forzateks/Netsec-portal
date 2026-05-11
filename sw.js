@@ -10,7 +10,7 @@
 // Bump CACHE_VERSION whenever the shell changes meaningfully so old clients
 // drop stale assets on activate.
 
-var CACHE_VERSION = 'netsec-v7';
+var CACHE_VERSION = 'netsec-v8';
 // Critical bootstrap files only — pre-caching the full shell on install
 // fires 25 parallel fetches that saturate mobile bandwidth and starve
 // the Supabase queries that follow. Everything else now caches on demand
@@ -56,11 +56,32 @@ self.addEventListener('fetch', function(e) {
 
   var sameOrigin = (url.origin === self.location.origin);
 
+  // ── Navigations (HTML documents): NETWORK-FIRST ──
+  // Every online PWA launch pulls a fresh /index.html so the user sees new
+  // deploys immediately. Only when the network is down do we fall back to
+  // the cached copy. Without this, iOS PWA standalone gets pinned to a
+  // stale HTML even after the SW updates underneath it.
+  if (req.mode === 'navigate' || req.destination === 'document') {
+    e.respondWith(
+      fetch(req).then(function(resp) {
+        if (resp && resp.ok) {
+          var copy = resp.clone();
+          caches.open(CACHE_VERSION).then(function(c){ c.put(req, copy).catch(function(){}); });
+        }
+        return resp;
+      }).catch(function() {
+        return caches.match(req).then(function(c){ return c || caches.match('/index.html'); });
+      })
+    );
+    return;
+  }
+
+  // ── Same-origin static assets (JS/CSS/images): STALE-WHILE-REVALIDATE ──
+  // Serves the cached copy instantly for fast paint while a background
+  // fetch refreshes the cache. Pairs with the network-first HTML above:
+  // the fresh HTML may briefly load with one-deploy-old JS, but the page
+  // reload triggered by the controllerchange listener fixes that.
   if (sameOrigin) {
-    // Stale-while-revalidate for shell. Serves the cached copy immediately
-    // (instant load) while fetching a fresh copy in the background and
-    // updating the cache, so CSS/JS changes propagate without needing a
-    // CACHE_VERSION bump on every deploy.
     e.respondWith(
       caches.open(CACHE_VERSION).then(function(cache) {
         return cache.match(req).then(function(cached) {
@@ -70,10 +91,8 @@ self.addEventListener('fetch', function(e) {
             }
             return resp;
           }).catch(function() {
-            if (req.mode === 'navigate') return cache.match('/index.html');
             return cached || new Response('', { status: 504, statusText: 'offline' });
           });
-          // Return cached immediately if we have it; otherwise wait for network.
           return cached || network;
         });
       })
@@ -81,8 +100,7 @@ self.addEventListener('fetch', function(e) {
     return;
   }
 
-  // Cross-origin (CDN libs): network-first, cache fallback. Fresh CDN payloads
-  // overwrite the cache so version bumps reach users on next online load.
+  // ── Cross-origin (CDN libs): NETWORK-FIRST, cache fallback ──
   e.respondWith(
     fetch(req).then(function(resp) {
       if (resp && resp.ok) {

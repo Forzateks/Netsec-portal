@@ -1,12 +1,45 @@
 // == PWA SERVICE WORKER ============================================
-// Register the service worker once the page is idle so it doesn't block
-// first paint. SW caches the app shell + CDN libs so repeat visits load
-// instantly and the app stays usable when the network drops mid-session.
+// Register the service worker and wire up its update lifecycle. iOS PWA
+// standalone is the hardest case — without an explicit reload trigger
+// it serves stale HTML for many launches after a deploy, even with
+// skipWaiting + clients.claim in the worker. The pieces below force the
+// browser to actually check for new versions on every launch and reload
+// the page once the new SW takes control.
+//
+// SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
+// HTTP-cached copy of /sw.js can't be served when this file ships. The
+// version number tracks CACHE_VERSION inside sw.js. Bump them together.
+var SW_REGISTRATION_URL = '/sw.js?v=8';
+
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
-  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+
+  // updateViaCache:'none' tells the browser to bypass the HTTP cache when
+  // checking /sw.js for changes. Without this iOS can pin the SW script
+  // itself in cache and never see new versions.
+  var opts = { updateViaCache: 'none' };
+  navigator.serviceWorker.register(SW_REGISTRATION_URL, opts).then(function(reg) {
+    // Belt-and-braces: explicitly ask for an update on every page load.
+    // Without this iOS PWA only re-checks on the browser's own schedule
+    // (which can be rare), so a deployed v9 might never reach users.
+    try { reg.update(); } catch (e) { /* update() can throw if SW gone */ }
+  }).catch(function(err) {
     console.warn('SW registration failed:', err);
+  });
+
+  // The new SW activates → clients.claim() inside the worker makes it
+  // controller of this page → controllerchange fires here → we reload
+  // once so the running page tosses its old JS/HTML and picks up the
+  // fresh shell. Guarded against reload loops; ignored on first install
+  // (when there was no previous controller).
+  var firstControllerSeen = !!navigator.serviceWorker.controller;
+  var refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (!firstControllerSeen) { firstControllerSeen = true; return; }
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
   });
 }
 
