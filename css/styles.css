@@ -6,6 +6,12 @@
   --success:#059669; --danger:#EF4444;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+/* Paint html with the same deep navy that bottoms out the top-bar
+   gradient. When the app runs as an installed PWA the OS title bar
+   leaves a 1-2px draggable strip above the page content; with the html
+   background set to navy, that strip blends seamlessly into the app
+   header instead of revealing the light page background. */
+html{background:#061745}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:'cv11' 1,'ss01' 1}
 /* Tabular numerals on numeric data so columns of numbers align cleanly */
 .stat-value,.stat-sub,.stat-bar+.stat-sub,table td,table th,.badge,.dash-hero-pill-num,input[type="number"],input[type="time"],input[type="date"]{font-variant-numeric:tabular-nums}
