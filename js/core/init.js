@@ -9,7 +9,7 @@
 // SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
 // HTTP-cached copy of /sw.js can't be served when this file ships. The
 // version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=11';
+var SW_REGISTRATION_URL = '/sw.js?v=12';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -41,6 +41,21 @@ function initServiceWorker() {
     refreshing = true;
     window.location.reload();
   });
+}
+
+// Fallback touch handler for the hamburger menu. On iOS PWA, the inline
+// onclick=toggleSidebar(true) can occasionally be eaten by the OS when
+// the user is reaching toward the safe-area boundary; binding a
+// touchstart listener fires earlier in the gesture and guarantees the
+// sidebar opens. preventDefault stops the synthesized click that would
+// otherwise also fire toggleSidebar (double-toggle).
+function initHamburgerTouch() {
+  var hb = document.querySelector('.hamburger');
+  if (!hb) return;
+  hb.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (typeof toggleSidebar === 'function') toggleSidebar(true);
+  }, { passive: false });
 }
 
 // == LOGIN BACKGROUND VIDEO ========================================
@@ -111,6 +126,7 @@ window.onload = async function() {
   initLoginBgVideo();
   renderIcons();
   initSidebarEdgeScroll();
+  initHamburgerTouch();
   // Supabase puts the link type in the URL hash:
   //   type=recovery            -> forgot-password reset link
   //   type=invite | type=signup -> invitation from manager (first-time login)
