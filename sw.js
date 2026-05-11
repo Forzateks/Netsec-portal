@@ -10,7 +10,7 @@
 // Bump CACHE_VERSION whenever the shell changes meaningfully so old clients
 // drop stale assets on activate.
 
-var CACHE_VERSION = 'netsec-v2';
+var CACHE_VERSION = 'netsec-v3';
 var SHELL = [
   '/',
   '/index.html',
@@ -74,20 +74,24 @@ self.addEventListener('fetch', function(e) {
   var sameOrigin = (url.origin === self.location.origin);
 
   if (sameOrigin) {
-    // Cache-first for shell. Falls back to index.html for navigations
-    // (e.g. a deep-linked URL that wasn't precached) so the SPA still loads.
+    // Stale-while-revalidate for shell. Serves the cached copy immediately
+    // (instant load) while fetching a fresh copy in the background and
+    // updating the cache, so CSS/JS changes propagate without needing a
+    // CACHE_VERSION bump on every deploy.
     e.respondWith(
-      caches.match(req).then(function(cached) {
-        if (cached) return cached;
-        return fetch(req).then(function(resp) {
-          if (resp && resp.ok && resp.type === 'basic') {
-            var copy = resp.clone();
-            caches.open(CACHE_VERSION).then(function(c) { c.put(req, copy); });
-          }
-          return resp;
-        }).catch(function() {
-          if (req.mode === 'navigate') return caches.match('/index.html');
-          return new Response('', { status: 504, statusText: 'offline' });
+      caches.open(CACHE_VERSION).then(function(cache) {
+        return cache.match(req).then(function(cached) {
+          var network = fetch(req).then(function(resp) {
+            if (resp && resp.ok && resp.type === 'basic') {
+              cache.put(req, resp.clone()).catch(function(){});
+            }
+            return resp;
+          }).catch(function() {
+            if (req.mode === 'navigate') return cache.match('/index.html');
+            return cached || new Response('', { status: 504, statusText: 'offline' });
+          });
+          // Return cached immediately if we have it; otherwise wait for network.
+          return cached || network;
         });
       })
     );
