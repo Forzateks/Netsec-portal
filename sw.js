@@ -10,7 +10,7 @@
 // Bump CACHE_VERSION whenever the shell changes meaningfully so old clients
 // drop stale assets on activate.
 
-var CACHE_VERSION = 'netsec-v8';
+var CACHE_VERSION = 'netsec-v9';
 // Critical bootstrap files only — pre-caching the full shell on install
 // fires 25 parallel fetches that saturate mobile bandwidth and starve
 // the Supabase queries that follow. Everything else now caches on demand
