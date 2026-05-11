@@ -530,9 +530,28 @@ async function renderManagerDashboard() {
   if (typeof renderIcons === 'function') renderIcons();
 }
 
+// Lazy-load the XLSX library from the CDN on demand. Keeps the ~700KB
+// payload out of every page load — mobile users on slow networks no
+// longer wait for it during login. Returns a promise that resolves once
+// XLSX is on window.
+function ensureXlsxLoaded() {
+  if (typeof XLSX !== 'undefined') return Promise.resolve();
+  if (window._xlsxLoadingPromise) return window._xlsxLoadingPromise;
+  window._xlsxLoadingPromise = new Promise(function(resolve, reject){
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = function(){ resolve(); };
+    s.onerror = function(){ reject(new Error('Failed to load XLSX library')); };
+    document.head.appendChild(s);
+  });
+  return window._xlsxLoadingPromise;
+}
+
 // == EXCEL BACKUP =================================================
 async function backupExcel(scope) {
-  if (typeof XLSX === 'undefined') { alert('Excel library not loaded. Refresh the page and try again.'); return; }
+  try { await ensureXlsxLoaded(); }
+  catch (e) { alert('Could not load the Excel library. Check your connection and try again.'); return; }
+  if (typeof XLSX === 'undefined') { alert('Excel library not available.'); return; }
   var stamp = new Date().toISOString().split('T')[0];
   var wb = XLSX.utils.book_new();
 
