@@ -193,6 +193,16 @@
       <div class="sidebar-subitem" id="sbi-inventory-log"     onclick="navigateSub('inventory','log')"><i data-lucide="history" class="sidebar-subicon"></i>Activity Log</div>
     </div>
   </div>
+  <div class="sidebar-group" id="sbg-certificates">
+    <div class="sidebar-item has-children" id="tab-certificates" onclick="showScreen('certificates');closeSidebarOnMobile()">
+      <i data-lucide="award" class="sidebar-icon"></i>Certificates<span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
+      <div class="sidebar-subitem" id="sbi-certificates-mine" onclick="navigateSub('certificates','mine')"><i data-lucide="user" class="sidebar-subicon"></i>My Certificates</div>
+      <div class="sidebar-subitem" id="sbi-certificates-all"  onclick="navigateSub('certificates','all')" style="display:none"><i data-lucide="users" class="sidebar-subicon"></i>All Certificates</div>
+    </div>
+  </div>
+
   <div class="sidebar-group" id="sbg-kb">
     <div class="sidebar-item has-children" id="tab-kb" onclick="showScreen('kb');closeSidebarOnMobile()">
       <i data-lucide="book-open-text" class="sidebar-icon"></i>Knowledge Base<span class="sidebar-chevron">›</span>
@@ -1133,6 +1143,113 @@
 
 </div><!-- /screen-inventory -->
 
+
+<!-- ══ CERTIFICATES SCREEN ══ -->
+<div class="screen" id="screen-certificates">
+  <div id="certtab-mine">
+    <div class="card cert-header-card">
+      <div class="cert-header-text">
+        <div class="card-title" style="margin-bottom:4px">My Certificates</div>
+        <div style="font-size:13px;color:var(--muted)">Upload and manage your professional certifications. Track expiry dates so you never miss a renewal.</div>
+      </div>
+      <button class="btn btn-primary" onclick="openCertUploadModal()"><i data-lucide="upload-cloud" class="btn-icon"></i>Upload Certificate</button>
+    </div>
+    <div id="cert-mine-load" class="loading"><div class="spinner"></div>Loading...</div>
+    <div id="cert-mine-content"></div>
+  </div>
+
+  <div id="certtab-all" style="display:none">
+    <div class="card cert-header-card">
+      <div class="cert-header-text">
+        <div class="card-title" style="margin-bottom:4px">All Certificates</div>
+        <div style="font-size:13px;color:var(--muted)">Team-wide certifications — every employee's uploads.</div>
+      </div>
+      <div class="form-group" style="margin:0;min-width:180px">
+        <label>Employee</label>
+        <select id="cert-all-filter-emp" onchange="renderCertList()">
+          <option value="">All Employees</option>
+        </select>
+      </div>
+    </div>
+    <div id="cert-all-load" class="loading"><div class="spinner"></div>Loading...</div>
+    <div id="cert-all-content"></div>
+  </div>
+</div>
+
+
+<!-- CERTIFICATE UPLOAD MODAL -->
+<div class="modal-overlay" id="cert-upload-modal">
+  <div class="modal" style="max-width:560px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px">
+      <div class="modal-title">Upload Certificate</div>
+      <button class="btn btn-ghost" onclick="closeCertUploadModal()" style="font-size:18px;padding:4px 10px">×</button>
+    </div>
+    <div class="form-grid mb-4">
+      <div class="form-group full">
+        <label>Certificate Name <span class="req">*</span></label>
+        <input type="text" id="cert-up-name" placeholder="e.g. Aruba ACMA, HPE Sales Certified">
+      </div>
+      <div class="form-group">
+        <label>Issue Date <span class="req">*</span></label>
+        <input type="date" id="cert-up-issue">
+      </div>
+      <div class="form-group">
+        <label>Expiry Date <span class="req">*</span></label>
+        <input type="date" id="cert-up-expiry">
+      </div>
+      <div class="form-group full">
+        <label>File <span class="req">*</span> <span class="dim" style="font-weight:400;font-size:11px">(PDF / PNG / JPEG, max 10 MB)</span></label>
+        <input type="file" id="cert-up-file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg,image/jpg">
+      </div>
+    </div>
+    <div class="alert alert-error" id="cert-up-error" style="display:none"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeCertUploadModal()">Cancel</button>
+      <button class="btn btn-primary" id="cert-up-btn" onclick="uploadCertificate()"><i data-lucide="upload" class="btn-icon"></i>Upload Certificate</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- CERTIFICATE EDIT MODAL -->
+<div class="modal-overlay" id="cert-edit-modal">
+  <div class="modal" style="max-width:560px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px">
+      <div class="modal-title">Edit Certificate</div>
+      <button class="btn btn-ghost" onclick="closeCertEditModal()" style="font-size:18px;padding:4px 10px">×</button>
+    </div>
+    <input type="hidden" id="cert-edit-id">
+    <div class="form-grid mb-4">
+      <div class="form-group full">
+        <label>Certificate Name <span class="req">*</span></label>
+        <input type="text" id="cert-edit-name">
+      </div>
+      <div class="form-group">
+        <label>Issue Date <span class="req">*</span></label>
+        <input type="date" id="cert-edit-issue">
+      </div>
+      <div class="form-group">
+        <label>Expiry Date <span class="req">*</span></label>
+        <input type="date" id="cert-edit-expiry">
+      </div>
+      <div class="form-group full">
+        <label>Current File</label>
+        <div id="cert-edit-current-file" style="font-size:13px;color:var(--muted);padding:6px 0"></div>
+      </div>
+      <div class="form-group full">
+        <label>Replace File <span class="dim" style="font-weight:400;font-size:11px">(optional — leave blank to keep current)</span></label>
+        <input type="file" id="cert-edit-file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg,image/jpg">
+      </div>
+    </div>
+    <div class="alert alert-error" id="cert-edit-error" style="display:none"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeCertEditModal()">Cancel</button>
+      <button class="btn btn-primary" id="cert-edit-btn" onclick="saveCertEdit()"><i data-lucide="save" class="btn-icon"></i>Save Changes</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- ══ KNOWLEDGE BASE SCREEN ══ -->
 <div class="screen" id="screen-kb">
 
@@ -1708,6 +1825,7 @@
 <script src="js/features/approvals.js"></script>
 <script src="js/features/knowledge-base.js"></script>
 <script src="js/features/tracker.js"></script>
+<script src="js/features/certificates.js"></script>
 <script src="js/core/init.js"></script>
 </body>
 </html>

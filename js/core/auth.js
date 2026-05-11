@@ -227,6 +227,8 @@ async function initApp(user) {
   if (sbiOTManager) sbiOTManager.style.display = isManager ? '' : 'none';
   var sbiManage = document.getElementById('sbi-projects-manage');
   if (sbiManage) sbiManage.style.display = isManager ? '' : 'none';
+  var sbiCertAll = document.getElementById('sbi-certificates-all');
+  if (sbiCertAll) sbiCertAll.style.display = isManager ? '' : 'none';
   document.getElementById('tab-approvals').style.display  = isManager ? '' : 'none';
   var sbgApprovals = document.getElementById('sbg-approvals');
   if (sbgApprovals) sbgApprovals.style.display = isManager ? '' : 'none';
