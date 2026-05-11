@@ -111,6 +111,20 @@ function setSidebarSubActive(screen, subTab) {
   });
 }
 
+// User-chip dropdown — top-right of the unified header. Opens / closes on
+// click; init.js binds a document-level handler that closes the menu when
+// the user taps outside it.
+function toggleUserMenu(e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  var wrap = document.querySelector('.user-menu-wrap');
+  if (!wrap) return;
+  wrap.classList.toggle('open');
+}
+function closeUserMenu() {
+  var wrap = document.querySelector('.user-menu-wrap');
+  if (wrap) wrap.classList.remove('open');
+}
+
 function toggleSidebar(open) {
   var sb = document.getElementById('sidebar');
   var ov = document.getElementById('sidebar-overlay');

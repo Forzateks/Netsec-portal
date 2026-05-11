@@ -9,7 +9,7 @@
 // SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
 // HTTP-cached copy of /sw.js can't be served when this file ships. The
 // version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=14';
+var SW_REGISTRATION_URL = '/sw.js?v=15';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -40,6 +40,18 @@ function initServiceWorker() {
     if (refreshing) return;
     refreshing = true;
     window.location.reload();
+  });
+}
+
+// Close the user-menu dropdown when the user taps anywhere outside it.
+// The chip itself stops propagation in toggleUserMenu, so opening doesn't
+// immediately fire this close.
+function initUserMenuOutsideClose() {
+  document.addEventListener('click', function(e) {
+    var wrap = document.querySelector('.user-menu-wrap');
+    if (!wrap || !wrap.classList.contains('open')) return;
+    if (wrap.contains(e.target)) return;
+    wrap.classList.remove('open');
   });
 }
 
@@ -127,6 +139,7 @@ window.onload = async function() {
   renderIcons();
   initSidebarEdgeScroll();
   initHamburgerTouch();
+  initUserMenuOutsideClose();
   // Supabase puts the link type in the URL hash:
   //   type=recovery            -> forgot-password reset link
   //   type=invite | type=signup -> invitation from manager (first-time login)

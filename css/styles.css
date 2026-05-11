@@ -152,64 +152,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .main-area{flex:1;min-width:0;display:flex;flex-direction:column}
 
 /* ── SIDEBAR ── */
-.sidebar{width:240px;background:var(--card);padding:0 0 8px;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:120;display:flex;flex-direction:column;box-shadow:1px 0 0 var(--border),4px 0 14px rgba(10,31,92,.04)}
-/* Sidebar brand — full mirror of the top bar so the two read as one
-   continuous header band. Same gradient, same reflection, same shimmer
-   timing, same box-shadow stack. */
-.sidebar-brand{
-  position:relative;
-  /* Grow into the iOS notch / Dynamic Island / status bar area so the
-     navy gradient runs edge-to-edge on installed PWAs. Uses max(12px, ...)
-     so there's a guaranteed minimum even when iOS reports env() as 0
-     (which it does on some Dynamic Island devices in standalone mode). */
-  height:calc(54px + max(12px, env(safe-area-inset-top, 0px)));
-  padding:max(12px, env(safe-area-inset-top, 0px)) 18px 0;
-  display:flex;align-items:center;gap:12px;
-  flex-shrink:0;
-  background:linear-gradient(180deg, #1B3478 0%, #0F286A 35%, #0A1F5C 65%, #061745 100%);
-  border-bottom:1px solid rgba(0,0,0,.35);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.28),
-    inset 0 -1px 0 rgba(0,0,0,.28),
-    0 1px 0 rgba(0,160,210,.18),
-    0 4px 14px rgba(10,31,92,.28);
-  overflow:hidden;
-  isolation:isolate;
-}
-.sidebar-brand::before{
-  content:'';
-  position:absolute;left:0;right:0;top:0;height:50%;
-  background:linear-gradient(180deg,
-    rgba(255,255,255,.16) 0%,
-    rgba(255,255,255,.06) 70%,
-    rgba(255,255,255,0) 100%);
-  pointer-events:none;
-  z-index:0;
-}
-.sidebar-brand::after{
-  content:'';
-  position:absolute;top:0;bottom:0;left:-40%;width:35%;
-  background:linear-gradient(100deg,
-    transparent 0%,
-    rgba(255,255,255,.06) 35%,
-    rgba(255,255,255,.16) 50%,
-    rgba(255,255,255,.06) 65%,
-    transparent 100%);
-  transform:skewX(-18deg);
-  animation:topbar-shimmer 14s ease-in-out infinite;
-  pointer-events:none;
-  z-index:0;
-}
-@media (prefers-reduced-motion: reduce){
-  .sidebar-brand::after{ animation:none; opacity:0; }
-}
-.sidebar-brand > *{ position:relative; z-index:1; }
-.sidebar-brand img{width:30px;height:30px;border-radius:6px;object-fit:contain;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.25)}
-.sidebar-brand-text{flex:1;min-width:0}
-.sidebar-brand-text h1{font-size:15px;color:white;font-weight:700;line-height:1.1;letter-spacing:.2px}
-.sidebar-brand-text h1 span{color:var(--teal)}
-.sidebar-close{display:none;background:transparent;border:none;color:white;font-size:24px;cursor:pointer;padding:0 4px;line-height:1;opacity:.85;transition:opacity .15s}
-.sidebar-close:hover{opacity:1}
+/* Sidebar — sits below the new unified header. Uses top:60px so when
+   the page scrolls, the sidebar pins below the sticky header instead
+   of slipping behind it. Height fills the rest of the viewport. */
+.sidebar{width:240px;background:var(--card);padding:14px 0 8px;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto;flex-shrink:0;z-index:80;display:flex;flex-direction:column;box-shadow:1px 0 0 var(--border),4px 0 14px rgba(10,31,92,.04)}
+/* Sidebar close button (X) — visible only on mobile when sidebar is open.
+   Sits at the top-right of the sidebar drawer; absolute so it doesn't
+   eat a row of the nav list. */
+.sidebar-close{display:none;position:absolute;top:8px;right:8px;background:transparent;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 10px;line-height:1;border-radius:6px;z-index:1;transition:background .15s,color .15s}
+.sidebar-close:hover{background:rgba(0,0,0,.04);color:var(--navy)}
+/* Sidebar brand removed — the logo + brand text now live in the unified
+   .top-bar at the top of the page. */
 .sidebar-section-label{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:18px 20px 6px}
 .sidebar-section-label:first-of-type{padding-top:14px}
 .sidebar-item{display:flex;align-items:center;gap:12px;padding:9px 20px 9px 17px;font-size:14px;color:var(--text);cursor:pointer;transition:background .15s,color .15s;border-left:3px solid transparent;font-weight:500;position:relative;user-select:none}
@@ -232,63 +185,43 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(10,31,92,.45);z-index:110;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
 .sidebar-overlay.show{display:block}
 
-/* ── TOP BAR — Aero-inspired glass surface ──
-   Multi-layer build: a base navy gradient that goes from slightly lifted
-   blue at the top to deep navy at the bottom, plus a ::before pseudo-element
-   that paints a soft top-half highlight (the classic Win7 glass reflection),
-   plus a ::after that drifts a low-opacity shimmer across the bar every
-   ~14s. Inset highlight + cyan-tinted drop shadow finish the depth. */
+/* ── UNIFIED TOP BAR — full-width header, ~60px tall, frosted glass ──
+   Hosts the brand, the spacer (future global search), and the right-side
+   controls (db dot, bell, user chip + dropdown). Sticky at top so it stays
+   pinned during scroll. Safe-area padding pushes content below the iOS
+   Dynamic Island / status bar in standalone PWA mode. */
 .top-bar{
-  position:relative;
-  /* Extend visually into the iOS status-bar / Dynamic Island zone so the
-     navy gradient runs to y=0. max(12px, ...) is a guaranteed minimum
-     floor — iOS sometimes reports env(safe-area-inset-top) as 0 in
-     standalone PWAs even on Dynamic Island devices; this ensures the
-     hamburger never sits in the system clock zone. */
-  height:calc(54px + max(12px, env(safe-area-inset-top, 0px)));
-  display:flex;align-items:center;justify-content:space-between;
-  padding-top:max(12px, env(safe-area-inset-top, 0px));
-  padding-right:18px;
-  padding-bottom:0;
-  padding-left:18px;
   position:sticky;top:0;z-index:100;
-  /* Aero-style frosted glass: a translucent navy plate with a strong
-     backdrop blur + saturation boost. Page content scrolling underneath
-     shows through as a softly-defocused color cast — the modern
-     equivalent of Win7 Aero. */
-  background:rgba(10, 31, 92, 0.75);
+  height:calc(60px + max(0px, env(safe-area-inset-top, 0px)));
+  display:flex;align-items:center;gap:14px;
+  padding-top:max(0px, env(safe-area-inset-top, 0px));
+  padding-right:20px;
+  padding-bottom:0;
+  padding-left:20px;
+  /* Aero-style frosted glass — translucent navy gradient + backdrop blur.
+     Content scrolling underneath shows through as a softly-defocused tint. */
+  background:linear-gradient(135deg, rgba(10,31,92,0.85) 0%, rgba(27,52,119,0.85) 100%);
   backdrop-filter:blur(20px) saturate(180%);
   -webkit-backdrop-filter:blur(20px) saturate(180%);
-  border-bottom:1px solid rgba(255, 255, 255, 0.08);
+  border-bottom:1px solid rgba(255,255,255,.08);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 1px 3px rgba(0, 0, 0, 0.10);
-  overflow:hidden;
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 1px 3px rgba(0,0,0,.10);
+  overflow:visible;        /* dropdown menus need to escape */
   isolation:isolate;
 }
 /* Fallback for browsers that don't support backdrop-filter (older Safari,
    some Firefox versions) — paint a clean opaque navy so the header still
    reads correctly. */
 @supports not (backdrop-filter: blur(20px)) {
-  .top-bar { background:#0A1F5C; }
+  .top-bar { background:linear-gradient(135deg, #0A1F5C 0%, #1B3477 100%); }
 }
 @supports not ((-webkit-backdrop-filter: blur(20px)) or (backdrop-filter: blur(20px))) {
-  .top-bar { background:#0A1F5C; }
+  .top-bar { background:linear-gradient(135deg, #0A1F5C 0%, #1B3477 100%); }
 }
-/* Top reflection — translucent highlight occupying the upper half of the
-   content row (i.e. below the safe-area padding). */
-.top-bar::before{
-  content:'';
-  position:absolute;left:0;right:0;
-  top:max(12px, env(safe-area-inset-top, 0px));height:27px;
-  background:linear-gradient(180deg,
-    rgba(255,255,255,.16) 0%,
-    rgba(255,255,255,.06) 70%,
-    rgba(255,255,255,0) 100%);
-  pointer-events:none;
-  z-index:0;
-}
-/* Slow lateral shimmer (Aero glass) — disabled for users who prefer reduced motion */
+/* Subtle shimmer that drifts across the bar every ~14s. Disabled for
+   users who prefer reduced motion. The reflection pseudo from the older
+   build was removed — the gradient itself does enough to suggest depth. */
 .top-bar::after{
   content:'';
   position:absolute;top:0;bottom:0;left:-40%;width:35%;
@@ -316,29 +249,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 /* Lift the actual children above the pseudo layers so clicks register */
 .top-bar > *{ position:relative; z-index:1; }
 
-/* ── iOS Dynamic Island / notch safety floor ──
-   In some iOS standalone PWA states env(safe-area-inset-top) reports 0 even
-   though the device actually has a ~37-59px Dynamic Island or notch above
-   the page. The 12px floor on .top-bar / .sidebar-brand isn't enough then
-   — hamburger and badges end up behind the system clock.
-   When the app is launched as an installed PWA (display-mode:standalone),
-   bump the floor to 50px so the navigation row always clears the system
-   area regardless of what env() reports. Browser tabs and desktop are
-   unaffected. */
+/* iOS standalone PWA: enlarge the safe-area floor so the unified header
+   always clears the Dynamic Island / notch even when iOS reports
+   env(safe-area-inset-top) as 0. */
 @media (display-mode: standalone) {
-  .top-bar,
-  .sidebar-brand {
-    height:calc(54px + max(50px, env(safe-area-inset-top, 0px)));
+  .top-bar {
+    height:calc(60px + max(50px, env(safe-area-inset-top, 0px)));
     padding-top:max(50px, env(safe-area-inset-top, 0px));
-  }
-  .top-bar::before {
-    top:max(50px, env(safe-area-inset-top, 0px));
   }
 }
 
-/* 44×44 effective tap target meets Apple HIG and Android touch guidelines.
-   touch-action:manipulation kills the 300ms tap delay older mobile browsers
-   apply while they wait to detect a double-tap zoom gesture. */
+/* ── Top-bar children ─────────────────────────────────────────── */
+
+/* Hamburger: 44×44 tap target, mobile only. inline-flex so the ☰ glyph
+   centers in the box. touch-action kills the 300ms tap delay. */
 .hamburger{background:transparent;border:none;color:white;font-size:24px;cursor:pointer;padding:0;display:none;line-height:1;transition:background .15s,color .15s;
   position:relative;z-index:1;
   min-width:44px;min-height:44px;width:44px;height:44px;
@@ -346,12 +270,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   touch-action:manipulation;
   -webkit-tap-highlight-color:rgba(255,255,255,.2);
   -webkit-user-select:none;user-select:none;
+  flex-shrink:0;
   margin-left:-8px}
 .hamburger:hover{background:rgba(255,255,255,.12)}
 .hamburger:active{background:rgba(255,255,255,.20)}
-.top-bar-right{display:flex;align-items:center;gap:12px;margin-left:auto}
-.db-status{display:flex;align-items:center;gap:7px;font-size:12px;color:rgba(255,255,255,.78);padding:4px 9px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);transition:background .15s,border-color .15s}
-.db-status:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.14)}
+
+/* Brand — logo + "NetSec Portal" wordmark. Clickable to navigate home. */
+.top-bar-brand{display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 8px;margin-left:-8px;border-radius:8px;transition:background .15s;flex-shrink:0}
+.top-bar-brand:hover{background:rgba(255,255,255,.06)}
+.top-bar-logo{width:32px;height:32px;border-radius:6px;object-fit:contain;box-shadow:0 1px 2px rgba(0,0,0,.25);flex-shrink:0}
+.top-bar-brand-text{font-size:17px;font-weight:600;color:white;letter-spacing:.2px;white-space:nowrap}
+.top-bar-brand-text span{color:var(--teal)}
+
+/* Flex spacer between brand and right controls. */
+.top-bar-spacer{flex:1;min-width:0}
+
+/* Right cluster — db dot, notification bell, user chip. */
+.top-bar-right{display:flex;align-items:center;gap:12px;position:relative}
+
+/* Db status — JUST the dot. The "Connected" text moved into the user
+   menu dropdown. Hover gives a tooltip via title=. */
+.db-status{display:flex;align-items:center;cursor:default;width:14px;height:14px;justify-content:center}
 .db-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.5)}
 .db-dot.connected{background:#10b981;box-shadow:0 0 0 0 rgba(16,185,129,.5);animation:db-dot-pulse 2.4s ease-in-out infinite}
 @keyframes db-dot-pulse{
@@ -359,15 +298,47 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   60%  { box-shadow:0 0 0 6px rgba(16,185,129,0);   }
   100% { box-shadow:0 0 0 0   rgba(16,185,129,0);   }
 }
-@media (prefers-reduced-motion: reduce){
-  .db-dot.connected{animation:none}
-}
-.user-info{display:flex;align-items:center;gap:9px;padding:3px 10px 3px 6px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);transition:background .15s,border-color .15s,box-shadow .15s}
-.user-info:hover{background:rgba(255,255,255,.11);border-color:rgba(0,160,210,.35);box-shadow:0 0 0 3px rgba(0,160,210,.10)}
-.user-name{color:white;font-size:13px;font-weight:500;letter-spacing:.1px}
-.role-badge{padding:3px 10px;border-radius:12px;font-size:10.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+@media (prefers-reduced-motion: reduce){ .db-dot.connected{animation:none} }
+
+/* Notification bell — clean SVG button, manager-only. Pill shows pending
+   count over the icon. Hidden by default until updateNotifBadge unhides
+   it for managers with pending approvals. */
+.top-bar-bell{background:transparent;border:none;color:rgba(255,255,255,.85);cursor:pointer;padding:0;width:36px;height:36px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;position:relative;transition:background .15s,color .15s;-webkit-tap-highlight-color:rgba(255,255,255,.18);touch-action:manipulation}
+.top-bar-bell i{width:18px;height:18px;stroke-width:2}
+.top-bar-bell:hover{background:rgba(255,255,255,.12);color:white}
+.notif-pill{position:absolute;top:2px;right:2px;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center;line-height:1.2;border:1.5px solid rgba(10,31,92,.85)}
+
+/* User chip — avatar (initials) + name + role badge + caret. Click toggles
+   the menu dropdown. */
+.user-menu-wrap{position:relative}
+.user-chip{display:flex;align-items:center;gap:8px;padding:3px 10px 3px 4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:22px;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s;color:white;font-family:'DM Sans',sans-serif;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.18)}
+.user-chip:hover{background:rgba(255,255,255,.12);border-color:rgba(0,160,210,.35);box-shadow:0 0 0 3px rgba(0,160,210,.10)}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#5ad1ff);color:white;font-size:12px;font-weight:700;letter-spacing:.5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.25)}
+.user-chip-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1;min-width:0}
+.user-chip-name{color:white;font-size:13px;font-weight:500;letter-spacing:.1px;white-space:nowrap}
+.user-chip-caret{width:14px;height:14px;stroke-width:2;color:rgba(255,255,255,.7);flex-shrink:0;transition:transform .15s}
+.user-menu-wrap.open .user-chip-caret{transform:rotate(180deg)}
+
+.role-badge{padding:1px 7px;border-radius:8px;font-size:9.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;margin-top:2px}
 .role-badge.manager{background:linear-gradient(180deg,#E8C75A,#C8A832);color:var(--navy);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 1px 2px rgba(0,0,0,.15)}
-.role-badge.employee{background:rgba(255,255,255,.15);color:white;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.role-badge.employee{background:rgba(255,255,255,.18);color:white;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+
+/* User menu dropdown */
+.user-menu{display:none;position:absolute;top:calc(100% + 8px);right:0;width:240px;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 30px rgba(10,31,92,.18),0 0 0 1px rgba(10,31,92,.04);padding:6px;z-index:200;animation:userMenuFade .14s ease-out both}
+.user-menu-wrap.open .user-menu{display:block}
+@keyframes userMenuFade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.user-menu-status{display:flex;align-items:center;gap:9px;padding:10px 12px;font-size:12px;color:var(--muted);font-weight:500}
+.user-menu-divider{height:1px;background:var(--border);margin:4px 0}
+.user-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;background:transparent;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text);text-align:left;font-family:'DM Sans',sans-serif;transition:background .12s,color .12s}
+.user-menu-item i{width:16px;height:16px;stroke-width:2;color:var(--muted);flex-shrink:0;transition:color .12s}
+.user-menu-item:hover{background:#F1F5F9;color:var(--navy)}
+.user-menu-item:hover i{color:var(--navy)}
+.user-menu-item-danger{color:var(--danger)}
+.user-menu-item-danger i{color:var(--danger)}
+.user-menu-item-danger:hover{background:#FEF2F2;color:#991B1B}
+.user-menu-item-danger:hover i{color:#991B1B}
+
+.notif-badge{margin-left:auto;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
 
 .notif-badge{margin-left:auto;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
 
@@ -700,12 +671,22 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .request-card.rejected{border-left:4px solid var(--danger)}
 /* ── SIDEBAR mobile collapse (≤900px) ── */
 @media(max-width:900px){
-  .sidebar{position:fixed;left:0;top:0;height:100vh;transform:translateX(-100%);transition:transform .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.15)}
+  /* Sidebar becomes a left drawer that slides over the page. Covers the
+     top-bar when open; user taps overlay or X to close. */
+  .sidebar{position:fixed;left:0;top:0;height:100vh;transform:translateX(-100%);transition:transform .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.15);z-index:130;padding-top:14px}
   .sidebar.open{transform:translateX(0)}
   /* inline-flex so align-items / justify-content in .hamburger actually
      center the ☰ glyph inside the 44×44 box. */
   .hamburger{display:inline-flex}
   .sidebar-close{display:inline-block}
+  /* Hide the brand text on small viewports — just keep hamburger + logo. */
+  .top-bar-brand-text{display:none}
+}
+/* Drop the name + role badge on the very narrowest screens; the avatar
+   alone is enough identity. */
+@media(max-width:480px){
+  .user-chip-text{display:none}
+  .top-bar{padding-left:12px;padding-right:12px;gap:10px}
 }
 
 /* ══ MOBILE RESPONSIVE ══════════════════════════════════════════ */

@@ -221,6 +221,12 @@ async function initApp(user) {
   const rb = document.getElementById('header-role-badge');
   rb.textContent = isManager ? 'Manager' : 'Employee';
   rb.className = 'role-badge ' + (isManager ? 'manager' : 'employee');
+  // Initials avatar — first letter of first two name tokens, uppercased.
+  var av = document.getElementById('user-avatar');
+  if (av) {
+    var parts = (user||'').split(/\s+/).filter(Boolean).slice(0,2);
+    av.textContent = parts.map(function(p){return p.charAt(0).toUpperCase();}).join('') || '·';
+  }
 
   // Show/hide manager elements
   var sbiOTManager = document.getElementById('sbi-projects-otmanager');
@@ -260,13 +266,17 @@ async function initApp(user) {
 
 // == CONNECTION CHECK ==============================================
 async function checkConnection() {
+  var topbarDot = document.getElementById('db-dot');
+  var menuDot   = document.getElementById('user-menu-dot');
+  var menuText  = document.getElementById('user-menu-status-text');
   try {
     const { error } = await sb.from('ot_sessions').select('id').limit(1);
     if (error) throw error;
-    document.getElementById('db-dot').classList.add('connected');
-    document.getElementById('db-status-text').textContent = 'Connected';
+    if (topbarDot) topbarDot.classList.add('connected');
+    if (menuDot)   menuDot.classList.add('connected');
+    if (menuText)  menuText.textContent = 'Connected to database';
   } catch(e) {
-    document.getElementById('db-status-text').textContent = 'DB error';
+    if (menuText) menuText.textContent = 'Database unreachable';
   }
 }
 
