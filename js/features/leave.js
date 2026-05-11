@@ -663,7 +663,13 @@ function approvalCard(r,type) {
 
 function openApproveModal(type,id,employee) {
   approveTarget={type,id,employee};
-  document.getElementById('approve-modal-title').textContent='Review '+cap(type==='compoff'?'Comp Off':'Leave')+' Request';
+  // Pick a title that matches the source. The same modal is reused by OT
+  // sessions, leave requests and comp-off requests, so the title has to
+  // adapt or managers see 'Review Leave Request' on an OT session.
+  var title = type==='ot'      ? 'Review OT Session'
+            : type==='compoff' ? 'Review Comp Off Request'
+            :                    'Review Leave Request';
+  document.getElementById('approve-modal-title').textContent=title;
   document.getElementById('approve-modal-info').textContent='Employee: '+employee;
   document.getElementById('approve-comment').value='';
   document.getElementById('approve-modal').classList.add('show');
