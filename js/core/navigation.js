@@ -1,4 +1,11 @@
 // == NAVIGATION ====================================================
+// Tracks which screens have already had their data loaders run at least
+// once. Used by showScreen() to skip a redundant refetch when the user
+// re-expands an accordion they had collapsed — without breaking the
+// initial render after login, where the static HTML pre-marks
+// #screen-dashboard as `active` even though no loader has fired yet.
+var _shownScreens = {};
+
 function showLeaveTab(tab) {
   ['log','history','team'].forEach(function(t) {
     const el=document.getElementById('ltab-'+t);
@@ -58,10 +65,13 @@ function showScreen(name) {
   document.querySelectorAll('.sidebar-group').forEach(function(g){ g.classList.remove('open'); });
   if (grp) grp.classList.add('open');
 
-  // If the user was already on this screen and is just re-expanding the
-  // collapsed accordion, don't re-run the data loaders. Saves a refetch
-  // on every accordion toggle.
-  if (alreadyOn) return;
+  // If the user was already on this screen and we've already initialized
+  // it once, this click is just an accordion re-expansion — skip the
+  // refetch. On the very first showScreen() per screen we always run the
+  // loader, even if `alreadyOn` is true (which happens for #screen-dashboard
+  // because the static HTML marks it `active` on initial render).
+  if (alreadyOn && _shownScreens[name]) return;
+  _shownScreens[name] = true;
 
   if (name==='dashboard') renderDashboard();
   if (name==='leave')     showLeaveTab('log');

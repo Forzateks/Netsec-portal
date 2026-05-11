@@ -64,12 +64,17 @@ function relDate(dateStr) {
 // == DASHBOARD ROUTER =============================================
 async function renderDashboard() {
   var host = document.getElementById('dash-content');
+  // Reset the rendered flag at the start of each render so the watchdog
+  // can correctly detect a hang in this run (not match the previous one).
+  delete host.dataset.rendered;
   host.innerHTML = dashSkeleton();
   // Watchdog: if the dashboard hasn't painted real content in 12s the
-  // user gets a visible "Network slow — tap to retry" panel so they
-  // aren't staring at a frozen skeleton forever.
+  // user gets a visible "Network slow — tap to retry" panel. We track
+  // success with a positive flag set by the inner render functions
+  // (renderManagerDashboard / renderEmployeeDashboard) when they finish
+  // writing real content; otherwise we'd false-positive on the skeleton.
   var watchdog = setTimeout(function(){
-    if (!host || host.innerHTML.indexOf('dash-hero') !== -1) return;
+    if (!host || host.dataset.rendered === 'true') return;
     host.innerHTML =
       '<div class="card" style="text-align:center;padding:32px 18px">'+
         '<div style="font-size:14px;color:var(--navy);font-weight:600;margin-bottom:6px">Network is slow.</div>'+
@@ -80,6 +85,7 @@ async function renderDashboard() {
   try {
     if (isManager) await renderManagerDashboard();
     else            await renderEmployeeDashboard();
+    host.dataset.rendered = 'true';
   } catch (err) {
     console.error('Dashboard render failed:', err);
     host.innerHTML =
@@ -90,6 +96,7 @@ async function renderDashboard() {
         '</div>'+
         '<button class="btn btn-primary" onclick="renderDashboard()">↻ Retry</button>'+
       '</div>';
+    host.dataset.rendered = 'true';
   } finally {
     clearTimeout(watchdog);
   }
