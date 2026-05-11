@@ -238,12 +238,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   position:sticky;top:0;z-index:100;
   background:
     linear-gradient(180deg, #1B3478 0%, #0F286A 35%, #0A1F5C 65%, #061745 100%);
-  /* TEMPORARY DEBUG: red line at y=0 of the top-bar — confirms whether
-     the element actually reaches the absolute top of the viewport. If you
-     see a red line above the iOS clock → element is at y=0, correct. If
-     the red line is BELOW the clock → padding is doing nothing. Remove
-     this border once verified. */
-  border-top:4px solid red;
   border-bottom:1px solid rgba(0,0,0,.35);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.28),
@@ -293,6 +287,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 }
 /* Lift the actual children above the pseudo layers so clicks register */
 .top-bar > *{ position:relative; z-index:1; }
+
+/* ── iOS Dynamic Island / notch safety floor ──
+   In some iOS standalone PWA states env(safe-area-inset-top) reports 0 even
+   though the device actually has a ~37-59px Dynamic Island or notch above
+   the page. The 12px floor on .top-bar / .sidebar-brand isn't enough then
+   — hamburger and badges end up behind the system clock.
+   When the app is launched as an installed PWA (display-mode:standalone),
+   bump the floor to 50px so the navigation row always clears the system
+   area regardless of what env() reports. Browser tabs and desktop are
+   unaffected. */
+@media (display-mode: standalone) {
+  .top-bar,
+  .sidebar-brand {
+    height:calc(54px + max(50px, env(safe-area-inset-top, 0px)));
+    padding-top:max(50px, env(safe-area-inset-top, 0px));
+  }
+  .top-bar::before {
+    top:max(50px, env(safe-area-inset-top, 0px));
+  }
+}
 
 /* 44×44 effective tap target meets Apple HIG and Android touch guidelines.
    touch-action:manipulation kills the 300ms tap delay older mobile browsers
