@@ -17,29 +17,50 @@ let CUSTOMERS = []; // [{id, name}]
 let ENGAGEMENTS = []; // [{id, customer_id, name, type, status, ...}] — full new model
 let PROJECT_CUSTOMER = {}; // { engagementName: customerName }
 
-async function loadProjects() {
-  // Customers and engagements don't depend on each other — fire in parallel.
-  // Cuts ~one round trip off every login on slow networks.
-  const [cRes, eRes] = await Promise.all([
-    sb.from('customers').select('id,name,status').order('name'),
-    sb.from('engagements').select('id,customer_id,name,type,status,created_by,created_at').order('name')
-  ]);
-  if (!cRes.error && cRes.data) {
-    CUSTOMERS = cRes.data.filter(function(c){ return c.status !== 'archived'; });
+// Apply customers + engagements arrays into the global caches used by every
+// session-log dropdown and Manage Engagements. Extracted so we can call it
+// once from the localStorage warm-up and again after the fresh fetch.
+function _applyProjectsData(customers, engagements) {
+  if (customers && customers.length) {
+    CUSTOMERS = customers.filter(function(c){ return c.status !== 'archived'; });
   }
-  // Engagements is the new source of truth (replaces projects)
-  if (!eRes.error && eRes.data) {
-    ENGAGEMENTS = eRes.data;
-    // PROJECTS array keeps backward-compat with existing OT/Project log forms —
-    // it now contains only type='project' engagement names (active ones).
+  if (engagements && engagements.length) {
+    ENGAGEMENTS = engagements;
     PROJECTS = ENGAGEMENTS
       .filter(function(e){ return e.type === 'project' && e.status !== 'archived'; })
       .map(function(e){ return e.name; });
     PROJECT_CUSTOMER = {};
-    var byId = {}; CUSTOMERS.forEach(function(c){ byId[c.id] = c.name; });
+    var byId = {}; (CUSTOMERS||[]).forEach(function(c){ byId[c.id] = c.name; });
     ENGAGEMENTS.forEach(function(e){ if (e.customer_id) PROJECT_CUSTOMER[e.name] = byId[e.customer_id]; });
     _projectsLoaded = true;
   }
+}
+
+async function loadProjects() {
+  // 1) Warm up from localStorage so session-log dropdowns work instantly on
+  //    repeat logins. The fresh fetch below replaces this with current data.
+  try {
+    var cached = localStorage.getItem('netsec.projectsCache');
+    if (cached) {
+      var c = JSON.parse(cached);
+      _applyProjectsData(c.customers, c.engagements);
+    }
+  } catch (e) { /* corrupt cache, ignore */ }
+
+  // 2) Fresh fetch (customers + engagements in parallel).
+  const [cRes, eRes] = await Promise.all([
+    sb.from('customers').select('id,name,status').order('name'),
+    sb.from('engagements').select('id,customer_id,name,type,status,created_by,created_at').order('name')
+  ]);
+  if (cRes.error || eRes.error) return; // keep cached data on error
+  _applyProjectsData(cRes.data, eRes.data);
+
+  // 3) Update localStorage for next login.
+  try {
+    localStorage.setItem('netsec.projectsCache', JSON.stringify({
+      customers: cRes.data, engagements: eRes.data, savedAt: Date.now()
+    }));
+  } catch (e) { /* quota or disabled, ignore */ }
 }
 
 // Get projects under a given customer (by name). Empty customer -> all.

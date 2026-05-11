@@ -10,38 +10,20 @@
 // Bump CACHE_VERSION whenever the shell changes meaningfully so old clients
 // drop stale assets on activate.
 
-var CACHE_VERSION = 'netsec-v3';
+var CACHE_VERSION = 'netsec-v4';
+// Critical bootstrap files only — pre-caching the full shell on install
+// fires 25 parallel fetches that saturate mobile bandwidth and starve
+// the Supabase queries that follow. Everything else now caches on demand
+// (stale-while-revalidate) as it's actually requested.
 var SHELL = [
-  '/',
-  '/index.html',
   '/manifest.webmanifest',
-  '/icon.svg',
-  '/icon-maskable.svg',
   '/favicon.svg',
-  '/css/styles.css',
-  '/js/core/state.js',
-  '/js/core/auth.js',
-  '/js/core/helpers.js',
-  '/js/core/navigation.js',
-  '/js/core/init.js',
-  '/js/features/overtime.js',
-  '/js/features/leave.js',
-  '/js/features/dashboard.js',
-  '/js/features/editors.js',
-  '/js/features/projects.js',
-  '/js/features/unified-sessions.js',
-  '/js/features/notifications.js',
-  '/js/features/inventory.js',
-  '/js/features/approvals.js',
-  '/js/features/knowledge-base.js',
-  '/js/features/tracker.js'
+  '/icon.svg'
 ];
 
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE_VERSION).then(function(cache) {
-      // addAll fails the whole install if any single resource 404s, so use
-      // individual puts that tolerate misses (e.g. a renamed JS file).
       return Promise.all(SHELL.map(function(url) {
         return fetch(url, { cache: 'reload' }).then(function(resp) {
           if (resp && resp.ok) return cache.put(url, resp);
