@@ -203,29 +203,24 @@ async function renderManagerDashboard() {
   var todayLabel = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   var firstName = (currentUser||'').split(' ')[0] || '';
 
+  // All queries in parallel. The 3 pending-count queries use head:true so
+  // they return just a count header (no rows), which is meaningfully faster
+  // on mobile than fetching every pending id just to count them.
   var results = await Promise.all([
-    // Pending approval queues (3 sources)
-    sb.from('comp_off_requests').select('id').eq('status','pending'),
-    sb.from('leave_requests').select('id').eq('status','pending'),
-    sb.from('ot_sessions').select('id').eq('status','pending'),
-    // Team OT this month (approved only)
-    sb.from('ot_sessions').select('credited_hours,employee').eq('status','approved').gte('ot_date', monthStart),
-    // Upcoming approved leave in next 30 days
+    sb.from('comp_off_requests').select('id', {count:'exact', head:true}).eq('status','pending'),
+    sb.from('leave_requests').select('id', {count:'exact', head:true}).eq('status','pending'),
+    sb.from('ot_sessions').select('id', {count:'exact', head:true}).eq('status','pending'),
+    sb.from('ot_sessions').select('credited_hours').eq('status','approved').gte('ot_date', monthStart),
     sb.from('annual_leave').select('employee,start_date,end_date,working_days,reason').gte('start_date', todayISO).lte('start_date', thirtyAhead),
-    // All non-archived engagements (split into active projects/POCs + POC outcomes downstream)
     sb.from('engagements').select('id,name,type,status,tracker_status,partner,country').neq('status','archived'),
-    // Sessions this week (last 7 days)
     sb.from('unified_sessions').select('id,employee,team_members,session_date,total_hours,engagement_name').gte('session_date', sevenAgo),
-    // Recent OT submissions for activity feed (last 7 days)
     sb.from('ot_sessions').select('id,employee,ot_date,credited_hours,band,activity,status,created_at').gte('created_at', sevenAgo+'T00:00:00').order('created_at',{ascending:false}),
-    // Engagements with license expiry in the past or within 30 days
     sb.from('engagements').select('id,name,type,license_expiry,customer_id').not('license_expiry','is',null).lte('license_expiry', thirtyAhead).order('license_expiry',{ascending:true}),
-    // Customers (for license banner display name lookup)
     sb.from('customers').select('id,name')
   ]);
-  var coPending = (results[0].data||[]).length;
-  var lvPending = (results[1].data||[]).length;
-  var otPending = (results[2].data||[]).length;
+  var coPending = results[0].count || 0;
+  var lvPending = results[1].count || 0;
+  var otPending = results[2].count || 0;
   var teamPending = coPending + lvPending + otPending;
 
   var teamOTHrs = (results[3].data||[]).reduce(function(a,r){return a+parseFloat(r.credited_hours||0);},0);
