@@ -145,8 +145,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
    timing, same box-shadow stack. */
 .sidebar-brand{
   position:relative;
-  height:54px;
-  padding:0 18px;
+  /* Grow into the iOS notch / status bar area so the navy gradient runs
+     edge-to-edge on installed PWAs. Content stays in its 54px row; only
+     the visual surface (background) extends behind the safe-area. */
+  height:calc(54px + env(safe-area-inset-top, 0px));
+  padding:env(safe-area-inset-top, 0px) 18px 0;
   display:flex;align-items:center;gap:12px;
   flex-shrink:0;
   background:linear-gradient(180deg, #1B3478 0%, #0F286A 35%, #0A1F5C 65%, #061745 100%);
@@ -223,9 +226,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
    ~14s. Inset highlight + cyan-tinted drop shadow finish the depth. */
 .top-bar{
   position:relative;
-  height:54px;
+  /* Extend visually into the iOS status-bar zone so the navy gradient
+     runs to y=0 and the status-bar icons sit on our background instead
+     of a white gap. Content row still gets exactly 54px tall; only the
+     padding eats into the safe-area. */
+  height:calc(54px + env(safe-area-inset-top, 0px));
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 18px;
+  padding:env(safe-area-inset-top, 0px) 18px 0;
   position:sticky;top:0;z-index:100;
   background:
     linear-gradient(180deg, #1B3478 0%, #0F286A 35%, #0A1F5C 65%, #061745 100%);
@@ -238,10 +245,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   overflow:hidden;
   isolation:isolate;
 }
-/* Top reflection — translucent highlight occupying the upper half */
+/* Top reflection — translucent highlight occupying the upper half of the
+   content row (i.e. below the safe-area padding). */
 .top-bar::before{
   content:'';
-  position:absolute;left:0;right:0;top:0;height:50%;
+  position:absolute;left:0;right:0;
+  top:env(safe-area-inset-top, 0px);height:27px;
   background:linear-gradient(180deg,
     rgba(255,255,255,.16) 0%,
     rgba(255,255,255,.06) 70%,
@@ -277,8 +286,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 /* Lift the actual children above the pseudo layers so clicks register */
 .top-bar > *{ position:relative; z-index:1; }
 
-.hamburger{background:transparent;border:none;color:white;font-size:22px;cursor:pointer;padding:6px 10px;display:none;line-height:1;transition:background .15s,color .15s}
+/* 44×44 effective tap target meets Apple HIG and Android touch guidelines.
+   touch-action:manipulation kills the 300ms tap delay older mobile browsers
+   apply while they wait to detect a double-tap zoom gesture. */
+.hamburger{background:transparent;border:none;color:white;font-size:24px;cursor:pointer;padding:0;display:none;line-height:1;transition:background .15s,color .15s;
+  width:44px;height:44px;align-items:center;justify-content:center;border-radius:8px;
+  -webkit-tap-highlight-color:rgba(255,255,255,.18);
+  touch-action:manipulation;
+  -webkit-user-select:none;user-select:none;
+  margin-left:-8px /* tighten visual gap, tap area stays 44×44 */}
 .hamburger:hover{background:rgba(255,255,255,.12)}
+.hamburger:active{background:rgba(255,255,255,.20)}
 .top-bar-right{display:flex;align-items:center;gap:12px;margin-left:auto}
 .db-status{display:flex;align-items:center;gap:7px;font-size:12px;color:rgba(255,255,255,.78);padding:4px 9px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);transition:background .15s,border-color .15s}
 .db-status:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.14)}
@@ -632,7 +650,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 @media(max-width:900px){
   .sidebar{position:fixed;left:0;top:0;height:100vh;transform:translateX(-100%);transition:transform .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.15)}
   .sidebar.open{transform:translateX(0)}
-  .hamburger{display:inline-block}
+  /* inline-flex so align-items / justify-content in .hamburger actually
+     center the ☰ glyph inside the 44×44 box. */
+  .hamburger{display:inline-flex}
   .sidebar-close{display:inline-block}
 }
 
