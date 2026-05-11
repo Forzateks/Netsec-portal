@@ -72,6 +72,30 @@ async function fetchAllRows(buildQuery) {
   return { data: all, error: null };
 }
 
+// Wrap a Supabase-style promise (resolves to {data, error, count}) with a
+// timeout. If the network call doesn't return in `ms` milliseconds, resolve
+// with the supplied fallback so the caller can still render something
+// instead of hanging indefinitely. Logs to console so we can spot which
+// query is slow.
+function withTimeout(promise, ms, fallback, label) {
+  return new Promise(function(resolve) {
+    var done = false;
+    var timer = setTimeout(function(){
+      if (done) return;
+      done = true;
+      if (label) console.warn('Query timeout (' + ms + 'ms):', label);
+      resolve(fallback);
+    }, ms);
+    Promise.resolve(promise).then(function(v){
+      if (done) return; done = true; clearTimeout(timer); resolve(v);
+    }).catch(function(err){
+      if (done) return; done = true; clearTimeout(timer);
+      if (label) console.warn('Query failed:', label, err);
+      resolve(fallback);
+    });
+  });
+}
+
 // Reusable multi-select dropdown. Wrap an empty <div class="ms" id="..."></div>
 // then call msInit(id, items, onChange). items is [{value,label}]; the chosen
 // values are stored on the element as a Set. Read via msGetValues(id), reset

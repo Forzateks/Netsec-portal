@@ -63,11 +63,36 @@ function relDate(dateStr) {
 
 // == DASHBOARD ROUTER =============================================
 async function renderDashboard() {
-  document.getElementById('dash-content').innerHTML = dashSkeleton();
-  if (isManager) {
-    return renderManagerDashboard();
+  var host = document.getElementById('dash-content');
+  host.innerHTML = dashSkeleton();
+  // Watchdog: if the dashboard hasn't painted real content in 12s the
+  // user gets a visible "Network slow — tap to retry" panel so they
+  // aren't staring at a frozen skeleton forever.
+  var watchdog = setTimeout(function(){
+    if (!host || host.innerHTML.indexOf('dash-hero') !== -1) return;
+    host.innerHTML =
+      '<div class="card" style="text-align:center;padding:32px 18px">'+
+        '<div style="font-size:14px;color:var(--navy);font-weight:600;margin-bottom:6px">Network is slow.</div>'+
+        '<div style="font-size:12px;color:var(--muted);margin-bottom:18px">Some queries are taking longer than expected.</div>'+
+        '<button class="btn btn-primary" onclick="renderDashboard()">↻ Retry</button>'+
+      '</div>';
+  }, 12000);
+  try {
+    if (isManager) await renderManagerDashboard();
+    else            await renderEmployeeDashboard();
+  } catch (err) {
+    console.error('Dashboard render failed:', err);
+    host.innerHTML =
+      '<div class="card" style="text-align:center;padding:32px 18px">'+
+        '<div style="font-size:14px;color:var(--danger);font-weight:600;margin-bottom:6px">Dashboard error</div>'+
+        '<div style="font-size:12px;color:var(--muted);margin-bottom:18px;word-break:break-word">'+
+          esc2(String(err && err.message || err))+
+        '</div>'+
+        '<button class="btn btn-primary" onclick="renderDashboard()">↻ Retry</button>'+
+      '</div>';
+  } finally {
+    clearTimeout(watchdog);
   }
-  return renderEmployeeDashboard();
 }
 
 // == EMPLOYEE DASHBOARD ===========================================
@@ -203,20 +228,25 @@ async function renderManagerDashboard() {
   var todayLabel = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   var firstName = (currentUser||'').split(' ')[0] || '';
 
-  // All queries in parallel. The 3 pending-count queries use head:true so
-  // they return just a count header (no rows), which is meaningfully faster
-  // on mobile than fetching every pending id just to count them.
+  // Each query is wrapped in a 10-second timeout so a single slow/stuck
+  // request can't hold the entire dashboard hostage. On timeout the fallback
+  // shape ({data:[], count:0}) is returned and the affected card simply
+  // renders empty — better than an infinite spinner.
+  var Q_TIMEOUT = 10000;
+  var emptyData = { data: [], count: 0, error: null };
+  var T = function(p, label) { return withTimeout(p, Q_TIMEOUT, emptyData, label); };
+
   var results = await Promise.all([
-    sb.from('comp_off_requests').select('id', {count:'exact', head:true}).eq('status','pending'),
-    sb.from('leave_requests').select('id', {count:'exact', head:true}).eq('status','pending'),
-    sb.from('ot_sessions').select('id', {count:'exact', head:true}).eq('status','pending'),
-    sb.from('ot_sessions').select('credited_hours').eq('status','approved').gte('ot_date', monthStart),
-    sb.from('annual_leave').select('employee,start_date,end_date,working_days,reason').gte('start_date', todayISO).lte('start_date', thirtyAhead),
-    sb.from('engagements').select('id,name,type,status,tracker_status,partner,country').neq('status','archived'),
-    sb.from('unified_sessions').select('id,employee,team_members,session_date,total_hours,engagement_name').gte('session_date', sevenAgo),
-    sb.from('ot_sessions').select('id,employee,ot_date,credited_hours,band,activity,status,created_at').gte('created_at', sevenAgo+'T00:00:00').order('created_at',{ascending:false}),
-    sb.from('engagements').select('id,name,type,license_expiry,customer_id').not('license_expiry','is',null).lte('license_expiry', thirtyAhead).order('license_expiry',{ascending:true}),
-    sb.from('customers').select('id,name')
+    T(sb.from('comp_off_requests').select('id', {count:'exact', head:true}).eq('status','pending'), 'comp_off_requests pending'),
+    T(sb.from('leave_requests').select('id', {count:'exact', head:true}).eq('status','pending'), 'leave_requests pending'),
+    T(sb.from('ot_sessions').select('id', {count:'exact', head:true}).eq('status','pending'), 'ot_sessions pending'),
+    T(sb.from('ot_sessions').select('credited_hours').eq('status','approved').gte('ot_date', monthStart), 'ot_sessions month'),
+    T(sb.from('annual_leave').select('employee,start_date,end_date,working_days,reason').gte('start_date', todayISO).lte('start_date', thirtyAhead), 'annual_leave upcoming'),
+    T(sb.from('engagements').select('id,name,type,status,tracker_status,partner,country').neq('status','archived'), 'engagements all'),
+    T(sb.from('unified_sessions').select('id,employee,team_members,session_date,total_hours,engagement_name').gte('session_date', sevenAgo), 'unified_sessions week'),
+    T(sb.from('ot_sessions').select('id,employee,ot_date,credited_hours,band,activity,status,created_at').gte('created_at', sevenAgo+'T00:00:00').order('created_at',{ascending:false}), 'ot_sessions recent'),
+    T(sb.from('engagements').select('id,name,type,license_expiry,customer_id').not('license_expiry','is',null).lte('license_expiry', thirtyAhead).order('license_expiry',{ascending:true}), 'engagements license'),
+    T(sb.from('customers').select('id,name'), 'customers')
   ]);
   var coPending = results[0].count || 0;
   var lvPending = results[1].count || 0;
