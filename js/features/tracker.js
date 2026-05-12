@@ -80,6 +80,11 @@ async function loadTracker() {
   });
   populateTrackerFilters();
   renderTracker();
+  // Deep-link support: if the URL carries ?customer=<name> (e.g. user
+  // clicked a customer chip in Manage Engagements), seed the search and
+  // re-render filtered. Runs after the initial render so the input + chip
+  // panel exist in the DOM.
+  _trkApplyUrlParams();
 }
 
 function populateTrackerFilters() {
@@ -119,10 +124,61 @@ function clearTrackerFilters() {
   });
   var sf = document.getElementById('trk-filter-start-from'); if (sf) sf.value = '';
   var st = document.getElementById('trk-filter-start-to');   if (st) st.value = '';
+  _trkUpdateUrlFromSearch();
   renderTracker();
 }
 
 function applyTrackerFilters() { renderTracker(); }
+
+// Search input change handler — keeps the URL ?customer= param in sync with
+// the live search value so the current view is deep-linkable / shareable.
+// replaceState (not pushState) so we don't pile up history entries on every
+// keystroke; back button still returns the user to wherever they came from.
+function _trkOnSearchInput() {
+  applyTrackerFilters();
+  _trkUpdateUrlFromSearch();
+}
+
+function _trkUpdateUrlFromSearch() {
+  try {
+    var v = ((document.getElementById('trk-search')||{}).value || '').trim();
+    var url = new URL(window.location.href);
+    if (v) url.searchParams.set('customer', v);
+    else   url.searchParams.delete('customer');
+    history.replaceState(history.state, '', url.toString());
+  } catch (e) { /* no-op on older browsers */ }
+}
+
+// Read ?customer= from the URL (set by navigateToTrackerForCustomer in the
+// customers chip) and seed the tracker search input. Called at the tail of
+// loadTracker so the filter applies on the first render.
+function _trkApplyUrlParams() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var customer = params.get('customer');
+    if (!customer) return;
+    var s = document.getElementById('trk-search');
+    if (s && s.value !== customer) {
+      s.value = customer;
+      if (typeof applyTrackerFilters === 'function') applyTrackerFilters();
+    }
+  } catch (e) { /* no-op */ }
+}
+
+// Back/forward button → re-read the URL and re-sync the search input.
+// Only acts when we're actually on the tracker screen; otherwise leaves the
+// browser default behaviour alone.
+window.addEventListener('popstate', function(){
+  var tracker = document.getElementById('screen-tracker');
+  if (!tracker || !tracker.classList.contains('active')) return;
+  var params = new URLSearchParams(window.location.search);
+  var customer = params.get('customer') || '';
+  var s = document.getElementById('trk-search');
+  if (s && s.value !== customer) {
+    s.value = customer;
+    applyTrackerFilters();
+  }
+});
 
 function _trkFilteredRows() {
   var search    = ((document.getElementById('trk-search')||{}).value||'').toLowerCase().trim();

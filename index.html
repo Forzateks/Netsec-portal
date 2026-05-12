@@ -541,15 +541,23 @@
 
     <!-- Customers -->
     <div class="card" style="margin-bottom:20px">
-      <div class="card-title">🏢 Customers</div>
-      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
-        <div class="form-group" style="flex:1;min-width:200px;margin:0">
-          <label>New Customer Name *</label>
-          <input type="text" id="cust-new-name" placeholder="e.g. Etisalat" onkeydown="if(event.key==='Enter')addCustomer()">
-        </div>
-        <button class="btn btn-primary" onclick="addCustomer()"><i data-lucide="plus" class="btn-icon"></i>Add Customer</button>
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">🏢 Customers <span id="cust-total-count" style="font-weight:400;color:var(--muted);font-size:14px"></span></div>
+        <button class="btn btn-primary cust-add-toggle" onclick="toggleCustomerAdd()">
+          <i data-lucide="plus" class="btn-icon"></i><span class="cust-add-toggle-label">Add Customer</span>
+        </button>
       </div>
-      <div id="cust-list-content" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      <div class="cust-search-row">
+        <i data-lucide="search" class="cust-search-ico"></i>
+        <input id="cust-search" oninput="renderCustomersList()" placeholder="Search customers...">
+        <button class="cust-search-clear" id="cust-search-clear" onclick="clearCustomerSearch()" title="Clear search" style="display:none">×</button>
+      </div>
+      <div class="cust-add-row" id="cust-add-row" style="display:none">
+        <input type="text" id="cust-new-name" placeholder="e.g. Etisalat" onkeydown="if(event.key==='Enter')addCustomer()">
+        <button class="btn btn-primary" onclick="addCustomer()">Add</button>
+        <button class="btn btn-ghost" onclick="toggleCustomerAdd()">Cancel</button>
+      </div>
+      <div id="cust-list-content"></div>
     </div>
 
     <div class="card" style="margin-bottom:20px">
@@ -778,7 +786,7 @@
   <div class="trk-search-row">
     <div class="trk-search-input">
       <i data-lucide="search" class="trk-search-ico"></i>
-      <input type="text" id="trk-search" placeholder="Search by name, customer, partner, owner, remarks..." oninput="applyTrackerFilters()">
+      <input type="text" id="trk-search" placeholder="Search by name, customer, partner, owner, remarks..." oninput="_trkOnSearchInput()">
     </div>
     <button class="btn btn-ghost trk-filter-toggle" id="trk-filter-toggle" onclick="trkToggleFilters()">
       <i data-lucide="sliders-horizontal" class="btn-icon"></i>Filter

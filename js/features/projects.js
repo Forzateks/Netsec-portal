@@ -185,27 +185,167 @@ async function addCustomer() {
   renderManageProjects();
 }
 
+// Collapsed-state for country groups persists within the session so toggling
+// one group doesn't reset siblings on every re-render.
+var _custGroupsCollapsed = {};
+
+// Walk ENGAGEMENTS once and derive a customer_id → group-label map.
+// 0 distinct countries → "Unassigned"; 1 → that country; 2+ → "Multi-country".
+function _custBuildCountryMap() {
+  var byCust = {};
+  (ENGAGEMENTS||[]).forEach(function(e){
+    var c = (e.country||'').trim();
+    if (!c) return;
+    if (!byCust[e.customer_id]) byCust[e.customer_id] = {};
+    byCust[e.customer_id][c] = 1;
+  });
+  var map = {};
+  Object.keys(byCust).forEach(function(cid){
+    var keys = Object.keys(byCust[cid]);
+    if (keys.length === 0)      map[cid] = 'Unassigned';
+    else if (keys.length === 1) map[cid] = keys[0];
+    else                        map[cid] = 'Multi-country';
+  });
+  return map;
+}
+
+function clearCustomerSearch() {
+  var el = document.getElementById('cust-search');
+  if (el) el.value = '';
+  renderCustomersList();
+}
+
+// Toggle the inline "+ Add Customer" form row visibility. The button in the
+// card header is the primary entry point; the form expands beneath it.
+function toggleCustomerAdd() {
+  var row = document.getElementById('cust-add-row');
+  if (!row) return;
+  var hidden = row.style.display === 'none' || !row.style.display;
+  row.style.display = hidden ? 'flex' : 'none';
+  if (hidden) {
+    var inp = document.getElementById('cust-new-name');
+    if (inp) { inp.focus(); inp.select(); }
+  }
+}
+
+function toggleCustomerGroup(country) {
+  _custGroupsCollapsed[country] = !_custGroupsCollapsed[country];
+  renderCustomersList();
+}
+
+// Click a customer chip → push the customer name into the URL and navigate
+// to the Tracker. Tracker's loadTracker reads ?customer= on mount and seeds
+// its search input, so the page lands pre-filtered. The pushState entry lets
+// the browser back button restore the previous tracker state.
+function navigateToTrackerForCustomer(name) {
+  if (!name) return;
+  try {
+    var url = new URL(window.location.href);
+    url.searchParams.set('customer', name);
+    history.pushState({customer: name, from: 'customers'}, '', url.toString());
+  } catch (e) { /* older browsers — silently skip URL update */ }
+  if (typeof showScreen === 'function') showScreen('tracker');
+}
+
 function renderCustomersList() {
   var el = document.getElementById('cust-list-content');
   if (!el) return;
-  var rows = (CUSTOMERS || []).slice().sort(function(a,b){
-    return String(a.name||'').toLowerCase().localeCompare(String(b.name||'').toLowerCase());
-  });
-  if (!rows.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px">No customers yet.</div>'; return; }
-  // Count engagements per customer (helps the manager see what cascades on delete)
+
+  var allRows = (CUSTOMERS||[]).slice();
+  var search  = ((document.getElementById('cust-search')||{}).value||'').toLowerCase().trim();
+
+  // Header total + Clear-search button visibility.
+  var totalEl = document.getElementById('cust-total-count');
+  if (totalEl) totalEl.textContent = allRows.length ? '('+allRows.length+')' : '';
+  var clearBtn = document.getElementById('cust-search-clear');
+  if (clearBtn) clearBtn.style.display = search ? '' : 'none';
+
+  // Empty data state — friendly first-run message.
+  if (!allRows.length) {
+    el.innerHTML = '<div class="empty-state"><i data-lucide="building-2" class="empty-icon-svg"></i>'+
+      '<div class="empty-title">No customers yet</div>'+
+      '<div>Click "+ Add Customer" to create your first.</div></div>';
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
+
+  // Apply search filter against customer name.
+  var filtered = search
+    ? allRows.filter(function(c){ return String(c.name||'').toLowerCase().indexOf(search) !== -1; })
+    : allRows;
+
+  // Search returned nothing — surface a Clear-search CTA so the user
+  // recovers in one click.
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty-state"><i data-lucide="search-x" class="empty-icon-svg"></i>'+
+      '<div class="empty-title">No customers match "'+esc2(search)+'"</div>'+
+      '<button class="btn btn-primary" onclick="clearCustomerSearch()" style="margin-top:12px"><i data-lucide="x" class="btn-icon"></i>Clear search</button></div>';
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
+
+  // Engagement counts per customer (chip badge).
   var counts = {};
   (ENGAGEMENTS||[]).forEach(function(e){ counts[e.customer_id] = (counts[e.customer_id]||0) + 1; });
-  el.innerHTML = rows.map(function(c){
-    var n = counts[c.id] || 0;
-    var archived = c.status === 'archived';
-    var safeName = (c.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return '<div class="cust-chip'+(archived?' cust-chip-archived':'')+'">'
-      + '<span class="cust-chip-name">'+esc2(c.name)+'</span>'
-      + (n ? '<span class="cust-chip-count">'+n+'</span>' : '')
-      + '<button class="cust-chip-btn" onclick="openEditCustomer('+c.id+')" title="Edit"><i data-lucide="pencil-line"></i></button>'
-      + '<button class="cust-chip-btn cust-chip-btn-danger" onclick="deleteCustomer('+c.id+",'"+safeName+"'"+')" title="Delete"><i data-lucide="x"></i></button>'
+
+  // Country derivation — built once per render.
+  var countryMap = _custBuildCountryMap();
+
+  // Bucket customers by group.
+  var groups = {};
+  filtered.forEach(function(c){
+    var g = countryMap[c.id] || 'Unassigned';
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(c);
+  });
+
+  // Sort customers alphabetically inside each group.
+  Object.keys(groups).forEach(function(g){
+    groups[g].sort(function(a,b){
+      return String(a.name||'').toLowerCase().localeCompare(String(b.name||'').toLowerCase());
+    });
+  });
+
+  // Group ordering: known countries alphabetically, then Multi-country, then
+  // Unassigned at the bottom. The special-bucket sort below assumes those
+  // are the only two special keys.
+  var groupOrder = Object.keys(groups).sort(function(a,b){
+    var rankA = (a === 'Multi-country') ? 1 : (a === 'Unassigned') ? 2 : 0;
+    var rankB = (b === 'Multi-country') ? 1 : (b === 'Unassigned') ? 2 : 0;
+    if (rankA !== rankB) return rankA - rankB;
+    return a.localeCompare(b);
+  });
+
+  el.innerHTML = groupOrder.map(function(country){
+    var customers = groups[country];
+    var collapsed = !!_custGroupsCollapsed[country];
+    var chevron   = collapsed ? 'chevron-right' : 'chevron-down';
+    var groupKey  = country.replace(/'/g, "\\'");
+    var chips = customers.map(function(c){
+      var n        = counts[c.id] || 0;
+      var archived = c.status === 'archived';
+      var safeName = (c.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      var ariaLabel = 'View '+esc2(c.name)+' engagements in Tracker';
+      return '<div class="cust-chip'+(archived?' cust-chip-archived':'')+'">'
+        + '<button class="cust-chip-body" onclick="navigateToTrackerForCustomer(\''+safeName+'\')" aria-label="'+ariaLabel+'">'
+        +   '<span class="cust-chip-name">'+esc2(c.name)+'</span>'
+        +   (n ? '<span class="cust-chip-count">'+n+'</span>' : '')
+        +   '<i data-lucide="arrow-right" class="cust-chip-arrow"></i>'
+        + '</button>'
+        + '<button class="cust-chip-btn" onclick="event.stopPropagation();openEditCustomer('+c.id+')" title="Edit"><i data-lucide="pencil-line"></i></button>'
+        + '<button class="cust-chip-btn cust-chip-btn-danger" onclick="event.stopPropagation();deleteCustomer('+c.id+",'"+safeName+"'"+')" title="Delete"><i data-lucide="x"></i></button>'
+        + '</div>';
+    }).join('');
+    return '<div class="cust-group">'
+      + '<button class="cust-group-head" onclick="toggleCustomerGroup(\''+groupKey+'\')" aria-expanded="'+(!collapsed)+'">'
+      +   '<i data-lucide="'+chevron+'" class="cust-group-chevron"></i>'
+      +   '<span class="cust-group-name">'+esc2(country)+'</span>'
+      +   '<span class="cust-group-count">'+customers.length+'</span>'
+      + '</button>'
+      + (collapsed ? '' : '<div class="cust-group-chips">'+chips+'</div>')
       + '</div>';
   }).join('');
+
   if (typeof renderIcons === 'function') renderIcons();
 }
 
