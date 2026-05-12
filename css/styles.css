@@ -894,7 +894,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .tracker-filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:12px;margin-bottom:16px}
 .tracker-filter-bar .form-group{flex:1;min-width:130px;margin:0}
 
-.tracker-stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.tracker-stat-row{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:16px}
 .trk-stat-card{display:flex;align-items:center;gap:10px;padding:12px 14px;background:white;border:1px solid var(--border);border-radius:10px;transition:border-color .15s,box-shadow .15s}
 .trk-stat-card:hover{border-color:var(--teal);box-shadow:0 1px 4px rgba(0,160,210,.12)}
 .trk-stat-icon{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#EFF6FF,#DBEAFE);color:var(--navy);display:flex;align-items:center;justify-content:center;flex-shrink:0}

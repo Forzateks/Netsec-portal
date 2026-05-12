@@ -252,22 +252,33 @@ function renderTrackerStatRow() {
   var wrap = document.getElementById('trk-stat-row');
   if (!wrap) return;
   var rows = _trkData;
-  var nProj = rows.filter(function(r){return r.type==='project';}).length;
-  var nPoc  = rows.filter(function(r){return r.type==='poc';}).length;
-  var nOngoing = rows.filter(function(r){return r.tracker_status==='Ongoing';}).length;
-  var nCompleted = rows.filter(function(r){return r.tracker_status==='Completed';}).length;
-  var nOnhold = rows.filter(function(r){return r.tracker_status==='Onhold';}).length;
+  // Type cards count by engagement.type. Status cards count by the
+  // NORMALIZED top-level status key (engagement.status), so legacy values
+  // like 'Ongoing' get folded into 'active' via _trkTopStatusKey aliases.
+  function statusKey(r){ return _trkTopStatusKey(r.status); }
+  var nProj      = rows.filter(function(r){return r.type==='project';}).length;
+  var nPoc       = rows.filter(function(r){return r.type==='poc';}).length;
+  var nActive    = rows.filter(function(r){return statusKey(r)==='active';}).length;
+  var nSignoff   = rows.filter(function(r){return statusKey(r)==='sign-off';}).length;
+  var nOnhold    = rows.filter(function(r){return statusKey(r)==='on-hold';}).length;
+  var nCompleted = rows.filter(function(r){return statusKey(r)==='completed';}).length;
+  var nCancelled = rows.filter(function(r){return statusKey(r)==='cancelled';}).length;
+  // Icon bg/fg mirror the status badge palette in styles.css so the stat
+  // strip reads as a colour key for the table below.
   var stats = [
-    {label:'Projects',  value:nProj,      icon:'folder-kanban', tab:'projects'},
-    {label:'POCs',      value:nPoc,       icon:'target',        tab:'pocs'},
-    {label:'Ongoing',   value:nOngoing,   icon:'play-circle'},
-    {label:'On Hold',   value:nOnhold,    icon:'pause-circle'},
-    {label:'Completed', value:nCompleted, icon:'check-circle-2'}
+    {label:'Projects',  value:nProj,      icon:'folder-kanban',  tab:'projects'},
+    {label:'POCs',      value:nPoc,       icon:'target',         tab:'pocs'},
+    {label:'Active',    value:nActive,    icon:'play-circle',    bg:'#DCFCE7', fg:'#166534'},
+    {label:'Sign-off',  value:nSignoff,   icon:'file-signature', bg:'#FEF3C7', fg:'#92400E'},
+    {label:'On Hold',   value:nOnhold,    icon:'pause-circle',   bg:'#FED7AA', fg:'#9A3412'},
+    {label:'Completed', value:nCompleted, icon:'check-circle-2', bg:'#E0F2FE', fg:'#075985'},
+    {label:'Cancelled', value:nCancelled, icon:'x-circle',       bg:'#FEE2E2', fg:'#991B1B'}
   ];
   wrap.innerHTML = stats.map(function(s){
     var click = s.tab ? ' onclick="showTrackerTab(\''+s.tab+'\')" style="cursor:pointer"' : '';
+    var iconStyle = (s.bg && s.fg) ? ' style="background:'+s.bg+';color:'+s.fg+'"' : '';
     return '<div class="trk-stat-card"'+click+'>'+
-      '<div class="trk-stat-icon"><i data-lucide="'+s.icon+'"></i></div>'+
+      '<div class="trk-stat-icon"'+iconStyle+'><i data-lucide="'+s.icon+'"></i></div>'+
       '<div class="trk-stat-text">'+
         '<div class="trk-stat-value num">'+s.value+'</div>'+
         '<div class="trk-stat-label">'+s.label+'</div>'+
