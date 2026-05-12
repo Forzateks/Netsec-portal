@@ -945,17 +945,15 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* ── Top-level engagement.status badges (8 values) ──
    Used by the Tracker list "Status" column and the Manage Engagements
    status pill. Each pill uses the .badge base + one of these modifiers. */
-.badge.trk-st-active,.badge.trk-st-ongoing,.badge.trk-st-signoff,
+.badge.trk-st-active,.badge.trk-st-signoff,
 .badge.trk-st-completed,.badge.trk-st-onhold,.badge.trk-st-dormant,
-.badge.trk-st-cancelled,.badge.trk-st-archived{font-size:11px;padding:3px 9px;border-radius:12px;letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;gap:4px}
+.badge.trk-st-cancelled{font-size:11px;padding:3px 9px;border-radius:12px;letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;gap:4px}
 .trk-st-active   { background:#DCFCE7; color:#166534 }
-.trk-st-ongoing  { background:#DBEAFE; color:#1E40AF }
 .trk-st-signoff  { background:#FEF3C7; color:#92400E }
 .trk-st-completed{ background:#E0F2FE; color:#075985 }
 .trk-st-onhold   { background:#FED7AA; color:#9A3412 }
 .trk-st-dormant  { background:#F3F4F6; color:#4B5563 }
 .trk-st-cancelled{ background:#FEE2E2; color:#991B1B }
-.trk-st-archived { background:#E5E7EB; color:#6B7280 }
 .trk-st-icon{font-size:11px;line-height:1}
 
 /* Helper hint under a detail-field value (e.g. Current Phase explainer). */

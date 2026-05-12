@@ -324,13 +324,11 @@ async function renderManageProjects() {
 
   const STATUS_COLORS = {
     'active':    {bg:'#DCFCE7',color:'#166534',label:'🟢 Active'},
-    'ongoing':   {bg:'#DBEAFE',color:'#1E40AF',label:'🔵 Ongoing'},
     'sign-off':  {bg:'#FEF3C7',color:'#92400E',label:'✍️ Sign-off'},
     'completed': {bg:'#E0F2FE',color:'#075985',label:'✅ Completed'},
     'on-hold':   {bg:'#FED7AA',color:'#9A3412',label:'⏸️ On Hold'},
     'dormant':   {bg:'#F3F4F6',color:'#4B5563',label:'💤 Dormant'},
     'cancelled': {bg:'#FEE2E2',color:'#991B1B',label:'❌ Cancelled'},
-    'archived':  {bg:'#E5E7EB',color:'#6B7280',label:'📦 Archived'},
   };
   const TYPE_BADGES = {
     'project':  {bg:'#EFF6FF',color:'#2563EB',label:'PROJECT'},

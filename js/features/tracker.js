@@ -29,10 +29,11 @@ var TRK_PHASES = [
   'Troubleshooting',
   'On demand request'
 ];
-// Phase dropdown is only enabled when the top-level status is one of
-// these. Anything else (completed / sign-off / cancelled / dormant /
-// archived) disables the Phase select and force-clears its value.
-var TRK_PHASE_ALLOWED_STATUSES = ['active','ongoing','on-hold'];
+// Phase dropdown is only enabled when the top-level status is exactly
+// 'active'. Every other status (sign-off, completed, on-hold, dormant,
+// cancelled) means the project isn't currently in a workflow phase, so
+// the Phase select is disabled and force-cleared.
+var TRK_PHASE_ALLOWED_STATUSES = ['active'];
 
 // Legacy compat — Phase list is now the same regardless of type.
 function trkStatusesFor(/*type*/) { return TRK_PHASES.slice(); }
@@ -200,25 +201,27 @@ function trkStatusBadge(s) {
 // Active per spec — legacy imports / freshly-inserted rows shouldn't read
 // as a blank cell.
 var TRK_TOP_STATUS_ORDER = [
-  'active','ongoing','sign-off','completed','on-hold','dormant','cancelled','archived'
+  'active','sign-off','completed','on-hold','dormant','cancelled'
 ];
 var TRK_TOP_STATUS_MAP = {
   'active':    { label:'Active',    icon:'🟢', cls:'trk-st-active' },
-  'ongoing':   { label:'Ongoing',   icon:'🔵', cls:'trk-st-ongoing' },
   'sign-off':  { label:'Sign-off',  icon:'✍️', cls:'trk-st-signoff' },
   'completed': { label:'Completed', icon:'✅', cls:'trk-st-completed' },
   'on-hold':   { label:'On Hold',   icon:'⏸️', cls:'trk-st-onhold' },
   'dormant':   { label:'Dormant',   icon:'💤', cls:'trk-st-dormant' },
-  'cancelled': { label:'Cancelled', icon:'❌', cls:'trk-st-cancelled' },
-  'archived':  { label:'Archived',  icon:'📦', cls:'trk-st-archived' }
+  'cancelled': { label:'Cancelled', icon:'❌', cls:'trk-st-cancelled' }
 };
 function _trkTopStatusKey(raw) {
   var v = (raw == null ? '' : String(raw)).trim().toLowerCase();
   if (!v) return 'active';
   if (TRK_TOP_STATUS_MAP[v]) return v;
-  // Accept a couple of historical aliases the data may carry.
-  if (v === 'on hold' || v === 'onhold') return 'on-hold';
+  // Historical aliases — if any legacy / hand-inserted data ever surfaces
+  // with the old keys, route it to the closest current bucket so the
+  // renderer doesn't fall back to an unknown grey badge.
+  if (v === 'on hold' || v === 'onhold')   return 'on-hold';
   if (v === 'sign off' || v === 'signoff') return 'sign-off';
+  if (v === 'ongoing')                     return 'active';   // retired in v22
+  if (v === 'archived')                    return 'dormant';  // retired in v22
   return v; // unknown — let the renderer fall back to muted
 }
 function trkTopStatusBadge(raw) {
@@ -547,7 +550,7 @@ function _trkRefreshAutoCompleteHint() {
   if (!box) return;
   var willAutoFlip = signedOn &&
     topStat !== 'completed' && topStat !== 'cancelled' &&
-    topStat !== 'archived'  && topStat !== 'sign-off';
+    topStat !== 'sign-off';
   if (willAutoFlip) {
     box.style.display = 'block';
     box.innerHTML = '<i data-lucide="info" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>'+
@@ -594,13 +597,12 @@ async function saveTrackerEdit() {
   };
 
   // A sign-off date flips engagement.status to 'sign-off' unless the user
-  // has already chosen an end state (cancelled / archived / completed /
-  // sign-off). tracker_status='Completed' is no longer a valid phase after
-  // the v20 cleanup migration, so the only auto-flip trigger now is the
-  // sign-off date itself.
+  // has already chosen an end state (cancelled / completed / sign-off).
+  // 'archived' is no longer a valid status after v22 so it's dropped from
+  // the guard.
   if (signedOn &&
       patch.status !== 'completed' && patch.status !== 'cancelled' &&
-      patch.status !== 'archived'  && patch.status !== 'sign-off') {
+      patch.status !== 'sign-off') {
     patch.status = 'sign-off';
   }
 
