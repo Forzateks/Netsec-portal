@@ -271,20 +271,30 @@ function renderTrackerStatRow() {
     'dormant':   {bg:'#F3F4F6', fg:'#4B5563'},
     'cancelled': {bg:'#FEE2E2', fg:'#991B1B'}
   };
-  // Current single-value selection (if any) so we can highlight that segment.
+  // Multi-select highlight — any segment whose key is in the current filter
+  // array reads as selected. Empty array = no filter; every segment subtle.
   var selected = msGetValues('trk-filter-status');
-  var soleSel  = (selected.length === 1) ? selected[0] : null;
 
   var segs = ['active','sign-off','on-hold','completed','dormant','cancelled'].map(function(k){
     var def = TRK_TOP_STATUS_MAP[k];
     var th  = THEME[k];
-    var isSel = (soleSel === k);
-    var style = 'background:'+th.bg+';color:'+th.fg+';'+(isSel?'box-shadow:inset 0 0 0 2px '+th.fg:'');
+    var isSel = (selected.indexOf(k) !== -1);
+    // Selected: full status color + 2px solid border + checkmark prefix.
+    // Unselected: muted neutral pill so selected ones pop visually.
+    var style = isSel
+      ? 'background:'+th.bg+';color:'+th.fg+';border:2px solid '+th.fg+';padding:3px 9px'
+      : 'background:#F3F4F6;color:#6B7280;border:1px solid transparent';
+    var checkIcon = isSel
+      ? '<i data-lucide="check" class="trk-strip-check"></i>'
+      : '';
     return '<button class="trk-strip-seg'+(isSel?' is-selected':'')+'" '+
       'data-key="'+k+'" '+
+      'role="button" aria-pressed="'+isSel+'" '+
+      'aria-label="'+(isSel?'Remove ':'Add ')+def.label+' filter" '+
       'style="'+style+'" '+
       'onclick="trkSelectStatusSegment(\''+k+'\')" '+
-      'title="Filter by '+def.label+'">'+
+      'title="'+(isSel?'Remove ':'Filter by ')+def.label+'">'+
+      checkIcon+
       '<i data-lucide="'+def.icon+'" class="trk-strip-ico"></i>'+
       '<span class="trk-strip-num num">'+counts[k]+'</span>'+
       '<span class="trk-strip-lbl">'+def.label+'</span>'+
@@ -297,16 +307,21 @@ function renderTrackerStatRow() {
     segs;
 }
 
-// Click a status segment → set the status filter to that single value (or
-// clear if the same segment was already selected). Keeps the multi-select
-// widget as the single source of truth for filter state.
+// Click a status segment → toggle it in the status filter array. Lets the
+// user build up a multi-status filter by clicking several segments (e.g.
+// Active + Sign-off + On Hold to see all live work). Clicking an already-
+// selected segment removes just that one. The .ms multi-select widget is
+// the single source of truth for filter state; this function just edits
+// its underlying array.
 function trkSelectStatusSegment(key) {
   var current = msGetValues('trk-filter-status');
-  if (current.length === 1 && current[0] === key) {
-    msSetValues('trk-filter-status', []);
+  var idx = current.indexOf(key);
+  if (idx === -1) {
+    current.push(key);
   } else {
-    msSetValues('trk-filter-status', [key]);
+    current.splice(idx, 1);
   }
+  msSetValues('trk-filter-status', current);
   renderTracker();
 }
 

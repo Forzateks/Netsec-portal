@@ -1027,8 +1027,17 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Strip-segment glyph (Lucide SVG). Inherits stroke colour from the segment
    button's foreground colour, so each segment's icon matches its tier. */
 .trk-strip-ico{width:14px;height:14px;stroke-width:2;flex-shrink:0}
-/* Active segment gets a filled dot, mirroring the table badge convention. */
-.trk-strip-seg[data-key="active"] .trk-strip-ico{fill:currentColor}
+/* Checkmark prefix that appears on a selected segment — visual + ARIA
+   reinforcement that this status is currently filtering the table. */
+.trk-strip-check{width:13px;height:13px;stroke-width:2.5;flex-shrink:0;margin-right:-2px}
+/* Active segment (when selected) gets a filled dot, mirroring the table
+   badge convention. Unselected segments keep the outlined glyph. */
+.trk-strip-seg.is-selected[data-key="active"] .trk-strip-ico{fill:currentColor}
+/* Unselected segment: hover lifts the neutral fill slightly to hint
+   "this is clickable." Selected segments don't need extra hover — the
+   2px border already reads as the affordance. */
+.trk-strip-seg:not(.is-selected):hover{background:#E5E7EB !important;color:#374151 !important}
+.trk-strip-seg:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .trk-strip-num{font-family:'DM Mono',monospace;font-size:13px}
 .trk-strip-lbl{font-weight:500}
 
