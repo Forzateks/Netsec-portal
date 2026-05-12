@@ -151,39 +151,24 @@ function _trkFilteredRows() {
     return true;
   });
 
-  // Active engagements bubble to the top so day-to-day work is visible
-  // first; concluded/dormant rows fall below. Within each band we keep the
-  // tracker_updated_at-desc order from the initial fetch.
-  var activeStatusOrder = {
-    'Ongoing': 0,
-    'Pilot Sites Rollout': 1,
-    'Migration': 2,
-    'KT / Training': 3,
-    'Initial Configuration': 4,
-    'HLD Documentation': 5, 'HLD Discussion': 5,
-    'LLD Documentation': 6, 'LLD Discussion': 6,
-    'As-Built Documentation': 7,
-    'Troubleshooting': 8,
-    'Kick-off': 9,
-    'Initial Phase': 10,
-    'Pilot': 11,
-    'Yet to start': 20,
-    'Onhold': 21,
-    'Budgetary Phase': 22,
-    'On demand request': 23,
-    'Completed': 50,
-    'Ended': 51,
-    'Cancelled': 52,
-    'Lost': 53
+  // Live work bubbles to the top, paused next, concluded last — so day-to-day
+  // engagements are visible without scrolling. Sort key is the TOP-LEVEL
+  // status (engagement.status), normalised through _trkTopStatusKey so legacy
+  // 'ongoing' / null values still bucket correctly.
+  var STATUS_TIER = {
+    'active':    0, 'sign-off':  0,    // live work
+    'on-hold':   1,                    // paused, expected to resume
+    'completed': 2, 'dormant':   2, 'cancelled': 2  // concluded
   };
   filtered.sort(function(a,b){
-    var ao = activeStatusOrder[a.tracker_status] != null ? activeStatusOrder[a.tracker_status] : 99;
-    var bo = activeStatusOrder[b.tracker_status] != null ? activeStatusOrder[b.tracker_status] : 99;
-    if (ao !== bo) return ao - bo;
-    // Same band → most recently updated first
-    var at = a.tracker_updated_at ? new Date(a.tracker_updated_at).getTime() : 0;
-    var bt = b.tracker_updated_at ? new Date(b.tracker_updated_at).getTime() : 0;
-    return bt - at;
+    var at = STATUS_TIER[_trkTopStatusKey(a.status)];
+    var bt = STATUS_TIER[_trkTopStatusKey(b.status)];
+    if (at == null) at = 1;
+    if (bt == null) bt = 1;
+    if (at !== bt) return at - bt;
+    var au = a.tracker_updated_at ? new Date(a.tracker_updated_at).getTime() : 0;
+    var bu = b.tracker_updated_at ? new Date(b.tracker_updated_at).getTime() : 0;
+    return bu - au;
   });
   return filtered;
 }
@@ -248,47 +233,140 @@ function trkLicenseCell(d) {
   return '<span class="num">'+label+'</span>';
 }
 
+// Thin horizontal status strip — replaces the 7-card grid. Each segment is
+// clickable: clicking sets the status filter to that single value (toggle off
+// to clear). The Total segment is non-interactive and resets nothing.
 function renderTrackerStatRow() {
   var wrap = document.getElementById('trk-stat-row');
   if (!wrap) return;
   var rows = _trkData;
-  // Type cards count by engagement.type. Status cards count by the
-  // NORMALIZED top-level status key (engagement.status), so legacy values
-  // like 'Ongoing' get folded into 'active' via _trkTopStatusKey aliases.
   function statusKey(r){ return _trkTopStatusKey(r.status); }
-  var nProj      = rows.filter(function(r){return r.type==='project';}).length;
-  var nPoc       = rows.filter(function(r){return r.type==='poc';}).length;
-  var nActive    = rows.filter(function(r){return statusKey(r)==='active';}).length;
-  var nSignoff   = rows.filter(function(r){return statusKey(r)==='sign-off';}).length;
-  var nOnhold    = rows.filter(function(r){return statusKey(r)==='on-hold';}).length;
-  var nCompleted = rows.filter(function(r){return statusKey(r)==='completed';}).length;
-  var nCancelled = rows.filter(function(r){return statusKey(r)==='cancelled';}).length;
-  // Icon bg/fg mirror the status badge palette in styles.css so the stat
-  // strip reads as a colour key for the table below.
-  var stats = [
-    {label:'Projects',  value:nProj,      icon:'folder-kanban',  tab:'projects'},
-    {label:'POCs',      value:nPoc,       icon:'target',         tab:'pocs'},
-    {label:'Active',    value:nActive,    icon:'play-circle',    bg:'#DCFCE7', fg:'#166534'},
-    {label:'Sign-off',  value:nSignoff,   icon:'file-signature', bg:'#FEF3C7', fg:'#92400E'},
-    {label:'On Hold',   value:nOnhold,    icon:'pause-circle',   bg:'#FED7AA', fg:'#9A3412'},
-    {label:'Completed', value:nCompleted, icon:'check-circle-2', bg:'#E0F2FE', fg:'#075985'},
-    {label:'Cancelled', value:nCancelled, icon:'x-circle',       bg:'#FEE2E2', fg:'#991B1B'}
-  ];
-  wrap.innerHTML = stats.map(function(s){
-    var click = s.tab ? ' onclick="showTrackerTab(\''+s.tab+'\')" style="cursor:pointer"' : '';
-    var iconStyle = (s.bg && s.fg) ? ' style="background:'+s.bg+';color:'+s.fg+'"' : '';
-    return '<div class="trk-stat-card"'+click+'>'+
-      '<div class="trk-stat-icon"'+iconStyle+'><i data-lucide="'+s.icon+'"></i></div>'+
-      '<div class="trk-stat-text">'+
-        '<div class="trk-stat-value num">'+s.value+'</div>'+
-        '<div class="trk-stat-label">'+s.label+'</div>'+
-      '</div>'+
-    '</div>';
-  }).join('');
+  var counts = {
+    'active':    rows.filter(function(r){return statusKey(r)==='active';}).length,
+    'sign-off':  rows.filter(function(r){return statusKey(r)==='sign-off';}).length,
+    'on-hold':   rows.filter(function(r){return statusKey(r)==='on-hold';}).length,
+    'completed': rows.filter(function(r){return statusKey(r)==='completed';}).length,
+    'dormant':   rows.filter(function(r){return statusKey(r)==='dormant';}).length,
+    'cancelled': rows.filter(function(r){return statusKey(r)==='cancelled';}).length
+  };
+  // Mirror the badge palette so the strip reads as a colour key for the table.
+  var THEME = {
+    'active':    {bg:'#DCFCE7', fg:'#166534'},
+    'sign-off':  {bg:'#FEF3C7', fg:'#92400E'},
+    'on-hold':   {bg:'#FED7AA', fg:'#9A3412'},
+    'completed': {bg:'#E0F2FE', fg:'#075985'},
+    'dormant':   {bg:'#F3F4F6', fg:'#4B5563'},
+    'cancelled': {bg:'#FEE2E2', fg:'#991B1B'}
+  };
+  // Current single-value selection (if any) so we can highlight that segment.
+  var selected = msGetValues('trk-filter-status');
+  var soleSel  = (selected.length === 1) ? selected[0] : null;
+
+  var segs = ['active','sign-off','on-hold','completed','dormant','cancelled'].map(function(k){
+    var def = TRK_TOP_STATUS_MAP[k];
+    var th  = THEME[k];
+    var isSel = (soleSel === k);
+    var style = 'background:'+th.bg+';color:'+th.fg+';'+(isSel?'box-shadow:inset 0 0 0 2px '+th.fg:'');
+    return '<button class="trk-strip-seg'+(isSel?' is-selected':'')+'" '+
+      'style="'+style+'" '+
+      'onclick="trkSelectStatusSegment(\''+k+'\')" '+
+      'title="Filter by '+def.label+'">'+
+      '<span class="trk-strip-ico">'+def.icon+'</span>'+
+      '<span class="trk-strip-num num">'+counts[k]+'</span>'+
+      '<span class="trk-strip-lbl">'+def.label+'</span>'+
+    '</button>';
+  }).join('<span class="trk-strip-dot">•</span>');
+
+  wrap.innerHTML =
+    '<div class="trk-strip-total"><span class="num">'+rows.length+'</span> Total</div>'+
+    '<span class="trk-strip-dot">•</span>'+
+    segs;
+}
+
+// Click a status segment → set the status filter to that single value (or
+// clear if the same segment was already selected). Keeps the multi-select
+// widget as the single source of truth for filter state.
+function trkSelectStatusSegment(key) {
+  var current = msGetValues('trk-filter-status');
+  if (current.length === 1 && current[0] === key) {
+    msSetValues('trk-filter-status', []);
+  } else {
+    msSetValues('trk-filter-status', [key]);
+  }
+  renderTracker();
+}
+
+// Toggle the collapsible filter panel and update the toggle button label.
+function trkToggleFilters() {
+  var panel = document.getElementById('trk-filter-panel');
+  var btn   = document.getElementById('trk-filter-toggle');
+  if (!panel) return;
+  var open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (btn) btn.classList.toggle('is-open', !open);
+}
+
+// Render removable chips for every non-empty filter so the user always knows
+// what's applied without having to expand the panel. Status chips use the
+// badge label for readability.
+function trkRenderActiveChips() {
+  var host = document.getElementById('trk-active-chips');
+  if (!host) return;
+  var chips = [];
+  function push(group, label, onRemove){
+    chips.push('<span class="trk-chip">'+
+      '<span class="trk-chip-group">'+esc2(group)+':</span> '+esc2(label)+
+      '<button class="trk-chip-x" onclick="'+onRemove+'" title="Remove">×</button>'+
+    '</span>');
+  }
+  msGetValues('trk-filter-country').forEach(function(v){
+    push('Country', v, "trkRemoveMsValue('trk-filter-country','"+_escAttr(v)+"')");
+  });
+  msGetValues('trk-filter-partner').forEach(function(v){
+    push('Partner', v, "trkRemoveMsValue('trk-filter-partner','"+_escAttr(v)+"')");
+  });
+  msGetValues('trk-filter-status').forEach(function(v){
+    var def = TRK_TOP_STATUS_MAP[v];
+    push('Status', def ? def.label : v, "trkRemoveMsValue('trk-filter-status','"+_escAttr(v)+"')");
+  });
+  msGetValues('trk-filter-owner').forEach(function(v){
+    push('Owner', v, "trkRemoveMsValue('trk-filter-owner','"+_escAttr(v)+"')");
+  });
+  var sf = (document.getElementById('trk-filter-start-from')||{}).value || '';
+  var st = (document.getElementById('trk-filter-start-to')  ||{}).value || '';
+  if (sf) push('Start from', sf, "trkClearDateInput('trk-filter-start-from')");
+  if (st) push('Start to',   st, "trkClearDateInput('trk-filter-start-to')");
+
+  host.style.display = chips.length ? 'flex' : 'none';
+  if (chips.length) {
+    host.innerHTML = chips.join('') +
+      '<button class="trk-chip-clear" onclick="clearTrackerFilters()">Clear all</button>';
+  } else {
+    host.innerHTML = '';
+  }
+}
+function _escAttr(s){ return String(s==null?'':s).replace(/'/g,"\\'"); }
+function trkRemoveMsValue(id, value) {
+  var cur = msGetValues(id).filter(function(v){return v !== value;});
+  msSetValues(id, cur);
+  renderTracker();
+}
+function trkClearDateInput(id) {
+  var el = document.getElementById(id);
+  if (el) el.value = '';
+  renderTracker();
+}
+
+// Primary CTA on the tracker page. Engagements are created from the Manage
+// Engagements sub-tab (the single source of truth — no duplicate form here).
+function trkOpenNew() {
+  if (typeof showScreen === 'function') showScreen('projects');
+  if (typeof showProjectsTab === 'function') showProjectsTab('manage');
 }
 
 function renderTracker() {
   renderTrackerStatRow();
+  trkRenderActiveChips();
 
   var content = document.getElementById('trk-content');
   if (!content) return;
@@ -312,45 +390,50 @@ function renderTracker() {
   if (!rows.length) {
     content.innerHTML = tabBar +
       '<div class="empty-state"><i data-lucide="folder-search" class="empty-icon-svg"></i>'+
-      '<div class="empty-title">No engagements match the current filters</div>'+
-      '<div>Adjust filters or clear them to see everything.</div></div>';
+      '<div class="empty-title">No engagements match your filters</div>'+
+      '<div style="margin-bottom:14px">Try removing a filter or clearing them all.</div>'+
+      '<button class="btn btn-primary" onclick="clearTrackerFilters()"><i data-lucide="x" class="btn-icon"></i>Clear filters</button>'+
+      '</div>';
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
 
-  var showLicense = (_trkActiveTab !== 'projects'); // POC + All show license col
-  var showCategory = (_trkActiveTab !== 'projects');
-
+  // 6-column layout (was 9): Engagement / Customer / Owner / Status / Updated / Action.
+  // Type rolls into the Engagement cell as a tiny label; Country folds under
+  // Customer as muted small text; Partner, Category and License Expiry move
+  // out of the row entirely — still available via the detail modal + filters.
   var th =
     '<tr>'+
-      '<th>Type</th>'+
       '<th>Engagement</th>'+
       '<th>Customer</th>'+
-      '<th class="hide-mobile">Country</th>'+
-      '<th class="hide-mobile">Partner</th>'+
-      (showCategory ? '<th class="hide-mobile">Category</th>' : '')+
-      '<th>Status</th>'+
       '<th class="hide-mobile">Owner</th>'+
-      (showLicense ? '<th class="hide-mobile">License Expiry</th>' : '')+
+      '<th>Status</th>'+
       '<th class="hide-mobile">Updated</th>'+
       '<th></th>'+
     '</tr>';
 
   var body = rows.map(function(r){
-    return '<tr class="trk-row" onclick="openTrackerDetail('+r.id+')">'+
-      '<td>'+trkTypeBadge(r.type)+'</td>'+
-      '<td><div style="font-weight:600;color:var(--navy)">'+esc2(r.name)+'</div>'+
-        (r.project_order_no?'<div style="font-size:11px;color:var(--muted)" class="num">PO: '+esc2(r.project_order_no)+'</div>':'')+
+    // Concluded work gets muted text so managers' eyes naturally land on live rows.
+    var sk = _trkTopStatusKey(r.status);
+    var muted = (sk === 'completed' || sk === 'cancelled' || sk === 'dormant');
+    var typeLabel = r.type === 'poc'      ? '🎯 POC'
+                  : r.type === 'amc'      ? '🛠️ AMC'
+                  : r.type === 'presales' ? '💼 Pre-sales'
+                  :                         '📁 Project';
+    return '<tr class="trk-row'+(muted?' trk-row-muted':'')+'" onclick="openTrackerDetail('+r.id+')">'+
+      '<td>'+
+        '<div class="trk-cell-type">'+typeLabel+'</div>'+
+        '<div class="trk-cell-name">'+esc2(r.name||'—')+'</div>'+
+        (r.project_order_no?'<div class="trk-cell-sub num">PO: '+esc2(r.project_order_no)+'</div>':'')+
       '</td>'+
-      '<td>'+esc2(r.customer_name||'—')+'</td>'+
-      '<td class="hide-mobile">'+esc2(r.country||'—')+'</td>'+
-      '<td class="hide-mobile">'+esc2(r.partner||'—')+'</td>'+
-      (showCategory ? '<td class="hide-mobile">'+esc2(r.category||'—')+'</td>' : '')+
-      '<td>'+trkTopStatusBadge(r.status)+'</td>'+
+      '<td>'+
+        '<div>'+esc2(r.customer_name||'—')+'</div>'+
+        (r.country?'<div class="trk-cell-sub">'+esc2(r.country)+'</div>':'')+
+      '</td>'+
       '<td class="hide-mobile">'+esc2(r.owner_employee||'—')+'</td>'+
-      (showLicense ? '<td class="hide-mobile">'+trkLicenseCell(r.license_expiry)+'</td>' : '')+
+      '<td>'+trkTopStatusBadge(r.status)+'</td>'+
       '<td class="hide-mobile dim num" style="font-size:12px">'+(r.tracker_updated_at?fmtDate(r.tracker_updated_at):'—')+'</td>'+
-      '<td><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openTrackerDetail('+r.id+')"><i data-lucide="eye" class="btn-icon"></i>View</button></td>'+
+      '<td><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openTrackerDetail('+r.id+')"><i data-lucide="eye" class="btn-icon"></i><span class="hide-mobile">View</span></button></td>'+
     '</tr>';
   }).join('');
 
@@ -360,8 +443,6 @@ function renderTracker() {
     '</div>'+
     '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Showing '+rows.length+' of '+_trkData.length+' engagements</div>';
   if (typeof renderIcons === 'function') renderIcons();
-  // Add a synced top scrollbar so users see horizontal overflow without
-  // having to scroll to the bottom of long tables.
   if (typeof attachTopScroll === 'function') {
     var wrap = content.querySelector('.table-wrap');
     if (wrap) attachTopScroll(wrap);

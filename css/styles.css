@@ -891,17 +891,56 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 /* ── PROJECT / POC TRACKER ─────────────────────────────────────── */
-.tracker-filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:12px;margin-bottom:16px}
-.tracker-filter-bar .form-group{flex:1;min-width:130px;margin:0}
+/* Page header row — title left, primary CTA right. Matches the Linear /
+   Notion pattern: one dominant action visible at all times. */
+.trk-page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.trk-page-title{font-size:20px;font-weight:700;color:var(--navy);line-height:1.2}
+.trk-page-sub{font-size:12px;color:var(--muted);margin-top:2px}
 
-.tracker-stat-row{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:16px}
-.trk-stat-card{display:flex;align-items:center;gap:10px;padding:12px 14px;background:white;border:1px solid var(--border);border-radius:10px;transition:border-color .15s,box-shadow .15s}
-.trk-stat-card:hover{border-color:var(--teal);box-shadow:0 1px 4px rgba(0,160,210,.12)}
-.trk-stat-icon{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#EFF6FF,#DBEAFE);color:var(--navy);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.trk-stat-icon i{width:20px;height:20px;stroke-width:2}
-.trk-stat-text{display:flex;flex-direction:column;line-height:1.1;min-width:0}
-.trk-stat-value{font-size:20px;font-weight:700;color:var(--navy);font-family:'DM Mono',monospace}
-.trk-stat-label{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+/* Thin horizontal status strip — replaces the old 7-card grid. Single row,
+   colour-coded segments separated by dots. Scrolls horizontally on small
+   screens so the strip never wraps awkwardly. */
+.trk-status-strip{display:flex;align-items:center;gap:8px;padding:10px 14px;background:white;border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+.trk-strip-total{font-size:13px;color:var(--navy);font-weight:600;display:inline-flex;align-items:baseline;gap:6px;padding:4px 8px}
+.trk-strip-total .num{font-size:16px;font-family:'DM Mono',monospace}
+.trk-strip-dot{color:var(--border);font-weight:700;user-select:none}
+.trk-strip-seg{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;line-height:1;transition:transform .12s,filter .12s;font-family:inherit}
+.trk-strip-seg:hover{filter:brightness(0.97)}
+.trk-strip-seg.is-selected{transform:scale(1.02)}
+.trk-strip-ico{font-size:13px;line-height:1}
+.trk-strip-num{font-family:'DM Mono',monospace;font-size:13px}
+.trk-strip-lbl{font-weight:500}
+
+/* Search row — search input grows, filter button collapses panel. */
+.trk-search-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.trk-search-input{flex:1;position:relative;min-width:0}
+.trk-search-input input{width:100%;padding:9px 12px 9px 36px;border:1px solid var(--border);border-radius:10px;background:white;font-size:13px;font-family:inherit}
+.trk-search-input input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,160,210,.12)}
+.trk-search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted);pointer-events:none}
+.trk-filter-toggle.is-open{background:rgba(0,160,210,.1);color:var(--teal)}
+
+/* Active filter chips — visible only when filters are applied. */
+.trk-active-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.trk-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 4px 4px 10px;background:#EFF6FF;border:1px solid #DBEAFE;border-radius:999px;font-size:12px;color:var(--navy);font-weight:500}
+.trk-chip-group{color:var(--muted);font-weight:600}
+.trk-chip-x{background:rgba(10,31,92,.08);border:none;color:var(--navy);width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0;font-family:inherit}
+.trk-chip-x:hover{background:rgba(10,31,92,.18)}
+.trk-chip-clear{background:none;border:none;color:var(--teal);font-size:12px;font-weight:600;cursor:pointer;padding:4px 8px;font-family:inherit}
+.trk-chip-clear:hover{text-decoration:underline}
+
+/* Collapsible filter panel — keeps the dropdowns but tucks them away. */
+.trk-filter-panel{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:12px;margin-bottom:14px}
+.trk-filter-panel .form-group{margin:0}
+
+/* Row cell styles — type label sits above engagement name; country below customer. */
+.trk-cell-type{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.trk-cell-name{font-weight:600;color:var(--navy)}
+.trk-cell-sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* Visual hierarchy — concluded engagements fade so live work pops first. */
+.trk-row-muted td{color:#6B7280}
+.trk-row-muted .trk-cell-name,
+.trk-row-muted .trk-cell-type{color:#9CA3AF}
 
 .trk-tab-bar{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
 .trk-tab{background:none;border:none;padding:9px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
@@ -1157,16 +1196,17 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-ms-add-card{margin-top:18px;padding:16px;background:#FAFBFC;border:1px dashed var(--border);border-radius:10px}
 
 @media(max-width:900px){
-  .tracker-stat-row{grid-template-columns:repeat(3,1fr)}
+  .trk-filter-panel{grid-template-columns:repeat(2,1fr)}
   .trk-detail-grid{grid-template-columns:1fr}
 }
 @media(max-width:640px){
-  .tracker-stat-row{grid-template-columns:repeat(2,1fr);gap:8px}
-  .trk-stat-card{padding:10px;gap:8px}
-  .trk-stat-icon{width:30px;height:30px}
-  .trk-stat-icon i{width:16px;height:16px}
-  .trk-stat-value{font-size:17px}
+  .trk-page-title{font-size:17px}
+  .trk-status-strip{padding:8px 10px;gap:6px}
+  .trk-strip-total{padding:3px 6px;font-size:12px}
+  .trk-strip-total .num{font-size:14px}
+  .trk-strip-seg{padding:4px 8px;font-size:11px}
+  .trk-strip-num{font-size:12px}
+  .trk-filter-panel{grid-template-columns:1fr;padding:12px;gap:8px}
   .trk-tab{padding:8px 12px;font-size:12px}
-  .tracker-filter-bar{padding:12px;gap:8px}
-  .tracker-filter-bar .form-group{min-width:0;flex:1 1 100%;width:100%}
+  .trk-search-input input{font-size:12px;padding:8px 10px 8px 32px}
 }
