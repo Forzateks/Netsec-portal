@@ -1293,6 +1293,68 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .cust-chip-arrow{opacity:.6;transform:translateX(0)}
 }
 
+/* ── Glow-pill button pattern ────────────────────────────────────────
+   Two-state pattern: white "default" pill with a coloured dot, or solid
+   green "active" pill with a glowing white dot. Used in EXACTLY THREE
+   places: header connection indicator, manager dashboard "all caught
+   up" state, and the approval-modal success transition. Don't apply
+   to other buttons without checking. */
+.glow-button{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:8px 14px;border-radius:10px;
+  border:1px solid var(--color-border);
+  background:white;color:var(--color-text);
+  font-size:14px;font-weight:500;line-height:1.2;
+  cursor:pointer;font-family:inherit;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+  transition:background 300ms ease,border-color 300ms ease,color 300ms ease,box-shadow 300ms ease,transform 300ms ease;
+}
+.glow-button .dot{
+  width:9px;height:9px;border-radius:50%;
+  background:var(--color-success);
+  box-shadow:0 0 0 0 rgba(16,185,129,.5);
+  transition:background 300ms ease,box-shadow 300ms ease;
+  flex-shrink:0;
+}
+.glow-button .glow-subtle{
+  font-size:12px;opacity:.7;font-weight:400;
+}
+.glow-button:hover:not(.active):not(.glow-button-static){
+  border-color:var(--color-border-strong);
+  box-shadow:0 4px 12px rgba(0,0,0,.06);
+}
+/* Active / success state — solid green, white glowing dot. */
+.glow-button.active{
+  background:#10B981;border-color:#10B981;color:white;
+  box-shadow:0 4px 12px rgba(16,185,129,.25);
+  transform:translateY(-1px);
+}
+.glow-button.active .dot{
+  background:white;
+  box-shadow:0 0 18px rgba(255,255,255,.9);
+}
+.glow-button.active .glow-subtle{
+  color:rgba(255,255,255,.85);opacity:1;
+}
+/* Static variant — used for non-interactive status pills (no hover lift,
+   no cursor pointer). */
+.glow-button.glow-button-static{cursor:default}
+/* Size variant — compact pill (used for the header connection indicator). */
+.glow-button.glow-button-sm{
+  padding:5px 12px;font-size:12px;gap:8px;border-radius:999px;
+}
+/* Top-bar context — the chip sits on the navy gradient header, so override
+   to a glassy translucent surface that matches the existing top-bar palette
+   (user-chip uses the same rgba pattern). The dot inside keeps its own
+   .db-dot colour transitions via auth.js. */
+.db-status.glow-button{
+  background:rgba(255,255,255,.08);
+  border-color:rgba(255,255,255,.12);
+  color:rgba(255,255,255,.9);
+  box-shadow:none;
+}
+.db-status-label{font-weight:500;letter-spacing:.2px}
+
 /* Customers section: search input, inline add form, collapsible country groups. */
 .cust-search-row{position:relative;margin-bottom:14px;max-width:480px}
 .cust-search-row input{width:100%;padding:9px 36px 9px 34px;border:1px solid var(--color-border);border-radius:10px;font-size:13px;background:white;font-family:inherit;color:var(--color-text)}

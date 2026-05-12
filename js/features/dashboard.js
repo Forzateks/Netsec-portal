@@ -345,10 +345,13 @@ async function renderManagerDashboard() {
       '</div>'+
     '</div>';
   } else {
+    // Glow-pill active state — celebratory confirmation when the queue is
+    // empty. Static (non-clickable) since there's nothing to do.
     html += '<div class="card" style="margin-bottom:16px;text-align:center;padding:20px">'+
-      '<div style="font-size:14px;color:var(--muted)">'+
-        '<span style="color:var(--success);font-size:18px;margin-right:6px">✓</span>'+
-        'All caught up — no pending approvals'+
+      '<div class="glow-button active glow-button-static" style="padding:14px 22px">'+
+        '<span class="dot"></span>'+
+        '<span>All caught up</span>'+
+        '<span class="glow-subtle">0 pending</span>'+
       '</div>'+
     '</div>';
   }

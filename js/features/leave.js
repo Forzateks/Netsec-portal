@@ -767,6 +767,26 @@ function openApproveModal(type,id,employee) {
 function closeApproveModal() {
   document.getElementById('approve-modal').classList.remove('show');
   approveTarget=null;
+  // Reset the glow-button to its default state so the next open is clean.
+  var btn = document.getElementById('approve-action-btn');
+  if (btn) {
+    btn.classList.remove('active');
+    btn.innerHTML = '<span class="dot"></span>Approve';
+  }
+}
+
+// Quick success-glow transition before the modal closes on an approved
+// decision. The button flips to its active state (solid green + white
+// glowing dot) for 800ms so the manager gets a satisfying confirmation
+// before the row dismisses. Rejections skip this — no celebration on
+// negative outcomes.
+function _approveSuccessGlow() {
+  var btn = document.getElementById('approve-action-btn');
+  if (!btn) return Promise.resolve();
+  btn.classList.add('active');
+  btn.innerHTML = '<span class="dot"></span>Approved <i data-lucide="check" style="width:14px;height:14px;stroke-width:3"></i>';
+  if (typeof renderIcons === 'function') renderIcons();
+  return new Promise(function(r){ setTimeout(r, 800); });
 }
 
 async function deleteRequest(type, id) {
@@ -810,6 +830,7 @@ async function processRequest(decision) {
       status:decision,manager_comment:comment,reviewed_by:currentUser,reviewed_at:new Date().toISOString()
     }).eq('id',id);
     if (error){alert('Error: '+error.message);return;}
+    if (decision === 'approved') await _approveSuccessGlow();
     closeApproveModal(); updateNotifBadge(); renderOTApprovals(); return;
   }
 
@@ -836,6 +857,7 @@ async function processRequest(decision) {
     }
   }
 
+  if (decision === 'approved') await _approveSuccessGlow();
   closeApproveModal();
   updateNotifBadge();
   renderLeaveApprovals();
