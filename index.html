@@ -303,6 +303,13 @@
           <label>End Date *</label>
           <input type="date" id="lv-end" onchange="updateLeavePreview()">
         </div>
+        <div class="form-group full" id="lv-halfday-wrap">
+          <label class="lv-halfday-row">
+            <input type="checkbox" id="lv-halfday" onchange="updateLeavePreview()">
+            <span>This is a half-day</span>
+          </label>
+          <div id="lv-halfday-help" class="lv-halfday-help"></div>
+        </div>
         <div class="form-group full">
           <label>Reason (optional)</label>
           <input type="text" id="lv-reason" placeholder="e.g. Family vacation / Medical appointment / LMG migration OT">

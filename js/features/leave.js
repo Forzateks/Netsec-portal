@@ -68,20 +68,69 @@ async function updateLeavePreview() {
   const isSick = ltype === 'sick';
   const allowance = isSick ? SICK_ALLOWANCE : LEAVE_ALLOWANCE;
   document.getElementById('lv-prev-type').textContent = isSick ? 'Sick' : 'Annual';
+
+  // Half-day checkbox: only valid when start=end and the date is a working
+  // day for this employee. Anything else (multi-day range, weekend, empty
+  // date) disables the checkbox and force-unchecks it.
+  _refreshHalfDayState(start, end);
+  var halfBox = document.getElementById('lv-halfday');
+  var isHalfDay = !!(halfBox && halfBox.checked && !halfBox.disabled);
+
   if (!start||!end) {
     document.getElementById('lv-prev-days').textContent = '—';
     document.getElementById('lv-prev-used').textContent = '—';
     document.getElementById('lv-prev-bal').textContent  = '—';
     return;
   }
-  const days = calcWorkingDays(start,end,currentUser);
+  var days = isHalfDay ? 0.5 : calcWorkingDays(start,end,currentUser);
   const year = start.split('-')[0];
   const used = await getLeaveDaysUsed(currentUser,year,ltype);
   const balAfter = allowance - used - days;
-  document.getElementById('lv-prev-days').textContent = days+' days';
-  document.getElementById('lv-prev-used').textContent = used+' / '+allowance;
-  document.getElementById('lv-prev-bal').textContent  = balAfter+' days';
+  // Format with one decimal only when fractional, so "5 days" stays clean
+  // and "0.5 day" / "21.5 days" surface only when there's actually a half.
+  var fmt = function(n){ return (Math.abs(n - Math.round(n)) < 0.001) ? String(Math.round(n)) : (Math.round(n*10)/10).toFixed(1); };
+  document.getElementById('lv-prev-days').textContent = fmt(days)+' day'+(days===1?'':'s');
+  document.getElementById('lv-prev-used').textContent = fmt(used)+' / '+allowance;
+  document.getElementById('lv-prev-bal').textContent  = fmt(balAfter)+' days';
   document.getElementById('lv-prev-bal').style.color  = balAfter<0?'var(--danger)':balAfter<=3?'var(--gold)':'var(--success)';
+}
+
+// Enable / disable the half-day checkbox based on the current date inputs.
+// Half-day is only meaningful when start === end and that single date is a
+// working day for the current employee. Sets a helpful message under the
+// checkbox explaining WHY it's disabled.
+function _refreshHalfDayState(start, end) {
+  var box  = document.getElementById('lv-halfday');
+  var help = document.getElementById('lv-halfday-help');
+  var wrap = document.getElementById('lv-halfday-wrap');
+  if (!box || !wrap) return;
+  // Comp-off types use their own half-day pathway (compoff_half) — hide
+  // this checkbox entirely so we don't have two ways to mean the same thing.
+  var ltype = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual';
+  if (isCompOffType(ltype)) {
+    wrap.style.display = 'none';
+    box.checked = false;
+    return;
+  }
+  wrap.style.display = '';
+
+  var reason = '';
+  if (!start || !end) {
+    reason = '';
+  } else if (start !== end) {
+    reason = 'Half-day only available for single-day requests.';
+  } else {
+    // Same date — check weekend for this employee's region
+    var d = new Date(start + 'T00:00:00');
+    if (isWeekend(d.getDay(), currentUser)) {
+      reason = 'Selected date is a weekend for your region.';
+    }
+  }
+  var disabled = !!reason;
+  if (disabled && box.checked) box.checked = false;
+  box.disabled = disabled;
+  if (help) help.textContent = reason;
+  wrap.classList.toggle('is-disabled', disabled);
 }
 
 async function submitLeaveRequest() {
@@ -92,8 +141,18 @@ async function submitLeaveRequest() {
   const reason = document.getElementById('lv-reason').value.trim();
   const errEl  = document.getElementById('leave-error');
   if (!start||!end){showAlert('leave-error');return;}
-  const days = calcWorkingDays(start,end,currentUser);
+  var halfBox = document.getElementById('lv-halfday');
+  var isHalfDay = !!(halfBox && halfBox.checked && !halfBox.disabled);
+  // Half-day → 0.5 working day. Otherwise the standard working-day count
+  // (excludes weekends per region).
+  var days = isHalfDay ? 0.5 : calcWorkingDays(start,end,currentUser);
   if (days<=0){showAlert('leave-error');return;}
+  // Defensive: if user manipulated the DOM to check half-day on a
+  // multi-day range, force-collapse to single-day.
+  if (isHalfDay && start !== end) {
+    if (errEl) errEl.textContent = '⚠️ Half-day applies to single-day requests only.';
+    showAlert('leave-error'); return;
+  }
 
   // Block self-overlap with any existing pending/approved leave request
   // OR any already-recorded annual_leave row (the source-of-truth balance table).
@@ -180,6 +239,8 @@ async function submitLeaveRequest() {
   showAlert('leave-success');
 
   ['lv-start','lv-end','lv-reason'].forEach(function(id){document.getElementById(id).value='';});
+  var hb = document.getElementById('lv-halfday'); if (hb) hb.checked = false;
+  if (typeof _refreshHalfDayState === 'function') _refreshHalfDayState('', '');
   document.getElementById('lv-prev-days').textContent='—';
   document.getElementById('lv-prev-used').textContent='—';
   document.getElementById('lv-prev-bal').textContent='—';
@@ -294,11 +355,15 @@ async function renderLeaveHistory() {
     }
     var ltIcon  = (r.leave_type||'annual')==='sick' ? 'Sick Leave' : 'Annual Leave';
     var ltColor = (r.leave_type||'annual')==='sick' ? '#8B5CF6' : 'var(--teal)';
+    // Half-day flag: working_days === 0.5 on a single-date row. The string
+    // shows "(half day)" inline next to the date range to stay compact.
+    var isHalf = (parseFloat(r.working_days) === 0.5);
+    var halfTag = isHalf ? ' <span style="font-size:11px;color:#8B5CF6;font-weight:600">(half day)</span>' : '';
     return '<div class="request-card '+r.status+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
       '<div><strong>'+r.employee+'</strong> <span style="font-size:11px;font-weight:600;color:'+ltColor+'">'+ltIcon+'</span><br>'+
-      '<span style="font-family:DM Mono,monospace;font-size:13px">'+fmtDate(r.start_date)+' to '+fmtDate(r.end_date)+'</span><br>'+
-      '<span style="font-size:12px;color:var(--muted)">'+r.working_days+' working days'+(r.reason?' | '+r.reason:'')+'</span></div>'+
+      '<span style="font-family:DM Mono,monospace;font-size:13px">'+fmtDate(r.start_date)+(r.start_date===r.end_date?'':' to '+fmtDate(r.end_date))+halfTag+'</span><br>'+
+      '<span style="font-size:12px;color:var(--muted)">'+r.working_days+' working day'+(parseFloat(r.working_days)===1?'':'s')+(r.reason?' | '+r.reason:'')+'</span></div>'+
       '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span></div>'+
       (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:4px">💬 '+r.manager_comment+'</div>':'')+
       '</div>';
@@ -650,7 +715,12 @@ function approvalCard(r,type) {
   const isPending=r.status==='pending';
   let info='';
   if (type==='compoff') info='<strong>'+r.employee+'</strong> — '+r.type+' on '+fmtDate(r.request_date)+(r.related_activity?' ('+r.related_activity+')':'');
-  else info='<strong>'+r.employee+'</strong> — '+fmtDate(r.start_date)+' to '+fmtDate(r.end_date)+' ('+r.working_days+' days)'+(r.reason?' | '+r.reason:'');
+  else {
+    var isHalf = (parseFloat(r.working_days) === 0.5);
+    var halfBadge = isHalf ? ' <span class="badge" style="background:#EDE9FE;color:#5B21B6;font-size:10px">Half day</span>' : '';
+    var dateLabel = r.start_date===r.end_date ? fmtDate(r.start_date) : (fmtDate(r.start_date)+' to '+fmtDate(r.end_date));
+    info='<strong>'+r.employee+'</strong> — '+dateLabel+halfBadge+' ('+r.working_days+' day'+(parseFloat(r.working_days)===1?'':'s')+')'+(r.reason?' | '+r.reason:'');
+  }
 
   // Overlap warning for leave requests where another employee has a
   // pending/approved leave covering any of the same dates.

@@ -948,6 +948,15 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-field-value{font-size:13px;color:#1F2937;font-weight:500;word-break:break-word}
 .trk-remarks-block{margin-top:14px;padding:14px;background:#FFFBEB;border-left:3px solid var(--gold);border-radius:6px}
 
+/* Half-day checkbox in the Request Time Off form. Inline label + box; the
+   helper text below explains *why* the checkbox is disabled (multi-day range
+   or weekend) so the user doesn't think it's broken. */
+.lv-halfday-row{display:inline-flex !important;align-items:center;gap:8px;cursor:pointer;font-weight:500 !important;color:var(--navy);text-transform:none !important;letter-spacing:normal !important}
+.lv-halfday-row input[type="checkbox"]{width:16px;height:16px;accent-color:var(--teal);cursor:pointer;margin:0;flex-shrink:0}
+.lv-halfday-row span{font-size:13px;color:var(--navy)}
+#lv-halfday-wrap.is-disabled .lv-halfday-row{cursor:not-allowed;opacity:.55}
+.lv-halfday-help{font-size:11.5px;color:var(--muted);margin-top:4px;min-height:1em;line-height:1.4}
+
 /* ── CERTIFICATES module ─────────────────────────────────────── */
 .cert-header-card{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
 .cert-header-text{flex:1;min-width:200px}
