@@ -574,8 +574,13 @@
           <label>Status</label>
           <select id="pj-new-status">
             <option value="active">🟢 Active</option>
+            <option value="ongoing">🔵 Ongoing</option>
+            <option value="sign-off">✍️ Sign-off</option>
             <option value="completed">✅ Completed</option>
             <option value="on-hold">⏸️ On Hold</option>
+            <option value="dormant">💤 Dormant</option>
+            <option value="cancelled">❌ Cancelled</option>
+            <option value="archived">📦 Archived</option>
           </select>
         </div>
       </div>
@@ -595,8 +600,13 @@
           <select id="pj-manage-filter" onchange="renderManageProjects()" style="width:auto;padding:7px 12px">
             <option value="">All Status</option>
             <option value="active">🟢 Active</option>
+            <option value="ongoing">🔵 Ongoing</option>
+            <option value="sign-off">✍️ Sign-off</option>
             <option value="completed">✅ Completed</option>
             <option value="on-hold">⏸️ On Hold</option>
+            <option value="dormant">💤 Dormant</option>
+            <option value="cancelled">❌ Cancelled</option>
+            <option value="archived">📦 Archived</option>
           </select>
         </div>
       </div>
@@ -767,6 +777,14 @@
       <label>Owner</label>
       <div class="ms" id="trk-filter-owner"></div>
     </div>
+    <div class="form-group trk-filter-daterange">
+      <label>Start Date — From</label>
+      <input type="date" id="trk-filter-start-from" onchange="applyTrackerFilters()">
+    </div>
+    <div class="form-group trk-filter-daterange">
+      <label>Start Date — To</label>
+      <input type="date" id="trk-filter-start-to" onchange="applyTrackerFilters()">
+    </div>
     <div style="display:flex;align-items:flex-end;gap:6px">
       <button class="btn btn-sm btn-ghost" onclick="clearTrackerFilters()">✕ Clear</button>
       <button class="btn btn-sm btn-ghost" onclick="loadTracker()"><i data-lucide="refresh-cw" class="btn-icon"></i>Refresh</button>
@@ -860,6 +878,20 @@
     </div>
     <input type="hidden" id="trk-edit-id">
     <div class="form-grid">
+      <div class="form-group full">
+        <label>Status</label>
+        <select id="trk-edit-status">
+          <option value="active">🟢 Active</option>
+          <option value="ongoing">🔵 Ongoing</option>
+          <option value="sign-off">✍️ Sign-off</option>
+          <option value="completed">✅ Completed</option>
+          <option value="on-hold">⏸️ On Hold</option>
+          <option value="dormant">💤 Dormant</option>
+          <option value="cancelled">❌ Cancelled</option>
+          <option value="archived">📦 Archived</option>
+        </select>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">High-level state of the engagement.</div>
+      </div>
       <div class="form-group">
         <label>Country</label>
         <input type="text" id="trk-edit-country" placeholder="UAE / KSA / Oman / Kenya...">
@@ -885,10 +917,11 @@
         <input type="date" id="trk-edit-end-date">
       </div>
       <div class="form-group">
-        <label>Status</label>
+        <label>Current Phase</label>
         <select id="trk-edit-tracker-status" onchange="onTrackerStatusChange()">
           <option value="">— None —</option>
         </select>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Workflow phase within an active project</div>
       </div>
       <div class="form-group">
         <label>Owner</label>
@@ -1802,9 +1835,13 @@
         <label>Status</label>
         <select id="edit-project-status">
           <option value="active">🟢 Active</option>
+          <option value="ongoing">🔵 Ongoing</option>
+          <option value="sign-off">✍️ Sign-off</option>
           <option value="completed">✅ Completed</option>
           <option value="on-hold">⏸️ On Hold</option>
-          <option value="archived">🗃️ Archived</option>
+          <option value="dormant">💤 Dormant</option>
+          <option value="cancelled">❌ Cancelled</option>
+          <option value="archived">📦 Archived</option>
         </select>
       </div>
     </div>

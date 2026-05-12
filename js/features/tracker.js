@@ -98,10 +98,11 @@ function populateTrackerFilters() {
   msInit('trk-filter-country', toItems(countries), applyTrackerFilters);
   msInit('trk-filter-partner', toItems(partners),  applyTrackerFilters);
   msInit('trk-filter-owner',   toItems(owners),    applyTrackerFilters);
-  // Status options change with the active tab — see showTrackerTab.
-  var typeKey = _trkActiveTab === 'projects' ? 'project' : (_trkActiveTab === 'pocs' ? 'poc' : 'all');
+  // Top-level status filter — 8 coarse-grained values, same across all
+  // tabs. The fine-grained tracker_status (Phase) is no longer filtered
+  // from this dropdown; it now lives inside the detail/edit modal.
   msInit('trk-filter-status',
-    trkStatusesFor(typeKey).map(function(v){return {value:v,label:v};}),
+    TRK_TOP_STATUS_ORDER.map(function(k){return {value:k, label:TRK_TOP_STATUS_MAP[k].label};}),
     applyTrackerFilters);
 }
 
@@ -110,6 +111,8 @@ function clearTrackerFilters() {
   ['trk-filter-country','trk-filter-partner','trk-filter-status','trk-filter-owner'].forEach(function(id){
     msSetValues(id, []);
   });
+  var sf = document.getElementById('trk-filter-start-from'); if (sf) sf.value = '';
+  var st = document.getElementById('trk-filter-start-to');   if (st) st.value = '';
   renderTracker();
 }
 
@@ -119,16 +122,25 @@ function _trkFilteredRows() {
   var search    = ((document.getElementById('trk-search')||{}).value||'').toLowerCase().trim();
   var countries = msGetValues('trk-filter-country');
   var partners  = msGetValues('trk-filter-partner');
-  var statuses  = msGetValues('trk-filter-status');
+  var statuses  = msGetValues('trk-filter-status');   // now filters TOP-LEVEL status
   var owners    = msGetValues('trk-filter-owner');
+  var startFrom = ((document.getElementById('trk-filter-start-from')||{}).value || '');
+  var startTo   = ((document.getElementById('trk-filter-start-to')||{}).value   || '');
 
   var filtered = _trkData.filter(function(r){
     if (_trkActiveTab === 'projects' && r.type !== 'project') return false;
     if (_trkActiveTab === 'pocs'     && r.type !== 'poc')     return false;
     if (countries.length && countries.indexOf(r.country)        === -1) return false;
     if (partners.length  && partners.indexOf(r.partner)         === -1) return false;
-    if (statuses.length  && statuses.indexOf(r.tracker_status)  === -1) return false;
+    // Compare against the NORMALIZED top-level status key so 'ongoing' /
+    // null / 'on hold' all bucket correctly even when the dropdown user
+    // picked 'active' or 'on-hold'.
+    if (statuses.length  && statuses.indexOf(_trkTopStatusKey(r.status)) === -1) return false;
     if (owners.length    && owners.indexOf(r.owner_employee)    === -1) return false;
+    // Start-date range: empty inputs skip the filter. ISO YYYY-MM-DD
+    // string compare is correct lexicographically for dates.
+    if (startFrom && (r.start_date == null || r.start_date < startFrom)) return false;
+    if (startTo   && (r.start_date == null || r.start_date > startTo))   return false;
     if (search) {
       var hay = [r.name, r.customer_name, r.partner, r.country, r.owner_employee, r.tracker_remarks, r.category, r.project_order_no]
         .map(function(x){return (x||'').toLowerCase();}).join(' ');
@@ -178,6 +190,41 @@ function trkStatusBadge(s) {
   if (!s) return '<span style="font-size:11px;color:var(--muted)">—</span>';
   var cls = 'trk-status-' + s.toLowerCase().replace(/[^a-z]+/g,'-');
   return '<span class="badge trk-status '+cls+'">'+esc2(s)+'</span>';
+}
+
+// ── TOP-LEVEL ENGAGEMENT STATUS (engagement.status) ─────────────────
+// 8 coarse-grained states — what a manager scans the tracker list for.
+// Distinct from tracker_status (the fine-grained workflow phase shown in
+// the detail/edit modal as "Current Phase"). null/empty status renders as
+// Active per spec — legacy imports / freshly-inserted rows shouldn't read
+// as a blank cell.
+var TRK_TOP_STATUS_ORDER = [
+  'active','ongoing','sign-off','completed','on-hold','dormant','cancelled','archived'
+];
+var TRK_TOP_STATUS_MAP = {
+  'active':    { label:'Active',    icon:'🟢', cls:'trk-st-active' },
+  'ongoing':   { label:'Ongoing',   icon:'🔵', cls:'trk-st-ongoing' },
+  'sign-off':  { label:'Sign-off',  icon:'✍️', cls:'trk-st-signoff' },
+  'completed': { label:'Completed', icon:'✅', cls:'trk-st-completed' },
+  'on-hold':   { label:'On Hold',   icon:'⏸️', cls:'trk-st-onhold' },
+  'dormant':   { label:'Dormant',   icon:'💤', cls:'trk-st-dormant' },
+  'cancelled': { label:'Cancelled', icon:'❌', cls:'trk-st-cancelled' },
+  'archived':  { label:'Archived',  icon:'📦', cls:'trk-st-archived' }
+};
+function _trkTopStatusKey(raw) {
+  var v = (raw == null ? '' : String(raw)).trim().toLowerCase();
+  if (!v) return 'active';
+  if (TRK_TOP_STATUS_MAP[v]) return v;
+  // Accept a couple of historical aliases the data may carry.
+  if (v === 'on hold' || v === 'onhold') return 'on-hold';
+  if (v === 'sign off' || v === 'signoff') return 'sign-off';
+  return v; // unknown — let the renderer fall back to muted
+}
+function trkTopStatusBadge(raw) {
+  var key = _trkTopStatusKey(raw);
+  var def = TRK_TOP_STATUS_MAP[key];
+  if (!def) return '<span class="badge" style="background:#F3F4F6;color:#6B7280">'+esc2(raw||'—')+'</span>';
+  return '<span class="badge '+def.cls+'"><span class="trk-st-icon">'+def.icon+'</span> '+def.label+'</span>';
 }
 
 function trkTypeBadge(t) {
@@ -284,7 +331,7 @@ function renderTracker() {
       '<td class="hide-mobile">'+esc2(r.country||'—')+'</td>'+
       '<td class="hide-mobile">'+esc2(r.partner||'—')+'</td>'+
       (showCategory ? '<td class="hide-mobile">'+esc2(r.category||'—')+'</td>' : '')+
-      '<td>'+trkStatusBadge(r.tracker_status)+'</td>'+
+      '<td>'+trkTopStatusBadge(r.status)+'</td>'+
       '<td class="hide-mobile">'+esc2(r.owner_employee||'—')+'</td>'+
       (showLicense ? '<td class="hide-mobile">'+trkLicenseCell(r.license_expiry)+'</td>' : '')+
       '<td class="hide-mobile dim num" style="font-size:12px">'+(r.tracker_updated_at?fmtDate(r.tracker_updated_at):'—')+'</td>'+
@@ -310,7 +357,7 @@ function openTrackerDetail(id) {
   var r = _trkData.find(function(x){return x.id===id;});
   if (!r) return;
 
-  document.getElementById('trk-detail-type').innerHTML = trkTypeBadge(r.type) + ' ' + trkStatusBadge(r.tracker_status);
+  document.getElementById('trk-detail-type').innerHTML = trkTypeBadge(r.type) + ' ' + trkTopStatusBadge(r.status);
   document.getElementById('trk-detail-name').textContent = r.name || '';
   document.getElementById('trk-detail-customer').textContent = (r.customer_name||'—') +
     (r.country?(' · '+r.country):'') +
@@ -321,6 +368,7 @@ function openTrackerDetail(id) {
     {label:'Country',          value: r.country},
     {label:'Partner',          value: r.partner},
     {label:'Category',         value: r.category},
+    {label:'Current Phase',    value: r.tracker_status, hint:'Workflow phase within an active project'},
     {label:'Project Order No', value: r.project_order_no, mono:true},
     {label:'Owner',            value: r.owner_employee},
     {label:'Start Date',       value: r.start_date ? fmtDate(r.start_date) : '', mono:true},
@@ -344,8 +392,9 @@ function openTrackerDetail(id) {
     var flagCss = '';
     if (f.flag === 'expired') flagCss = 'color:var(--danger);font-weight:600';
     else if (f.flag === 'soon') flagCss = 'color:#D97706;font-weight:600';
+    var hint = f.hint ? '<div class="trk-field-hint">'+esc2(f.hint)+'</div>' : '';
     return '<div class="trk-field"><div class="trk-field-label">'+esc2(f.label)+'</div>'+
-      '<div class="trk-field-value'+cls+'" style="'+flagCss+'">'+esc2(String(v))+'</div></div>';
+      '<div class="trk-field-value'+cls+'" style="'+flagCss+'">'+esc2(String(v))+'</div>'+hint+'</div>';
   }).join('');
 
   var remarks = (r.tracker_remarks||'').trim();
@@ -438,6 +487,9 @@ function openTrackerEditModal(id) {
   document.getElementById('trk-edit-subtitle').textContent =
     (r.customer_name||'—') + ' · ' + (r.type||'').toUpperCase();
   _trkSet('trk-edit-id',                String(r.id));
+  // Top-level status — normalize null/empty/legacy 'ongoing' to a valid
+  // key from the 8-option dropdown so the select doesn't blank out.
+  _trkSet('trk-edit-status',            _trkTopStatusKey(r.status));
   _trkSet('trk-edit-country',           r.country);
   _trkSet('trk-edit-partner',           r.partner);
   _trkSet('trk-edit-category',          r.category);
@@ -494,9 +546,11 @@ async function saveTrackerEdit() {
   if (!id) { alert('Missing engagement id.'); return; }
 
   var trackerStatus = _trkGet('trk-edit-tracker-status');
+  var topStatus     = _trkGet('trk-edit-status'); // one of the 8 top-level values
   var signedOn      = _trkGet('trk-edit-signed-off-on');
 
   var patch = {
+    status:            topStatus || 'active',
     country:           _trkTextOrNull(_trkGet('trk-edit-country')),
     partner:           _trkTextOrNull(_trkGet('trk-edit-partner')),
     category:          _trkTextOrNull(_trkGet('trk-edit-category')),
@@ -513,10 +567,13 @@ async function saveTrackerEdit() {
     tracker_updated_at: new Date().toISOString()
   };
 
-  // Sign-off OR tracker_status='Completed' flips engagement.status to
-  // 'completed' across the app (engagement summary, dropdowns, dashboards).
-  if (trackerStatus === 'Completed' || signedOn) {
-    patch.status = 'completed';
+  // Sign-off OR tracker_status='Completed' flips engagement.status. We
+  // override the user's top-status pick only if the user hasn't already
+  // chosen an end state (cancelled / archived / completed / sign-off).
+  if ((trackerStatus === 'Completed' || signedOn) &&
+      patch.status !== 'completed' && patch.status !== 'cancelled' &&
+      patch.status !== 'archived'  && patch.status !== 'sign-off') {
+    patch.status = signedOn ? 'sign-off' : 'completed';
   }
 
   btn.disabled = true;
