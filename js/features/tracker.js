@@ -160,9 +160,9 @@ function _trkFilteredRows() {
   // status (engagement.status), normalised through _trkTopStatusKey so legacy
   // 'ongoing' / null values still bucket correctly.
   var STATUS_TIER = {
-    'active':    0, 'sign-off':  0,    // live work
-    'on-hold':   1,                    // paused, expected to resume
-    'completed': 2, 'dormant':   2, 'cancelled': 2  // concluded
+    'active':    0, 'sign-off':  0, 'payment-pending': 0,  // live work / needs follow-up
+    'on-hold':   1,                                        // paused, expected to resume
+    'completed': 2, 'dormant':   2, 'cancelled': 2         // concluded
   };
   filtered.sort(function(a,b){
     var at = STATUS_TIER[_trkTopStatusKey(a.status)];
@@ -189,17 +189,20 @@ function trkStatusBadge(s) {
 // the detail/edit modal as "Current Phase"). null/empty status renders as
 // Active per spec — legacy imports / freshly-inserted rows shouldn't read
 // as a blank cell.
+// Lifecycle order: Active → Sign-off → Payment Pending → Completed, with
+// On Hold / Dormant / Cancelled as off-ramp states after the happy path.
 var TRK_TOP_STATUS_ORDER = [
-  'active','sign-off','completed','on-hold','dormant','cancelled'
+  'active','sign-off','payment-pending','completed','on-hold','dormant','cancelled'
 ];
 // Icon column carries a LUCIDE name (rendered as <i data-lucide>) for the
 // badge / strip / detail-modal surfaces. Filter dropdown options can't render
 // SVG (the .ms widget escapes labels), so populateTrackerFilters() uses a
 // short Unicode glyph for those — see the EMOJI_FOR_OPTION map below.
 var TRK_TOP_STATUS_MAP = {
-  'active':    { label:'Active',    icon:'circle',         cls:'trk-st-active' },
-  'sign-off':  { label:'Sign-off',  icon:'pen-tool',       cls:'trk-st-signoff' },
-  'completed': { label:'Completed', icon:'check-circle-2', cls:'trk-st-completed' },
+  'active':          { label:'Active',          icon:'circle',         cls:'trk-st-active' },
+  'sign-off':        { label:'Sign-off',        icon:'pen-tool',       cls:'trk-st-signoff' },
+  'payment-pending': { label:'Payment Pending', icon:'wallet',         cls:'trk-st-paypending' },
+  'completed':       { label:'Completed',       icon:'check-circle-2', cls:'trk-st-completed' },
   'on-hold':   { label:'On Hold',   icon:'pause-circle',   cls:'trk-st-onhold' },
   'dormant':   { label:'Dormant',   icon:'moon',           cls:'trk-st-dormant' },
   'cancelled': { label:'Cancelled', icon:'x-circle',       cls:'trk-st-cancelled' }
@@ -207,7 +210,7 @@ var TRK_TOP_STATUS_MAP = {
 // Unicode glyphs for the multi-select dropdown labels only — those go
 // through esc2() so they can't render an SVG tag. Same six statuses.
 var TRK_STATUS_OPTION_GLYPH = {
-  'active':'🟢','sign-off':'✍️','completed':'✅','on-hold':'⏸️','dormant':'💤','cancelled':'❌'
+  'active':'🟢','sign-off':'✍️','payment-pending':'💰','completed':'✅','on-hold':'⏸️','dormant':'💤','cancelled':'❌'
 };
 function _trkTopStatusKey(raw) {
   var v = (raw == null ? '' : String(raw)).trim().toLowerCase();
@@ -255,27 +258,29 @@ function renderTrackerStatRow() {
   var rows = _trkData;
   function statusKey(r){ return _trkTopStatusKey(r.status); }
   var counts = {
-    'active':    rows.filter(function(r){return statusKey(r)==='active';}).length,
-    'sign-off':  rows.filter(function(r){return statusKey(r)==='sign-off';}).length,
-    'on-hold':   rows.filter(function(r){return statusKey(r)==='on-hold';}).length,
-    'completed': rows.filter(function(r){return statusKey(r)==='completed';}).length,
-    'dormant':   rows.filter(function(r){return statusKey(r)==='dormant';}).length,
-    'cancelled': rows.filter(function(r){return statusKey(r)==='cancelled';}).length
+    'active':          rows.filter(function(r){return statusKey(r)==='active';}).length,
+    'sign-off':        rows.filter(function(r){return statusKey(r)==='sign-off';}).length,
+    'payment-pending': rows.filter(function(r){return statusKey(r)==='payment-pending';}).length,
+    'completed':       rows.filter(function(r){return statusKey(r)==='completed';}).length,
+    'on-hold':         rows.filter(function(r){return statusKey(r)==='on-hold';}).length,
+    'dormant':         rows.filter(function(r){return statusKey(r)==='dormant';}).length,
+    'cancelled':       rows.filter(function(r){return statusKey(r)==='cancelled';}).length
   };
   // Mirror the badge palette so the strip reads as a colour key for the table.
   var THEME = {
-    'active':    {bg:'#DCFCE7', fg:'#166534'},
-    'sign-off':  {bg:'#FEF3C7', fg:'#92400E'},
-    'on-hold':   {bg:'#FED7AA', fg:'#9A3412'},
-    'completed': {bg:'#E0F2FE', fg:'#075985'},
-    'dormant':   {bg:'#F3F4F6', fg:'#4B5563'},
-    'cancelled': {bg:'#FEE2E2', fg:'#991B1B'}
+    'active':          {bg:'#DCFCE7', fg:'#166534'},
+    'sign-off':        {bg:'#FEF3C7', fg:'#92400E'},
+    'payment-pending': {bg:'#FEF9C3', fg:'#854D0E'},
+    'completed':       {bg:'#E0F2FE', fg:'#075985'},
+    'on-hold':         {bg:'#FED7AA', fg:'#9A3412'},
+    'dormant':         {bg:'#F3F4F6', fg:'#4B5563'},
+    'cancelled':       {bg:'#FEE2E2', fg:'#991B1B'}
   };
   // Multi-select highlight — any segment whose key is in the current filter
   // array reads as selected. Empty array = no filter; every segment subtle.
   var selected = msGetValues('trk-filter-status');
 
-  var segs = ['active','sign-off','on-hold','completed','dormant','cancelled'].map(function(k){
+  var segs = ['active','sign-off','payment-pending','completed','on-hold','dormant','cancelled'].map(function(k){
     var def = TRK_TOP_STATUS_MAP[k];
     var th  = THEME[k];
     var isSel = (selected.indexOf(k) !== -1);
@@ -803,7 +808,7 @@ function _trkRefreshAutoCompleteHint() {
   if (!box) return;
   var willAutoFlip = signedOn &&
     topStat !== 'completed' && topStat !== 'cancelled' &&
-    topStat !== 'sign-off';
+    topStat !== 'sign-off' && topStat !== 'payment-pending';
   if (willAutoFlip) {
     box.style.display = 'block';
     box.innerHTML = '<i data-lucide="info" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>'+
@@ -857,7 +862,7 @@ async function saveTrackerEdit() {
   // the guard.
   if (signedOn &&
       patch.status !== 'completed' && patch.status !== 'cancelled' &&
-      patch.status !== 'sign-off') {
+      patch.status !== 'sign-off' && patch.status !== 'payment-pending') {
     patch.status = 'sign-off';
   }
 

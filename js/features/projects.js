@@ -326,8 +326,9 @@ async function renderManageProjects() {
   // <i data-lucide> so the badge picks up an SVG glyph after lucide.createIcons().
   const STATUS_COLORS = {
     'active':    {bg:'#DCFCE7',color:'#166534',icon:'circle',         label:'Active'},
-    'sign-off':  {bg:'#FEF3C7',color:'#92400E',icon:'pen-tool',       label:'Sign-off'},
-    'completed': {bg:'#E0F2FE',color:'#075985',icon:'check-circle-2', label:'Completed'},
+    'sign-off':        {bg:'#FEF3C7',color:'#92400E',icon:'pen-tool',       label:'Sign-off'},
+    'payment-pending': {bg:'#FEF9C3',color:'#854D0E',icon:'wallet',         label:'Payment Pending'},
+    'completed':       {bg:'#E0F2FE',color:'#075985',icon:'check-circle-2', label:'Completed'},
     'on-hold':   {bg:'#FED7AA',color:'#9A3412',icon:'pause-circle',   label:'On Hold'},
     'dormant':   {bg:'#F3F4F6',color:'#4B5563',icon:'moon',           label:'Dormant'},
     'cancelled': {bg:'#FEE2E2',color:'#991B1B',icon:'x-circle',       label:'Cancelled'},
