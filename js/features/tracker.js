@@ -423,11 +423,21 @@ function renderTracker() {
                   : r.type === 'amc'      ? '🛠️ AMC'
                   : r.type === 'presales' ? '💼 Pre-sales'
                   :                         '📁 Project';
+    // Remarks preview — Gmail/Linear-style snippet under the name. Collapse
+    // newlines to spaces so multi-line remarks render as one line, trim,
+    // then truncate at 60 chars with an ellipsis. Empty remarks → no line.
+    var remarksRaw  = (r.tracker_remarks || '').replace(/\s+/g,' ').trim();
+    var remarksLine = '';
+    if (remarksRaw) {
+      var snippet = remarksRaw.length > 60 ? remarksRaw.slice(0,60).replace(/\s+$/,'') + '…' : remarksRaw;
+      remarksLine = '<div class="trk-cell-remarks" title="'+esc2(remarksRaw)+'">'+esc2(snippet)+'</div>';
+    }
     return '<tr class="trk-row'+(muted?' trk-row-muted':'')+'" onclick="openTrackerDetail('+r.id+')">'+
       '<td>'+
         '<div class="trk-cell-type">'+typeLabel+'</div>'+
         '<div class="trk-cell-name">'+esc2(r.name||'—')+'</div>'+
         (r.project_order_no?'<div class="trk-cell-sub num">PO: '+esc2(r.project_order_no)+'</div>':'')+
+        remarksLine+
       '</td>'+
       '<td>'+
         '<div>'+esc2(r.customer_name||'—')+'</div>'+
