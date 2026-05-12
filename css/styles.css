@@ -416,6 +416,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 
 /* Inline Lucide icon inside a button label. Sized at 16px to sit cleanly
    on the text baseline; stroke-width 2 matches the sidebar icon weight. */
 .btn-icon{width:16px;height:16px;stroke-width:2;display:inline-block;vertical-align:middle;margin-right:7px;flex-shrink:0}
+/* Compact icon-only button — no text margin, square footprint. */
+.btn-icon-only{padding:6px 8px}
+.btn-icon-only [data-lucide]{width:14px;height:14px;stroke-width:2;margin:0}
+/* Status pill in Manage Engagements list (matches tracker badge geometry). */
+.pj-status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
+.pj-status-badge [data-lucide]{width:13px;height:13px;stroke-width:2;flex-shrink:0}
+/* Employee-summary table column header icon spacing. */
+.pj-th-ico{display:inline-flex;align-items:center;gap:5px}
+.pj-th-ico [data-lucide]{width:13px;height:13px;stroke-width:2}
 /* Empty-state Lucide icon — replaces the big emoji glyphs in empty cards. */
 .empty-icon-svg{width:42px;height:42px;stroke-width:1.5;display:inline-block;color:#9CA3AF;margin-bottom:12px}
 input[readonly]{background:#f9fafb;color:var(--muted)}
@@ -920,7 +929,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-strip-seg{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;line-height:1;transition:transform .12s,filter .12s;font-family:inherit}
 .trk-strip-seg:hover{filter:brightness(0.97)}
 .trk-strip-seg.is-selected{transform:scale(1.02)}
-.trk-strip-ico{font-size:13px;line-height:1}
+/* Strip-segment glyph (Lucide SVG). Inherits stroke colour from the segment
+   button's foreground colour, so each segment's icon matches its tier. */
+.trk-strip-ico{width:14px;height:14px;stroke-width:2;flex-shrink:0}
+/* Active segment gets a filled dot, mirroring the table badge convention. */
+.trk-strip-seg[data-key="active"] .trk-strip-ico{fill:currentColor}
 .trk-strip-num{font-family:'DM Mono',monospace;font-size:13px}
 .trk-strip-lbl{font-weight:500}
 
@@ -946,21 +959,17 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-filter-panel .form-group{margin:0}
 
 /* Row cell styles — type label sits above engagement name; country below customer. */
-.trk-cell-type{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.trk-cell-type{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;display:inline-flex;align-items:center;gap:4px}
+.trk-cell-type [data-lucide]{width:11px;height:11px;stroke-width:2.25}
 .trk-cell-name{font-weight:600;color:var(--navy)}
 .trk-cell-sub{font-size:11px;color:var(--muted);margin-top:1px}
 /* Remarks snippet — Gmail/Linear-style preview under the engagement name.
    nowrap + ellipsis keeps a wall-of-text or long URL from blowing out the
    column. JS already truncates to 60 chars; this is a width safety net. */
-.trk-cell-remarks{font-size:12px;color:#6B7280;margin-top:2px;line-height:1.4;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(max-width:640px){
-  .trk-cell-remarks{max-width:220px}
-}
-@media(min-width:1600px){
-  /* Wider layout → let the snippet use the extra room before the JS-side
-     60-char truncation kicks in. */
-  .trk-cell-remarks{max-width:560px}
-}
+/* Two-line clamp — CSS handles truncation now (no JS slice). Multi-line
+   remarks wrap naturally, then the line-clamp cuts at the second line with
+   a browser-rendered ellipsis. Hover tooltip (title attr) carries full text. */
+.trk-cell-remarks{font-size:12px;color:#6B7280;margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-wrap:break-word;overflow-wrap:anywhere}
 
 /* Visual hierarchy — concluded engagements fade so live work pops first. */
 .trk-row-muted td{color:#6B7280}
@@ -1018,7 +1027,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-st-onhold   { background:#FED7AA; color:#9A3412 }
 .trk-st-dormant  { background:#F3F4F6; color:#4B5563 }
 .trk-st-cancelled{ background:#FEE2E2; color:#991B1B }
-.trk-st-icon{font-size:11px;line-height:1}
+/* Status-badge inner icon (Lucide SVG). Inherits text colour via
+   stroke="currentColor" so each status renders in its own accent shade. */
+.trk-st-icon{width:13px;height:13px;stroke-width:2;flex-shrink:0;vertical-align:-2px}
+/* Active-status badge gets a filled dot rather than an outlined glyph so
+   the "green dot" reads at a glance. */
+.trk-st-active .trk-st-icon{fill:#166534;color:#166534}
 
 /* Helper hint under a detail-field value (e.g. Current Phase explainer). */
 .trk-field-hint{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.35;font-weight:500}

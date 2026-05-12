@@ -106,7 +106,8 @@ function populateTrackerFilters() {
   msInit('trk-filter-status',
     TRK_TOP_STATUS_ORDER.map(function(k){
       var def = TRK_TOP_STATUS_MAP[k];
-      return { value:k, label: def.icon + ' ' + def.label };
+      var glyph = TRK_STATUS_OPTION_GLYPH[k] || '';
+      return { value:k, label: (glyph ? glyph + ' ' : '') + def.label };
     }),
     applyTrackerFilters);
 }
@@ -191,13 +192,22 @@ function trkStatusBadge(s) {
 var TRK_TOP_STATUS_ORDER = [
   'active','sign-off','completed','on-hold','dormant','cancelled'
 ];
+// Icon column carries a LUCIDE name (rendered as <i data-lucide>) for the
+// badge / strip / detail-modal surfaces. Filter dropdown options can't render
+// SVG (the .ms widget escapes labels), so populateTrackerFilters() uses a
+// short Unicode glyph for those — see the EMOJI_FOR_OPTION map below.
 var TRK_TOP_STATUS_MAP = {
-  'active':    { label:'Active',    icon:'🟢', cls:'trk-st-active' },
-  'sign-off':  { label:'Sign-off',  icon:'✍️', cls:'trk-st-signoff' },
-  'completed': { label:'Completed', icon:'✅', cls:'trk-st-completed' },
-  'on-hold':   { label:'On Hold',   icon:'⏸️', cls:'trk-st-onhold' },
-  'dormant':   { label:'Dormant',   icon:'💤', cls:'trk-st-dormant' },
-  'cancelled': { label:'Cancelled', icon:'❌', cls:'trk-st-cancelled' }
+  'active':    { label:'Active',    icon:'circle',         cls:'trk-st-active' },
+  'sign-off':  { label:'Sign-off',  icon:'pen-tool',       cls:'trk-st-signoff' },
+  'completed': { label:'Completed', icon:'check-circle-2', cls:'trk-st-completed' },
+  'on-hold':   { label:'On Hold',   icon:'pause-circle',   cls:'trk-st-onhold' },
+  'dormant':   { label:'Dormant',   icon:'moon',           cls:'trk-st-dormant' },
+  'cancelled': { label:'Cancelled', icon:'x-circle',       cls:'trk-st-cancelled' }
+};
+// Unicode glyphs for the multi-select dropdown labels only — those go
+// through esc2() so they can't render an SVG tag. Same six statuses.
+var TRK_STATUS_OPTION_GLYPH = {
+  'active':'🟢','sign-off':'✍️','completed':'✅','on-hold':'⏸️','dormant':'💤','cancelled':'❌'
 };
 function _trkTopStatusKey(raw) {
   var v = (raw == null ? '' : String(raw)).trim().toLowerCase();
@@ -216,7 +226,7 @@ function trkTopStatusBadge(raw) {
   var key = _trkTopStatusKey(raw);
   var def = TRK_TOP_STATUS_MAP[key];
   if (!def) return '<span class="badge" style="background:#F3F4F6;color:#6B7280">'+esc2(raw||'—')+'</span>';
-  return '<span class="badge '+def.cls+'"><span class="trk-st-icon">'+def.icon+'</span> '+def.label+'</span>';
+  return '<span class="badge '+def.cls+'"><i data-lucide="'+def.icon+'" class="trk-st-icon"></i> '+def.label+'</span>';
 }
 
 function trkTypeBadge(t) {
@@ -271,10 +281,11 @@ function renderTrackerStatRow() {
     var isSel = (soleSel === k);
     var style = 'background:'+th.bg+';color:'+th.fg+';'+(isSel?'box-shadow:inset 0 0 0 2px '+th.fg:'');
     return '<button class="trk-strip-seg'+(isSel?' is-selected':'')+'" '+
+      'data-key="'+k+'" '+
       'style="'+style+'" '+
       'onclick="trkSelectStatusSegment(\''+k+'\')" '+
       'title="Filter by '+def.label+'">'+
-      '<span class="trk-strip-ico">'+def.icon+'</span>'+
+      '<i data-lucide="'+def.icon+'" class="trk-strip-ico"></i>'+
       '<span class="trk-strip-num num">'+counts[k]+'</span>'+
       '<span class="trk-strip-lbl">'+def.label+'</span>'+
     '</button>';
@@ -415,26 +426,30 @@ function renderTracker() {
       '<th></th>'+
     '</tr>';
 
+  // Type-label icon + text. Lucide icons rendered as <i data-lucide>, sized
+  // small via .trk-cell-type [data-lucide] in CSS.
+  var TYPE_DEF = {
+    'poc':      { icon:'target', text:'POC' },
+    'amc':      { icon:'wrench', text:'AMC' },
+    'presales': { icon:'briefcase', text:'Pre-sales' },
+    'project':  { icon:'folder', text:'Project' }
+  };
   var body = rows.map(function(r){
     // Concluded work gets muted text so managers' eyes naturally land on live rows.
     var sk = _trkTopStatusKey(r.status);
     var muted = (sk === 'completed' || sk === 'cancelled' || sk === 'dormant');
-    var typeLabel = r.type === 'poc'      ? '🎯 POC'
-                  : r.type === 'amc'      ? '🛠️ AMC'
-                  : r.type === 'presales' ? '💼 Pre-sales'
-                  :                         '📁 Project';
+    var td = TYPE_DEF[r.type] || TYPE_DEF['project'];
     // Remarks preview — Gmail/Linear-style snippet under the name. Collapse
-    // newlines to spaces so multi-line remarks render as one line, trim,
-    // then truncate at 60 chars with an ellipsis. Empty remarks → no line.
-    var remarksRaw  = (r.tracker_remarks || '').replace(/\s+/g,' ').trim();
-    var remarksLine = '';
-    if (remarksRaw) {
-      var snippet = remarksRaw.length > 60 ? remarksRaw.slice(0,60).replace(/\s+$/,'') + '…' : remarksRaw;
-      remarksLine = '<div class="trk-cell-remarks" title="'+esc2(remarksRaw)+'">'+esc2(snippet)+'</div>';
-    }
+    // newlines + whitespace runs to single spaces, trim, then let the CSS
+    // 2-line clamp on .trk-cell-remarks handle the visual truncation. Hover
+    // tooltip carries the full untruncated text. Empty remarks → no line.
+    var remarksFull = (r.tracker_remarks || '').replace(/\s+/g,' ').trim();
+    var remarksLine = remarksFull
+      ? '<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+esc2(remarksFull)+'</div>'
+      : '';
     return '<tr class="trk-row'+(muted?' trk-row-muted':'')+'" onclick="openTrackerDetail('+r.id+')">'+
       '<td>'+
-        '<div class="trk-cell-type">'+typeLabel+'</div>'+
+        '<div class="trk-cell-type"><i data-lucide="'+td.icon+'"></i>'+td.text+'</div>'+
         '<div class="trk-cell-name">'+esc2(r.name||'—')+'</div>'+
         (r.project_order_no?'<div class="trk-cell-sub num">PO: '+esc2(r.project_order_no)+'</div>':'')+
         remarksLine+

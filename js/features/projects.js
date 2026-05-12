@@ -322,13 +322,15 @@ async function renderManageProjects() {
     return;
   }
 
+  // Lucide icon name + plain label per status. Renderer wraps the icon as
+  // <i data-lucide> so the badge picks up an SVG glyph after lucide.createIcons().
   const STATUS_COLORS = {
-    'active':    {bg:'#DCFCE7',color:'#166534',label:'🟢 Active'},
-    'sign-off':  {bg:'#FEF3C7',color:'#92400E',label:'✍️ Sign-off'},
-    'completed': {bg:'#E0F2FE',color:'#075985',label:'✅ Completed'},
-    'on-hold':   {bg:'#FED7AA',color:'#9A3412',label:'⏸️ On Hold'},
-    'dormant':   {bg:'#F3F4F6',color:'#4B5563',label:'💤 Dormant'},
-    'cancelled': {bg:'#FEE2E2',color:'#991B1B',label:'❌ Cancelled'},
+    'active':    {bg:'#DCFCE7',color:'#166534',icon:'circle',         label:'Active'},
+    'sign-off':  {bg:'#FEF3C7',color:'#92400E',icon:'pen-tool',       label:'Sign-off'},
+    'completed': {bg:'#E0F2FE',color:'#075985',icon:'check-circle-2', label:'Completed'},
+    'on-hold':   {bg:'#FED7AA',color:'#9A3412',icon:'pause-circle',   label:'On Hold'},
+    'dormant':   {bg:'#F3F4F6',color:'#4B5563',icon:'moon',           label:'Dormant'},
+    'cancelled': {bg:'#FEE2E2',color:'#991B1B',icon:'x-circle',       label:'Cancelled'},
   };
   const TYPE_BADGES = {
     'project':  {bg:'#EFF6FF',color:'#2563EB',label:'PROJECT'},
@@ -352,14 +354,15 @@ async function renderManageProjects() {
         '<td style="font-size:13px;color:var(--navy);font-weight:600">'+custName+'</td>'+
         '<td><span style="background:'+tb.bg+';color:'+tb.color+';padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">'+tb.label+'</span></td>'+
         '<td><strong>'+p.name+'</strong></td>'+
-        '<td><span style="background:'+sc.bg+';color:'+sc.color+';padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600">'+sc.label+'</span></td>'+
+        '<td><span class="pj-status-badge" style="background:'+sc.bg+';color:'+sc.color+'"><i data-lucide="'+sc.icon+'"></i>'+sc.label+'</span></td>'+
         '<td style="white-space:nowrap">'+
-          '<button class="btn btn-sm btn-ghost" onclick="openEditProject('+p.id+')" style="margin-right:4px">✏️</button>'+
-          '<button class="btn btn-sm btn-danger" onclick="deleteProject('+p.id+',\''+ (p.name||'').replace(/'/g,"\\'") +'\')">🗑</button>'+
+          '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openEditProject('+p.id+')" title="Edit" style="margin-right:4px"><i data-lucide="pencil"></i></button>'+
+          '<button class="btn btn-sm btn-danger btn-icon-only" onclick="deleteProject('+p.id+',\''+ (p.name||'').replace(/'/g,"\\'") +'\')" title="Delete"><i data-lucide="trash-2"></i></button>'+
         '</td>'+
         '</tr>';
     }).join('')+
     '</tbody></table></div>';
+  if (typeof renderIcons === 'function') renderIcons();
 }
 
 // ── EDIT PROJECT (manager) ────────────────────────────────────────
@@ -662,7 +665,13 @@ async function renderPjEmployeeSummary() {
     buildPieChart(EMPLOYEES.map(function(e){ return {label:empShortName(e),value:empData[e].sessions,color:empColor(e)}; }).filter(function(d){return d.value>0;}),'')+
     '</div></div>'+
     '<div class="table-wrap"><table>'+
-    '<thead><tr><th>Employee</th><th>Sessions</th><th>Total</th><th>📁 Project</th><th>🎯 POC</th><th>🛠️ Support/AMC</th><th>💼 Pre-Sales-Task</th><th>🔧 Internal</th><th>Working Days</th><th>Top Engagements</th></tr></thead>'+
+    '<thead><tr><th>Employee</th><th>Sessions</th><th>Total</th>'+
+      '<th><span class="pj-th-ico"><i data-lucide="folder"></i>Project</span></th>'+
+      '<th><span class="pj-th-ico"><i data-lucide="target"></i>POC</span></th>'+
+      '<th><span class="pj-th-ico"><i data-lucide="wrench"></i>Support/AMC</span></th>'+
+      '<th><span class="pj-th-ico"><i data-lucide="briefcase"></i>Pre-Sales</span></th>'+
+      '<th><span class="pj-th-ico"><i data-lucide="cog"></i>Internal</span></th>'+
+      '<th>Working Days</th><th>Top Engagements</th></tr></thead>'+
     '<tbody>'+tableRows+
     '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>-</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+r2(totalHours)+'h</td>'+
@@ -670,6 +679,7 @@ async function renderPjEmployeeSummary() {
     '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+r2(totalHours/8)+'</td><td>-</td></tr>'+
     '</tbody></table></div>'+
     '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours / 8 | Hours are credited to every team member on a session (so a 4h session with 3 members shows 4h on each row, summing to 12h in TOTAL).</div>';
+  if (typeof renderIcons === 'function') renderIcons();
 }
 
 // ── PIE CHART HELPERS ────────────────────────────────────────────
