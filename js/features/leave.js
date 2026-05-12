@@ -364,18 +364,35 @@ async function renderManager() {
   const rows=EMPLOYEES.map(function(emp){
     const s=calcSummary(sessions||[],compoffs||[],emp);
     const bc=s.balance>0?'var(--success)':s.balance<0?'var(--danger)':'var(--navy)';
+    // Mid 1:1 hours are tracked but don't earn CO (Mid <4h is 1:1 by policy).
+    // Render them in a muted color so the manager can see the hours exist
+    // without being misled into thinking they contribute to comp-off.
     return '<tr><td><strong>'+emp+'</strong></td>'+
       '<td style="font-family:\'DM Mono\',monospace">'+s.sessions+'</td>'+
-      '<td style="font-family:\'DM Mono\',monospace">'+r2(s.eveCred)+'</td>'+
-      '<td style="font-family:\'DM Mono\',monospace">'+r2(s.earlyCred)+'</td>'+
-      '<td style="font-family:\'DM Mono\',monospace">'+r2(s.mid12)+'</td>'+
-      '<td style="font-family:\'DM Mono\',monospace">'+r2(s.wk12)+'</td>'+
+      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+r2(s.eveCred)+'</td>'+
+      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+r2(s.earlyCred)+'</td>'+
+      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace;color:#9CA3AF" title="Mid 1:1 (<4h) — tracked but does not earn CO">'+r2(s.mid11)+'</td>'+
+      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+r2(s.mid12)+'</td>'+
+      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace" title="Weekend 1:1 — earns CO at 8h = 1 day">'+r2(s.wk11)+'</td>'+
+      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+r2(s.wk12)+'</td>'+
       '<td><strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.totalCO+'</strong></td>'+
       '<td style="font-family:\'DM Mono\',monospace">'+s.used+'</td>'+
       '<td><strong style="font-family:\'DM Mono\',monospace;color:'+bc+'">'+s.balance+'</strong></td></tr>';
   }).join('');
   document.getElementById('manager-content').innerHTML=
-    '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Sessions</th><th>Eve Cred</th><th>Early Cred</th><th>Mid 1:2</th><th>Wknd 1:2</th><th>CO Earned</th><th>CO Used</th><th>Balance</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    '<div class="table-wrap"><table><thead><tr>'+
+      '<th>Employee</th>'+
+      '<th>Sessions</th>'+
+      '<th class="hide-mobile">Eve Cred</th>'+
+      '<th class="hide-mobile">Early Cred</th>'+
+      '<th class="hide-mobile" style="color:#9CA3AF">Mid 1:1</th>'+
+      '<th class="hide-mobile">Mid 1:2</th>'+
+      '<th class="hide-mobile">Wknd 1:1</th>'+
+      '<th class="hide-mobile">Wknd 1:2</th>'+
+      '<th>CO Earned</th>'+
+      '<th>CO Used</th>'+
+      '<th>Balance</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 // == APPROVALS (MANAGER) ==========================================
