@@ -740,9 +740,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   /* Hide the brand text on small viewports — just keep hamburger + logo. */
   .top-bar-brand-text{display:none}
 }
-/* Drop the name + role badge on the very narrowest screens; the avatar
-   alone is enough identity. */
-@media(max-width:480px){
+/* Drop the name + role badge on small screens; the avatar + caret alone
+   are enough identity once the brand text is gone (<900px). Threshold
+   lifted from 480 → 640 so iPad mini / small tablets get the compact chip. */
+@media(max-width:640px){
   .user-chip-text{display:none}
   .top-bar{padding-left:12px;padding-right:12px;gap:10px}
 }
@@ -788,8 +789,29 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
   /* Modals — full screen on mobile */
   .modal-overlay{align-items:flex-end}
-  .modal{width:100% !important;max-width:100% !important;border-radius:20px 20px 0 0 !important;max-height:92vh;padding:20px 16px}
-  .modal-title{font-size:15px}
+  .modal{
+    width:100% !important;max-width:100% !important;
+    border-radius:20px 20px 0 0 !important;
+    max-height:92vh;padding:28px 16px 0;
+    /* Drag-handle pill painted as a background-image layer above the
+       standard modal gradient. Stays visible while the modal body scrolls
+       because the modal's box (and thus its bg) is the scrolling viewport. */
+    background:
+      linear-gradient(90deg, transparent calc(50% - 20px), #D1D5DB calc(50% - 20px), #D1D5DB calc(50% + 20px), transparent calc(50% + 20px)) 0 10px / 100% 4px no-repeat,
+      linear-gradient(180deg, #ffffff 0%, #fafbfd 100%) !important;
+  }
+  .modal-title{font-size:15px;margin-bottom:14px}
+  /* Hide the desktop navy top-stripe — replaced by the drag-handle layer above. */
+  .modal::before{display:none !important}
+  /* Sticky action bar so primary actions (Save/Cancel) stay reachable
+     without scrolling to the end of long forms. */
+  .modal-actions{
+    position:sticky;bottom:0;
+    background:linear-gradient(180deg, rgba(250,251,253,0) 0%, #fafbfd 20%, #fafbfd 100%);
+    margin:20px -16px 0;padding:12px 16px 18px;
+    box-shadow:0 -1px 0 var(--border);
+    z-index:3;
+  }
 
   /* Dashboard stat cards — 2 per row */
   .summary-grid[style*="margin-bottom:20px"]{grid-template-columns:1fr 1fr}
@@ -1004,6 +1026,43 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-row-muted td{color:#6B7280}
 .trk-row-muted .trk-cell-name,
 .trk-row-muted .trk-cell-type{color:#9CA3AF}
+
+/* Sessions: dual-format list. Table on desktop (≥768px), cards on mobile.
+   Both formats live in the DOM; CSS toggles which is visible. */
+.us-cards-only{display:none}
+@media(max-width:767px){
+  .us-table-only{display:none !important}
+  .us-cards-only{display:flex !important;flex-direction:column;gap:10px}
+}
+.us-card{position:relative;background:white;border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;-webkit-tap-highlight-color:rgba(0,160,210,.12)}
+.us-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.us-card-hours{font-family:'DM Mono',monospace;font-weight:700;color:var(--teal);font-size:14px}
+.us-card-name{font-weight:600;color:var(--navy);font-size:14px;line-height:1.3}
+.us-card-meta{font-size:12px;color:#6B7280;line-height:1.4}
+.us-card-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:4px;flex-wrap:wrap}
+.us-card-sep{color:var(--border)}
+.us-card-emp{font-size:12px;color:var(--muted);margin-left:auto}
+.us-card-info{font-size:12px;color:#6B7280;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-wrap:break-word}
+.us-card-actions{margin-top:6px;display:flex;gap:6px;justify-content:flex-end;border-top:1px solid #F1F5F9;padding-top:8px}
+
+/* Mobile card layout — desktop renders a table, mobile (<768px) renders the
+   same rows as vertically-stacked tappable cards. Whole card is the target
+   (no separate View button), matching iOS / Material list patterns. */
+.trk-cards{display:flex;flex-direction:column;gap:10px}
+.trk-card{position:relative;background:white;border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:transform 150ms ease,box-shadow 150ms ease,border-color 150ms ease;-webkit-tap-highlight-color:rgba(0,160,210,.12)}
+.trk-card:active{transform:scale(.995)}
+.trk-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.trk-card-type{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.trk-card-type [data-lucide]{width:11px;height:11px;stroke-width:2.25}
+.trk-card-name{font-weight:600;color:var(--navy);font-size:15px;line-height:1.3;margin-bottom:4px}
+.trk-card-meta{font-size:12px;color:#6B7280;line-height:1.4;margin-bottom:2px}
+.trk-card-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #F1F5F9}
+.trk-card-date{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.trk-card .trk-cell-remarks{margin-top:8px}
+/* Muted styling on concluded cards — text fades so live cards pop. */
+.trk-card.trk-row-muted{background:#FAFBFC}
+.trk-card.trk-row-muted .trk-card-name{color:#6B7280}
+.trk-card.trk-row-muted .trk-card-meta{color:#9CA3AF}
 
 .trk-tab-bar{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
 .trk-tab{background:none;border:none;padding:9px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}

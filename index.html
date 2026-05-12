@@ -467,7 +467,7 @@
         </div>
       </div>
       <div id="us-sess-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <div class="table-wrap" id="us-sess-table" style="display:none">
+      <div class="table-wrap us-table-only" id="us-sess-table" style="display:none">
         <table>
           <thead><tr>
             <th>#</th><th>Type</th><th>Customer</th><th>Engagement</th><th>Date</th>
@@ -476,6 +476,8 @@
           <tbody id="us-sess-tbody"></tbody>
         </table>
       </div>
+      <!-- Mobile-only card list (CSS toggles visibility at <768px). -->
+      <div class="us-cards us-cards-only" id="us-sess-cards"></div>
       <div id="us-sess-empty" class="empty-state" style="display:none">
         <div class="empty-icon">📋</div><div class="empty-title">No sessions match the filters</div>
       </div>

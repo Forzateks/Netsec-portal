@@ -412,10 +412,36 @@ function renderTracker() {
     return;
   }
 
-  // 6-column layout (was 9): Engagement / Customer / Owner / Status / Updated / Action.
-  // Type rolls into the Engagement cell as a tiny label; Country folds under
-  // Customer as muted small text; Partner, Category and License Expiry move
-  // out of the row entirely — still available via the detail modal + filters.
+  // Type-label icon + text. Lucide icons rendered as <i data-lucide>, sized
+  // small via .trk-cell-type [data-lucide] in CSS.
+  var TYPE_DEF = {
+    'poc':      { icon:'target', text:'POC' },
+    'amc':      { icon:'wrench', text:'AMC' },
+    'presales': { icon:'briefcase', text:'Pre-sales' },
+    'project':  { icon:'folder', text:'Project' }
+  };
+
+  // Viewport-aware: <768px renders a card list (vertical stack) instead of a
+  // wide horizontally-scrolling table. The card surface is the same row
+  // tappable target, so tap → openTrackerDetail just like the table rows.
+  var isMobile = window.innerWidth < 768;
+  var listHtml = isMobile
+    ? _trkRenderCards(rows, TYPE_DEF)
+    : _trkRenderTable(rows, TYPE_DEF);
+
+  content.innerHTML = tabBar +
+    listHtml +
+    '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Showing '+rows.length+' of '+_trkData.length+' engagements</div>';
+  if (typeof renderIcons === 'function') renderIcons();
+  if (!isMobile && typeof attachTopScroll === 'function') {
+    var wrap = content.querySelector('.table-wrap');
+    if (wrap) attachTopScroll(wrap);
+  }
+}
+
+// Desktop layout — 6-column table. Engagement (type label + name + PO + remarks),
+// Customer (name + country), Owner, Status, Updated, Actions.
+function _trkRenderTable(rows, TYPE_DEF) {
   var th =
     '<tr>'+
       '<th>Engagement</th>'+
@@ -425,24 +451,10 @@ function renderTracker() {
       '<th class="hide-mobile">Updated</th>'+
       '<th></th>'+
     '</tr>';
-
-  // Type-label icon + text. Lucide icons rendered as <i data-lucide>, sized
-  // small via .trk-cell-type [data-lucide] in CSS.
-  var TYPE_DEF = {
-    'poc':      { icon:'target', text:'POC' },
-    'amc':      { icon:'wrench', text:'AMC' },
-    'presales': { icon:'briefcase', text:'Pre-sales' },
-    'project':  { icon:'folder', text:'Project' }
-  };
   var body = rows.map(function(r){
-    // Concluded work gets muted text so managers' eyes naturally land on live rows.
     var sk = _trkTopStatusKey(r.status);
     var muted = (sk === 'completed' || sk === 'cancelled' || sk === 'dormant');
     var td = TYPE_DEF[r.type] || TYPE_DEF['project'];
-    // Remarks preview — Gmail/Linear-style snippet under the name. Collapse
-    // newlines + whitespace runs to single spaces, trim, then let the CSS
-    // 2-line clamp on .trk-cell-remarks handle the visual truncation. Hover
-    // tooltip carries the full untruncated text. Empty remarks → no line.
     var remarksFull = (r.tracker_remarks || '').replace(/\s+/g,' ').trim();
     var remarksLine = remarksFull
       ? '<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+esc2(remarksFull)+'</div>'
@@ -464,18 +476,54 @@ function renderTracker() {
       '<td><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openTrackerDetail('+r.id+')"><i data-lucide="eye" class="btn-icon"></i><span class="hide-mobile">View</span></button></td>'+
     '</tr>';
   }).join('');
-
-  content.innerHTML = tabBar +
-    '<div class="card trk-table-card" style="padding:0">'+
-      '<div class="table-wrap"><table class="trk-table"><thead>'+th+'</thead><tbody>'+body+'</tbody></table></div>'+
-    '</div>'+
-    '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Showing '+rows.length+' of '+_trkData.length+' engagements</div>';
-  if (typeof renderIcons === 'function') renderIcons();
-  if (typeof attachTopScroll === 'function') {
-    var wrap = content.querySelector('.table-wrap');
-    if (wrap) attachTopScroll(wrap);
-  }
+  return '<div class="card trk-table-card" style="padding:0">'+
+    '<div class="table-wrap"><table class="trk-table"><thead>'+th+'</thead><tbody>'+body+'</tbody></table></div>'+
+  '</div>';
 }
+
+// Mobile layout — each engagement becomes a tappable card. Same data, more
+// breathable vertical stack. Whole card is the tap target (no "View" button).
+function _trkRenderCards(rows, TYPE_DEF) {
+  var cards = rows.map(function(r){
+    var sk = _trkTopStatusKey(r.status);
+    var muted = (sk === 'completed' || sk === 'cancelled' || sk === 'dormant');
+    var td = TYPE_DEF[r.type] || TYPE_DEF['project'];
+    var remarksFull = (r.tracker_remarks || '').replace(/\s+/g,' ').trim();
+    var customerLine = esc2(r.customer_name||'—') + (r.country ? ' · '+esc2(r.country) : '');
+    var updated = r.tracker_updated_at ? fmtDate(r.tracker_updated_at) : '—';
+    return '<div class="trk-card'+(muted?' trk-row-muted':'')+'" onclick="openTrackerDetail('+r.id+')">'+
+      '<div class="trk-card-head">'+
+        '<span class="trk-card-type"><i data-lucide="'+td.icon+'"></i>'+td.text+'</span>'+
+      '</div>'+
+      '<div class="trk-card-name">'+esc2(r.name||'—')+'</div>'+
+      '<div class="trk-card-meta">'+customerLine+'</div>'+
+      (r.owner_employee?'<div class="trk-card-meta">Owner: '+esc2(r.owner_employee)+'</div>':'')+
+      '<div class="trk-card-foot">'+
+        trkTopStatusBadge(r.status)+
+        '<span class="trk-card-date num">'+updated+'</span>'+
+      '</div>'+
+      (remarksFull?'<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+esc2(remarksFull)+'</div>':'')+
+    '</div>';
+  }).join('');
+  return '<div class="trk-cards">'+cards+'</div>';
+}
+
+// Re-render the tracker if the viewport crosses the 768px mobile breakpoint.
+// Debounced so dragging a window edge doesn't thrash. _trkData is already in
+// memory, so re-render is free (no refetch).
+var _trkLastIsMobile = null;
+var _trkResizeTimer = null;
+window.addEventListener('resize', function(){
+  if (_trkResizeTimer) clearTimeout(_trkResizeTimer);
+  _trkResizeTimer = setTimeout(function(){
+    var nowMobile = window.innerWidth < 768;
+    if (_trkLastIsMobile !== null && _trkLastIsMobile !== nowMobile) {
+      var content = document.getElementById('trk-content');
+      if (content && _trkData && _trkData.length) renderTracker();
+    }
+    _trkLastIsMobile = nowMobile;
+  }, 150);
+});
 
 function openTrackerDetail(id) {
   var r = _trkData.find(function(x){return x.id===id;});

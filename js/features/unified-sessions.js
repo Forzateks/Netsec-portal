@@ -339,13 +339,28 @@ async function renderUSSessions() {
     var firstName = fMem.split(' ')[0].toLowerCase();
     rows = rows.filter(function(r){ return (r.team_members||r.employee||'').toLowerCase().includes(firstName); });
   }
-  if (!rows.length) { document.getElementById('us-sess-empty').style.display = 'block'; return; }
+  if (!rows.length) {
+    document.getElementById('us-sess-empty').style.display = 'block';
+    var emptyCards = document.getElementById('us-sess-cards');
+    if (emptyCards) emptyCards.innerHTML = '';
+    return;
+  }
 
   document.getElementById('us-sess-table').style.display = 'block';
-  document.getElementById('us-sess-tbody').innerHTML = rows.map(function(r,i){
+  // Render the table tbody AND a card list in parallel. Visibility is toggled
+  // by .us-cards-only / .us-table-only at the 768px breakpoint in CSS — no
+  // resize listener needed since both formats live in the DOM. Cheaper than
+  // re-fetching from Supabase on viewport change.
+  var tbodyHtml = '';
+  var cardsHtml = '';
+  rows.forEach(function(r,i){
     var canEdit = isManager || (r.employee === currentUser);
     var t = SESSION_TYPE_BADGES[r.session_type] || {bg:'#F3F4F6',color:'#6B7280',label:r.session_type||'-'};
-    return '<tr>'+
+    var actions = canEdit
+      ? '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openEditUS('+r.id+')" title="Edit" style="margin-right:4px"><i data-lucide="pencil"></i></button>'+
+        '<button class="btn btn-sm btn-danger btn-icon-only" onclick="deleteUS('+r.id+')" title="Delete"><i data-lucide="trash-2"></i></button>'
+      : '';
+    tbodyHtml += '<tr>'+
       '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
       '<td><span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+t.label+'</span></td>'+
       '<td style="font-size:12px;color:var(--navy);font-weight:600">'+(r.customer_name||'-')+'</td>'+
@@ -356,13 +371,33 @@ async function renderUSSessions() {
       '<td><span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+(r.activity_type||'-')+'</span></td>'+
       '<td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(r.session_info||'')+'">'+(r.session_info||'-')+'</td>'+
       '<td style="font-size:12px;color:var(--muted)">'+(r.employee||'-')+'</td>'+
-      '<td style="white-space:nowrap">'+
-        (canEdit ? '<button class="btn btn-sm btn-ghost" onclick="openEditUS('+r.id+')" style="margin-right:4px">✏️</button><button class="btn btn-sm btn-danger" onclick="deleteUS('+r.id+')">✕</button>' : '')+
-      '</td>'+
+      '<td style="white-space:nowrap">'+actions+'</td>'+
       '</tr>';
-  }).join('');
-  // Synced top horizontal scrollbar so the user can scroll the wide table
-  // without having to scroll the page to find the bottom scrollbar.
+    cardsHtml += '<div class="us-card">'+
+      '<div class="us-card-head">'+
+        '<span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+t.label+'</span>'+
+        '<span class="us-card-hours num">'+r.total_hours+'h</span>'+
+      '</div>'+
+      '<div class="us-card-name">'+(r.engagement_name||'-')+'</div>'+
+      '<div class="us-card-meta">'+(r.customer_name||'-')+'</div>'+
+      '<div class="us-card-row">'+
+        '<span class="num">'+fmtDate(r.session_date)+'</span>'+
+        '<span class="us-card-sep">·</span>'+
+        '<span class="num">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+'</span>'+
+      '</div>'+
+      '<div class="us-card-row">'+
+        '<span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+(r.activity_type||'-')+'</span>'+
+        '<span class="us-card-emp">'+(r.employee||'-')+'</span>'+
+      '</div>'+
+      (r.session_info?'<div class="us-card-info" title="'+(r.session_info||'')+'">'+(r.session_info||'')+'</div>':'')+
+      (canEdit?'<div class="us-card-actions">'+actions+'</div>':'')+
+    '</div>';
+  });
+  document.getElementById('us-sess-tbody').innerHTML = tbodyHtml;
+  var cardsEl = document.getElementById('us-sess-cards');
+  if (cardsEl) cardsEl.innerHTML = cardsHtml;
+  if (typeof renderIcons === 'function') renderIcons();
+  // Synced top horizontal scrollbar (desktop table only).
   if (typeof attachTopScroll === 'function') {
     requestAnimationFrame(function(){ attachTopScroll(document.getElementById('us-sess-table')); });
   }
