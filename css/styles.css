@@ -29,6 +29,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 /* Tabular numerals on numeric data so columns of numbers align cleanly */
 .stat-value,.stat-sub,.stat-bar+.stat-sub,table td,table th,.badge,.dash-hero-pill-num,input[type="number"],input[type="time"],input[type="date"]{font-variant-numeric:tabular-nums}
 
+/* ── PHASE 1 POLISH LAYER ─────────────────────────────────────────
+   Universal "feels-premium" transitions. Narrow property list keeps things
+   safe — only presentational props (no layout-affecting transitions). All
+   component-specific transition rules elsewhere (.btn, .modal, .sidebar,
+   inputs, etc.) win on specificity and tune their own durations. This rule
+   simply gives every NEW element a baseline glide on hover/state changes.
+   Respects prefers-reduced-motion. */
+*{transition:background-color 150ms ease,border-color 150ms ease,color 150ms ease,transform 150ms ease,opacity 150ms ease}
+/* Inputs already manage their own focus transitions — strip the universal
+   to avoid double-animating. .no-transition is an escape hatch for callers
+   that need instant feedback (e.g. drag handles, sliders). */
+input,textarea,select,.no-transition,.no-transition *{transition:none}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important;animation-iteration-count:1 !important}
+}
+
+/* Branded focus ring globally. Only renders on keyboard navigation
+   (focus-visible) — mouse clicks don't trigger it. Component-level focus
+   rules (.btn:focus-visible etc.) still override where defined. */
+*:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:4px}
+
+/* Clickable-card utility — opt-in via .card-clickable. Subtle vertical
+   lift + soft shadow on hover gives the perception that the card is a
+   target. Existing strip / stat / request cards can adopt this class
+   incrementally without breaking their current styling. */
+.card-clickable{cursor:pointer;transition:transform 200ms ease,box-shadow 200ms ease,border-color 200ms ease}
+.card-clickable:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(10,31,92,.08)}
+.card-clickable:active{transform:translateY(0) scale(.995)}
+
 /* ── SCREEN TRANSITION ── */
 .screen.active{animation:screenIn .26s cubic-bezier(.2,.7,.2,1) both}
 @keyframes screenIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
@@ -987,7 +1016,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-table thead th{background:#F8FAFC;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;position:sticky;top:0;z-index:1}
 .trk-table tbody td{padding:11px 12px;border-bottom:1px solid #F1F5F9;font-size:13px;vertical-align:middle}
 .trk-row{cursor:pointer;transition:background-color .12s}
-.trk-row:hover{background:#F8FAFC}
+/* Clickable row hover — tinted accent (#F0F9FF) reads as "this opens
+   something" vs. the neutral #F8FAFC used on non-clickable tr:hover. */
+.trk-row:hover td{background:#F0F9FF}
 
 .badge.trk-type{font-size:10px;letter-spacing:.4px;text-transform:uppercase;padding:3px 8px;border-radius:4px}
 .trk-type-poc{background:#FEF3C7;color:#92400E}
