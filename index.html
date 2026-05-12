@@ -479,7 +479,10 @@
       <!-- Mobile-only card list (CSS toggles visibility at <768px). -->
       <div class="us-cards us-cards-only" id="us-sess-cards"></div>
       <div id="us-sess-empty" class="empty-state" style="display:none">
-        <div class="empty-icon">📋</div><div class="empty-title">No sessions match the filters</div>
+        <i data-lucide="clipboard-list" class="empty-icon-svg"></i>
+        <div class="empty-title">No sessions match the filters</div>
+        <div style="margin-bottom:14px">Try clearing a filter or two.</div>
+        <button class="btn btn-primary" onclick="clearUSFilters()"><i data-lucide="x" class="btn-icon"></i>Clear filters</button>
       </div>
     </div>
   </div>
@@ -640,7 +643,7 @@
         <table><thead><tr><th>#</th><th>Employee</th><th>Activity</th><th>Date</th><th class="hide-mobile">Start</th><th class="hide-mobile">End</th><th>Hrs</th><th>Band</th><th>Rate</th><th>Credited</th><th>Status</th><th></th></tr></thead>
         <tbody id="sessions-tbody"></tbody></table>
       </div>
-      <div id="sessions-empty" class="empty-state" style="display:none"><div class="empty-icon">📭</div><div class="empty-title">No sessions yet</div></div>
+      <div id="sessions-empty" class="empty-state" style="display:none"><i data-lucide="inbox" class="empty-icon-svg"></i><div class="empty-title">No sessions yet</div><div>Log your first OT session above.</div></div>
     </div>
   </div>
 

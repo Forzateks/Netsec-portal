@@ -339,7 +339,8 @@ async function renderLeaveHistory() {
   });
 
   if (!all.length){
-    document.getElementById('lv-hist-content').innerHTML='<div class="empty-state"><div class="empty-title">No requests yet</div></div>';
+    document.getElementById('lv-hist-content').innerHTML='<div class="empty-state"><i data-lucide="palmtree" class="empty-icon-svg"></i><div class="empty-title">No requests yet</div><div>Submit your first leave request above.</div></div>';
+    if (typeof renderIcons === 'function') renderIcons();
     return;
   }
   document.getElementById('lv-hist-content').innerHTML=all.map(function(r){
@@ -572,6 +573,7 @@ async function renderLeaveApprovals() {
   }
 
   document.getElementById('lv-approvals-content').innerHTML=html;
+  if (typeof renderIcons === 'function') renderIcons();
 }
 
 // === APPROVED LEAVE RECORDS (annual_leave table) ==================
@@ -597,7 +599,7 @@ async function buildApprovedLeavesSection() {
   var html = '<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin:28px 0 8px">📒 Approved Leave Records ('+rows.length+')</h3>'+
     '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Source of truth for the balance. Editing or deleting here adjusts what the employee has used.</div>';
   if (!rows.length) {
-    html += '<div class="empty-state" style="padding:14px"><div class="empty-title">No approved leave records</div></div>';
+    html += '<div class="empty-state" style="padding:14px"><i data-lucide="clipboard-x" class="empty-icon-svg"></i><div class="empty-title">No approved leave records</div></div>';
     return html;
   }
   html += '<div class="table-wrap"><table style="width:100%;font-size:12px"><thead><tr>'+

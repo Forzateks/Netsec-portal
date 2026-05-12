@@ -61,6 +61,15 @@ function invStatusClass(status) {
   return 'inv-status-unavailable';
 }
 
+// Reset every Inventory filter input and re-render. Wired to the "Clear
+// filters" CTA in the empty-state card.
+function clearInventoryFilters() {
+  ['inv-search','inv-filter-model','inv-filter-location','inv-filter-status'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  applyInventoryFilters();
+}
+
 function applyInventoryFilters() {
   var search  = (document.getElementById('inv-search').value||'').toLowerCase();
   var modelF  = document.getElementById('inv-filter-model').value;
@@ -85,7 +94,21 @@ function applyInventoryFilters() {
 function renderInventoryTable(data) {
   var wrap = document.getElementById('inv-table-wrap');
   if (!data.length) {
-    wrap.innerHTML = '<div class="empty-state"><i data-lucide="package" class="empty-icon-svg"></i><div class="empty-title">No devices found</div><div>Try adjusting your filters</div></div>';
+    // If any filter is active, surface a Clear-filters CTA so the user
+    // recovers in one click. With no filters set, it's a true empty
+    // dataset — just show the friendly message.
+    var anyFilter =
+      (document.getElementById('inv-search').value||'') ||
+      (document.getElementById('inv-filter-model').value||'') ||
+      (document.getElementById('inv-filter-location').value||'') ||
+      (document.getElementById('inv-filter-status').value||'');
+    wrap.innerHTML =
+      '<div class="empty-state">'+
+        '<i data-lucide="package" class="empty-icon-svg"></i>'+
+        '<div class="empty-title">'+(anyFilter?'No devices match your filters':'No devices yet')+'</div>'+
+        '<div style="margin-bottom:14px">'+(anyFilter?'Try removing a filter or clearing them all.':'Add your first device above.')+'</div>'+
+        (anyFilter?'<button class="btn btn-primary" onclick="clearInventoryFilters()"><i data-lucide="x" class="btn-icon"></i>Clear filters</button>':'')+
+      '</div>';
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }

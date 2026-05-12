@@ -1,9 +1,53 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 :root {
+  /* Brand + legacy tokens — referenced hundreds of times across the
+     codebase. Names kept short for compatibility with existing rules. */
   --navy:#0A1F5C; --teal:#00A0D2; --gold:#C8A832; --bg:#F0F2F7; --card:#FFFFFF;
   --text:#1a1a2e; --muted:#6b7280; --border:#e5e7eb;
   --eve:#3B82F6; --early:#10B981; --mid:#8B5CF6; --wknd:#F59E0B; --day:#6B7280;
   --success:#059669; --danger:#EF4444;
+
+  /* Phase 3 — Semantic tokens. Additive: new code should reach for these
+     so the design system has one source of truth without rewriting
+     everything that currently uses --navy / --teal / etc.
+     Color tokens: aliases for the brand vars + 3 new neutral text tiers
+     + an explicit warning amber. */
+  --color-primary:        var(--navy);
+  --color-accent:         var(--teal);
+  --color-success:        #10B981;
+  --color-warning:        #F59E0B;
+  --color-danger:         var(--danger);
+  --color-bg:             #F8FAFC;
+  --color-surface:        #FFFFFF;
+  --color-border:         #E5E7EB;
+  --color-border-strong:  #D1D5DB;
+  --color-text:           #1F2937;
+  --color-text-muted:     #6B7280;
+  --color-text-subtle:    #9CA3AF;
+
+  /* Spacing scale — 4-pt grid. Use --space-md for default gaps, --space-lg
+     for section padding, --space-xl for page-level breathing room. */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Radius scale — buttons/badges (sm), cards/inputs (md), modals (lg),
+     mobile bottom sheets (xl). */
+  --radius-sm:  6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Type scale. */
+  --fs-micro:        12px;
+  --fs-table:        13px;
+  --fs-body:         14px;
+  --fs-em:           15px;
+  --fs-section:      17px;
+  --fs-page-title:   20px;
+  --fs-modal-title:  24px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 /* Paint html with the same deep navy that bottoms out the top-bar
