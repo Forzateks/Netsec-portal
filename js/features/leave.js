@@ -339,7 +339,13 @@ async function renderLeaveHistory() {
   });
 
   if (!all.length){
-    document.getElementById('lv-hist-content').innerHTML='<div class="empty-state"><i data-lucide="palmtree" class="empty-icon-svg"></i><div class="empty-title">No requests yet</div><div>Submit your first leave request above.</div></div>';
+    document.getElementById('lv-hist-content').innerHTML = renderEmptyState({
+      icon: 'palmtree',
+      heading: 'No leave requests yet',
+      sub: 'Submit annual or sick leave requests here. Manager reviews and approves.',
+      btnText: 'Request time off',
+      btnOnclick: "navigateSub('leave','log')"
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
@@ -613,7 +619,12 @@ async function buildApprovedLeavesSection() {
   var html = '<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin:28px 0 8px">📒 Approved Leave Records ('+rows.length+')</h3>'+
     '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Source of truth for the balance. Editing or deleting here adjusts what the employee has used.</div>';
   if (!rows.length) {
-    html += '<div class="empty-state" style="padding:14px"><i data-lucide="clipboard-x" class="empty-icon-svg"></i><div class="empty-title">No approved leave records</div></div>';
+    html += renderEmptyState({
+      icon: 'clipboard-x',
+      heading: 'No approved leave records',
+      sub: 'When the manager approves leave requests, they show up here.',
+      padding: '14px'
+    });
     return html;
   }
   html += '<div class="table-wrap"><table style="width:100%;font-size:12px"><thead><tr>'+

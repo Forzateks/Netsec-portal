@@ -209,10 +209,10 @@ async function renderEmployeeDashboard() {
     html += '</tbody></table></div>';
   } else {
     html += '<div class="dash-empty">'+
-      '<i data-lucide="clock" class="empty-icon-svg"></i>'+
+      '<i data-lucide="timer" class="empty-icon-svg"></i>'+
       '<div class="dash-empty-title">No OT logged yet</div>'+
       '<div class="dash-empty-sub">When you put in extra hours, log them here so they count toward your comp off.</div>'+
-      '<button class="btn btn-primary" onclick="showScreen(\'projects\');showProjectTab(\'uslog\')">Log a session</button>'+
+      '<button class="btn btn-primary" onclick="showScreen(\'projects\');showProjectTab(\'uslog\')"><i data-lucide="plus" class="btn-icon"></i>Log OT session</button>'+
       '</div>';
   }
   html += '</div>';

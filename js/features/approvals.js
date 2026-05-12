@@ -34,7 +34,11 @@ async function renderOTApprovals() {
   const {data,error}=await q;
   document.getElementById('ot-approvals-load').style.display='none';
   if (error||!data||!data.length){
-    document.getElementById('ot-approvals-content').innerHTML='<div class="empty-state"><i data-lucide="clock" class="empty-icon-svg"></i><div class="empty-title">No OT sessions match the filters</div></div>';
+    document.getElementById('ot-approvals-content').innerHTML = renderEmptyState({
+      icon: 'clock',
+      heading: 'No OT sessions match the filters',
+      sub: 'Adjust the filters above, or check back when the team submits new OT requests.'
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }

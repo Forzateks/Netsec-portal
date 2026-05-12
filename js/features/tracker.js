@@ -491,12 +491,14 @@ function renderTracker() {
   '</div>';
 
   if (!rows.length) {
-    content.innerHTML = tabBar +
-      '<div class="empty-state"><i data-lucide="folder-search" class="empty-icon-svg"></i>'+
-      '<div class="empty-title">No engagements match your filters</div>'+
-      '<div style="margin-bottom:14px">Try removing a filter or clearing them all.</div>'+
-      '<button class="btn btn-primary" onclick="clearTrackerFilters()"><i data-lucide="x" class="btn-icon"></i>Clear filters</button>'+
-      '</div>';
+    content.innerHTML = tabBar + renderEmptyState({
+      icon: 'search-x',
+      heading: 'No engagements match your filters',
+      sub: 'Try removing some filters or searching for a different keyword.',
+      btnText: 'Clear all filters',
+      btnIcon: 'x',
+      btnOnclick: 'clearTrackerFilters()'
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }

@@ -262,9 +262,13 @@ function renderCustomersList() {
 
   // Empty data state — friendly first-run message.
   if (!allRows.length) {
-    el.innerHTML = '<div class="empty-state"><i data-lucide="building-2" class="empty-icon-svg"></i>'+
-      '<div class="empty-title">No customers yet</div>'+
-      '<div>Click "+ Add Customer" to create your first.</div></div>';
+    el.innerHTML = renderEmptyState({
+      icon: 'building-2',
+      heading: 'No customers yet',
+      sub: 'Customers organize your engagements. Add one to start tracking projects and POCs.',
+      btnText: 'Add first customer',
+      btnOnclick: 'toggleCustomerAdd()'
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
@@ -277,9 +281,14 @@ function renderCustomersList() {
   // Search returned nothing — surface a Clear-search CTA so the user
   // recovers in one click.
   if (!filtered.length) {
-    el.innerHTML = '<div class="empty-state"><i data-lucide="search-x" class="empty-icon-svg"></i>'+
-      '<div class="empty-title">No customers match "'+esc2(search)+'"</div>'+
-      '<button class="btn btn-primary" onclick="clearCustomerSearch()" style="margin-top:12px"><i data-lucide="x" class="btn-icon"></i>Clear search</button></div>';
+    el.innerHTML = renderEmptyState({
+      icon: 'search-x',
+      heading: 'No customers match "'+esc2(search)+'"',
+      sub: 'Try a different keyword or clear the search.',
+      btnText: 'Clear search',
+      btnIcon: 'x',
+      btnOnclick: 'clearCustomerSearch()'
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
@@ -456,8 +465,11 @@ async function renderManageProjects() {
 
   const rows = data || [];
   if (!rows.length) {
-    document.getElementById('pj-manage-content').innerHTML =
-      '<div class="empty-state"><i data-lucide="folder-open" class="empty-icon-svg"></i><div class="empty-title">No engagements found</div></div>';
+    document.getElementById('pj-manage-content').innerHTML = renderEmptyState({
+      icon: 'folder-open',
+      heading: 'No engagements found',
+      sub: 'Adjust the filters above, or create a new engagement.'
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }

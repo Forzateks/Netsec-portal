@@ -105,6 +105,36 @@ function showAlert(id){
   setTimeout(function(){el.classList.remove('show');},3500);
   return true;
 }
+
+// ── Empty-state HTML helper ────────────────────────────────────────
+// Single source of truth for empty-state markup so every list/table/
+// section uses the same icon + heading + subtext + optional CTA shape.
+// opts:
+//   icon       — Lucide name (string), default 'inbox'
+//   heading    — short title, 4-8 words
+//   sub        — descriptive sentence explaining the section's purpose
+//   btnText    — primary CTA label; omit for no button
+//   btnOnclick — string of JS to run on click (caller controls escaping)
+//   btnIcon    — Lucide name for the button glyph, default 'plus'
+//   padding    — override inline padding (e.g. '32px 16px' for tight cards)
+// Caller must run renderIcons() (or lucide.createIcons()) after inserting
+// the returned HTML into the DOM so the Lucide tags hydrate.
+function renderEmptyState(opts) {
+  opts = opts || {};
+  var icon       = opts.icon || 'inbox';
+  var heading    = opts.heading || '';
+  var sub        = opts.sub || '';
+  var btnText    = opts.btnText || '';
+  var btnOnclick = opts.btnOnclick || '';
+  var btnIcon    = opts.btnIcon || 'plus';
+  var padding    = opts.padding ? ' style="padding:'+opts.padding+'"' : '';
+  return '<div class="empty-state"'+padding+'>' +
+    '<i data-lucide="'+icon+'" class="empty-icon-svg"></i>' +
+    (heading ? '<div class="empty-title">'+heading+'</div>' : '') +
+    (sub     ? '<div class="empty-sub">'+sub+'</div>'       : '') +
+    (btnText ? '<button class="btn btn-primary" onclick="'+btnOnclick+'"><i data-lucide="'+btnIcon+'" class="btn-icon"></i>'+btnText+'</button>' : '') +
+    '</div>';
+}
 // Display format: 01-Jan-2026. Accepts ISO (YYYY-MM-DD) or ISO timestamps.
 function fmtDate(str){
   if(!str) return '';

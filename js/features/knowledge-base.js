@@ -59,7 +59,13 @@ function kbCatClass(cat) {
 function renderKBArticles(data) {
   var wrap = document.getElementById('kb-articles-wrap');
   if (!data.length) {
-    wrap.innerHTML='<div class="empty-state"><i data-lucide="folder-open" class="empty-icon-svg"></i><div class="empty-title">No articles found</div><div>Be the first to submit one!</div></div>';
+    wrap.innerHTML = renderEmptyState({
+      icon: 'book-open',
+      heading: 'Knowledge base is empty',
+      sub: 'Share configuration guides, troubleshooting steps, and lessons learned with the team.',
+      btnText: 'Write the first article',
+      btnOnclick: "navigateSub('kb','submit')"
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
@@ -144,7 +150,13 @@ async function loadMyKBArticles() {
   var {data,error}=await sb.from('kb_articles').select('*').eq('submitted_by',currentUser).order('created_at',{ascending:false});
   if (error){wrap.innerHTML='<div class="alert alert-error show">Error: '+error.message+'</div>';return;}
   if (!data||!data.length){
-    wrap.innerHTML='<div class="empty-state"><i data-lucide="folder-open" class="empty-icon-svg"></i><div class="empty-title">No articles yet</div><div>Submit your first article!</div></div>';
+    wrap.innerHTML = renderEmptyState({
+      icon: 'file-text',
+      heading: "You haven't written any articles",
+      sub: "Share what you've learned. Configuration tricks, troubleshooting steps, customer-specific tips.",
+      btnText: 'Write your first article',
+      btnOnclick: "navigateSub('kb','submit')"
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }

@@ -97,12 +97,20 @@ function renderCertList() {
   }
 
   if (!rows.length) {
-    content.innerHTML =
-      '<div class="empty-state">'+
-        '<i data-lucide="award" class="empty-icon-svg"></i>'+
-        '<div class="empty-title">'+(isAll?'No certificates uploaded yet':'No certificates yet')+'</div>'+
-        '<div>'+(isAll?'No employee has uploaded a certificate.':'Click <strong>Upload Certificate</strong> to add your first one.')+'</div>'+
-      '</div>';
+    content.innerHTML = isAll
+      ? renderEmptyState({
+          icon: 'award',
+          heading: 'Team certifications hub',
+          sub: "Once employees upload their certs, you'll see everyone's qualifications and expiry dates here."
+        })
+      : renderEmptyState({
+          icon: 'award',
+          heading: 'No certificates yet',
+          sub: 'Track your professional certs like Aruba ACMA, HPE Sales, or CCNA. Get expiry alerts so you renew on time.',
+          btnText: 'Upload your first certificate',
+          btnIcon: 'upload-cloud',
+          btnOnclick: 'openCertUploadModal()'
+        });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }

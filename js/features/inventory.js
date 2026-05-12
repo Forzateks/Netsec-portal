@@ -102,13 +102,22 @@ function renderInventoryTable(data) {
       (document.getElementById('inv-filter-model').value||'') ||
       (document.getElementById('inv-filter-location').value||'') ||
       (document.getElementById('inv-filter-status').value||'');
-    wrap.innerHTML =
-      '<div class="empty-state">'+
-        '<i data-lucide="package" class="empty-icon-svg"></i>'+
-        '<div class="empty-title">'+(anyFilter?'No devices match your filters':'No devices yet')+'</div>'+
-        '<div style="margin-bottom:14px">'+(anyFilter?'Try removing a filter or clearing them all.':'Add your first device above.')+'</div>'+
-        (anyFilter?'<button class="btn btn-primary" onclick="clearInventoryFilters()"><i data-lucide="x" class="btn-icon"></i>Clear filters</button>':'')+
-      '</div>';
+    wrap.innerHTML = anyFilter
+      ? renderEmptyState({
+          icon: 'package',
+          heading: 'No devices match your filters',
+          sub: 'Try removing a filter or clearing them all.',
+          btnText: 'Clear filters',
+          btnIcon: 'x',
+          btnOnclick: 'clearInventoryFilters()'
+        })
+      : renderEmptyState({
+          icon: 'package',
+          heading: 'No devices tracked yet',
+          sub: 'Add your Aruba EC devices to track serial numbers, locations, and audit history.',
+          btnText: 'Add first device',
+          btnOnclick: "navigateSub('inventory','add')"
+        });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
@@ -331,7 +340,11 @@ async function loadActivityLog() {
   }
   var data = res.data || [];
   if (!data.length) {
-    container.innerHTML = '<div class="empty-state"><i data-lucide="history" class="empty-icon-svg"></i><div class="empty-title">No activity yet</div></div>';
+    container.innerHTML = renderEmptyState({
+      icon: 'history',
+      heading: 'No activity yet',
+      sub: 'When a device changes hands, location, or status, the change history shows up here.'
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }

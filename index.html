@@ -482,7 +482,7 @@
       <div id="us-sess-empty" class="empty-state" style="display:none">
         <i data-lucide="clipboard-list" class="empty-icon-svg"></i>
         <div class="empty-title">No sessions match the filters</div>
-        <div style="margin-bottom:14px">Try clearing a filter or two.</div>
+        <div class="empty-sub">Adjust the filters above, or clear them all to see every session.</div>
         <button class="btn btn-primary" onclick="clearUSFilters()"><i data-lucide="x" class="btn-icon"></i>Clear filters</button>
       </div>
     </div>
@@ -654,7 +654,12 @@
         <table><thead><tr><th>#</th><th>Employee</th><th>Activity</th><th>Date</th><th class="hide-mobile">Start</th><th class="hide-mobile">End</th><th>Hrs</th><th>Band</th><th>Rate</th><th>Credited</th><th>Status</th><th></th></tr></thead>
         <tbody id="sessions-tbody"></tbody></table>
       </div>
-      <div id="sessions-empty" class="empty-state" style="display:none"><i data-lucide="inbox" class="empty-icon-svg"></i><div class="empty-title">No sessions yet</div><div>Log your first OT session above.</div></div>
+      <div id="sessions-empty" class="empty-state" style="display:none">
+        <i data-lucide="clock" class="empty-icon-svg"></i>
+        <div class="empty-title">No sessions logged yet</div>
+        <div class="empty-sub">Log your work sessions to track project hours, OT, and comp-off credit.</div>
+        <button class="btn btn-primary" onclick="navigateSub('projects','uslog')"><i data-lucide="plus" class="btn-icon"></i>Log your first session</button>
+      </div>
     </div>
   </div>
 

@@ -669,9 +669,11 @@ async function renderEngagementSummary() {
   var typeLabel   = typeKey==='all' ? 'Engagement' : TYPE_LABELS[typeKey] || typeKey;
 
   if (!rows.length) {
-    document.getElementById('pj-eng-content').innerHTML =
-      '<div class="empty-state"><i data-lucide="bar-chart-3" class="empty-icon-svg"></i>'+
-      '<div class="empty-title">No '+esc2(typeLabel)+' sessions in this period</div></div>';
+    document.getElementById('pj-eng-content').innerHTML = renderEmptyState({
+      icon: 'folder-open',
+      heading: 'No '+esc2(typeLabel)+' data yet',
+      sub: 'Once your team logs sessions against '+esc2(typeLabel.toLowerCase())+'s, summary stats and charts appear here.'
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
@@ -843,8 +845,11 @@ async function renderUnifiedTypeSummary(typeKey) {
   var rows = res.data || [];
 
   if (!rows.length) {
-    document.getElementById(ui.content).innerHTML =
-      '<div class="empty-state"><i data-lucide="bar-chart-3" class="empty-icon-svg"></i><div class="empty-title">No '+typeKey.toUpperCase()+' sessions for '+year+'</div></div>';
+    document.getElementById(ui.content).innerHTML = renderEmptyState({
+      icon: 'folder-open',
+      heading: 'No '+typeKey.toUpperCase()+' data yet for '+year,
+      sub: 'Once team members log '+typeKey.toUpperCase()+' sessions, summary stats and charts appear here.'
+    });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
