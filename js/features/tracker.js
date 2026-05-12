@@ -59,7 +59,7 @@ async function loadTracker() {
   // Avoids relying on Supabase nested-select FK metadata.
   var engRes = await fetchAllRows(function(){
     return sb.from('engagements')
-      .select('id,customer_id,name,type,status,country,partner,category,project_order_no,start_date,end_date,tracker_status,orch_version,ec_version,license_expiry,signed_off_on,owner_employee,tracker_remarks,tracker_updated_at,created_at')
+      .select('id,customer_id,name,type,status,country,partner,category,project_order_no,start_date,end_date,tracker_status,orch_version,ec_version,license_expiry,signed_off_on,owner_employee,tracker_remarks,tracker_updated_at,updated_by,created_at')
       .order('tracker_updated_at',{ascending:false,nullsFirst:false});
   });
   var custRes = await fetchAllRows(function(){
@@ -555,7 +555,7 @@ function openTrackerDetail(id) {
     {label:'Sign Off',         value: r.signed_off_on ? fmtDate(r.signed_off_on) : '', mono:true},
     {label:'Orch. Version',    value: r.orch_version, mono:true},
     {label:'EC Version',       value: r.ec_version,   mono:true},
-    {label:'Last Updated',     value: r.tracker_updated_at ? fmtDate(r.tracker_updated_at) : '', mono:true}
+    {label:'Last Updated',     value: r.tracker_updated_at ? (fmtDate(r.tracker_updated_at) + (r.updated_by ? ' · by '+r.updated_by : '')) : '', mono:true}
   ];
   var fieldHtml = fields.map(function(f){
     var v = f.value;
@@ -579,7 +579,7 @@ function openTrackerDetail(id) {
     '<div class="trk-detail-grid">'+fieldHtml+'</div>'+
     remarksHtml +
     '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">'+
-      (isManager ? '<button class="btn btn-primary" onclick="openTrackerEditModal('+r.id+')"><i data-lucide="pencil" class="btn-icon"></i>Edit</button>' : '')+
+      '<button class="btn btn-primary" onclick="openTrackerEditModal('+r.id+')"><i data-lucide="pencil" class="btn-icon"></i>Edit</button>'+
       '<button class="btn btn-ghost" onclick="openMilestonesModal('+r.id+')"><i data-lucide="list-checks" class="btn-icon"></i>Milestones</button>'+
       '<button class="btn btn-ghost" onclick="closeTrackerDetail()" style="margin-left:auto">Close</button>'+
     '</div>';
@@ -668,7 +668,12 @@ function _trkUpdatePhaseEnabledState() {
 }
 
 function openTrackerEditModal(id) {
-  if (!isManager) { alert('Manager access only.'); return; }
+  // Employees can now open this modal to edit a limited field set
+  // (Remarks / Phase / Versions / Category). The DB trigger
+  // enforce_engagement_employee_edit_perms reverts any manager-only
+  // column to its OLD value for non-managers, so this gate is no longer
+  // load-bearing — _trkApplyEmployeeLocks() at the bottom of this
+  // function disables the manager-only inputs in the UI as well.
   var r = _trkData.find(function(x){return x.id===id;});
   if (!r) return;
   closeTrackerDetail();
@@ -699,8 +704,73 @@ function openTrackerEditModal(id) {
   _trkUpdatePhaseEnabledState();
   document.getElementById('trk-edit-info').style.display = 'none';
 
+  _trkApplyEmployeeLocks();
+
   document.getElementById('trk-edit-modal').classList.add('show');
   if (typeof renderIcons === 'function') renderIcons();
+}
+
+// Disable manager-only fields + hide the Delete button when the current
+// user isn't a manager. Spec: employees can edit Remarks, Current Phase,
+// Orch Version, EC Version, Category. Everything else stays locked. The
+// DB trigger (enforce_engagement_employee_edit_perms) is the authoritative
+// enforcement; this is the matching UI cue so employees know which fields
+// they own. Idempotent — safe to call on every modal open.
+function _trkApplyEmployeeLocks() {
+  // Field IDs that are locked for non-managers. Current Phase / Orch /
+  // EC / Category / Remarks stay editable and aren't in this list.
+  // Phase has its own workflow-aware disable in _trkUpdatePhaseEnabledState
+  // (disabled when Status isn't 'active') — that's independent of role.
+  var MANAGER_ONLY_FIELDS = [
+    'trk-edit-status',
+    'trk-edit-owner',
+    'trk-edit-country',
+    'trk-edit-partner',
+    'trk-edit-start-date',
+    'trk-edit-end-date',
+    'trk-edit-license-expiry',
+    'trk-edit-signed-off-on',
+    'trk-edit-project-order-no'
+  ];
+  var locked = !isManager;
+
+  MANAGER_ONLY_FIELDS.forEach(function(id){
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = locked;
+    el.classList.toggle('trk-locked', locked);
+
+    // Attach a lock icon to the label + a helper line under the input.
+    // Wipe previous markers so toggling role (rare, but possible if the
+    // modal is re-opened after a session change) doesn't accumulate.
+    var group = el.closest('.form-group');
+    if (!group) return;
+    var label = group.querySelector('label');
+    if (label) {
+      var prevIcon = label.querySelector('.trk-field-lock');
+      if (prevIcon) prevIcon.remove();
+      if (locked) {
+        var ic = document.createElement('i');
+        ic.setAttribute('data-lucide', 'lock');
+        ic.className = 'trk-field-lock';
+        label.appendChild(ic);
+      }
+    }
+    var prevHelper = group.querySelector('.trk-field-locked-helper');
+    if (prevHelper) prevHelper.remove();
+    if (locked) {
+      var hint = document.createElement('div');
+      hint.className = 'trk-field-locked-helper';
+      hint.textContent = 'Manager-editable only';
+      group.appendChild(hint);
+    }
+  });
+
+  // Delete is manager-only at the DB level too — hide the button entirely
+  // for non-managers rather than show a disabled state, since employees
+  // shouldn't be reminded that delete exists.
+  var delBtn = document.getElementById('trk-edit-delete-btn');
+  if (delBtn) delBtn.style.display = locked ? 'none' : '';
 }
 
 function closeTrackerEditModal() {
@@ -737,7 +807,9 @@ function onTrackerStatusChange() {
 function onTrackerSignOffChange() { _trkRefreshAutoCompleteHint(); }
 
 async function saveTrackerEdit() {
-  if (!isManager) { alert('Manager access only.'); return; }
+  // Employees can save their allowed fields; the DB trigger reverts
+  // every manager-only column to its OLD value, so the patch built
+  // below is safe to send wholesale either way.
   var btn = document.getElementById('trk-edit-save-btn');
   var id  = parseInt(_trkGet('trk-edit-id'), 10);
   if (!id) { alert('Missing engagement id.'); return; }
