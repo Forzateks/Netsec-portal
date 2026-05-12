@@ -41,14 +41,11 @@ function trkStatusesFor(/*type*/) { return TRK_PHASES.slice(); }
 function showTrackerTab(tab) {
   _trkActiveTab = tab;
   setSidebarSubActive('tracker', tab);
-  // Refresh the status filter so its option list matches the tab. Selection
-  // values that aren't valid for the new type are dropped automatically by
-  // msInit's validity filter.
-  if (typeof msInit === 'function' && document.getElementById('trk-filter-status')) {
-    var items = trkStatusesFor(tab === 'projects' ? 'project' : (tab === 'pocs' ? 'poc' : 'all'))
-      .map(function(v){return {value:v,label:v};});
-    msInit('trk-filter-status', items, applyTrackerFilters);
-  }
+  // The Status filter is the 6-value top-level enum and is the same for
+  // every tab — it's populated once by populateTrackerFilters() and must
+  // NOT be re-initialised here. Older code reseeded it with TRK_PHASES
+  // (the workflow phase list), which is what produced phase values in the
+  // Status dropdown after the v21 Status/Phase split.
   renderTracker();
 }
 
@@ -100,11 +97,17 @@ function populateTrackerFilters() {
   msInit('trk-filter-country', toItems(countries), applyTrackerFilters);
   msInit('trk-filter-partner', toItems(partners),  applyTrackerFilters);
   msInit('trk-filter-owner',   toItems(owners),    applyTrackerFilters);
-  // Top-level status filter — 8 coarse-grained values, same across all
-  // tabs. The fine-grained tracker_status (Phase) is no longer filtered
-  // from this dropdown; it now lives inside the detail/edit modal.
+  // Top-level status filter — the fixed 6-value enum (active, sign-off,
+  // completed, on-hold, dormant, cancelled). Hardcoded from TRK_TOP_STATUS_MAP
+  // so the dropdown never drifts with data. Labels carry the emoji so the
+  // option list matches the status badge in the table. The workflow Phase
+  // (tracker_status) is a separate concept and is filtered inside the
+  // detail/edit modal, not from this bar.
   msInit('trk-filter-status',
-    TRK_TOP_STATUS_ORDER.map(function(k){return {value:k, label:TRK_TOP_STATUS_MAP[k].label};}),
+    TRK_TOP_STATUS_ORDER.map(function(k){
+      var def = TRK_TOP_STATUS_MAP[k];
+      return { value:k, label: def.icon + ' ' + def.label };
+    }),
     applyTrackerFilters);
 }
 
