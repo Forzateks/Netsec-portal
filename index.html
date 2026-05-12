@@ -880,7 +880,7 @@
     <div class="form-grid">
       <div class="form-group full">
         <label>Status</label>
-        <select id="trk-edit-status">
+        <select id="trk-edit-status" onchange="_trkUpdatePhaseEnabledState()">
           <option value="active">🟢 Active</option>
           <option value="ongoing">🔵 Ongoing</option>
           <option value="sign-off">✍️ Sign-off</option>
@@ -921,7 +921,7 @@
         <select id="trk-edit-tracker-status" onchange="onTrackerStatusChange()">
           <option value="">— None —</option>
         </select>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Workflow phase within an active project</div>
+        <div id="trk-edit-phase-helper" style="font-size:11px;color:var(--muted);margin-top:4px">Workflow phase within an active project</div>
       </div>
       <div class="form-group">
         <label>Owner</label>

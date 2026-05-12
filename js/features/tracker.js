@@ -10,31 +10,32 @@ var _trkActiveTab = 'all';   // 'all' | 'projects' | 'pocs'
 // LLD → Pilot Sites Rollout → Migration → KT → Sign-off) so the project
 // status set mirrors the activity types + a few terminal states. POCs follow
 // a simpler sales-cycle vocabulary.
-var TRK_PROJECT_STATUSES = [
-  'Yet to start','Kick-off',
-  'HLD Discussion','HLD Documentation',
-  'LLD Discussion','LLD Documentation',
-  'Initial Configuration','Pilot Sites Rollout',
-  'Migration','KT / Training','As-Built Documentation','Troubleshooting',
-  'Onhold','On demand request',
-  'Completed'
+// Phase = workflow step within an ACTIVE project. Lifecycle states like
+// Completed / Cancelled / Dormant / Sign-off live exclusively on
+// engagement.status (the top-level Status field). The 13 phase values
+// here are enforced by the CHECK constraint on engagements.tracker_status.
+var TRK_PHASES = [
+  'Yet to start',
+  'Kick-off',
+  'HLD Discussion',
+  'HLD Documentation',
+  'LLD Discussion',
+  'LLD Documentation',
+  'Initial Configuration',
+  'Pilot Sites Rollout',
+  'Migration',
+  'KT / Training',
+  'As-Built Documentation',
+  'Troubleshooting',
+  'On demand request'
 ];
-var TRK_POC_STATUSES = [
-  'Yet to start','Initial Phase','Ongoing','Pilot','Onhold',
-  'Budgetary Phase','On demand request',
-  'Completed','Ended','Cancelled','Lost'
-];
-function trkStatusesFor(type) {
-  if (type === 'project') return TRK_PROJECT_STATUSES.slice();
-  if (type === 'poc')     return TRK_POC_STATUSES.slice();
-  // 'all' (or unspecified) → union, preserving project ordering first
-  var seen = {};
-  var union = [];
-  TRK_PROJECT_STATUSES.concat(TRK_POC_STATUSES).forEach(function(s){
-    if (!seen[s]) { seen[s] = 1; union.push(s); }
-  });
-  return union;
-}
+// Phase dropdown is only enabled when the top-level status is one of
+// these. Anything else (completed / sign-off / cancelled / dormant /
+// archived) disables the Phase select and force-clears its value.
+var TRK_PHASE_ALLOWED_STATUSES = ['active','ongoing','on-hold'];
+
+// Legacy compat — Phase list is now the same regardless of type.
+function trkStatusesFor(/*type*/) { return TRK_PHASES.slice(); }
 
 function showTrackerTab(tab) {
   _trkActiveTab = tab;
@@ -460,19 +461,39 @@ function _trkPopulateStatusOptions(type, currentValue) {
   var sel = document.getElementById('trk-edit-tracker-status');
   if (!sel) return;
   var preserve = (typeof currentValue === 'string' && currentValue) ? currentValue : sel.value;
-  var statuses = trkStatusesFor(type);
   var html = '<option value="">— None —</option>';
-  // If the engagement is already on a status that's no longer in the standard
-  // list (e.g. a legacy 'Ongoing' on a project), keep it as a selectable
-  // "(legacy)" option so the row stays editable without forcing reclassification.
-  if (preserve && statuses.indexOf(preserve) === -1) {
+  // Defensive legacy preservation — should be rare after the v20 cleanup
+  // migration but if any row slips through with an out-of-list value,
+  // surface it as "(legacy)" so the manager can re-select correctly.
+  if (preserve && TRK_PHASES.indexOf(preserve) === -1) {
     html += '<option value="'+esc2(preserve)+'" selected>'+esc2(preserve)+' (legacy)</option>';
   }
-  statuses.forEach(function(v){
+  TRK_PHASES.forEach(function(v){
     html += '<option>'+esc2(v)+'</option>';
   });
   sel.innerHTML = html;
-  if (preserve && statuses.indexOf(preserve) !== -1) sel.value = preserve;
+  if (preserve && TRK_PHASES.indexOf(preserve) !== -1) sel.value = preserve;
+}
+
+// When the user picks a terminal/paused top-level status (completed,
+// sign-off, cancelled, dormant, archived) the Phase field becomes
+// meaningless — disable it and force-clear the value. Re-running on
+// every form-load + Status-change keeps the two fields in sync.
+function _trkUpdatePhaseEnabledState() {
+  var statusSel = document.getElementById('trk-edit-status');
+  var phaseSel  = document.getElementById('trk-edit-tracker-status');
+  var helper    = document.getElementById('trk-edit-phase-helper');
+  if (!statusSel || !phaseSel) return;
+  var topStatus = statusSel.value || 'active';
+  var allowed = TRK_PHASE_ALLOWED_STATUSES.indexOf(topStatus) !== -1;
+  if (!allowed) {
+    phaseSel.value = '';
+    phaseSel.disabled = true;
+    if (helper) helper.textContent = 'Phase only applies to active projects';
+  } else {
+    phaseSel.disabled = false;
+    if (helper) helper.textContent = 'Workflow phase within an active project';
+  }
 }
 
 function openTrackerEditModal(id) {
@@ -503,6 +524,8 @@ function openTrackerEditModal(id) {
   _trkSet('trk-edit-license-expiry',    r.license_expiry);
   _trkSet('trk-edit-signed-off-on',     r.signed_off_on);
   _trkSet('trk-edit-remarks',           r.tracker_remarks);
+  // Apply the Phase enable/disable rule based on the just-set top status.
+  _trkUpdatePhaseEnabledState();
   document.getElementById('trk-edit-info').style.display = 'none';
 
   document.getElementById('trk-edit-modal').classList.add('show');
@@ -513,31 +536,34 @@ function closeTrackerEditModal() {
   document.getElementById('trk-edit-modal').classList.remove('show');
 }
 
-// Show a hint when status 'Completed' or sign-off date is set, since both
-// auto-flip the engagement.status field to 'completed' on save.
+// Show a hint when a sign-off date is set — saving will auto-flip the
+// top-level engagement.status to 'sign-off' (unless the user has already
+// picked a terminal state). Phase no longer has a 'Completed' value
+// after the v20 cleanup so it can't trigger the auto-flip on its own.
 function _trkRefreshAutoCompleteHint() {
-  var status   = _trkGet('trk-edit-tracker-status');
   var signedOn = _trkGet('trk-edit-signed-off-on');
+  var topStat  = _trkGet('trk-edit-status') || 'active';
   var box = document.getElementById('trk-edit-info');
   if (!box) return;
-  if (status === 'Completed' || signedOn) {
+  var willAutoFlip = signedOn &&
+    topStat !== 'completed' && topStat !== 'cancelled' &&
+    topStat !== 'archived'  && topStat !== 'sign-off';
+  if (willAutoFlip) {
     box.style.display = 'block';
     box.innerHTML = '<i data-lucide="info" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>'+
-      'Saving will mark this engagement as <strong>Completed</strong> across the app (status flips to <code>completed</code>).';
+      'Saving will set <strong>Status = Sign-off</strong> across the app because a sign-off date is recorded.';
     if (typeof renderIcons === 'function') renderIcons();
   } else {
     box.style.display = 'none';
   }
 }
-function onTrackerStatusChange() { _trkRefreshAutoCompleteHint(); }
-function onTrackerSignOffChange() {
-  // If user picks a sign-off date and status isn't already Completed, prefill
-  // the status select so the intent is explicit before saving.
-  if (_trkGet('trk-edit-signed-off-on') && _trkGet('trk-edit-tracker-status') !== 'Completed') {
-    _trkSet('trk-edit-tracker-status', 'Completed');
-  }
+function onTrackerStatusChange() {
+  // Phase select onchange — only meaningful for the auto-complete hint
+  // refresh. The disable/enable rule keys off the top-level Status field
+  // and is handled by _trkUpdatePhaseEnabledState.
   _trkRefreshAutoCompleteHint();
 }
+function onTrackerSignOffChange() { _trkRefreshAutoCompleteHint(); }
 
 async function saveTrackerEdit() {
   if (!isManager) { alert('Manager access only.'); return; }
@@ -567,13 +593,15 @@ async function saveTrackerEdit() {
     tracker_updated_at: new Date().toISOString()
   };
 
-  // Sign-off OR tracker_status='Completed' flips engagement.status. We
-  // override the user's top-status pick only if the user hasn't already
-  // chosen an end state (cancelled / archived / completed / sign-off).
-  if ((trackerStatus === 'Completed' || signedOn) &&
+  // A sign-off date flips engagement.status to 'sign-off' unless the user
+  // has already chosen an end state (cancelled / archived / completed /
+  // sign-off). tracker_status='Completed' is no longer a valid phase after
+  // the v20 cleanup migration, so the only auto-flip trigger now is the
+  // sign-off date itself.
+  if (signedOn &&
       patch.status !== 'completed' && patch.status !== 'cancelled' &&
       patch.status !== 'archived'  && patch.status !== 'sign-off') {
-    patch.status = signedOn ? 'sign-off' : 'completed';
+    patch.status = 'sign-off';
   }
 
   btn.disabled = true;
