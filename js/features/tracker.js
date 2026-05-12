@@ -54,6 +54,11 @@ async function loadTracker() {
   var content = document.getElementById('trk-content');
   if (load)    load.style.display    = 'flex';
   if (content) content.innerHTML     = '';
+  // Reset the strip's animation gate so the count-up plays again on
+  // every fresh navigation to the tracker (per spec: "navigating away
+  // and back triggers the animation again").
+  var strip = document.getElementById('trk-stat-row');
+  if (strip) strip._stripAnimated = false;
 
   // Fetch engagements and customers separately, then join client-side.
   // Avoids relying on Supabase nested-select FK metadata.
@@ -357,15 +362,23 @@ function renderTrackerStatRow() {
       'title="'+(isSel?'Remove ':'Filter by ')+def.label+'">'+
       checkIcon+
       '<i data-lucide="'+def.icon+'" class="trk-strip-ico"></i>'+
-      '<span class="trk-strip-num num">'+counts[k]+'</span>'+
+      '<span class="trk-strip-num num" data-counter="'+counts[k]+'">'+counts[k]+'</span>'+
       '<span class="trk-strip-lbl">'+def.label+'</span>'+
     '</button>';
   }).join('<span class="trk-strip-dot">•</span>');
 
   wrap.innerHTML =
-    '<div class="trk-strip-total"><span class="num">'+rows.length+'</span> Total</div>'+
+    '<div class="trk-strip-total"><span class="num" data-counter="'+rows.length+'">'+rows.length+'</span> Total</div>'+
     '<span class="trk-strip-dot">•</span>'+
     segs;
+  // Animate only on the FIRST strip render after a fresh loadTracker.
+  // Filter clicks rebuild this innerHTML on every render — re-animating
+  // every click would feel chaotic — so we gate on a wrap-level flag
+  // that loadTracker resets when the user navigates back to the tracker.
+  if (!wrap._stripAnimated) {
+    wrap._stripAnimated = true;
+    if (typeof animateCountersIn === 'function') animateCountersIn(wrap);
+  }
 }
 
 // Click a status segment → toggle it in the status filter array. Lets the

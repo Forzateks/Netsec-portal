@@ -470,8 +470,22 @@ async function updateNotifBadge() {
   ]);
   const total=(coReqs||[]).length+(lvReqs||[]).length+(otReqs||[]).length;
   const badge=document.getElementById('notif-badge');
-  if (total>0){badge.textContent=total;badge.style.display='inline-block';}
-  else {badge.style.display='none';}
+  if (!badge) return;
+  if (total>0) {
+    badge.style.display='inline-block';
+    // Animate count-up on the FIRST reveal of the badge (e.g. on login).
+    // Subsequent updates (after the manager approves a request and the
+    // count decrements) write instantly so the change feels responsive.
+    if (!badge._counterAnimated && typeof animateCounter === 'function') {
+      badge._counterAnimated = true;
+      animateCounter(badge, total, { duration: 600 });
+    } else {
+      badge.textContent = total;
+    }
+  } else {
+    badge.style.display='none';
+    badge._counterAnimated = false;  // reset so next reveal animates again
+  }
 }
 
 function clearLeaveApprovalFilters() {

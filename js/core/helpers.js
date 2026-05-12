@@ -1,4 +1,103 @@
 ﻿// == HELPERS =======================================================
+// ── Animated number counters ────────────────────────────────────────
+// Tiny perceptual upgrade: stats count up from 0 to their final value
+// on initial render. Declarative — emit markup with `data-counter="N"`
+// (plus optional data-counter-decimals / -suffix / -prefix), then call
+// animateCountersIn(scopeEl) right after the innerHTML assignment. The
+// utility synchronously sets textContent to "0" before the first paint
+// so the final value never flashes. easeOutQuart, ~600ms duration,
+// 80ms stagger between siblings inside the same scope.
+function _counterFormat(value, opts) {
+  opts = opts || {};
+  if (typeof value !== 'number' || !isFinite(value)) return String(value);
+  var precision;
+  if (opts.decimals != null) {
+    precision = opts.decimals;
+  } else if (Number.isInteger(value)) {
+    precision = 0;
+  } else {
+    var s = String(value);
+    var dot = s.indexOf('.');
+    precision = dot === -1 ? 0 : Math.min(2, s.length - dot - 1);
+  }
+  // Locale-aware so animated counters get the same thousands separators
+  // as the rest of the app's fmtNum-formatted numbers (e.g. "2,287.44").
+  var n = value.toLocaleString('en-US', {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision
+  });
+  return (opts.prefix || '') + n + (opts.suffix || '');
+}
+function animateCounter(el, value, opts) {
+  if (!el) return;
+  opts = opts || {};
+  // Cancel any in-flight animation on this element so a fast re-render
+  // can't leave two RAFs racing each other to write the textContent.
+  if (el._counterRAF)   { cancelAnimationFrame(el._counterRAF); el._counterRAF = null; }
+  if (el._counterTimer) { clearTimeout(el._counterTimer); el._counterTimer = null; }
+  // Non-numeric / placeholder ('N/A', '—'): display as-is.
+  if (typeof value !== 'number' || !isFinite(value)) {
+    el.textContent = String(value);
+    return;
+  }
+  // Respect prefers-reduced-motion — write the final value and exit.
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    el.textContent = _counterFormat(value, opts);
+    return;
+  }
+  var duration = opts.duration || 600;
+  var delay    = opts.delay || 0;
+  // Immediate sync paint to "0" so the final value never flashes between
+  // markup insertion and the first RAF tick.
+  el.textContent = _counterFormat(0, opts);
+  function start() {
+    var startTs = null;
+    function tick(ts) {
+      if (startTs === null) startTs = ts;
+      var t = Math.min(1, (ts - startTs) / duration);
+      var eased = 1 - Math.pow(1 - t, 4); // easeOutQuart
+      el.textContent = _counterFormat(value * eased, opts);
+      if (t < 1) {
+        el._counterRAF = requestAnimationFrame(tick);
+      } else {
+        el._counterRAF = null;
+        el.textContent = _counterFormat(value, opts);  // settle to exact value
+      }
+    }
+    el._counterRAF = requestAnimationFrame(tick);
+  }
+  if (delay > 0) el._counterTimer = setTimeout(start, delay);
+  else start();
+}
+// Scan a container for data-counter elements and animate them with a
+// staggered start. _counterAnimated guards against re-animating the
+// same element so calling on a stable DOM is a no-op (only freshly-
+// inserted markup ever animates).
+function animateCountersIn(root, opts) {
+  if (!root) return;
+  opts = opts || {};
+  var stagger  = opts.stagger != null ? opts.stagger : 80;
+  var duration = opts.duration || 600;
+  var els = root.querySelectorAll('[data-counter]');
+  Array.prototype.forEach.call(els, function(el, i) {
+    if (el._counterAnimated) return;
+    el._counterAnimated = true;
+    var raw    = el.getAttribute('data-counter');
+    var target = parseFloat(raw);
+    var decAttr= el.getAttribute('data-counter-decimals');
+    var suffix = el.getAttribute('data-counter-suffix') || '';
+    var prefix = el.getAttribute('data-counter-prefix') || '';
+    if (isNaN(target)) { el.textContent = raw; return; }
+    animateCounter(el, target, {
+      duration: duration,
+      delay:    i * stagger,
+      decimals: decAttr != null ? parseInt(decAttr, 10) : undefined,
+      suffix:   suffix,
+      prefix:   prefix
+    });
+  });
+}
+
 function showAlert(id){
   const el=document.getElementById(id);
   if(!el) return false;

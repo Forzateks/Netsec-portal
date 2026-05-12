@@ -163,16 +163,16 @@ async function renderEmployeeDashboard() {
   // === STATS GRID === (no 160h target progress bar — that was aspirational)
   html += '<div class="dash-stats">'+
     '<div class="stat-card green"><div class="stat-label">CO Balance</div>'+
-      '<div class="stat-value" style="color:'+balColor+'">'+fmtNum(s.balance)+'</div>'+
+      '<div class="stat-value" style="color:'+balColor+'"><span data-counter="'+s.balance+'">'+fmtNum(s.balance)+'</span></div>'+
       '<div class="stat-sub">Earned '+fmtNum(s.totalCO)+' &middot; Used '+fmtNum(s.used)+'</div></div>'+
     '<div class="stat-card teal"><div class="stat-label">Annual Leave</div>'+
-      '<div class="stat-value" style="color:'+lvColor+'">'+fmtNum(leaveBalance)+'</div>'+
+      '<div class="stat-value" style="color:'+lvColor+'"><span data-counter="'+leaveBalance+'">'+fmtNum(leaveBalance)+'</span></div>'+
       '<div class="stat-sub">of '+LEAVE_ALLOWANCE+' days &middot; '+year+'</div></div>'+
     '<div class="stat-card navy"><div class="stat-label">OT &mdash; '+monthName+'</div>'+
-      '<div class="stat-value">'+fmtNum(otThisMonth)+trendPill(otThisMonth, otLastMonth, '')+'</div>'+
+      '<div class="stat-value"><span data-counter="'+otThisMonth+'">'+fmtNum(otThisMonth)+'</span>'+trendPill(otThisMonth, otLastMonth, '')+'</div>'+
       '<div class="stat-sub">'+fmtNum(otHrsThisMonth)+'h credited</div></div>'+
     '<div class="stat-card eve"><div class="stat-label">Project Hours &mdash; '+monthName+'</div>'+
-      '<div class="stat-value">'+fmtNum(pjHrsMonth)+'<span class="stat-unit">h</span>'+trendPill(pjHrsMonth, pjHrsPrev, 'h')+'</div>'+
+      '<div class="stat-value"><span data-counter="'+pjHrsMonth+'" data-counter-decimals="2">'+fmtNum(pjHrsMonth)+'</span><span class="stat-unit">h</span>'+trendPill(pjHrsMonth, pjHrsPrev, 'h')+'</div>'+
       '<div class="stat-sub">vs '+fmtNum(pjHrsPrev)+'h last month</div></div>'+
     '</div>';
 
@@ -219,6 +219,12 @@ async function renderEmployeeDashboard() {
 
   document.getElementById('dash-content').innerHTML = html;
   if (typeof renderIcons === 'function') renderIcons();
+  // Run counter animations on every freshly-inserted [data-counter] span.
+  // _counterAnimated flag inside animateCountersIn skips elements that have
+  // already animated, so this is safe to call multiple times.
+  if (typeof animateCountersIn === 'function') {
+    animateCountersIn(document.getElementById('dash-content'));
+  }
 }
 
 // == MANAGER DASHBOARD ============================================
@@ -334,7 +340,7 @@ async function renderManagerDashboard() {
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">'+
         '<div>'+
           '<div style="font-size:13px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;font-weight:600">Pending Approvals</div>'+
-          '<div style="font-size:36px;font-weight:700;font-family:DM Mono,monospace;line-height:1.1;margin-top:4px">'+teamPending+'</div>'+
+          '<div style="font-size:36px;font-weight:700;font-family:DM Mono,monospace;line-height:1.1;margin-top:4px"><span data-counter="'+teamPending+'">'+teamPending+'</span></div>'+
           '<div style="font-size:13px;opacity:.85;margin-top:4px">'+
             (otPending>0?otPending+' OT &middot; ':'')+
             (coPending>0?coPending+' Comp Off &middot; ':'')+
@@ -359,19 +365,19 @@ async function renderManagerDashboard() {
   // === TEAM STATS GRID ===
   html += '<div class="dash-stats">'+
     '<div class="stat-card navy"><div class="stat-label">Team OT &mdash; '+monthName+'</div>'+
-      '<div class="stat-value">'+fmtNum(teamOTHrs)+'<span class="stat-unit">h</span></div>'+
+      '<div class="stat-value"><span data-counter="'+teamOTHrs+'" data-counter-decimals="2">'+fmtNum(teamOTHrs)+'</span><span class="stat-unit">h</span></div>'+
       '<div class="stat-sub">credited across the team</div></div>'+
     '<div class="stat-card teal"><div class="stat-label">Leave next 30 days</div>'+
-      '<div class="stat-value">'+fmtNum(upcomingLeaveDays)+'</div>'+
+      '<div class="stat-value"><span data-counter="'+upcomingLeaveDays+'">'+fmtNum(upcomingLeaveDays)+'</span></div>'+
       '<div class="stat-sub">'+upcomingLeaves.length+' approved request'+(upcomingLeaves.length===1?'':'s')+'</div></div>'+
     '<div class="stat-card green" style="cursor:pointer" onclick="showScreen(\'tracker\');showTrackerTab(\'projects\')"><div class="stat-label">Active Projects</div>'+
-      '<div class="stat-value">'+fmtNum(activeProjects.length)+'</div>'+
+      '<div class="stat-value"><span data-counter="'+activeProjects.length+'">'+fmtNum(activeProjects.length)+'</span></div>'+
       '<div class="stat-sub">in flight</div></div>'+
     '<div class="stat-card mid" style="cursor:pointer" onclick="showScreen(\'tracker\');showTrackerTab(\'pocs\')"><div class="stat-label">Active POCs</div>'+
-      '<div class="stat-value">'+fmtNum(activePocs.length)+'</div>'+
+      '<div class="stat-value"><span data-counter="'+activePocs.length+'">'+fmtNum(activePocs.length)+'</span></div>'+
       '<div class="stat-sub">in flight</div></div>'+
     '<div class="stat-card eve"><div class="stat-label">Sessions this week</div>'+
-      '<div class="stat-value">'+fmtNum(weekSessions.length)+'</div>'+
+      '<div class="stat-value"><span data-counter="'+weekSessions.length+'">'+fmtNum(weekSessions.length)+'</span></div>'+
       '<div class="stat-sub">logged in last 7 days</div></div>'+
     '</div>';
 
@@ -563,6 +569,12 @@ async function renderManagerDashboard() {
 
   document.getElementById('dash-content').innerHTML = html;
   if (typeof renderIcons === 'function') renderIcons();
+  // Run counter animations on every freshly-inserted [data-counter] span.
+  // _counterAnimated flag inside animateCountersIn skips elements that have
+  // already animated, so this is safe to call multiple times.
+  if (typeof animateCountersIn === 'function') {
+    animateCountersIn(document.getElementById('dash-content'));
+  }
 }
 
 // Lazy-load the XLSX library from the CDN on demand. Keeps the ~700KB
