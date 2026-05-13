@@ -360,36 +360,45 @@ async function renderUSSessions() {
       ? '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openEditUS('+r.id+')" title="Edit" style="margin-right:4px"><i data-lucide="pencil"></i></button>'+
         '<button class="btn btn-sm btn-danger btn-icon-only" onclick="deleteUS('+r.id+')" title="Delete"><i data-lucide="trash-2"></i></button>'
       : '';
+    // User-typed fields wrapped in esc2 — closes attribute-quote-break
+    // injection (e.g. session_info containing `"` would otherwise blow
+    // out the title attribute). Note esc2 does NOT escape <>&; broader
+    // XSS hardening of the helper itself is a separate scoped deploy.
+    var custName = r.customer_name || '-';
+    var engName  = r.engagement_name || '-';
+    var actType  = r.activity_type || '-';
+    var info     = r.session_info || '';
+    var emp      = r.employee || '-';
     tbodyHtml += '<tr>'+
       '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
-      '<td><span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+t.label+'</span></td>'+
-      '<td style="font-size:12px;color:var(--navy);font-weight:600">'+(r.customer_name||'-')+'</td>'+
-      '<td style="font-size:12px"><strong>'+(r.engagement_name||'-')+'</strong></td>'+
+      '<td><span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+esc2(t.label)+'</span></td>'+
+      '<td style="font-size:12px;color:var(--navy);font-weight:600">'+esc2(custName)+'</td>'+
+      '<td style="font-size:12px"><strong>'+esc2(engName)+'</strong></td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtDate(r.session_date)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+r.total_hours+'h</td>'+
-      '<td><span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+(r.activity_type||'-')+'</span></td>'+
-      '<td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(r.session_info||'')+'">'+(r.session_info||'-')+'</td>'+
-      '<td style="font-size:12px;color:var(--muted)">'+(r.employee||'-')+'</td>'+
+      '<td><span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+esc2(actType)+'</span></td>'+
+      '<td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(info)+'">'+esc2(info||'-')+'</td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+esc2(emp)+'</td>'+
       '<td style="white-space:nowrap">'+actions+'</td>'+
       '</tr>';
     cardsHtml += '<div class="us-card">'+
       '<div class="us-card-head">'+
-        '<span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+t.label+'</span>'+
+        '<span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+esc2(t.label)+'</span>'+
         '<span class="us-card-hours num">'+r.total_hours+'h</span>'+
       '</div>'+
-      '<div class="us-card-name">'+(r.engagement_name||'-')+'</div>'+
-      '<div class="us-card-meta">'+(r.customer_name||'-')+'</div>'+
+      '<div class="us-card-name">'+esc2(engName)+'</div>'+
+      '<div class="us-card-meta">'+esc2(custName)+'</div>'+
       '<div class="us-card-row">'+
         '<span class="num">'+fmtDate(r.session_date)+'</span>'+
         '<span class="us-card-sep">·</span>'+
         '<span class="num">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+'</span>'+
       '</div>'+
       '<div class="us-card-row">'+
-        '<span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+(r.activity_type||'-')+'</span>'+
-        '<span class="us-card-emp">'+(r.employee||'-')+'</span>'+
+        '<span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+esc2(actType)+'</span>'+
+        '<span class="us-card-emp">'+esc2(emp)+'</span>'+
       '</div>'+
-      (r.session_info?'<div class="us-card-info" title="'+(r.session_info||'')+'">'+(r.session_info||'')+'</div>':'')+
+      (info?'<div class="us-card-info" title="'+esc2(info)+'">'+esc2(info)+'</div>':'')+
       (canEdit?'<div class="us-card-actions">'+actions+'</div>':'')+
     '</div>';
   });

@@ -469,12 +469,23 @@ async function renderManager() {
 
 // == APPROVALS (MANAGER) ==========================================
 async function updateNotifBadge() {
-  const [{data:coReqs},{data:lvReqs},{data:otReqs}]=await Promise.all([
+  const [coRes,lvRes,otRes]=await Promise.all([
     sb.from('comp_off_requests').select('id').eq('status','pending'),
     sb.from('leave_requests').select('id').eq('status','pending'),
     sb.from('ot_sessions').select('id').eq('status','pending')
   ]);
-  const total=(coReqs||[]).length+(lvReqs||[]).length+(otReqs||[]).length;
+  // If any of the three count queries errored (network blip, RLS hiccup),
+  // bail out silently — better to leave the badge in its previous state
+  // than to display a misleading total. Console-warn for diagnostics.
+  if (coRes.error || lvRes.error || otRes.error) {
+    console.warn('updateNotifBadge: fetch error, skipping update', {
+      co: coRes.error && coRes.error.message,
+      lv: lvRes.error && lvRes.error.message,
+      ot: otRes.error && otRes.error.message
+    });
+    return;
+  }
+  const total=(coRes.data||[]).length+(lvRes.data||[]).length+(otRes.data||[]).length;
   const badge=document.getElementById('notif-badge');
   if (!badge) return;
   if (total>0) {

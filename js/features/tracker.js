@@ -1199,10 +1199,12 @@ async function moveMilestone(id, delta) {
   var bSeq = b.sequence || (swapIdx+1);
   if (aSeq === bSeq) { aSeq = idx+1; bSeq = swapIdx+1; }
   var ts = new Date().toISOString();
-  var r1 = await sb.from('engagement_milestones').update({sequence:bSeq, updated_at:ts}).eq('id', a.id);
-  if (r1.error) { alert('Error: '+r1.error.message); return; }
-  var r2 = await sb.from('engagement_milestones').update({sequence:aSeq, updated_at:ts}).eq('id', b.id);
-  if (r2.error) { alert('Error: '+r2.error.message); return; }
+  // Locals deliberately NOT named r1/r2 — `r2` is a global rounding helper
+  // (see CLAUDE.md "Critical Quirks") and shadowing it has bitten us before.
+  var resA = await sb.from('engagement_milestones').update({sequence:bSeq, updated_at:ts}).eq('id', a.id);
+  if (resA.error) { alert('Error: '+resA.error.message); return; }
+  var resB = await sb.from('engagement_milestones').update({sequence:aSeq, updated_at:ts}).eq('id', b.id);
+  if (resB.error) { alert('Error: '+resB.error.message); return; }
   await loadMilestones();
 }
 
