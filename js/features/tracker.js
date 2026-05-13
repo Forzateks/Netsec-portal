@@ -84,12 +84,13 @@ async function loadTracker() {
     return r;
   });
   populateTrackerFilters();
-  renderTracker();
-  // Deep-link support: if the URL carries ?customer=<name> (e.g. user
-  // clicked a customer chip in Manage Engagements), seed the search and
-  // re-render filtered. Runs after the initial render so the input + chip
-  // panel exist in the DOM.
+  // Deep-link support: seed the search input from ?customer=<name> BEFORE
+  // the first render so the filter is applied on first paint — avoids the
+  // brief flash of unfiltered rows users would otherwise see after clicking
+  // a customer chip in Manage Engagements. _trkApplyUrlParams returns early
+  // when no ?customer= is set, so non-deep-link loads pay no cost.
   _trkApplyUrlParams();
+  renderTracker();
 }
 
 function populateTrackerFilters() {
@@ -155,18 +156,18 @@ function _trkUpdateUrlFromSearch() {
 }
 
 // Read ?customer= from the URL (set by navigateToTrackerForCustomer in the
-// customers chip) and seed the tracker search input. Called at the tail of
-// loadTracker so the filter applies on the first render.
+// customers chip) and seed the tracker search input. Seed-only — the caller
+// is responsible for rendering. loadTracker calls this BEFORE renderTracker
+// so the first paint already carries the filter (no flash of unfiltered
+// rows). popstate calls this then renders explicitly because the screen is
+// already loaded by then.
 function _trkApplyUrlParams() {
   try {
     var params = new URLSearchParams(window.location.search);
     var customer = params.get('customer');
     if (!customer) return;
     var s = document.getElementById('trk-search');
-    if (s && s.value !== customer) {
-      s.value = customer;
-      if (typeof applyTrackerFilters === 'function') applyTrackerFilters();
-    }
+    if (s && s.value !== customer) s.value = customer;
   } catch (e) { /* no-op */ }
 }
 
@@ -602,13 +603,16 @@ function _trkRenderCards(rows, TYPE_DEF) {
 // Re-render the tracker if the viewport crosses the 768px mobile breakpoint.
 // Debounced so dragging a window edge doesn't thrash. _trkData is already in
 // memory, so re-render is free (no refetch).
-var _trkLastIsMobile = null;
+// Initialise from the current viewport at module load so the first resize
+// event across the 768px breakpoint actually triggers a re-render. The
+// previous `null` sentinel short-circuited the first crossing.
+var _trkLastIsMobile = (typeof window !== 'undefined' && window.innerWidth < 768);
 var _trkResizeTimer = null;
 window.addEventListener('resize', function(){
   if (_trkResizeTimer) clearTimeout(_trkResizeTimer);
   _trkResizeTimer = setTimeout(function(){
     var nowMobile = window.innerWidth < 768;
-    if (_trkLastIsMobile !== null && _trkLastIsMobile !== nowMobile) {
+    if (_trkLastIsMobile !== nowMobile) {
       var content = document.getElementById('trk-content');
       if (content && _trkData && _trkData.length) renderTracker();
     }

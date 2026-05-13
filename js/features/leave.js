@@ -486,6 +486,11 @@ async function updateNotifBadge() {
       badge._counterAnimated = true;
       animateCounter(badge, total, { duration: 600 });
     } else {
+      // Cancel any in-flight initial-reveal RAF before writing instantly —
+      // otherwise the still-running tick would overwrite the new total back
+      // to its eased intermediate and settle on the OLD value.
+      if (badge._counterRAF)   { cancelAnimationFrame(badge._counterRAF); badge._counterRAF = null; }
+      if (badge._counterTimer) { clearTimeout(badge._counterTimer); badge._counterTimer = null; }
       badge.textContent = total;
     }
   } else {
