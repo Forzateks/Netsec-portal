@@ -14,13 +14,16 @@ let _projectsLoaded = false;
 
 // Customer & engagement lookup
 let CUSTOMERS = []; // [{id, name}]
-let ENGAGEMENTS = []; // [{id, customer_id, name, type, status, ...}] — full new model
+let ENGAGEMENTS = []; // [{id, customer_id, name, type, status, vendor, product_line, ...}]
 let PROJECT_CUSTOMER = {}; // { engagementName: customerName }
 
-// Apply customers + engagements arrays into the global caches used by every
-// session-log dropdown and Manage Engagements. Extracted so we can call it
-// once from the localStorage warm-up and again after the fresh fetch.
-function _applyProjectsData(customers, engagements) {
+// Vendor + Product line catalog — manager-managed lists used for engagement
+// classification. Stored as text on engagements (snapshot pattern) so a
+// renamed/disabled vendor still surfaces correctly on historical rows.
+let VENDORS       = []; // [{id, name, display_order, is_active}]
+let PRODUCT_LINES = []; // [{id, vendor_id, name, display_order, is_active}]
+
+function _applyProjectsData(customers, engagements, vendors, productLines) {
   if (customers && customers.length) {
     CUSTOMERS = customers.filter(function(c){ return c.status !== 'archived'; });
   }
@@ -34,6 +37,8 @@ function _applyProjectsData(customers, engagements) {
     ENGAGEMENTS.forEach(function(e){ if (e.customer_id) PROJECT_CUSTOMER[e.name] = byId[e.customer_id]; });
     _projectsLoaded = true;
   }
+  if (vendors)       VENDORS       = vendors;
+  if (productLines)  PRODUCT_LINES = productLines;
 }
 
 async function loadProjects() {
@@ -43,24 +48,92 @@ async function loadProjects() {
     var cached = localStorage.getItem('netsec.projectsCache');
     if (cached) {
       var c = JSON.parse(cached);
-      _applyProjectsData(c.customers, c.engagements);
+      _applyProjectsData(c.customers, c.engagements, c.vendors, c.productLines);
     }
   } catch (e) { /* corrupt cache, ignore */ }
 
-  // 2) Fresh fetch (customers + engagements in parallel).
-  const [cRes, eRes] = await Promise.all([
+  // 2) Fresh fetch — customers + engagements + vendor catalog in parallel.
+  const [cRes, eRes, vRes, plRes] = await Promise.all([
     sb.from('customers').select('id,name,status').order('name'),
-    sb.from('engagements').select('id,customer_id,name,type,status,created_by,created_at').order('name')
+    sb.from('engagements').select('id,customer_id,name,type,status,vendor,product_line,created_by,created_at').order('name'),
+    sb.from('vendors').select('id,name,display_order,is_active').order('display_order').order('name'),
+    sb.from('product_lines').select('id,vendor_id,name,display_order,is_active').order('display_order').order('name')
   ]);
   if (cRes.error || eRes.error) return; // keep cached data on error
-  _applyProjectsData(cRes.data, eRes.data);
+  // Vendor catalog errors are non-fatal — the dropdowns will just be empty
+  // (engagements still save fine since vendor/product_line are nullable text).
+  _applyProjectsData(cRes.data, eRes.data, vRes.error ? null : vRes.data, plRes.error ? null : plRes.data);
 
   // 3) Update localStorage for next login.
   try {
     localStorage.setItem('netsec.projectsCache', JSON.stringify({
-      customers: cRes.data, engagements: eRes.data, savedAt: Date.now()
+      customers: cRes.data,
+      engagements: eRes.data,
+      vendors: vRes.error ? [] : vRes.data,
+      productLines: plRes.error ? [] : plRes.data,
+      savedAt: Date.now()
     }));
   } catch (e) { /* quota or disabled, ignore */ }
+}
+
+// ── Vendor + Product Line dropdown helpers ────────────────────────
+// Populates a vendor <select> with active vendors plus an "Other (specify)"
+// entry. Inactive vendors only surface when the engagement already references
+// them (so historical data stays accurate without re-introducing the disabled
+// option as a choice for new picks).
+function fillVendorSelect(selectId, currentValue) {
+  var el = document.getElementById(selectId);
+  if (!el) return;
+  var cur = (currentValue !== undefined) ? currentValue : el.value;
+  var active = (VENDORS||[]).filter(function(v){ return v.is_active; });
+  var html = '<option value="">-- Select Vendor --</option>'
+    + active.map(function(v){
+        return '<option value="'+esc2(v.name)+'">'+esc2(v.name)+'</option>';
+      }).join('')
+    + '<option value="__other__">+ Other (specify)</option>';
+  // Preserve a pre-existing value even if the vendor is now inactive
+  if (cur && !active.some(function(v){ return v.name === cur; }) && cur !== '__other__') {
+    var stillExists = (VENDORS||[]).some(function(v){ return v.name === cur; });
+    html = html.replace('-- Select Vendor --</option>',
+      '-- Select Vendor --</option><option value="'+esc2(cur)+'" selected>'+esc2(cur)+(stillExists?' (inactive)':' (custom)')+'</option>');
+  }
+  el.innerHTML = html;
+  if (cur) el.value = cur;
+}
+
+// Populates a product line <select> filtered by vendor name. Disabled when
+// no vendor selected. "Other (specify)" entry always present per vendor.
+function fillProductLineSelect(selectId, vendorName, currentValue) {
+  var el = document.getElementById(selectId);
+  if (!el) return;
+  var cur = (currentValue !== undefined) ? currentValue : el.value;
+  if (!vendorName || vendorName === '__other__') {
+    el.innerHTML = '<option value="">-- Select Vendor first --</option>';
+    el.disabled = true;
+    return;
+  }
+  var vendor = (VENDORS||[]).find(function(v){ return v.name === vendorName; });
+  if (!vendor) {
+    // Custom vendor — no preset product lines, only Other-specify
+    el.innerHTML = '<option value="">-- Select --</option><option value="__other__">+ Other (specify)</option>';
+    el.disabled = false;
+    if (cur) el.value = cur;
+    return;
+  }
+  var lines = (PRODUCT_LINES||[])
+    .filter(function(p){ return p.vendor_id === vendor.id && p.is_active && p.name !== 'Other (specify)'; });
+  var html = '<option value="">-- Select Product Line --</option>'
+    + lines.map(function(p){
+        return '<option value="'+esc2(p.name)+'">'+esc2(p.name)+'</option>';
+      }).join('')
+    + '<option value="__other__">+ Other (specify)</option>';
+  if (cur && !lines.some(function(p){ return p.name === cur; }) && cur !== '__other__') {
+    html = html.replace('-- Select Product Line --</option>',
+      '-- Select Product Line --</option><option value="'+esc2(cur)+'" selected>'+esc2(cur)+' (custom)</option>');
+  }
+  el.innerHTML = html;
+  el.disabled = false;
+  if (cur) el.value = cur;
 }
 
 // Get projects under a given customer (by name). Empty customer -> all.
@@ -112,8 +185,29 @@ async function addEngagement() {
     showAlert('pj-manage-error'); return;
   }
 
+  // Vendor + product line — required for NEW engagements. "Other (specify)"
+  // routes through the inline text input which stores the literal custom name.
+  var vendorSel = document.getElementById('pj-new-vendor');
+  var plSel     = document.getElementById('pj-new-product-line');
+  var vendorVal = vendorSel ? vendorSel.value : '';
+  var plVal     = plSel ? plSel.value : '';
+  if (vendorVal === '__other__') {
+    vendorVal = ((document.getElementById('pj-new-vendor-other')||{}).value||'').trim();
+  }
+  if (plVal === '__other__') {
+    plVal = ((document.getElementById('pj-new-product-line-other')||{}).value||'').trim();
+  }
+  if (!vendorVal) { errEl.textContent = '⚠️ Please select a vendor.';        showAlert('pj-manage-error'); return; }
+  if (!plVal)     { errEl.textContent = '⚠️ Please select a product line.'; showAlert('pj-manage-error'); return; }
+
   const {error} = await sb.from('engagements').insert({
-    customer_id: customer_id, name: name, type: type, status: status, created_by: currentUser
+    customer_id:  customer_id,
+    name:         name,
+    type:         type,
+    status:       status,
+    vendor:       vendorVal,
+    product_line: plVal,
+    created_by:   currentUser
   });
   if (error) { showError('Error: '+error.message); return; }
 
@@ -136,6 +230,12 @@ async function addEngagement() {
   document.getElementById('pj-new-status').value = 'active';
   document.getElementById('pj-new-customer').value = '';
   document.getElementById('pj-new-type').value = '';
+  // Reset vendor/product-line + their Other inputs
+  if (vendorSel) vendorSel.value = '';
+  if (plSel) { plSel.value = ''; plSel.disabled = true; plSel.innerHTML = '<option value="">-- Select Vendor first --</option>'; }
+  ['pj-new-vendor-other','pj-new-product-line-other'].forEach(function(id){
+    var el = document.getElementById(id); if (el) { el.value = ''; el.style.display = 'none'; }
+  });
   showToast('Engagement created ✓');
   _projectsLoaded = false;
   await loadProjects();
@@ -145,6 +245,40 @@ async function addEngagement() {
 
 // Backward-compat alias (anything still referencing addProject keeps working)
 var addProject = addEngagement;
+
+// ── Vendor / Product Line dropdown handlers ──────────────────────
+// Wire the "Other (specify)" toggle behaviour: picking "Other" surfaces an
+// inline text input, picking anything else hides it.
+function onNewVendorChange() {
+  var sel = document.getElementById('pj-new-vendor');
+  var other = document.getElementById('pj-new-vendor-other');
+  if (!sel) return;
+  if (other) other.style.display = (sel.value === '__other__') ? '' : 'none';
+  fillProductLineSelect('pj-new-product-line', sel.value === '__other__' ? '__other__' : sel.value, '');
+  var plOther = document.getElementById('pj-new-product-line-other');
+  if (plOther) { plOther.style.display = 'none'; plOther.value = ''; }
+}
+function onNewProductLineChange() {
+  var sel = document.getElementById('pj-new-product-line');
+  var other = document.getElementById('pj-new-product-line-other');
+  if (!sel || !other) return;
+  other.style.display = (sel.value === '__other__') ? '' : 'none';
+}
+function onEditEngVendorChange() {
+  var sel = document.getElementById('edit-project-vendor');
+  var other = document.getElementById('edit-project-vendor-other');
+  if (!sel) return;
+  if (other) other.style.display = (sel.value === '__other__') ? '' : 'none';
+  fillProductLineSelect('edit-project-product-line', sel.value === '__other__' ? '__other__' : sel.value, '');
+  var plOther = document.getElementById('edit-project-product-line-other');
+  if (plOther) { plOther.style.display = 'none'; plOther.value = ''; }
+}
+function onEditEngProductLineChange() {
+  var sel = document.getElementById('edit-project-product-line');
+  var other = document.getElementById('edit-project-product-line-other');
+  if (!sel || !other) return;
+  other.style.display = (sel.value === '__other__') ? '' : 'none';
+}
 
 // ── UPDATE PROJECT STATUS ────────────────────────────────────────
 async function updateProjectStatus(idOrName, newStatus) {
@@ -538,6 +672,13 @@ async function openEditProject(id) {
   fillCustomerSelect('edit-project-customer', false);
   var custById = {}; (CUSTOMERS||[]).forEach(function(c){ custById[c.id] = c.name; });
   document.getElementById('edit-project-customer').value = custById[data.customer_id] || '';
+  // Seed vendor + product line. Existing engagements with NULL stay blank —
+  // edit flow stays forgiving so users can save without backfilling.
+  fillVendorSelect('edit-project-vendor', data.vendor || '');
+  fillProductLineSelect('edit-project-product-line', data.vendor || '', data.product_line || '');
+  ['edit-project-vendor-other','edit-project-product-line-other'].forEach(function(otherId){
+    var el = document.getElementById(otherId); if (el) { el.value = ''; el.style.display = 'none'; }
+  });
   document.getElementById('edit-project-modal').classList.add('show');
 }
 
@@ -556,13 +697,28 @@ async function saveEditProject() {
   var custRow = (CUSTOMERS||[]).find(function(c){ return c.name === customer; });
   var customer_id = custRow ? custRow.id : null;
 
+  // Vendor + Product Line — edit flow stays forgiving for existing engagements
+  // (NULL allowed). Resolve "Other (specify)" through the inline text input.
+  var vendorVal = (document.getElementById('edit-project-vendor')||{}).value || '';
+  var plVal     = (document.getElementById('edit-project-product-line')||{}).value || '';
+  if (vendorVal === '__other__') {
+    vendorVal = ((document.getElementById('edit-project-vendor-other')||{}).value||'').trim();
+  }
+  if (plVal === '__other__') {
+    plVal = ((document.getElementById('edit-project-product-line-other')||{}).value||'').trim();
+  }
+
   // Read OLD row so we can cascade renames / customer / type changes to session tables
   var oldRes = await sb.from('engagements').select('name,customer_id,type').eq('id', id).single();
   var oldName = oldRes.data ? oldRes.data.name : null;
   var oldCustomerId = oldRes.data ? oldRes.data.customer_id : null;
   var oldType = oldRes.data ? oldRes.data.type : null;
 
-  var {error} = await sb.from('engagements').update({ name: name, status: status, customer_id: customer_id, type: type }).eq('id', id);
+  var {error} = await sb.from('engagements').update({
+    name: name, status: status, customer_id: customer_id, type: type,
+    vendor:       vendorVal || null,
+    product_line: plVal     || null
+  }).eq('id', id);
   if (error) { showError('Error: '+error.message); return; }
 
   // If renamed, cascade the new name to every session table that snapshots it
@@ -626,6 +782,12 @@ function populateProjectDropdowns() {
   fillCustomerSelect('edit-ot-customer', false);
   fillCustomerSelect('edit-pj-customer', false);
   fillCustomerSelect('pj-filter-customer', true);
+
+  // Vendor + Product Line selects on the Add Engagement form. Edit Engagement
+  // modal populates its selects on open (openEditProject) since it needs the
+  // engagement's current values to seed them.
+  fillVendorSelect('pj-new-vendor', '');
+  fillProductLineSelect('pj-new-product-line', '', '');
 
   // Project selects — OT edit forms start unfiltered (until user picks customer)
   fillProjectSelect('pj-project', '', false);
@@ -946,7 +1108,7 @@ function showProjectTab(tab) {
   if (tab==='project' || tab==='poc' || tab==='amc' || tab==='support' || tab==='presales') {
     typePreset = tab; tab = 'engagement';
   }
-  ['uslog','ussess','otsessions','otsummary','engagement','employee','otpolicy','otmanager','manage'].forEach(function(t) {
+  ['uslog','ussess','otsessions','otsummary','engagement','employee','otpolicy','otmanager','manage','vendors'].forEach(function(t) {
     const el  = document.getElementById('pjtab-'+t);
     const sub = document.getElementById('pjsub-'+t);
     if (!el) return;
@@ -976,6 +1138,172 @@ function showProjectTab(tab) {
   if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
   if (tab==='otmanager')  { renderManager(); }
   if (tab==='manage')     { populateProjectDropdowns(); renderCustomersList(); renderManageProjects(); }
+  if (tab==='vendors')    { renderVendorsManage(); }
   setSidebarSubActive('projects', tab);
+}
+
+// ── MANAGE VENDORS & PRODUCT LINES (manager-only) ────────────────
+// Left column lists vendors with a + Add Vendor button. Selecting a vendor
+// expands its product lines on the right with a + Add Product Line button.
+// Disable instead of delete to preserve historical references on engagements.
+var _vendorActiveId = null;
+
+async function renderVendorsManage() {
+  if (!isManager) {
+    document.getElementById('pj-vendors-content').innerHTML = renderEmptyState({
+      icon: 'lock',
+      heading: 'Managers only',
+      sub: 'The vendor / product-line catalog is editable by managers. Ask Venkat if a vendor needs to be added.'
+    });
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
+  // Always pull fresh — the local cache is dropdown-only and won't reflect
+  // edits made in this session until loadProjects() fires again.
+  var [vRes, plRes] = await Promise.all([
+    sb.from('vendors').select('id,name,display_order,is_active').order('display_order').order('name'),
+    sb.from('product_lines').select('id,vendor_id,name,display_order,is_active').order('display_order').order('name')
+  ]);
+  if (vRes.error)  { showError('Could not load vendors: ' + vRes.error.message); return; }
+  if (plRes.error) { showError('Could not load product lines: ' + plRes.error.message); return; }
+  VENDORS = vRes.data || [];
+  PRODUCT_LINES = plRes.data || [];
+
+  // Persist selection across refreshes; fall back to first vendor on first load.
+  if (_vendorActiveId == null && VENDORS.length) _vendorActiveId = VENDORS[0].id;
+
+  var vendorList = VENDORS.map(function(v){
+    var active = (v.id === _vendorActiveId);
+    var statusBadge = v.is_active
+      ? ''
+      : '<span class="badge" style="background:#F3F4F6;color:#6B7280;font-size:10px;margin-left:6px">disabled</span>';
+    return '<div class="vendor-row'+(active?' vendor-row-active':'')+'" onclick="selectVendor('+v.id+')">'+
+      '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>'+esc2(v.name)+'</strong>'+statusBadge+'</div>'+
+      '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();renameVendorPrompt('+v.id+')" title="Rename"><i data-lucide="pencil"></i></button>'+
+      '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();toggleVendorActive('+v.id+')" title="'+(v.is_active?'Disable':'Re-enable')+'"><i data-lucide="'+(v.is_active?'eye-off':'eye')+'"></i></button>'+
+    '</div>';
+  }).join('');
+
+  var activeVendor = VENDORS.find(function(v){ return v.id === _vendorActiveId; });
+  var rightPanel = '';
+  if (!activeVendor) {
+    rightPanel = renderEmptyState({
+      icon: 'package',
+      heading: 'No vendor selected',
+      sub: 'Pick a vendor on the left to see its product lines.'
+    });
+  } else {
+    var lines = PRODUCT_LINES.filter(function(p){ return p.vendor_id === activeVendor.id; });
+    var lineRows = lines.length ? lines.map(function(p){
+      var statusBadge = p.is_active
+        ? ''
+        : '<span class="badge" style="background:#F3F4F6;color:#6B7280;font-size:10px;margin-left:6px">disabled</span>';
+      return '<div class="vendor-row">'+
+        '<div style="flex:1;min-width:0">'+esc2(p.name)+statusBadge+'</div>'+
+        '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="renameProductLinePrompt('+p.id+')" title="Rename"><i data-lucide="pencil"></i></button>'+
+        '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="toggleProductLineActive('+p.id+')" title="'+(p.is_active?'Disable':'Re-enable')+'"><i data-lucide="'+(p.is_active?'eye-off':'eye')+'"></i></button>'+
+      '</div>';
+    }).join('') : '<div style="padding:14px;color:var(--muted);font-size:13px">No product lines yet.</div>';
+
+    rightPanel =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+        '<strong style="color:var(--navy);font-size:15px">'+esc2(activeVendor.name)+' — Product Lines</strong>'+
+        '<button class="btn btn-sm btn-primary" onclick="addProductLinePrompt('+activeVendor.id+')"><i data-lucide="plus" class="btn-icon"></i>Add Product Line</button>'+
+      '</div>'+
+      '<div class="vendor-list">'+lineRows+'</div>';
+  }
+
+  document.getElementById('pj-vendors-content').innerHTML =
+    '<div class="vendor-mgmt-grid">'+
+      '<div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+          '<strong style="color:var(--navy);font-size:15px">Vendors</strong>'+
+          '<button class="btn btn-sm btn-primary" onclick="addVendorPrompt()"><i data-lucide="plus" class="btn-icon"></i>Add Vendor</button>'+
+        '</div>'+
+        '<div class="vendor-list">'+vendorList+'</div>'+
+      '</div>'+
+      '<div>'+rightPanel+'</div>'+
+    '</div>';
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+function selectVendor(id) {
+  _vendorActiveId = id;
+  renderVendorsManage();
+}
+
+async function addVendorPrompt() {
+  var name = prompt('New vendor name:');
+  if (!name) return;
+  name = name.trim();
+  if (!name) return;
+  // Compute a display_order that places it after the existing entries.
+  var maxOrder = (VENDORS||[]).reduce(function(m,v){ return Math.max(m, v.display_order||0); }, 0);
+  var {data, error} = await sb.from('vendors').insert({ name: name, display_order: maxOrder + 10 }).select().single();
+  if (error) { showError('Could not add vendor: ' + error.message); return; }
+  _vendorActiveId = data.id;
+  showToast('Vendor added ✓');
+  await loadProjects();
+  renderVendorsManage();
+}
+
+async function renameVendorPrompt(id) {
+  var v = (VENDORS||[]).find(function(x){ return x.id === id; });
+  if (!v) return;
+  var newName = prompt('Rename vendor:', v.name);
+  if (!newName || newName.trim() === v.name) return;
+  var {error} = await sb.from('vendors').update({ name: newName.trim() }).eq('id', id);
+  if (error) { showError('Could not rename: ' + error.message); return; }
+  showToast('Vendor renamed ✓');
+  await loadProjects();
+  renderVendorsManage();
+}
+
+async function toggleVendorActive(id) {
+  var v = (VENDORS||[]).find(function(x){ return x.id === id; });
+  if (!v) return;
+  var {error} = await sb.from('vendors').update({ is_active: !v.is_active }).eq('id', id);
+  if (error) { showError('Could not toggle: ' + error.message); return; }
+  showToast(v.is_active ? 'Vendor disabled ✓' : 'Vendor re-enabled ✓');
+  await loadProjects();
+  renderVendorsManage();
+}
+
+async function addProductLinePrompt(vendorId) {
+  var name = prompt('New product line name:');
+  if (!name) return;
+  name = name.trim();
+  if (!name) return;
+  var existing = (PRODUCT_LINES||[]).filter(function(p){ return p.vendor_id === vendorId; });
+  var maxOrder = existing.reduce(function(m,p){ return Math.max(m, p.display_order||0); }, 0);
+  // Keep "Other (specify)" at 999 — slot the new one before it
+  var newOrder = Math.min(maxOrder + 10, 990);
+  var {error} = await sb.from('product_lines').insert({ vendor_id: vendorId, name: name, display_order: newOrder });
+  if (error) { showError('Could not add product line: ' + error.message); return; }
+  showToast('Product line added ✓');
+  await loadProjects();
+  renderVendorsManage();
+}
+
+async function renameProductLinePrompt(id) {
+  var p = (PRODUCT_LINES||[]).find(function(x){ return x.id === id; });
+  if (!p) return;
+  var newName = prompt('Rename product line:', p.name);
+  if (!newName || newName.trim() === p.name) return;
+  var {error} = await sb.from('product_lines').update({ name: newName.trim() }).eq('id', id);
+  if (error) { showError('Could not rename: ' + error.message); return; }
+  showToast('Product line renamed ✓');
+  await loadProjects();
+  renderVendorsManage();
+}
+
+async function toggleProductLineActive(id) {
+  var p = (PRODUCT_LINES||[]).find(function(x){ return x.id === id; });
+  if (!p) return;
+  var {error} = await sb.from('product_lines').update({ is_active: !p.is_active }).eq('id', id);
+  if (error) { showError('Could not toggle: ' + error.message); return; }
+  showToast(p.is_active ? 'Product line disabled ✓' : 'Product line re-enabled ✓');
+  await loadProjects();
+  renderVendorsManage();
 }
 

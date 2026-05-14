@@ -194,6 +194,7 @@
       <div class="sidebar-subitem" id="sbi-projects-otpolicy"   onclick="navigateSub('projects','otpolicy')"><i data-lucide="book-open" class="sidebar-subicon"></i>OT Policy</div>
       <div class="sidebar-subitem" id="sbi-projects-otmanager"  onclick="navigateSub('projects','otmanager')" style="display:none"><i data-lucide="shield-check" class="sidebar-subicon"></i>Manager View</div>
       <div class="sidebar-subitem" id="sbi-projects-manage"     onclick="navigateSub('projects','manage')" style="display:none"><i data-lucide="settings-2" class="sidebar-subicon"></i>Manage Engagements</div>
+      <div class="sidebar-subitem" id="sbi-projects-vendors"    onclick="navigateSub('projects','vendors')" style="display:none"><i data-lucide="package" class="sidebar-subicon"></i>Vendors &amp; Products</div>
     </div>
   </div>
 
@@ -585,6 +586,16 @@
           </select>
         </div>
         <div class="form-group">
+          <label>Vendor *</label>
+          <select id="pj-new-vendor" onchange="onNewVendorChange()"></select>
+          <input type="text" id="pj-new-vendor-other" placeholder="Custom vendor name" style="display:none;margin-top:6px">
+        </div>
+        <div class="form-group">
+          <label>Product Line *</label>
+          <select id="pj-new-product-line" onchange="onNewProductLineChange()" disabled></select>
+          <input type="text" id="pj-new-product-line-other" placeholder="Custom product line" style="display:none;margin-top:6px">
+        </div>
+        <div class="form-group">
           <label>Engagement Name *</label>
           <input type="text" id="pj-new-name" placeholder="e.g. ENBD-PHASE3" style="text-transform:uppercase">
         </div>
@@ -629,6 +640,17 @@
       </div>
       <div id="pj-manage-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="pj-manage-content"></div>
+    </div>
+  </div>
+
+  <!-- VENDORS & PRODUCT LINES (manager-only catalog) -->
+  <div id="pjtab-vendors" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">📦 Vendors &amp; Product Lines</div>
+        <span style="font-size:12px;color:var(--muted)">Manager-only catalog. Disabled items stay on existing engagements but won't appear in new pickers.</span>
+      </div>
+      <div id="pj-vendors-content"></div>
     </div>
   </div>
 
@@ -825,6 +847,14 @@
     <div class="form-group">
       <label>Owner</label>
       <div class="ms" id="trk-filter-owner"></div>
+    </div>
+    <div class="form-group">
+      <label>Vendor</label>
+      <div class="ms" id="trk-filter-vendor"></div>
+    </div>
+    <div class="form-group">
+      <label>Product Line</label>
+      <div class="ms" id="trk-filter-product-line"></div>
     </div>
     <div class="form-group">
       <label>Start Date — From</label>
@@ -1873,6 +1903,16 @@
           <option value="support">🚨 Support</option>
           <option value="presales">💼 Pre-Sales-Task</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label>Vendor</label>
+        <select id="edit-project-vendor" onchange="onEditEngVendorChange()"></select>
+        <input type="text" id="edit-project-vendor-other" placeholder="Custom vendor name" style="display:none;margin-top:6px">
+      </div>
+      <div class="form-group">
+        <label>Product Line</label>
+        <select id="edit-project-product-line" onchange="onEditEngProductLineChange()" disabled></select>
+        <input type="text" id="edit-project-product-line-other" placeholder="Custom product line" style="display:none;margin-top:6px">
       </div>
       <div class="form-group">
         <label>Engagement Name *</label>

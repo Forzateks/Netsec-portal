@@ -1145,6 +1145,18 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-type-amc{background:#FFFBEB;color:#B45309}
 .trk-type-support{background:#FFF1F2;color:#9F1239}
 
+/* ── VENDORS & PRODUCT LINES MANAGE ─────────────────────────────── */
+.vendor-mgmt-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:24px}
+.vendor-list{display:flex;flex-direction:column;gap:4px;max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;background:#fafafa}
+.vendor-row{display:flex;align-items:center;gap:6px;padding:8px 10px;font-size:13px;background:#fff;border-radius:6px;border:1px solid transparent;transition:background .12s,border-color .12s;cursor:default}
+.vendor-row:hover{background:#F8FAFC}
+.vendor-row[onclick]{cursor:pointer}
+.vendor-row-active{background:#EFF6FF;border-color:#BFDBFE}
+.vendor-row-active:hover{background:#DBEAFE}
+@media(max-width:640px){
+  .vendor-mgmt-grid{grid-template-columns:1fr;gap:14px}
+}
+
 .badge.trk-status{font-size:11px;padding:3px 9px;border-radius:12px;text-transform:none;letter-spacing:0}
 .trk-status-yet-to-start{background:#F1F5F9;color:#475569}
 .trk-status-initial-phase{background:#E0F2FE;color:#075985}

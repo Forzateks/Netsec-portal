@@ -64,7 +64,7 @@ async function loadTracker() {
   // Avoids relying on Supabase nested-select FK metadata.
   var engRes = await fetchAllRows(function(){
     return sb.from('engagements')
-      .select('id,customer_id,name,type,status,country,partner,category,project_order_no,start_date,end_date,tracker_status,orch_version,ec_version,license_expiry,signed_off_on,owner_employee,tracker_remarks,tracker_updated_at,updated_by,created_at')
+      .select('id,customer_id,name,type,status,vendor,product_line,country,partner,category,project_order_no,start_date,end_date,tracker_status,orch_version,ec_version,license_expiry,signed_off_on,owner_employee,tracker_remarks,tracker_updated_at,updated_by,created_at')
       .order('tracker_updated_at',{ascending:false,nullsFirst:false});
   });
   var custRes = await fetchAllRows(function(){
@@ -94,11 +94,13 @@ async function loadTracker() {
 }
 
 function populateTrackerFilters() {
-  var countries = {}, partners = {}, owners = {};
+  var countries = {}, partners = {}, owners = {}, vendors = {}, productLines = {};
   _trkData.forEach(function(r){
-    if (r.country) countries[r.country] = 1;
-    if (r.partner) partners[r.partner] = 1;
+    if (r.country)        countries[r.country] = 1;
+    if (r.partner)        partners[r.partner] = 1;
     if (r.owner_employee) owners[r.owner_employee] = 1;
+    if (r.vendor)         vendors[r.vendor] = 1;
+    if (r.product_line)   productLines[r.product_line] = 1;
   });
   var toItems = function(obj){
     return Object.keys(obj).sort().map(function(v){return {value:v,label:v};});
@@ -108,6 +110,8 @@ function populateTrackerFilters() {
   msInit('trk-filter-country', toItems(countries), applyTrackerFilters);
   msInit('trk-filter-partner', toItems(partners),  applyTrackerFilters);
   msInit('trk-filter-owner',   toItems(owners),    applyTrackerFilters);
+  msInit('trk-filter-vendor',  toItems(vendors),   applyTrackerFilters);
+  msInit('trk-filter-product-line', toItems(productLines), applyTrackerFilters);
   // Top-level status filter — the fixed 6-value enum (active, sign-off,
   // completed, on-hold, dormant, cancelled). Hardcoded from TRK_TOP_STATUS_MAP
   // so the dropdown never drifts with data. Labels carry the emoji so the
@@ -125,7 +129,7 @@ function populateTrackerFilters() {
 
 function clearTrackerFilters() {
   var search = document.getElementById('trk-search'); if (search) search.value = '';
-  ['trk-filter-country','trk-filter-partner','trk-filter-status','trk-filter-owner'].forEach(function(id){
+  ['trk-filter-country','trk-filter-partner','trk-filter-status','trk-filter-owner','trk-filter-vendor','trk-filter-product-line'].forEach(function(id){
     msSetValues(id, []);
   });
   var sf = document.getElementById('trk-filter-start-from'); if (sf) sf.value = '';
@@ -188,10 +192,12 @@ window.addEventListener('popstate', function(){
 
 function _trkFilteredRows() {
   var search    = ((document.getElementById('trk-search')||{}).value||'').toLowerCase().trim();
-  var countries = msGetValues('trk-filter-country');
-  var partners  = msGetValues('trk-filter-partner');
-  var statuses  = msGetValues('trk-filter-status');   // now filters TOP-LEVEL status
-  var owners    = msGetValues('trk-filter-owner');
+  var countries    = msGetValues('trk-filter-country');
+  var partners     = msGetValues('trk-filter-partner');
+  var statuses     = msGetValues('trk-filter-status');   // top-level status
+  var owners       = msGetValues('trk-filter-owner');
+  var vendors      = msGetValues('trk-filter-vendor');
+  var productLines = msGetValues('trk-filter-product-line');
   var startFrom = ((document.getElementById('trk-filter-start-from')||{}).value || '');
   var startTo   = ((document.getElementById('trk-filter-start-to')||{}).value   || '');
 
@@ -200,8 +206,10 @@ function _trkFilteredRows() {
     if (_trkActiveTab === 'pocs'     && r.type !== 'poc')     return false;
     if (_trkActiveTab === 'amc'      && r.type !== 'amc')     return false;
     if (_trkActiveTab === 'support'  && r.type !== 'support') return false;
-    if (countries.length && countries.indexOf(r.country)        === -1) return false;
-    if (partners.length  && partners.indexOf(r.partner)         === -1) return false;
+    if (countries.length    && countries.indexOf(r.country)        === -1) return false;
+    if (partners.length     && partners.indexOf(r.partner)         === -1) return false;
+    if (vendors.length      && vendors.indexOf(r.vendor)           === -1) return false;
+    if (productLines.length && productLines.indexOf(r.product_line) === -1) return false;
     // Compare against the NORMALIZED top-level status key so 'ongoing' /
     // null / 'on hold' all bucket correctly even when the dropdown user
     // picked 'active' or 'on-hold'.
@@ -543,12 +551,13 @@ function renderTracker() {
   }
 }
 
-// Desktop layout — 6-column table. Engagement (type label + name + PO + remarks),
-// Customer (name + country), Owner, Status, Updated, Actions.
+// Desktop layout — Engagement + Vendor/Product (one stacked column,
+// hidden on small screens), Customer, Owner, Status, Updated, Actions.
 function _trkRenderTable(rows, TYPE_DEF) {
   var th =
     '<tr>'+
       '<th>Engagement</th>'+
+      '<th class="hide-mobile">Vendor / Product</th>'+
       '<th>Customer</th>'+
       '<th class="hide-mobile">Owner</th>'+
       '<th>Status</th>'+
@@ -563,6 +572,10 @@ function _trkRenderTable(rows, TYPE_DEF) {
     var remarksLine = remarksFull
       ? '<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+esc2(remarksFull)+'</div>'
       : '';
+    var vendorCell = r.vendor
+      ? '<div>'+esc2(r.vendor)+'</div>'+
+        (r.product_line?'<div class="trk-cell-sub">'+esc2(r.product_line)+'</div>':'')
+      : '<span class="dim">—</span>';
     return '<tr class="trk-row'+(muted?' trk-row-muted':'')+'" onclick="openTrackerDetail('+r.id+')">'+
       '<td>'+
         '<div class="trk-cell-type"><i data-lucide="'+td.icon+'"></i>'+td.text+'</div>'+
@@ -570,6 +583,7 @@ function _trkRenderTable(rows, TYPE_DEF) {
         (r.project_order_no?'<div class="trk-cell-sub num">PO: '+esc2(r.project_order_no)+'</div>':'')+
         remarksLine+
       '</td>'+
+      '<td class="hide-mobile" style="font-size:12px">'+vendorCell+'</td>'+
       '<td>'+
         '<div>'+esc2(r.customer_name||'—')+'</div>'+
         (r.country?'<div class="trk-cell-sub">'+esc2(r.country)+'</div>':'')+
@@ -602,6 +616,7 @@ function _trkRenderCards(rows, TYPE_DEF) {
       '</div>'+
       '<div class="trk-card-name">'+esc2(r.name||'—')+'</div>'+
       '<div class="trk-card-meta">'+customerLine+'</div>'+
+      (r.vendor?'<div class="trk-card-meta">'+esc2(r.vendor)+(r.product_line?' · '+esc2(r.product_line):'')+'</div>':'')+
       (r.owner_employee?'<div class="trk-card-meta">Owner: '+esc2(r.owner_employee)+'</div>':'')+
       '<div class="trk-card-foot">'+
         trkTopStatusBadge(r.status)+

@@ -902,7 +902,7 @@ async function renderEngagementSummary() {
 
   var PIE_COLORS = ['#0A1F5C','#00A0D2','#C8A832','#3B82F6','#10B981','#8B5CF6','#F59E0B','#EF4444'];
   var pieData = sorted.slice(0,8).map(function(name,i){
-    var clean = name.replace(/ · (Project|POC|Support\/AMC|Pre-Sales-Task)$/, '');
+    var clean = name.replace(/ · (Project|POC|AMC|Support|Pre-Sales-Task)$/, '');
     return { label: clean, value: byEng[name].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
   });
   var custPieData = sortedCust.slice(0,8).map(function(cust,i){
@@ -910,6 +910,34 @@ async function renderEngagementSummary() {
   });
   var pie     = (typeof buildPieChart === 'function') ? buildPieChart(pieData,     'h') : '';
   var custPie = (typeof buildPieChart === 'function') ? buildPieChart(custPieData, 'h') : '';
+
+  // Hours by Vendor + Product Line — join sessions to their engagement via
+  // (engagement_name + session_type) to pick up the vendor/product_line text
+  // stored on the engagement. Sessions whose engagement has NULL vendor get
+  // bucketed as "(no vendor)" so historical rows still surface here.
+  var engByKey = {};
+  (ENGAGEMENTS||[]).forEach(function(e){
+    engByKey[e.name + '||' + e.type] = e;
+  });
+  var byVendor = {}, byProductLine = {};
+  rows.forEach(function(r){
+    var hrs = parseFloat(r.total_hours || 0);
+    var eng = engByKey[(r.engagement_name||'') + '||' + r.session_type];
+    var v   = (eng && eng.vendor)       ? eng.vendor       : '(no vendor)';
+    var p   = (eng && eng.product_line) ? eng.product_line : '(no product line)';
+    byVendor[v]      = (byVendor[v]||0)      + hrs;
+    byProductLine[p] = (byProductLine[p]||0) + hrs;
+  });
+  var sortedVendor      = Object.keys(byVendor)     .sort(function(a,b){ return byVendor[b]      - byVendor[a]; });
+  var sortedProductLine = Object.keys(byProductLine).sort(function(a,b){ return byProductLine[b] - byProductLine[a]; });
+  var vendorPieData = sortedVendor.slice(0,8).map(function(v,i){
+    return { label: v, value: byVendor[v], color: PIE_COLORS[i%PIE_COLORS.length] };
+  });
+  var plPieData = sortedProductLine.slice(0,8).map(function(p,i){
+    return { label: p, value: byProductLine[p], color: PIE_COLORS[i%PIE_COLORS.length] };
+  });
+  var vendorPie = (typeof buildPieChart === 'function') ? buildPieChart(vendorPieData, 'h') : '';
+  var plPie     = (typeof buildPieChart === 'function') ? buildPieChart(plPieData,     'h') : '';
 
   // Type-mix mini-bar (only when All Types is selected)
   var typeMixHtml = '';
@@ -953,6 +981,10 @@ async function renderEngagementSummary() {
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">'+
       '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by '+esc2(typeLabel)+' (Top 8)</div>'+pie+'</div>'+
       '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by Customer (Top 8)</div>'+custPie+'</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">'+
+      '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by Vendor (Top 8)</div>'+vendorPie+'</div>'+
+      '<div class="card" style="margin-bottom:0"><div class="card-title">Hours by Product Line (Top 8)</div>'+plPie+'</div>'+
     '</div>'+
     '<div class="card" style="margin-bottom:20px"><div class="card-title">Quick Stats</div>'+
       '<div class="summary-grid">'+
