@@ -9,7 +9,7 @@
 // SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
 // HTTP-cached copy of /sw.js can't be served when this file ships. The
 // version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=43';
+var SW_REGISTRATION_URL = '/sw.js?v=44';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -132,6 +132,121 @@ function initSidebarEdgeScroll() {
   });
 }
 
+// == PULL-TO-REFRESH (mobile only) =================================
+// Drag down at the top of the page to refresh the current screen's
+// data. Threshold ~ 80px of damped pull (real drag distance ~133px).
+// Desktops never see the indicator (CSS @media min-width:769px).
+//
+// Screen → refresh-handler mapping is intentionally narrow: only the
+// five "live data" screens listed in the spec respond to pull. Other
+// screens (Log Session form, Inventory, KB, Certificates) don't have a
+// natural "refresh this view's data" action, so we no-op.
+function _ptrCurrentHandler() {
+  var active = document.querySelector('.screen.active');
+  if (!active) return null;
+  switch (active.id) {
+    case 'screen-dashboard':
+      return (typeof renderDashboard === 'function') ? renderDashboard : null;
+    case 'screen-tracker':
+      return (typeof loadTracker === 'function') ? loadTracker : null;
+    case 'screen-projects':
+      // Only refresh on the My Sessions sub-tab (the live list). Other
+      // sub-tabs (Log form, summaries) aren't list views worth pulling.
+      var ussess = document.getElementById('pjtab-ussess');
+      if (ussess && ussess.style.display !== 'none' && typeof renderUSSessions === 'function') {
+        return renderUSSessions;
+      }
+      return null;
+    case 'screen-leave':
+      var hist = document.getElementById('ltab-history');
+      if (hist && hist.style.display !== 'none' && typeof renderLeaveHistory === 'function') return renderLeaveHistory;
+      var team = document.getElementById('ltab-team');
+      if (team && team.style.display !== 'none' && typeof renderLeaveTeam === 'function') return renderLeaveTeam;
+      return null;
+    case 'screen-approvals':
+      var ot = document.getElementById('apptab-ot');
+      if (ot && ot.style.display !== 'none' && typeof renderOTApprovals === 'function') return renderOTApprovals;
+      if (typeof renderLeaveApprovals === 'function') return renderLeaveApprovals;
+      return null;
+    default:
+      return null;
+  }
+}
+
+function initPullToRefresh() {
+  // Bail on non-touch devices so we don't waste listener slots
+  if (!('ontouchstart' in window) && !(navigator.maxTouchPoints > 0)) return;
+
+  var ind = document.createElement('div');
+  ind.className = 'ptr-indicator';
+  ind.innerHTML =
+    '<svg class="ptr-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>' +
+    '<svg class="ptr-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>';
+  document.body.appendChild(ind);
+
+  var THRESHOLD = 80;     // px of damped travel required to trigger
+  var MAX_VISUAL = 120;   // cap so the indicator doesn't fly off
+  var startY = 0, dy = 0;
+  var pulling = false, armed = false, refreshing = false;
+
+  function reset(animate) {
+    ind.classList.remove('ptr-ready');
+    ind.style.transition = animate === false ? 'none' : '';
+    ind.style.transform = 'translate(-50%, -60px)';
+    ind.style.opacity = 0;
+    armed = false;
+  }
+
+  document.addEventListener('touchstart', function(e) {
+    if (refreshing) return;
+    if (window.scrollY > 5) return;
+    if (e.touches.length !== 1) return;
+    if (!_ptrCurrentHandler()) return;
+    startY = e.touches[0].clientY;
+    dy = 0;
+    pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (!pulling || refreshing) return;
+    dy = e.touches[0].clientY - startY;
+    if (dy <= 0) {
+      pulling = false;
+      reset(true);
+      return;
+    }
+    // Damp the visual pull so it feels rubbery — real-finger 133px maps
+    // to threshold; further travel still nudges the indicator but slowly.
+    var visual = Math.min(dy * 0.6, MAX_VISUAL);
+    ind.style.transition = 'none';
+    ind.style.transform = 'translate(-50%, ' + (visual - 50) + 'px)';
+    ind.style.opacity = Math.min(visual / THRESHOLD, 1);
+    armed = visual >= THRESHOLD;
+    ind.classList.toggle('ptr-ready', armed);
+  }, { passive: true });
+
+  document.addEventListener('touchend', function() {
+    if (!pulling) return;
+    pulling = false;
+    if (!armed) { reset(true); return; }
+    // Snap to "refreshing" position (~50px), spin the icon, fire the handler
+    refreshing = true;
+    ind.classList.add('ptr-refreshing');
+    ind.style.transition = '';
+    ind.style.transform = 'translate(-50%, 26px)';
+    ind.style.opacity = 1;
+    var handler = _ptrCurrentHandler();
+    var done = function() {
+      refreshing = false;
+      ind.classList.remove('ptr-refreshing');
+      reset(true);
+    };
+    try {
+      Promise.resolve(handler ? handler() : null).then(done, done);
+    } catch (e) { done(); }
+  });
+}
+
 // == INIT ==========================================================
 window.onload = async function() {
   initServiceWorker();
@@ -140,6 +255,7 @@ window.onload = async function() {
   initSidebarEdgeScroll();
   initHamburgerTouch();
   initUserMenuOutsideClose();
+  initPullToRefresh();
   // Supabase puts the link type in the URL hash:
   //   type=recovery            -> forgot-password reset link
   //   type=invite | type=signup -> invitation from manager (first-time login)

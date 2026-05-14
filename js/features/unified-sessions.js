@@ -143,6 +143,147 @@ function initUSLogForm() {
   var dateEl = document.getElementById('us-date');
   if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
   onUSTypeChange();
+  // Draft recovery — surface a banner if the last unsaved state is
+  // still in localStorage. Then start the auto-save heartbeat so any
+  // new typing gets captured.
+  _usDraftCheck();
+  _usDraftStart();
+}
+
+// ── LOG SESSION DRAFT AUTO-SAVE ──────────────────────────────────
+// Snapshots the form to localStorage every 3 seconds so a tab close
+// or accidental nav doesn't lose work. Cleared on successful submit.
+//
+// Scope: only this form has auto-save. Smaller forms (leave request,
+// inventory, customer add) don't justify the localStorage churn.
+var US_DRAFT_KEY = 'draft-log-session';
+var _usDraftTimer = null;
+var _usDraftFields = ['us-type','us-customer','us-engagement','us-activity-type',
+                      'us-info','us-date','us-start','us-end','us-mode',
+                      'us-stake','us-remarks'];
+
+function _usDraftSnapshot() {
+  var data = { savedAt: new Date().toISOString() };
+  _usDraftFields.forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) data[id] = el.value;
+  });
+  data.team = [];
+  document.querySelectorAll('#us-team-checkboxes input[type=checkbox]:checked').forEach(function(cb){
+    data.team.push(cb.value);
+  });
+  return data;
+}
+
+// "Blank" = no user-typed content. Defaults like today's date or the
+// pre-checked currentUser teammate don't count as a draft worth keeping.
+function _usDraftIsBlank(d) {
+  if (!d) return true;
+  var hasContent = false;
+  ['us-info','us-customer','us-engagement','us-start','us-end','us-stake','us-remarks'].forEach(function(id){
+    if (d[id]) hasContent = true;
+  });
+  // Team beyond just currentUser counts as content
+  if (d.team && d.team.length > 1) hasContent = true;
+  if (d.team && d.team.length === 1 && d.team[0] !== currentUser) hasContent = true;
+  return !hasContent;
+}
+
+function _usDraftStart() {
+  _usDraftStop();
+  _usDraftTimer = setInterval(function(){
+    var snap = _usDraftSnapshot();
+    if (_usDraftIsBlank(snap)) return;
+    try { localStorage.setItem(US_DRAFT_KEY, JSON.stringify(snap)); } catch(e) { /* quota or disabled */ }
+  }, 3000);
+}
+
+function _usDraftStop() {
+  if (_usDraftTimer) { clearInterval(_usDraftTimer); _usDraftTimer = null; }
+}
+
+function _usDraftClear() {
+  try { localStorage.removeItem(US_DRAFT_KEY); } catch(e) {}
+  var banner = document.getElementById('us-draft-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function _usDraftCheck() {
+  var raw = null;
+  try { raw = localStorage.getItem(US_DRAFT_KEY); } catch(e) {}
+  if (!raw) return;
+  var d;
+  try { d = JSON.parse(raw); } catch(e) { _usDraftClear(); return; }
+  if (_usDraftIsBlank(d)) { _usDraftClear(); return; }
+
+  var when = (typeof relativeTime === 'function' && d.savedAt) ? relativeTime(d.savedAt) : 'a moment ago';
+  var banner = document.getElementById('us-draft-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'us-draft-banner';
+    banner.className = 'us-draft-banner';
+    var card = document.querySelector('#pjtab-uslog .card');
+    if (card && card.parentNode) card.parentNode.insertBefore(banner, card);
+  }
+  banner.innerHTML =
+    '<span class="us-draft-msg"><strong>Unsaved draft</strong> from ' + when + ' — restore the values you were typing?</span>' +
+    '<button type="button" class="btn btn-sm btn-primary" onclick="_usDraftResume()">Resume</button>' +
+    '<button type="button" class="btn btn-sm btn-ghost" onclick="_usDraftDiscard()">Discard</button>';
+  banner.style.display = '';
+}
+
+function _usDraftResume() {
+  var raw = null;
+  try { raw = localStorage.getItem(US_DRAFT_KEY); } catch(e) {}
+  if (!raw) return;
+  var d;
+  try { d = JSON.parse(raw); } catch(e) { return; }
+
+  // Type must be set first because it controls which other rows are
+  // visible AND populates the engagement dropdown.
+  if (d['us-type']) {
+    var t = document.getElementById('us-type');
+    if (t) t.value = d['us-type'];
+    if (typeof onUSTypeChange === 'function') onUSTypeChange();
+  }
+  // Customer next so the engagement dropdown filters correctly
+  if (d['us-customer']) {
+    var c = document.getElementById('us-customer');
+    if (c) c.value = d['us-customer'];
+    if (typeof onUSCustomerChange === 'function') onUSCustomerChange();
+  }
+  // Remaining straightforward fields
+  ['us-engagement','us-activity-type','us-info','us-date','us-start','us-end','us-mode','us-stake','us-remarks'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el && d[id] !== undefined && d[id] !== '') el.value = d[id];
+  });
+  // Team checkboxes
+  if (Array.isArray(d.team)) {
+    document.querySelectorAll('#us-team-checkboxes input[type=checkbox]').forEach(function(cb){
+      cb.checked = d.team.indexOf(cb.value) !== -1;
+      var lbl = cb.parentElement;
+      if (lbl) {
+        lbl.style.background = cb.checked ? '#E0F7FF' : 'white';
+        lbl.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
+      }
+    });
+  }
+  if (typeof updateUSPreview === 'function') updateUSPreview();
+  var banner = document.getElementById('us-draft-banner');
+  if (banner) banner.style.display = 'none';
+  showToast('Draft restored ✓');
+}
+
+async function _usDraftDiscard() {
+  var ok = await confirmAction({
+    title: 'Discard the unsaved draft?',
+    body: 'The values you were typing will be removed and you\'ll start with a fresh form.',
+    confirmText: 'Discard',
+    danger: false
+  });
+  if (!ok) return;
+  _usDraftClear();
+  showToast('Draft discarded');
 }
 
 function updateUSPreview() {
@@ -300,6 +441,8 @@ async function saveUnifiedSession() {
     lbl.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
   });
 
+  // Successful save — wipe the draft so the banner doesn't reappear next visit
+  _usDraftClear();
   showToast('Session logged ✓' + otSummary);
   updateUSPreview();
 }

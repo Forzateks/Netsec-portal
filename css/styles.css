@@ -1557,6 +1557,53 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .toast.toast-leaving{animation:none;opacity:0}
 }
 
+/* ── PULL-TO-REFRESH ─────────────────────────────────────────────
+   Floating circular indicator that descends from the top edge while
+   the user drags. Below the 769px breakpoint only — desktops use
+   the existing nav refresh buttons. */
+.ptr-indicator{
+  position:fixed;top:0;left:50%;
+  transform:translate(-50%,-60px);
+  z-index:9998;
+  width:42px;height:42px;
+  background:#fff;
+  border-radius:50%;
+  box-shadow:0 6px 18px rgba(10,31,92,.18),0 2px 6px rgba(10,31,92,.08);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),opacity .2s ease;
+  opacity:0;
+  pointer-events:none;
+  color:var(--navy);
+}
+.ptr-indicator svg{width:20px;height:20px;display:block;transition:transform .2s ease}
+.ptr-indicator .ptr-spinner{display:none}
+.ptr-indicator.ptr-ready .ptr-arrow{transform:rotate(180deg)}
+.ptr-indicator.ptr-refreshing .ptr-arrow{display:none}
+.ptr-indicator.ptr-refreshing .ptr-spinner{display:block;animation:ptrSpin .7s linear infinite}
+@keyframes ptrSpin{to{transform:rotate(360deg)}}
+@media(min-width:769px){
+  .ptr-indicator{display:none !important}
+}
+@media (prefers-reduced-motion: reduce){
+  .ptr-indicator{transition:opacity .2s ease}
+  .ptr-indicator .ptr-spinner{animation-duration:1.5s}
+}
+
+/* ── LOG SESSION DRAFT BANNER ────────────────────────────────────
+   Inline amber strip surfaced above the form when a recovered draft
+   is available. Matches the gold/warning tokens used elsewhere. */
+.us-draft-banner{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:12px 14px;
+  background:linear-gradient(180deg,#FEF3C7 0%,#FDE68A 100%);
+  border:1px solid #FCD34D;
+  border-radius:10px;
+  margin-bottom:16px;
+  box-shadow:0 1px 0 rgba(146,64,14,.05);
+}
+.us-draft-banner .us-draft-msg{flex:1;min-width:200px;font-size:13px;color:#78350F;line-height:1.4}
+.us-draft-banner .us-draft-msg strong{color:#451A03}
+
 /* ── CONFIRM MODAL TYPING INPUT ─────────────────────────────────── */
 .confirm-typing-wrap{margin-top:16px}
 .confirm-typing-label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
