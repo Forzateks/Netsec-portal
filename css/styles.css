@@ -238,6 +238,17 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
    .top-bar at the top of the page. */
 .sidebar-section-label{font-size:11px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:18px 20px 6px}
 .sidebar-section-label:first-of-type{padding-top:14px}
+
+/* Brief teal pulse used by trkOpenNew to highlight the Add Engagement
+   form card after navigating from the Tracker. Single-shot animation —
+   the class is removed and re-added each invocation to retrigger. */
+@keyframes pj-card-flash-kf {
+  0%   { box-shadow: 0 0 0 0   rgba(0,160,210,0); }
+  18%  { box-shadow: 0 0 0 5px rgba(0,160,210,.28); }
+  100% { box-shadow: 0 0 0 0   rgba(0,160,210,0); }
+}
+.pj-card-flash { animation: pj-card-flash-kf 1.4s ease-out; }
+@media (prefers-reduced-motion: reduce){ .pj-card-flash{ animation: none; } }
 .sidebar-item{display:flex;align-items:center;gap:12px;padding:9px 20px 9px 17px;font-size:14px;color:var(--text);cursor:pointer;transition:background .15s,color .15s;border-left:3px solid transparent;font-weight:500;position:relative;user-select:none}
 .sidebar-item:hover{background:rgba(10,31,92,.04);color:var(--navy)}
 .sidebar-item.active{background:rgba(0,160,210,.08);color:var(--navy);border-left-color:var(--teal);font-weight:600}
