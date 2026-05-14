@@ -300,10 +300,7 @@ async function saveUnifiedSession() {
     lbl.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
   });
 
-  // Update alert text to summarize what was saved
-  var successEl = document.getElementById('us-success');
-  if (successEl) successEl.textContent = '✅ Session saved' + otSummary;
-  showAlert('us-success');
+  showToast('Session logged ✓' + otSummary);
   updateUSPreview();
 }
 
@@ -448,7 +445,7 @@ function populateUSFilters() {
 // === EDIT / DELETE ============================================
 async function openEditUS(id) {
   var res = await sb.from('unified_sessions').select('*').eq('id', id).single();
-  if (res.error || !res.data) { alert('Could not load session.'); return; }
+  if (res.error || !res.data) { showError('Could not load session.'); return; }
   var r = res.data;
   document.getElementById('edit-us-id').value = r.id;
   document.getElementById('edit-us-type').value = r.session_type;
@@ -536,8 +533,13 @@ async function saveEditUS() {
   // Approved-OT warning
   var wasApproved = !!(oldOt && oldOt.status === 'approved');
   if (wasApproved) {
-    var msg = 'WARNING: This session has APPROVED OT linked to it ('+oldOt.credited_hours+'h credited).\n\nSaving will recalculate the OT and reset its status to PENDING. The manager will need to re-approve it. Comp-off balance for ' + sessionEmployee + ' may change.\n\nContinue?';
-    if (!confirm(msg)) return;
+    var ok = await confirmAction({
+      title: 'Recalculate this session?',
+      body: 'This session has APPROVED OT linked ('+oldOt.credited_hours+'h credited).\n\nSaving will recalculate the OT and reset its status to PENDING. The manager will need to re-approve. Comp-off balance for '+sessionEmployee+' may change.',
+      confirmText: 'Save & reset to pending',
+      danger: false
+    });
+    if (!ok) return;
   }
 
   var payload = {
@@ -617,6 +619,7 @@ async function saveEditUS() {
   }
 
   closeEditUS();
+  showToast('Session updated ✓');
   renderUSSessions();
 }
 
@@ -954,7 +957,7 @@ async function renderUnifiedTypeSummary(typeKey) {
 async function deleteUS(id) {
   // Read the row to find any linked OT and its status
   var res = await sb.from('unified_sessions').select('linked_ot_session_id,employee').eq('id', id).single();
-  if (res.error) { alert('Could not load session.'); return; }
+  if (res.error) { showError('Could not load session.'); return; }
   var oldOtId = res.data.linked_ot_session_id;
   var sessionEmployee = res.data.employee;
 
@@ -964,19 +967,20 @@ async function deleteUS(id) {
     if (!otRes.error) oldOt = otRes.data;
   }
 
-  var msg = 'Delete this session?';
+  var dOpts = { title: 'Delete this session?', body: 'This cannot be undone.', confirmText: 'Delete' };
   if (oldOt && oldOt.status === 'approved') {
-    msg = 'WARNING: This session has APPROVED OT linked to it ('+oldOt.credited_hours+'h credited as ' + oldOt.band + ').\n\nDeleting will also remove that OT row, reducing ' + sessionEmployee + '\'s comp-off balance.\n\nContinue?';
+    dOpts.title = 'Delete session with approved OT?';
+    dOpts.body  = 'This session has APPROVED OT linked ('+oldOt.credited_hours+'h credited as '+oldOt.band+').\n\nDeleting will also remove that OT row, reducing '+sessionEmployee+'\'s comp-off balance.\n\nThis cannot be undone.';
   } else if (oldOtId) {
-    msg = 'Delete this session?\n\nThe linked ' + (oldOt ? oldOt.status : 'pending') + ' OT record will also be deleted.';
+    dOpts.body = 'The linked '+(oldOt ? oldOt.status : 'pending')+' OT record will also be deleted.\n\nThis cannot be undone.';
   }
-  if (!confirm(msg)) return;
+  if (!await confirmAction(dOpts)) return;
 
   if (oldOtId) {
     await sb.from('ot_sessions').delete().eq('id', oldOtId);
   }
   var del = await sb.from('unified_sessions').delete().eq('id', id);
-  if (del.error) { alert('Error: ' + del.error.message); return; }
+  if (del.error) { showError('Error: ' + del.error.message); return; }
 
   // Notify manager when an approved OT row was just deleted
   if (oldOt && oldOt.status === 'approved' && typeof notifyManagerOTEvent === 'function') {
@@ -984,5 +988,6 @@ async function deleteUS(id) {
     notifyManagerOTEvent('ot_deleted_after_approval', id, nm);
   }
 
+  showToast('Session deleted ✓');
   renderUSSessions();
 }

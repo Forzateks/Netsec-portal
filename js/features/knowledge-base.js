@@ -76,7 +76,7 @@ function renderKBArticles(data) {
     return '<div class="kb-card">'+
       '<div class="kb-card-meta">'+
       '<span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'General')+'</span>'+
-      '<span class="kb-author">by <strong>'+esc2(a.submitted_by)+'</strong> · '+fmtDate(a.created_at)+'</span>'+
+      '<span class="kb-author">by <strong>'+esc2(a.submitted_by)+'</strong> · <span title="'+relativeTimeTitle(a.created_at)+'">'+relativeTime(a.created_at)+'</span></span>'+
       '</div>'+
       '<div class="kb-title">'+esc2(a.title)+'</div>'+
       '<div class="kb-excerpt">'+esc2(excerpt)+'</div>'+
@@ -97,7 +97,7 @@ function openKBArticle(id) {
   var tags = (a.tags||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
   document.getElementById('kb-view-cat').innerHTML='<span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'General')+'</span>';
   document.getElementById('kb-view-title').textContent=a.title;
-  document.getElementById('kb-view-meta').innerHTML='Submitted by <strong>'+esc2(a.submitted_by)+'</strong> &nbsp;·&nbsp; '+fmtDate(a.created_at);
+  document.getElementById('kb-view-meta').innerHTML='Submitted by <strong>'+esc2(a.submitted_by)+'</strong> &nbsp;·&nbsp; <span title="'+relativeTimeTitle(a.created_at)+'">'+relativeTime(a.created_at)+'</span>';
   document.getElementById('kb-view-tags').innerHTML=tags.map(function(t){return '<span class="kb-tag">'+esc2(t)+'</span>';}).join('');
   document.getElementById('kb-view-body').textContent=a.content;
   var urlEl=document.getElementById('kb-view-url');
@@ -127,7 +127,7 @@ async function submitKBArticle() {
   var title   = (document.getElementById('kb-title').value||'').trim();
   var category= document.getElementById('kb-category').value;
   var content = (document.getElementById('kb-content').value||'').trim();
-  if (!title||!category||!content){alert('Title, Category and Content are required.');return;}
+  if (!title||!category||!content){showError('Title, Category and Content are required.');return;}
   var btn=document.getElementById('kb-submit-btn');
   btn.disabled=true; btn.textContent='⏳ Publishing...';
   var {error}=await sb.from('kb_articles').insert({
@@ -138,8 +138,8 @@ async function submitKBArticle() {
     submitted_by:currentUser
   });
   btn.disabled=false; btn.innerHTML='<i data-lucide="send" class="btn-icon"></i>Publish Article'; if (typeof renderIcons === 'function') renderIcons();
-  if (error){alert('Error: '+error.message);return;}
-  showAlert('kb-submit-success');
+  if (error){showError('Error: '+error.message);return;}
+  showToast('Article published ✓');
   resetKBForm();
   showKBTab('browse');
 }
@@ -166,7 +166,7 @@ async function loadMyKBArticles() {
     return '<tr>'+
       '<td style="font-weight:600">'+esc2(a.title)+'</td>'+
       '<td><span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'—')+'</span></td>'+
-      '<td style="font-size:12px;color:var(--muted)">'+fmtDate(a.created_at)+'</td>'+
+      '<td style="font-size:12px;color:var(--muted)" title="'+relativeTimeTitle(a.created_at)+'">'+relativeTime(a.created_at)+'</td>'+
       '<td style="white-space:nowrap">'+
         '<button class="btn btn-sm btn-ghost" onclick="openKBArticle('+a.id+')" style="margin-right:6px">👁 View</button>'+
         '<button class="btn btn-sm btn-ghost" onclick="openKBEditModal('+a.id+')" style="margin-right:6px">✏️ Edit</button>'+
@@ -180,7 +180,7 @@ async function loadMyKBArticles() {
 function openKBEditModal(id) {
   var a=_kbData.find(function(x){return x.id===id;});
   if (!a) return;
-  if (a.submitted_by!==currentUser && !isManager){alert('You can only edit your own articles.');return;}
+  if (a.submitted_by!==currentUser && !isManager){showError('You can only edit your own articles.');return;}
   document.getElementById('kb-edit-id').value=id;
   document.getElementById('kb-edit-title').value=a.title||'';
   document.getElementById('kb-edit-category').value=a.category||'';
@@ -199,7 +199,7 @@ async function saveKBEdit() {
   var id=parseInt(document.getElementById('kb-edit-id').value);
   var title=(document.getElementById('kb-edit-title').value||'').trim();
   var content=(document.getElementById('kb-edit-content').value||'').trim();
-  if (!title||!content){alert('Title and Content are required.');return;}
+  if (!title||!content){showError('Title and Content are required.');return;}
   var btn=document.getElementById('kb-edit-save-btn');
   btn.disabled=true; btn.textContent='⏳ Saving...';
   var {error}=await sb.from('kb_articles').update({
@@ -211,18 +211,24 @@ async function saveKBEdit() {
     updated_at:new Date().toISOString()
   }).eq('id',id);
   btn.disabled=false; btn.innerHTML='<i data-lucide="save" class="btn-icon"></i>Save'; if (typeof renderIcons === 'function') renderIcons();
-  if (error){alert('Error: '+error.message);return;}
+  if (error){showError('Error: '+error.message);return;}
   closeKBEditModal();
+  showToast('Article updated ✓');
   refreshKBViews();
 }
 
 async function deleteKBArticle(id) {
   var a=_kbData.find(function(x){return x.id===id;});
   if (!a) return;
-  if (a.submitted_by!==currentUser && !isManager){alert('You can only delete your own articles.');return;}
-  if (!confirm('Delete "'+a.title+'"? This cannot be undone.')) return;
+  if (a.submitted_by!==currentUser && !isManager){showError('You can only delete your own articles.');return;}
+  if (!await confirmAction({
+    title: 'Delete "'+a.title+'"?',
+    body: 'This cannot be undone.',
+    confirmText: 'Delete article'
+  })) return;
   closeKBModal();
   var {error}=await sb.from('kb_articles').delete().eq('id',id);
-  if (error){alert('Error: '+error.message);return;}
+  if (error){showError('Error: '+error.message);return;}
+  showToast('Article deleted ✓');
   refreshKBViews();
 }

@@ -66,7 +66,7 @@ function otApprovalCard(r) {
   return '<div class="request-card '+st+'" style="margin-bottom:10px">'+
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'+
     '<div style="font-size:13px;line-height:1.6">'+info+
-    '<br><span style="font-size:11px;color:var(--muted)">Submitted: '+fmtDate(r.created_at)+'</span></div>'+
+    '<br><span style="font-size:11px;color:var(--muted)" title="'+relativeTimeTitle(r.created_at)+'">Submitted '+relativeTime(r.created_at)+'</span></div>'+
     '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'+
     '<span class="badge badge-'+st+'">'+statusIcon(st)+' '+cap(st)+'</span>'+
     (isPending?'<button class="btn btn-sm btn-primary" onclick="openApproveModal(\'ot\','+r.id+',\''+r.employee+'\')">Review</button>':'')+

@@ -251,6 +251,7 @@ async function uploadCertificate() {
   }
 
   closeCertUploadModal();
+  showToast('Certificate uploaded ✓');
   await loadCertificates();
 }
 
@@ -259,7 +260,7 @@ async function uploadCertificate() {
 function openCertEditModal(id) {
   var c = _certData.find(function(x){return x.id===id;});
   if (!c) return;
-  if (c.employee !== currentUser) { alert('You can only edit your own certificates.'); return; }
+  if (c.employee !== currentUser) { showError('You can only edit your own certificates.'); return; }
   document.getElementById('cert-edit-id').value     = String(id);
   document.getElementById('cert-edit-name').value   = c.name || '';
   document.getElementById('cert-edit-issue').value  = c.issue_date || '';
@@ -337,6 +338,7 @@ async function saveCertEdit() {
   btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Changes';
   if (typeof renderIcons === 'function') renderIcons();
   closeCertEditModal();
+  showToast('Certificate updated ✓');
   await loadCertificates();
 }
 
@@ -349,7 +351,7 @@ async function downloadCertificate(id) {
   // original filename rather than the storage path.
   var res = await sb.storage.from('certificates').createSignedUrl(c.file_url, 60, { download: c.file_name || true });
   if (res.error || !res.data || !res.data.signedUrl) {
-    alert('Could not download: ' + ((res.error && res.error.message) || 'no URL returned'));
+    showError('Could not download: ' + ((res.error && res.error.message) || 'no URL returned'));
     return;
   }
   // Trigger download
@@ -363,14 +365,18 @@ async function downloadCertificate(id) {
 
 // ── delete ─────────────────────────────────────────────────────────
 
-function confirmDeleteCertificate(id) {
+async function confirmDeleteCertificate(id) {
   var c = _certData.find(function(x){return x.id===id;});
   if (!c) return;
   if (c.employee !== currentUser && !isManager) {
-    alert('You can only delete your own certificates.');
+    showError('You can only delete your own certificates.');
     return;
   }
-  if (!confirm('Delete certificate "'+c.name+'"?\n\nThis will permanently remove the file. This cannot be undone.')) return;
+  if (!await confirmAction({
+    title: 'Delete certificate "'+c.name+'"?',
+    body: 'This will permanently remove the file.\n\nThis cannot be undone.',
+    confirmText: 'Delete certificate'
+  })) return;
   deleteCertificate(id);
 }
 
@@ -380,11 +386,12 @@ async function deleteCertificate(id) {
   // Delete DB row first (then file). If we deleted file first and the DB
   // delete failed, we'd be left with a dangling row pointing at nothing.
   var { error } = await sb.from('certificates').delete().eq('id', id);
-  if (error) { alert('Could not delete: '+error.message); return; }
+  if (error) { showError('Could not delete: '+error.message); return; }
   if (c.file_url) {
     sb.storage.from('certificates').remove([c.file_url]).catch(function(err){
       console.warn('Storage delete failed (row already gone):', err);
     });
   }
+  showToast('Certificate deleted ✓');
   await loadCertificates();
 }

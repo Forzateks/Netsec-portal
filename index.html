@@ -1910,6 +1910,22 @@
   </div>
 </div>
 
+<!-- ── CONFIRM MODAL — shared across the app for destructive actions ── -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title" id="confirm-modal-title">Are you sure?</div>
+    <div class="confirm-body" id="confirm-modal-body"></div>
+    <div class="confirm-typing-wrap" id="confirm-modal-typing-wrap" style="display:none">
+      <label class="confirm-typing-label">Type <span class="confirm-typing-target" id="confirm-modal-typing-target"></span> to confirm:</label>
+      <input type="text" id="confirm-modal-typing-input" class="confirm-typing-input" autocomplete="off">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="confirm-modal-cancel">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirm-modal-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/core/state.js"></script>
 <script src="js/core/auth.js"></script>
 <script src="js/features/overtime.js"></script>

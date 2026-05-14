@@ -384,8 +384,14 @@ async function renderSessions() {
 }
 
 async function deleteSession(id) {
-  if (!confirm('Delete this session?')) return;
-  await sb.from('ot_sessions').delete().eq('id',id);
+  if (!await confirmAction({
+    title: 'Delete this OT session?',
+    body: 'This will permanently remove the session and any linked CO credit.\n\nThis cannot be undone.',
+    confirmText: 'Delete'
+  })) return;
+  var res = await sb.from('ot_sessions').delete().eq('id',id);
+  if (res.error) { showError('Error: '+res.error.message); return; }
+  showToast('Session deleted ✓');
   renderSessions();
 }
 
@@ -455,7 +461,7 @@ function selectSummaryEmp(el,emp) {
 let _recomputeDiff = null;
 
 async function recomputeAllOT(mode) {
-  if (!isManager) { alert('Manager only.'); return; }
+  if (!isManager) { showError('Manager only.'); return; }
   var resultEl = document.getElementById('recompute-result');
   var applyBtn = document.getElementById('recompute-apply-btn');
   resultEl.style.display = 'block';
@@ -499,10 +505,15 @@ async function recomputeAllOT(mode) {
 
   // mode === 'apply'
   if (!_recomputeDiff || !_recomputeDiff.length) {
-    alert('Run Preview first.');
+    showError('Run Preview first.');
     return;
   }
-  if (!confirm('Apply policy recompute to '+_recomputeDiff.length+' sessions? This updates band, rate, duration, and credited hours. Cannot be undone.')) return;
+  if (!await confirmAction({
+    title: 'Apply policy recompute?',
+    body: 'This will run calcOT() on '+_recomputeDiff.length+' session'+(_recomputeDiff.length===1?'':'s')+' and update band, rate, duration, and credited hours.\n\nThis cannot be undone.',
+    confirmText: 'Apply recompute',
+    danger: false
+  })) return;
   applyBtn.disabled = true;
   resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Updating '+_recomputeDiff.length+' sessions...</div>';
   var ok = 0, fail = 0;
@@ -583,7 +594,7 @@ async function findPolicyViolators(fromDate) {
 }
 
 async function previewViolations() {
-  if (!isManager) { alert('Manager only.'); return; }
+  if (!isManager) { showError('Manager only.'); return; }
   var resultEl = document.getElementById('violations-result');
   var applyBtn = document.getElementById('violations-apply-btn');
   var fromEl   = document.getElementById('violations-from');
@@ -640,15 +651,20 @@ async function previewViolations() {
 
 async function applyViolationCleanup() {
   if (!isManager) return;
-  if (!_violationPlan) { alert('Run Preview Violations first.'); return; }
+  if (!_violationPlan) { showError('Run Preview Violations first.'); return; }
 
   var allDel = [];
   Object.keys(_violationPlan).forEach(function(emp){
     allDel = allDel.concat(_violationPlan[emp].recommendation.del);
   });
-  if (!allDel.length) { alert('Nothing to archive.'); return; }
+  if (!allDel.length) { showError('Nothing to archive.'); return; }
 
-  if (!confirm('Archive '+allDel.length+' OT session(s)?\n\nThey will be marked as archived (no longer count toward CO) but stay visible to manager and the affected employee for reference. Reason will be auto-recorded.')) return;
+  if (!await confirmAction({
+    title: 'Archive '+allDel.length+' policy-violating session'+(allDel.length===1?'':'s')+'?',
+    body: 'They will be marked archived (no longer count toward CO) but stay visible to manager and the affected employee for reference. The reason will be auto-recorded.',
+    confirmText: 'Archive',
+    danger: false
+  })) return;
 
   var resultEl = document.getElementById('violations-result');
   var applyBtn = document.getElementById('violations-apply-btn');
@@ -680,7 +696,7 @@ async function applyViolationCleanup() {
 let _reevalPlan = null;
 
 async function previewReevalArchived() {
-  if (!isManager) { alert('Manager only.'); return; }
+  if (!isManager) { showError('Manager only.'); return; }
   var resultEl = document.getElementById('reeval-result');
   var applyBtn = document.getElementById('reeval-apply-btn');
   resultEl.style.display = 'block';
@@ -725,8 +741,13 @@ async function previewReevalArchived() {
 
 async function applyReevalArchived() {
   if (!isManager) return;
-  if (!_reevalPlan || !_reevalPlan.length) { alert('Run Preview first.'); return; }
-  if (!confirm('Re-evaluate '+_reevalPlan.length+' archived session(s)?\n\nThey will be marked APPROVED with updated credit. Their CO contribution will resume.')) return;
+  if (!_reevalPlan || !_reevalPlan.length) { showError('Run Preview first.'); return; }
+  if (!await confirmAction({
+    title: 'Re-evaluate '+_reevalPlan.length+' archived session'+(_reevalPlan.length===1?'':'s')+'?',
+    body: 'They will be marked APPROVED with updated credit. Their comp-off contribution will resume.',
+    confirmText: 'Re-evaluate',
+    danger: false
+  })) return;
 
   var resultEl = document.getElementById('reeval-result');
   var applyBtn = document.getElementById('reeval-apply-btn');
@@ -754,7 +775,7 @@ async function applyReevalArchived() {
 // Purge archived/rejected OT sessions older than 1 year. Manager-only,
 // double-confirm. Hard-delete is irreversible.
 async function purgeOldArchived() {
-  if (!isManager) { alert('Manager only.'); return; }
+  if (!isManager) { showError('Manager only.'); return; }
   var resultEl = document.getElementById('purge-result');
   resultEl.style.display = 'block';
   resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning...</div>';
@@ -778,8 +799,17 @@ async function purgeOldArchived() {
     return;
   }
 
-  if (!confirm('PERMANENTLY DELETE '+stale.length+' archived/rejected session(s) older than 1 year ('+cutoff.toISOString().split('T')[0]+')?\n\nThis cannot be undone.')) return;
-  if (!confirm('Final confirmation — hard-delete '+stale.length+' rows?')) return;
+  if (!await confirmAction({
+    title: 'Permanently delete '+stale.length+' old session'+(stale.length===1?'':'s')+'?',
+    body: 'This will HARD-DELETE archived/rejected sessions older than 1 year (before '+cutoff.toISOString().split('T')[0]+').\n\nThis cannot be undone.',
+    requireTyping: 'DELETE',
+    confirmText: 'Continue'
+  })) return;
+  if (!await confirmAction({
+    title: 'Final confirmation',
+    body: 'Hard-delete '+stale.length+' row'+(stale.length===1?'':'s')+' from the database?',
+    confirmText: 'Hard delete'
+  })) return;
 
   resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Purging '+stale.length+'...</div>';
   var ok = 0, fail = 0;

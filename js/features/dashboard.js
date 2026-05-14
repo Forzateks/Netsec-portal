@@ -597,8 +597,8 @@ function ensureXlsxLoaded() {
 // == EXCEL BACKUP =================================================
 async function backupExcel(scope) {
   try { await ensureXlsxLoaded(); }
-  catch (e) { alert('Could not load the Excel library. Check your connection and try again.'); return; }
-  if (typeof XLSX === 'undefined') { alert('Excel library not available.'); return; }
+  catch (e) { showError('Could not load the Excel library. Check your connection and try again.'); return; }
+  if (typeof XLSX === 'undefined') { showError('Excel library not available.'); return; }
   var stamp = new Date().toISOString().split('T')[0];
   var wb = XLSX.utils.book_new();
 
@@ -644,4 +644,5 @@ async function backupExcel(scope) {
     ? 'netsec-backup-'+stamp+'.xlsx'
     : 'netsec-'+scope+'-'+stamp+'.xlsx';
   XLSX.writeFile(wb, filename);
+  showToast('Backup ready — check downloads ✓');
 }

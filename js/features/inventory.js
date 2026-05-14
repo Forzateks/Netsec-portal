@@ -133,7 +133,7 @@ function renderInventoryTable(data) {
       '<td class="hide-mobile">'+esc2(d.current_partner||'—')+'</td>'+
       '<td class="hide-mobile">'+esc2(d.current_end_user||'—')+'</td>'+
       '<td class="hide-mobile">'+esc2(d.ids_ps||'—')+'</td>'+
-      '<td class="hide-mobile" style="font-size:11px;color:var(--muted);line-height:1.3">'+esc2(d.last_updated_by||'—')+'<br><span style="font-size:10px">'+(d.updated_at?fmtDate(d.updated_at):'')+'</span></td>'+
+      '<td class="hide-mobile" style="font-size:11px;color:var(--muted);line-height:1.3">'+esc2(d.last_updated_by||'—')+'<br><span style="font-size:10px"'+(d.updated_at?' title="'+relativeTimeTitle(d.updated_at)+'"':'')+'>'+(d.updated_at?relativeTime(d.updated_at):'')+'</span></td>'+
       '<td>'+
         '<div style="display:flex;gap:6px">'+
         '<button class="btn btn-sm btn-ghost" onclick="openEditDeviceModal('+d.id+')">✏️ Edit</button>'+
@@ -166,12 +166,12 @@ function resetAddDeviceForm() {
 
 async function saveNewDevice() {
   var serial = document.getElementById('inv-add-serial').value.trim();
-  if (!serial) { alert('Serial number is required.'); return; }
+  if (!serial) { showError('Serial number is required.'); return; }
 
   // Pre-check: serial already in our loaded inventory?
   var dupe = (_invData||[]).find(function(x){ return (x.serial_number||'').toLowerCase() === serial.toLowerCase(); });
   if (dupe) {
-    alert('Serial number "'+serial+'" is already in inventory.\n\nExisting device:\n  Model: '+(dupe.model_no||'—')+'\n  Location: '+(dupe.current_location||'—')+'\n  Partner: '+(dupe.current_partner||'—')+'\n\nUse the Edit button on that device instead of adding a duplicate.');
+    showError('Serial "'+serial+'" already in inventory (model '+(dupe.model_no||'—')+', location '+(dupe.current_location||'—')+'). Use Edit on that device instead of re-adding.');
     return;
   }
 
@@ -199,9 +199,9 @@ async function saveNewDevice() {
   if (res.error) {
     // Friendly message for unique-violation (race condition fallback)
     if (res.error.code === '23505' || /duplicate key|unique/i.test(res.error.message)) {
-      alert('Serial number "'+serial+'" is already in inventory. Please check the device list — it may have been added by someone else.');
+      showError('Serial "'+serial+'" already in inventory. Check the device list — it may have just been added.');
     } else {
-      alert('Error saving device: ' + res.error.message);
+      showError('Error saving device: ' + res.error.message);
     }
     btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Device'; if (typeof renderIcons === 'function') renderIcons(); return;
   }
@@ -216,7 +216,7 @@ async function saveNewDevice() {
 
   btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Device'; if (typeof renderIcons === 'function') renderIcons();
   showInventoryTab('devices');
-  showAlert('inv-add-success');
+  showToast('Device saved ✓');
 }
 
 function openEditDeviceModal(id) {
@@ -240,7 +240,8 @@ function openEditDeviceModal(id) {
   var lu = document.getElementById('inv-edit-lastupdated');
   if (lu) {
     var by = d.last_updated_by || '—';
-    var when = d.updated_at ? new Date(d.updated_at).toLocaleString() : (d.created_at ? new Date(d.created_at).toLocaleString() : '—');
+    var luStamp = d.updated_at || d.created_at;
+    var when = luStamp ? relativeTime(luStamp) : '—';
     lu.value = by + '  •  ' + when;
   }
   document.getElementById('inv-edit-modal').classList.add('show');
@@ -292,7 +293,7 @@ async function saveEditDevice() {
 
   var res = await sb.from('inventory').update(newData).eq('id', _invEditId);
   if (res.error) {
-    alert('Error updating device: ' + res.error.message);
+    showError('Error updating device: ' + res.error.message);
     btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Changes'; if (typeof renderIcons === 'function') renderIcons(); return;
   }
 
@@ -308,12 +309,17 @@ async function saveEditDevice() {
 
   btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Changes'; if (typeof renderIcons === 'function') renderIcons();
   closeEditDeviceModal();
+  showToast('Device saved ✓');
   loadInventory();
 }
 
 async function deleteDevice(id, serial) {
   if (!isManager) return;
-  if (!confirm('Delete device ' + serial + '? This cannot be undone.')) return;
+  if (!await confirmAction({
+    title: 'Delete this device?',
+    body: 'Serial: '+serial+'\n\nThis cannot be undone.',
+    confirmText: 'Delete device'
+  })) return;
 
   await sb.from('inventory_activity_log').insert({
     device_id:     id,
@@ -324,7 +330,8 @@ async function deleteDevice(id, serial) {
   });
 
   var res = await sb.from('inventory').delete().eq('id', id);
-  if (res.error) { alert('Error deleting: ' + res.error.message); return; }
+  if (res.error) { showError('Error deleting: ' + res.error.message); return; }
+  showToast('Device deleted ✓');
   loadInventory();
 }
 
@@ -366,7 +373,7 @@ async function loadActivityLog() {
     }
     rows +=
       '<tr>'+
-      '<td style="white-space:nowrap;font-size:12px;color:var(--muted)">'+fmtDate(log.changed_at)+'</td>'+
+      '<td style="white-space:nowrap;font-size:12px;color:var(--muted)" title="'+relativeTimeTitle(log.changed_at)+'">'+relativeTime(log.changed_at)+'</td>'+
       '<td style="font-family:\'DM Mono\',monospace;font-size:12px;font-weight:600">'+esc2(log.serial_number||'')+'</td>'+
       '<td><span style="color:'+color+';font-weight:600">'+icon+' '+cap(log.action)+'</span></td>'+
       '<td>'+esc2(log.changed_by||'')+'</td>'+
@@ -382,7 +389,7 @@ async function loadActivityLog() {
 }
 
 function exportInventoryCSV() {
-  if (!_invData.length) { alert('No data to export.'); return; }
+  if (!_invData.length) { showError('No data to export.'); return; }
   var headers = ['Serial Number','Model','Status','Rail Kit','IDS/PS','Location',
                  'Partner','End User','Previous Location','Audit Location','Version',
                  'Remarks','Audit Date','Last Updated By'];

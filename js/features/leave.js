@@ -194,7 +194,7 @@ async function submitLeaveRequest() {
   btn.disabled=false; btn.innerHTML='<i data-lucide="send" class="btn-icon"></i>Submit Request'; if (typeof renderIcons === 'function') renderIcons();
   if (error){
     if (emailWindow) try { emailWindow.close(); } catch(e){}
-    alert('Error: '+error.message); return;
+    showError('Error: '+error.message); return;
   }
   // Build email draft links and show them inside the success alert.
   // Letting the user click preserves the browser's user-gesture rule
@@ -228,11 +228,15 @@ async function submitLeaveRequest() {
       emailWindow = null;
     }
   }
+  showToast('Leave request sent for approval ✓');
+  // Keep the inline element for the Outlook deep-links — those are
+  // actionable follow-ups, not a duplicate "Saved!" message. Toast
+  // confirms the save; this row hands off email so the manager hears
+  // about it via Outlook too.
   var successEl = document.getElementById('leave-success');
   if (successEl) {
-    var note = emailWindow ? ' Outlook should have opened.' : ' (Outlook auto-launch was blocked.)';
-    successEl.innerHTML = '✅ Request submitted.' + note
-      + ' Or open manually: '
+    var note = emailWindow ? 'Outlook should have opened.' : '(Outlook auto-launch was blocked.)';
+    successEl.innerHTML = note + ' Or open manually: '
       + '<a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a>'
       + '<a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>';
   }
@@ -281,7 +285,7 @@ async function submitCompOffViaLeaveForm(ltype) {
   btn.disabled=false; btn.innerHTML='<i data-lucide="send" class="btn-icon"></i>Submit Request'; if (typeof renderIcons === 'function') renderIcons();
   if (error){
     if (emailWindow) try { emailWindow.close(); } catch(e){}
-    alert('Error: '+error.message); return;
+    showError('Error: '+error.message); return;
   }
 
   var subject = 'Comp Off Request - ' + currentUser + ' - ' + typeLabel + ' on ' + date;
@@ -306,11 +310,11 @@ async function submitCompOffViaLeaveForm(ltype) {
       emailWindow = null;
     }
   }
+  showToast('Comp off request sent for approval ✓');
   var successEl = document.getElementById('leave-success');
   if (successEl) {
-    var note = emailWindow ? ' Outlook should have opened.' : ' (Outlook auto-launch was blocked.)';
-    successEl.innerHTML = '✅ Comp off request submitted.' + note
-      + ' Or open manually: '
+    var note = emailWindow ? 'Outlook should have opened.' : '(Outlook auto-launch was blocked.)';
+    successEl.innerHTML = note + ' Or open manually: '
       + '<a href="' + mailto + '" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">📧 Outlook (desktop)</a>'
       + '<a href="' + outlookWb + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600;text-decoration:underline;margin-left:6px">🌐 Outlook (web)</a>';
   }
@@ -653,7 +657,7 @@ async function buildApprovedLeavesSection() {
         '<td style="font-family:DM Mono,monospace">'+fmtDate(r.start_date)+'</td>'+
         '<td style="font-family:DM Mono,monospace">'+fmtDate(r.end_date)+'</td>'+
         '<td style="font-family:DM Mono,monospace;font-weight:700">'+r.working_days+'</td>'+
-        '<td style="font-size:11px;color:var(--muted)">'+(r.created_at?fmtDate(r.created_at):'')+'</td>'+
+        '<td style="font-size:11px;color:var(--muted)"'+(r.created_at?' title="'+relativeTimeTitle(r.created_at)+'"':'')+'>'+(r.created_at?relativeTime(r.created_at):'')+'</td>'+
         '<td style="white-space:nowrap">'+
           '<button class="btn btn-sm btn-ghost" onclick="openEditALModal('+r.id+')" title="Edit">✏️</button>'+
           '<button class="btn btn-sm btn-danger" onclick="deleteAL('+r.id+',\''+r.employee+'\')" title="Delete">✕</button>'+
@@ -665,7 +669,7 @@ async function buildApprovedLeavesSection() {
 
 async function openEditALModal(id) {
   var {data, error} = await sb.from('annual_leave').select('*').eq('id', id).single();
-  if (error || !data) { alert('Could not load record.'); return; }
+  if (error || !data) { showError('Could not load record.'); return; }
   document.getElementById('edit-al-id').value = data.id;
   document.getElementById('edit-al-emp').value = data.employee || '';
   document.getElementById('edit-al-type').value = data.leave_type || 'Annual';
@@ -696,19 +700,26 @@ async function saveEditAL() {
   }).eq('id', id);
   if (error) { errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
   closeEditALModal();
+  showToast('Leave record updated ✓');
   renderLeaveApprovals();
 }
 async function deleteAL(id, employee) {
-  if (!confirm('Delete this approved leave record for '+employee+'?\n\nThe employee\'s used-days balance will decrease.')) return;
+  if (!await confirmAction({
+    title: 'Delete this approved leave record?',
+    body: 'Employee: '+employee+'\n\nThis will permanently remove the leave record. The employee\'s used-days balance will decrease.\n\nThis cannot be undone.',
+    requireTyping: 'DELETE',
+    confirmText: 'Delete leave record'
+  })) return;
   var {error} = await sb.from('annual_leave').delete().eq('id', id);
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
+  showToast('Leave record deleted ✓');
   renderLeaveApprovals();
 }
 
 // === EDIT LEAVE REQUEST (manager only) ============================
 function openEditLeaveModal(id) {
   sb.from('leave_requests').select('*').eq('id', id).single().then(function(res){
-    if (res.error || !res.data) { alert('Could not load leave request.'); return; }
+    if (res.error || !res.data) { showError('Could not load leave request.'); return; }
     var r = res.data;
     document.getElementById('edit-lv-id').value = r.id;
     document.getElementById('edit-lv-emp').value = r.employee || '';
@@ -751,6 +762,7 @@ async function saveEditLeave() {
   var {error} = await sb.from('leave_requests').update(payload).eq('id', id);
   if (error) { errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
   closeEditLeaveModal();
+  showToast('Leave request updated ✓');
   renderLeaveApprovals();
 }
 
@@ -779,7 +791,7 @@ function approvalCard(r,type) {
 
   return '<div class="request-card '+r.status+'" style="margin-bottom:10px">'+
     '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
-    '<div style="font-size:13px">'+info+'<br><span style="font-size:11px;color:var(--muted)">Submitted: '+fmtDate(r.created_at)+'</span></div>'+
+    '<div style="font-size:13px">'+info+'<br><span style="font-size:11px;color:var(--muted)" title="'+relativeTimeTitle(r.created_at)+'">Submitted '+relativeTime(r.created_at)+'</span></div>'+
     '<div style="display:flex;align-items:center;gap:8px">'+
     '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span>'+
     (isPending?'<button class="btn btn-sm btn-primary" onclick="openApproveModal(\''+type+'\','+r.id+',\''+r.employee+'\')">Review</button>':'')+
@@ -837,11 +849,18 @@ async function deleteRequest(type, id) {
   const {data: existing} = await sb.from(table).select('*').eq('id', id).single();
   var isApproved = existing && existing.status === 'approved';
 
-  var msg = 'Delete this request permanently? This cannot be undone.';
+  var dOpts;
   if (isApproved) {
-    msg = 'This request is APPROVED. Deleting will also remove the matching balance record (the employee\'s used days will decrease). Continue?';
+    dOpts = {
+      title: 'Delete this approved request?',
+      body: 'This request is APPROVED. Deleting will also remove the matching balance record (the employee\'s used days will decrease).\n\nThis cannot be undone.',
+      requireTyping: 'DELETE',
+      confirmText: 'Delete approved'
+    };
+  } else {
+    dOpts = { title: 'Delete this request?', body: 'This cannot be undone.', confirmText: 'Delete' };
   }
-  if (!confirm(msg)) return;
+  if (!await confirmAction(dOpts)) return;
 
   if (isApproved && existing) {
     if (type === 'compoff') {
@@ -856,7 +875,8 @@ async function deleteRequest(type, id) {
     }
   }
   const {error} = await sb.from(table).delete().eq('id', id);
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
+  showToast('Request deleted ✓');
   renderLeaveApprovals();
 }
 
@@ -870,16 +890,18 @@ async function processRequest(decision) {
     const {error}=await sb.from('ot_sessions').update({
       status:decision,manager_comment:comment,reviewed_by:currentUser,reviewed_at:new Date().toISOString()
     }).eq('id',id);
-    if (error){alert('Error: '+error.message);return;}
+    if (error){showError('Error: '+error.message);return;}
     if (decision === 'approved') await _approveSuccessGlow();
-    closeApproveModal(); updateNotifBadge(); renderOTApprovals(); return;
+    closeApproveModal(); updateNotifBadge(); renderOTApprovals();
+    showToast(decision === 'approved' ? 'Request approved ✓' : 'Request rejected ✓');
+    return;
   }
 
   const table=type==='compoff'?'comp_off_requests':'leave_requests';
   const {error}=await sb.from(table).update({
     status:decision,manager_comment:comment,reviewed_by:currentUser,reviewed_at:new Date().toISOString()
   }).eq('id',id);
-  if (error){alert('Error: '+error.message);return;}
+  if (error){showError('Error: '+error.message);return;}
 
   // If approved, insert into actual records table
   if (decision==='approved') {
@@ -901,6 +923,7 @@ async function processRequest(decision) {
   if (decision === 'approved') await _approveSuccessGlow();
   closeApproveModal();
   updateNotifBadge();
+  showToast(decision === 'approved' ? 'Request approved ✓' : 'Request rejected ✓');
   renderLeaveApprovals();
 }
 

@@ -171,8 +171,8 @@ async function doChangePassword() {
   if (p1 !== p2)     { errEl.textContent = 'Passwords do not match.'; errEl.style.display='block'; return; }
   var {error} = await sb.auth.updateUser({ password: p1 });
   if (error) { errEl.textContent = error.message || 'Could not update password.'; errEl.style.display='block'; return; }
-  okEl.textContent = 'Password updated. Use the new one next time you sign in.'; okEl.style.display='block';
-  setTimeout(closeChangePasswordModal, 2000);
+  closeChangePasswordModal();
+  showToast('Password updated ✓');
 }
 
 // Look up the user_profiles row for the signed-in user

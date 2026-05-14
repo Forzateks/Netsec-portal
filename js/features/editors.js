@@ -43,9 +43,9 @@ async function saveEditOT() {
   var date=document.getElementById('edit-ot-date').value;
   var start=document.getElementById('edit-ot-start').value;
   var end=document.getElementById('edit-ot-end').value;
-  if (!activity||!date||!start||!end){alert('Please fill all required fields.');return;}
+  if (!activity||!date||!start||!end){showError('Please fill all required fields.');return;}
   var vErr = validateOTStart(date, start, _editEmp, end);
-  if (vErr) { alert(vErr); return; }
+  if (vErr) { showError(vErr); return; }
   var res=calcOT(date,start,end,_editEmp);
   var {error}=await sb.from('ot_sessions').update({
     activity:activity,ot_date:date,start_time:start,end_time:end,
@@ -53,8 +53,10 @@ async function saveEditOT() {
     duration_hours:res.duration,credited_hours:res.credited,
     customer_name:customer||null,project_name:project||null,activity_type:actType||null
   }).eq('id',id);
-  if (error){alert('Error: '+error.message);return;}
-  closeEditOT(); renderSessions();
+  if (error){showError('Error: '+error.message);return;}
+  closeEditOT();
+  showToast('OT session updated ✓');
+  renderSessions();
 }
 
 // == MONTHLY OT REPORT ============================================

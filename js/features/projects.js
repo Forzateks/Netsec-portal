@@ -115,7 +115,7 @@ async function addEngagement() {
   const {error} = await sb.from('engagements').insert({
     customer_id: customer_id, name: name, type: type, status: status, created_by: currentUser
   });
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
 
   // Adopt any orphan sessions that share this engagement name.
   // Strategy:
@@ -136,7 +136,7 @@ async function addEngagement() {
   document.getElementById('pj-new-status').value = 'active';
   document.getElementById('pj-new-customer').value = '';
   document.getElementById('pj-new-type').value = '';
-  showAlert('pj-manage-success');
+  showToast('Engagement created ✓');
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
@@ -156,11 +156,12 @@ async function updateProjectStatus(idOrName, newStatus) {
     query = query.eq('name', idOrName);
   }
   const {error} = await query;
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
   renderManageProjects();
+  showToast('Status updated ✓');
 }
 
 
@@ -175,9 +176,9 @@ async function addCustomer() {
   if (dup) { errEl.textContent = 'A customer named "'+name+'" already exists.'; showAlert('pj-manage-error'); return; }
 
   var {error} = await sb.from('customers').insert({ name: name, status: 'active' });
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
   nameEl.value = '';
-  showAlert('pj-manage-success');
+  showToast('Customer added ✓');
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
@@ -360,7 +361,7 @@ function renderCustomersList() {
 
 async function openEditCustomer(id) {
   var {data, error} = await sb.from('customers').select('*').eq('id', id).single();
-  if (error || !data) { alert('Could not load customer.'); return; }
+  if (error || !data) { showError('Could not load customer.'); return; }
   document.getElementById('edit-cust-id').value = data.id;
   document.getElementById('edit-cust-name').value = data.name || '';
   document.getElementById('edit-cust-status').value = data.status || 'active';
@@ -395,6 +396,7 @@ async function saveEditCustomer() {
     await sb.from('unified_sessions').update({ customer_name: name }).eq('customer_name', oldName);
   }
   closeEditCustomerModal();
+  showToast('Customer saved ✓');
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
@@ -420,25 +422,30 @@ async function deleteCustomer(id, name) {
     msCount = msRes.count || 0;
   }
 
-  var msg = 'Delete customer "'+name+'"?\n\n';
+  var body = 'This will permanently delete the customer';
   if (custEngagements.length) {
-    msg += 'This will also delete:\n';
-    msg += '  • '+custEngagements.length+' engagement'+(custEngagements.length===1?'':'s')+'\n';
-    if (msCount) msg += '  • '+msCount+' milestone'+(msCount===1?'':'s')+' under those engagements\n';
-    msg += '\nLogged sessions referencing this customer keep their snapshot text but will be unlinked.\n\n';
+    body += ' and cascade to:\n  • '+custEngagements.length+' engagement'+(custEngagements.length===1?'':'s');
+    if (msCount) body += '\n  • '+msCount+' milestone'+(msCount===1?'':'s')+' under those engagements';
+    body += '\n\nLogged sessions referencing this customer keep their snapshot text but become unlinked.';
   }
-  msg += 'This cannot be undone.';
-  if (!confirm(msg)) return;
+  body += '\n\nThis cannot be undone.';
+  if (!await confirmAction({
+    title: 'Delete customer "'+name+'"?',
+    body: body,
+    requireTyping: name,
+    confirmText: 'Delete customer'
+  })) return;
 
   // Delete engagements first; engagement_milestones cascade via FK.
   if (custEngagements.length) {
     var ids = custEngagements.map(function(e){return e.id;});
     var de = await sb.from('engagements').delete().in('id', ids);
-    if (de.error) { alert('Error deleting engagements: '+de.error.message); return; }
+    if (de.error) { showError('Error deleting engagements: '+de.error.message); return; }
   }
   var {error} = await sb.from('customers').delete().eq('id', id);
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
 
+  showToast('Customer deleted ✓');
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
@@ -521,7 +528,7 @@ async function renderManageProjects() {
 // ── EDIT PROJECT (manager) ────────────────────────────────────────
 async function openEditProject(id) {
   var {data, error} = await sb.from('engagements').select('*').eq('id', id).single();
-  if (error || !data) { alert('Could not load engagement.'); return; }
+  if (error || !data) { showError('Could not load engagement.'); return; }
   document.getElementById('edit-project-id').value = data.id;
   document.getElementById('edit-project-name').value = data.name || '';
   document.getElementById('edit-project-status').value = data.status || 'active';
@@ -544,7 +551,7 @@ async function saveEditProject() {
   var status = document.getElementById('edit-project-status').value;
   var typeEl = document.getElementById('edit-project-type');
   var type   = typeEl ? typeEl.value : 'project';
-  if (!customer || !name || !type) { alert('Customer, Type and Engagement Name are required.'); return; }
+  if (!customer || !name || !type) { showError('Customer, Type and Engagement Name are required.'); return; }
   var custRow = (CUSTOMERS||[]).find(function(c){ return c.name === customer; });
   var customer_id = custRow ? custRow.id : null;
 
@@ -555,7 +562,7 @@ async function saveEditProject() {
   var oldType = oldRes.data ? oldRes.data.type : null;
 
   var {error} = await sb.from('engagements').update({ name: name, status: status, customer_id: customer_id, type: type }).eq('id', id);
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
 
   // If renamed, cascade the new name to every session table that snapshots it
   if (oldName && oldName !== name) {
@@ -587,6 +594,7 @@ async function saveEditProject() {
   }
 
   closeEditProjectModal();
+  showToast('Engagement updated ✓');
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
@@ -594,9 +602,15 @@ async function saveEditProject() {
 }
 
 async function deleteProject(id, name) {
-  if (!confirm('Delete engagement "'+name+'"?\n\nThis only removes it from the Projects registry — existing OT/Project sessions that referenced it remain unchanged.')) return;
+  if (!await confirmAction({
+    title: 'Delete engagement "'+name+'"?',
+    body: 'This only removes it from the Projects registry. Existing OT/Project sessions that referenced it remain unchanged (they keep their snapshot text).\n\nThis cannot be undone.',
+    requireTyping: name,
+    confirmText: 'Delete engagement'
+  })) return;
   var {error} = await sb.from('engagements').delete().eq('id', id);
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
+  showToast('Engagement deleted ✓');
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();

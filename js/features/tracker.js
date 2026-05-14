@@ -564,7 +564,7 @@ function _trkRenderTable(rows, TYPE_DEF) {
       '</td>'+
       '<td class="hide-mobile">'+esc2(r.owner_employee||'—')+'</td>'+
       '<td>'+trkTopStatusBadge(r.status)+'</td>'+
-      '<td class="hide-mobile dim num" style="font-size:12px">'+(r.tracker_updated_at?fmtDate(r.tracker_updated_at):'—')+'</td>'+
+      '<td class="hide-mobile dim num" style="font-size:12px"'+(r.tracker_updated_at?' title="'+relativeTimeTitle(r.tracker_updated_at)+'"':'')+'>'+(r.tracker_updated_at?relativeTime(r.tracker_updated_at):'—')+'</td>'+
       '<td><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openTrackerDetail('+r.id+')"><i data-lucide="eye" class="btn-icon"></i><span class="hide-mobile">View</span></button></td>'+
     '</tr>';
   }).join('');
@@ -582,7 +582,8 @@ function _trkRenderCards(rows, TYPE_DEF) {
     var td = TYPE_DEF[r.type] || TYPE_DEF['project'];
     var remarksFull = (r.tracker_remarks || '').replace(/\s+/g,' ').trim();
     var customerLine = esc2(r.customer_name||'—') + (r.country ? ' · '+esc2(r.country) : '');
-    var updated = r.tracker_updated_at ? fmtDate(r.tracker_updated_at) : '—';
+    var updated = r.tracker_updated_at ? relativeTime(r.tracker_updated_at) : '—';
+    var updatedTitle = r.tracker_updated_at ? ' title="'+relativeTimeTitle(r.tracker_updated_at)+'"' : '';
     return '<div class="trk-card'+(muted?' trk-row-muted':'')+'" onclick="openTrackerDetail('+r.id+')">'+
       '<div class="trk-card-head">'+
         '<span class="trk-card-type"><i data-lucide="'+td.icon+'"></i>'+td.text+'</span>'+
@@ -592,7 +593,7 @@ function _trkRenderCards(rows, TYPE_DEF) {
       (r.owner_employee?'<div class="trk-card-meta">Owner: '+esc2(r.owner_employee)+'</div>':'')+
       '<div class="trk-card-foot">'+
         trkTopStatusBadge(r.status)+
-        '<span class="trk-card-date num">'+updated+'</span>'+
+        '<span class="trk-card-date num"'+updatedTitle+'>'+updated+'</span>'+
       '</div>'+
       (remarksFull?'<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+esc2(remarksFull)+'</div>':'')+
     '</div>';
@@ -650,7 +651,7 @@ function openTrackerDetail(id) {
     {label:'Sign Off',         value: r.signed_off_on ? fmtDate(r.signed_off_on) : '', mono:true},
     {label:'Orch. Version',    value: r.orch_version, mono:true},
     {label:'EC Version',       value: r.ec_version,   mono:true},
-    {label:'Last Updated',     value: r.tracker_updated_at ? (fmtDate(r.tracker_updated_at) + (r.updated_by ? ' · by '+r.updated_by : '')) : '', mono:true}
+    {label:'Last Updated',     value: r.tracker_updated_at ? (relativeTime(r.tracker_updated_at) + (r.updated_by ? ' · by '+r.updated_by : '')) : '', mono:true, titleAttr: r.tracker_updated_at ? relativeTimeTitle(r.tracker_updated_at) : ''}
   ];
   var fieldHtml = fields.map(function(f){
     var v = f.value;
@@ -660,8 +661,9 @@ function openTrackerDetail(id) {
     if (f.flag === 'expired') flagCss = 'color:var(--danger);font-weight:600';
     else if (f.flag === 'soon') flagCss = 'color:#D97706;font-weight:600';
     var hint = f.hint ? '<div class="trk-field-hint">'+esc2(f.hint)+'</div>' : '';
+    var titleAttr = f.titleAttr ? ' title="'+esc2(f.titleAttr)+'"' : '';
     return '<div class="trk-field"><div class="trk-field-label">'+esc2(f.label)+'</div>'+
-      '<div class="trk-field-value'+cls+'" style="'+flagCss+'">'+esc2(String(v))+'</div>'+hint+'</div>';
+      '<div class="trk-field-value'+cls+'" style="'+flagCss+'"'+titleAttr+'>'+esc2(String(v))+'</div>'+hint+'</div>';
   }).join('');
 
   var remarks = (r.tracker_remarks||'').trim();
@@ -907,7 +909,7 @@ async function saveTrackerEdit() {
   // below is safe to send wholesale either way.
   var btn = document.getElementById('trk-edit-save-btn');
   var id  = parseInt(_trkGet('trk-edit-id'), 10);
-  if (!id) { alert('Missing engagement id.'); return; }
+  if (!id) { showError('Missing engagement id.'); return; }
 
   var trackerStatus = _trkGet('trk-edit-tracker-status');
   var topStatus     = _trkGet('trk-edit-status'); // one of the 8 top-level values
@@ -948,7 +950,7 @@ async function saveTrackerEdit() {
   btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Changes';
   if (typeof renderIcons === 'function') renderIcons();
 
-  if (error) { alert('Error saving: ' + error.message); return; }
+  if (error) { showError('Error saving: ' + error.message); return; }
 
   // Invalidate the projects cache so engagement dropdowns + Manage Engagements
   // reflect the change without a full reload.
@@ -961,23 +963,29 @@ async function saveTrackerEdit() {
   }
 
   closeTrackerEditModal();
+  showToast('Engagement updated ✓');
   await loadTracker();
 }
 
 async function deleteTrackerEngagement() {
-  if (!isManager) { alert('Manager access only.'); return; }
+  if (!isManager) { showError('Manager access only.'); return; }
   var id = parseInt(_trkGet('trk-edit-id'), 10);
   if (!id) return;
   var r = _trkData.find(function(x){return x.id===id;});
   if (!r) return;
-  // Two-step confirm: this also cascade-deletes any milestones via the FK.
-  var msg = 'Delete engagement "'+r.name+'"?\n\nThis will also delete its milestones (cascade) and cannot be undone.\n\nNote: any logged sessions referencing this engagement keep their snapshotted name and remain intact.';
-  if (!confirm(msg)) return;
+  // Cascade-deletes any milestones via the FK.
+  if (!await confirmAction({
+    title: 'Delete engagement "'+r.name+'"?',
+    body: 'This will also delete its milestones (cascade). Any logged sessions referencing this engagement keep their snapshotted name and remain intact.\n\nThis cannot be undone.',
+    requireTyping: r.name,
+    confirmText: 'Delete engagement'
+  })) return;
   var btn = document.getElementById('trk-edit-delete-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Deleting…'; }
   var { error } = await sb.from('engagements').delete().eq('id', id);
   if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="trash-2" class="btn-icon"></i>Delete Engagement'; if (typeof renderIcons === 'function') renderIcons(); }
-  if (error) { alert('Error deleting: '+error.message); return; }
+  if (error) { showError('Error deleting: '+error.message); return; }
+  showToast('Engagement deleted ✓');
   // Invalidate the projects cache so the deleted engagement disappears from
   // session dropdowns / Manage Engagements / Engagement Summary everywhere.
   if (typeof _projectsLoaded !== 'undefined') {
@@ -1131,9 +1139,9 @@ function resetMilestoneForm() {
 }
 
 async function addMilestone() {
-  if (!isManager) { alert('Manager access only.'); return; }
+  if (!isManager) { showError('Manager access only.'); return; }
   var name = (document.getElementById('trk-ms-new-name').value||'').trim();
-  if (!name) { alert('Milestone name is required.'); return; }
+  if (!name) { showError('Milestone name is required.'); return; }
   var btn = document.getElementById('trk-ms-add-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Adding…';
@@ -1163,8 +1171,9 @@ async function addMilestone() {
   btn.disabled = false;
   btn.innerHTML = '<i data-lucide="plus" class="btn-icon"></i>Add Milestone';
   if (typeof renderIcons === 'function') renderIcons();
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
   resetMilestoneForm();
+  showToast('Milestone added ✓');
   await loadMilestones();
 }
 
@@ -1174,7 +1183,8 @@ async function markMilestoneComplete(id) {
   var { error } = await sb.from('engagement_milestones').update({
     status: 'completed', completed_date: today, updated_at: new Date().toISOString()
   }).eq('id', id);
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
+  showToast('Milestone marked complete ✓');
   await loadMilestones();
 }
 
@@ -1183,7 +1193,8 @@ async function reopenMilestone(id) {
   var { error } = await sb.from('engagement_milestones').update({
     status: 'in_progress', completed_date: null, updated_at: new Date().toISOString()
   }).eq('id', id);
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
+  showToast('Milestone reopened ✓');
   await loadMilestones();
 }
 
@@ -1202,9 +1213,9 @@ async function moveMilestone(id, delta) {
   // Locals deliberately NOT named r1/r2 — `r2` is a global rounding helper
   // (see CLAUDE.md "Critical Quirks") and shadowing it has bitten us before.
   var resA = await sb.from('engagement_milestones').update({sequence:bSeq, updated_at:ts}).eq('id', a.id);
-  if (resA.error) { alert('Error: '+resA.error.message); return; }
+  if (resA.error) { showError('Error: '+resA.error.message); return; }
   var resB = await sb.from('engagement_milestones').update({sequence:aSeq, updated_at:ts}).eq('id', b.id);
-  if (resB.error) { alert('Error: '+resB.error.message); return; }
+  if (resB.error) { showError('Error: '+resB.error.message); return; }
   await loadMilestones();
 }
 
@@ -1212,9 +1223,14 @@ async function deleteMilestone(id) {
   if (!isManager) return;
   var m = _msData.find(function(x){return x.id===id;});
   if (!m) return;
-  if (!confirm('Delete milestone "'+m.name+'"? This cannot be undone.')) return;
+  if (!await confirmAction({
+    title: 'Delete milestone "'+m.name+'"?',
+    body: 'This cannot be undone.',
+    confirmText: 'Delete milestone'
+  })) return;
   var { error } = await sb.from('engagement_milestones').delete().eq('id', id);
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
+  showToast('Milestone deleted ✓');
   await loadMilestones();
 }
 
@@ -1255,7 +1271,7 @@ function editMilestoneInline(id) {
 async function saveMilestoneInline(id) {
   if (!isManager) return;
   var name = (document.getElementById('trk-ms-edit-name-'+id).value||'').trim();
-  if (!name) { alert('Name is required.'); return; }
+  if (!name) { showError('Name is required.'); return; }
   var status = document.getElementById('trk-ms-edit-status-'+id).value;
   var tgt    = document.getElementById('trk-ms-edit-target-'+id).value || null;
   var tc     = parseInt(document.getElementById('trk-ms-edit-target-count-'+id).value, 10);
@@ -1276,6 +1292,7 @@ async function saveMilestoneInline(id) {
     patch.completed_date = null;
   }
   var { error } = await sb.from('engagement_milestones').update(patch).eq('id', id);
-  if (error) { alert('Error: '+error.message); return; }
+  if (error) { showError('Error: '+error.message); return; }
+  showToast('Milestone updated ✓');
   await loadMilestones();
 }

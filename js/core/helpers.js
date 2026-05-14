@@ -106,6 +106,146 @@ function showAlert(id){
   return true;
 }
 
+// ── Toast notifications ───────────────────────────────────────────
+// Single source of truth for "action result" feedback. Success toasts
+// auto-dismiss in 3s, errors in 5s (longer because the user may need to
+// read the message). Position is top-right on desktop, bottom-center on
+// mobile — handled by CSS so JS doesn't need viewport detection.
+function _toastContainer() {
+  var el = document.getElementById('toast-container');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast-container';
+    el.className = 'toast-container';
+    el.setAttribute('aria-live', 'polite');
+    el.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function showToast(message, opts) {
+  opts = opts || {};
+  var type = opts.type || 'success';
+  var duration = opts.duration != null ? opts.duration : (type === 'error' ? 5000 : 3000);
+  var t = document.createElement('div');
+  t.className = 'toast toast-' + type;
+  t.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  var msgSpan = document.createElement('span');
+  msgSpan.className = 'toast-msg';
+  msgSpan.textContent = message;
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'toast-close';
+  btn.setAttribute('aria-label', 'Dismiss');
+  btn.textContent = '×';
+  t.appendChild(msgSpan);
+  t.appendChild(btn);
+  var dismissed = false;
+  function dismiss() {
+    if (dismissed) return;
+    dismissed = true;
+    t.classList.add('toast-leaving');
+    setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 220);
+  }
+  btn.addEventListener('click', dismiss);
+  _toastContainer().appendChild(t);
+  setTimeout(dismiss, duration);
+  return dismiss;
+}
+function showError(message) {
+  return showToast(message || 'Something went wrong — please try again', { type:'error' });
+}
+
+// ── Relative time ────────────────────────────────────────────────
+// "just now" / "5 minutes ago" / "yesterday" / "3 days ago" /
+// "last week" — falls back to fmtDate after 14 days. For "when did
+// this happen" timestamps only; never use for work dates.
+function relativeTime(iso) {
+  if (!iso) return '';
+  var t = new Date(iso).getTime();
+  if (isNaN(t)) return '';
+  var diffMs = Date.now() - t;
+  if (diffMs < 0) return fmtDate(iso); // future — fall back to absolute
+  if (diffMs < 60000) return 'just now';
+  var min = Math.floor(diffMs / 60000);
+  if (min < 60) return min + ' minute' + (min===1?'':'s') + ' ago';
+  var hrs = Math.floor(min / 60);
+  if (hrs < 24) return hrs + ' hour' + (hrs===1?'':'s') + ' ago';
+  var days = Math.floor(hrs / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 7)   return days + ' days ago';
+  if (days < 14)  return 'last week';
+  return fmtDate(iso);
+}
+// Hover tooltip showing the raw timestamp (YYYY-MM-DD HH:MM) for precision.
+function relativeTimeTitle(iso) {
+  if (!iso) return '';
+  return String(iso).replace('T', ' ').slice(0, 16);
+}
+
+// ── Confirmation modal ───────────────────────────────────────────
+// Replaces window.confirm() across the app. Returns a Promise<boolean>.
+// opts:
+//   title          — modal title (required)
+//   body           — body text; \n preserved via white-space:pre-wrap
+//   confirmText    — button label (default 'Delete')
+//   danger         — red Delete button (default true)
+//   requireTyping  — if set, user must type this exact string before
+//                    the confirm button enables. Used for high-stakes
+//                    cascading deletes (engagement/customer/purge).
+function confirmAction(opts) {
+  opts = opts || {};
+  return new Promise(function(resolve) {
+    var modal       = document.getElementById('confirm-modal');
+    var titleEl     = document.getElementById('confirm-modal-title');
+    var bodyEl      = document.getElementById('confirm-modal-body');
+    var typingWrap  = document.getElementById('confirm-modal-typing-wrap');
+    var typingTgt   = document.getElementById('confirm-modal-typing-target');
+    var typingInput = document.getElementById('confirm-modal-typing-input');
+    var cancelBtn   = document.getElementById('confirm-modal-cancel');
+    var okBtn       = document.getElementById('confirm-modal-ok');
+    if (!modal || !okBtn) { resolve(window.confirm(opts.body || opts.title || 'Are you sure?')); return; }
+
+    titleEl.textContent = opts.title || 'Are you sure?';
+    bodyEl.textContent  = opts.body || '';
+    okBtn.textContent   = opts.confirmText || 'Delete';
+    var danger = opts.danger !== false;
+    okBtn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+
+    if (opts.requireTyping) {
+      typingTgt.textContent = opts.requireTyping;
+      typingInput.value = '';
+      typingWrap.style.display = 'block';
+      okBtn.disabled = true;
+      typingInput.oninput = function() {
+        okBtn.disabled = typingInput.value !== opts.requireTyping;
+      };
+    } else {
+      typingWrap.style.display = 'none';
+      okBtn.disabled = false;
+      typingInput.oninput = null;
+    }
+
+    function close(result) {
+      modal.classList.remove('show');
+      cancelBtn.onclick = null;
+      okBtn.onclick = null;
+      typingInput.oninput = null;
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') close(false);
+      else if (e.key === 'Enter' && !okBtn.disabled && document.activeElement !== typingInput) close(true);
+    }
+    cancelBtn.onclick = function(){ close(false); };
+    okBtn.onclick     = function(){ if (!okBtn.disabled) close(true); };
+    document.addEventListener('keydown', onKey);
+    modal.classList.add('show');
+    if (opts.requireTyping) setTimeout(function(){ typingInput.focus(); }, 80);
+  });
+}
+
 // ── Empty-state HTML helper ────────────────────────────────────────
 // Single source of truth for empty-state markup so every list/table/
 // section uses the same icon + heading + subtext + optional CTA shape.
@@ -463,7 +603,7 @@ async function downloadBackup(btnEl) {
   } catch(e) {
     btn.textContent = '❌ Error';
     btn.disabled = false;
-    alert('Backup failed: ' + e.message);
+    showError('Backup failed: ' + e.message);
   }
 }
 
