@@ -9,14 +9,11 @@ function exportCSV() {
 }
 
 // == DASHBOARD HELPERS ============================================
+// fmtNum is a thin compatibility wrapper around fmtNumber (helpers.js).
+// Kept so any external callers using fmtNum() keep working; new code
+// should call fmtNumber/fmtHours/fmtDays/fmtPct/fmtCount directly.
 function fmtNum(n) {
-  // 1234 -> "1,234". Floats keep up to 2 decimals, no trailing zeros.
-  if (n === null || n === undefined || isNaN(n)) return '0';
-  var v = Number(n);
-  if (Math.abs(v - Math.round(v)) < 0.005) {
-    return Math.round(v).toLocaleString('en-US');
-  }
-  return v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+  return fmtNumber(n, 1);
 }
 
 function trendPill(curr, prev, suffix) {
@@ -163,17 +160,17 @@ async function renderEmployeeDashboard() {
   // === STATS GRID === (no 160h target progress bar — that was aspirational)
   html += '<div class="dash-stats">'+
     '<div class="stat-card green"><div class="stat-label">CO Balance</div>'+
-      '<div class="stat-value" style="color:'+balColor+'"><span data-counter="'+s.balance+'">'+fmtNum(s.balance)+'</span></div>'+
-      '<div class="stat-sub">Earned '+fmtNum(s.totalCO)+' &middot; Used '+fmtNum(s.used)+'</div></div>'+
+      '<div class="stat-value" style="color:'+balColor+'"><span data-counter="'+s.balance+'">'+fmtNumber(s.balance,1)+'</span></div>'+
+      '<div class="stat-sub">Earned '+fmtNumber(s.totalCO,1)+' &middot; Used '+fmtNumber(s.used,1)+'</div></div>'+
     '<div class="stat-card teal"><div class="stat-label">Annual Leave</div>'+
-      '<div class="stat-value" style="color:'+lvColor+'"><span data-counter="'+leaveBalance+'">'+fmtNum(leaveBalance)+'</span></div>'+
-      '<div class="stat-sub">of '+LEAVE_ALLOWANCE+' days &middot; '+year+'</div></div>'+
+      '<div class="stat-value" style="color:'+lvColor+'"><span data-counter="'+leaveBalance+'">'+fmtNumber(leaveBalance,1)+'</span></div>'+
+      '<div class="stat-sub">of '+fmtDays(LEAVE_ALLOWANCE)+' &middot; '+year+'</div></div>'+
     '<div class="stat-card navy"><div class="stat-label">OT &mdash; '+monthName+'</div>'+
-      '<div class="stat-value"><span data-counter="'+otThisMonth+'">'+fmtNum(otThisMonth)+'</span>'+trendPill(otThisMonth, otLastMonth, '')+'</div>'+
-      '<div class="stat-sub">'+fmtNum(otHrsThisMonth)+'h credited</div></div>'+
+      '<div class="stat-value"><span data-counter="'+otThisMonth+'">'+fmtCount(otThisMonth)+'</span>'+trendPill(otThisMonth, otLastMonth, '')+'</div>'+
+      '<div class="stat-sub">'+fmtHours(otHrsThisMonth)+' credited</div></div>'+
     '<div class="stat-card eve"><div class="stat-label">Project Hours &mdash; '+monthName+'</div>'+
-      '<div class="stat-value"><span data-counter="'+pjHrsMonth+'" data-counter-decimals="2">'+fmtNum(pjHrsMonth)+'</span><span class="stat-unit">h</span>'+trendPill(pjHrsMonth, pjHrsPrev, 'h')+'</div>'+
-      '<div class="stat-sub">vs '+fmtNum(pjHrsPrev)+'h last month</div></div>'+
+      '<div class="stat-value"><span data-counter="'+pjHrsMonth+'" data-counter-decimals="1">'+fmtNumber(pjHrsMonth,1)+'</span><span class="stat-unit">h</span>'+trendPill(pjHrsMonth, pjHrsPrev, 'h')+'</div>'+
+      '<div class="stat-sub">vs '+fmtHours(pjHrsPrev)+' last month</div></div>'+
     '</div>';
 
   // === QUICK ACTIONS ===
@@ -187,9 +184,9 @@ async function renderEmployeeDashboard() {
   // === MY PENDING REQUESTS ===
   if (pendingCO.length || pendingLV.length || pendingOT.length) {
     html += '<div class="card"><div class="card-title">My Pending Requests</div>';
-    pendingOT.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">OT Session &middot; '+r.activity+' &middot; '+fmtDate(r.ot_date)+' ('+r.band+' '+r.duration_hours+'h)<span class="badge badge-pending" style="margin-left:8px">Awaiting approval</span></div>'; });
+    pendingOT.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">OT Session &middot; '+r.activity+' &middot; '+fmtDate(r.ot_date)+' ('+r.band+' '+fmtHours(r.duration_hours)+')<span class="badge badge-pending" style="margin-left:8px">Awaiting approval</span></div>'; });
     pendingCO.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">Comp Off &middot; '+r.type+' &middot; '+fmtDate(r.request_date)+'<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
-    pendingLV.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">Leave &middot; '+fmtDate(r.start_date)+' to '+fmtDate(r.end_date)+' &middot; '+r.working_days+' days<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
+    pendingLV.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">Leave &middot; '+fmtDateRange(r.start_date, r.end_date)+' &middot; '+fmtDays(r.working_days)+'<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
     html += '</div>';
   }
 
@@ -204,7 +201,7 @@ async function renderEmployeeDashboard() {
         '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.activity+'</td>'+
         '<td>'+bandBadge(r)+'</td>'+
         '<td><span class="badge '+(r.rate==='1:2'?'badge-12':'badge-11')+'">'+r.rate+'</span></td>'+
-        '<td><strong style="color:var(--teal)">'+r.credited_hours+'h</strong>'+creditDriftMarker(r)+'</td></tr>';
+        '<td><strong style="color:var(--teal)">'+fmtHours(r.credited_hours)+'</strong>'+creditDriftMarker(r)+'</td></tr>';
     });
     html += '</tbody></table></div>';
   } else {
@@ -365,19 +362,19 @@ async function renderManagerDashboard() {
   // === TEAM STATS GRID ===
   html += '<div class="dash-stats">'+
     '<div class="stat-card navy"><div class="stat-label">Team OT &mdash; '+monthName+'</div>'+
-      '<div class="stat-value"><span data-counter="'+teamOTHrs+'" data-counter-decimals="2">'+fmtNum(teamOTHrs)+'</span><span class="stat-unit">h</span></div>'+
+      '<div class="stat-value"><span data-counter="'+teamOTHrs+'" data-counter-decimals="1">'+fmtNumber(teamOTHrs,1)+'</span><span class="stat-unit">h</span></div>'+
       '<div class="stat-sub">credited across the team</div></div>'+
     '<div class="stat-card teal"><div class="stat-label">Leave next 30 days</div>'+
-      '<div class="stat-value"><span data-counter="'+upcomingLeaveDays+'">'+fmtNum(upcomingLeaveDays)+'</span></div>'+
-      '<div class="stat-sub">'+upcomingLeaves.length+' approved request'+(upcomingLeaves.length===1?'':'s')+'</div></div>'+
+      '<div class="stat-value"><span data-counter="'+upcomingLeaveDays+'">'+fmtNumber(upcomingLeaveDays,1)+'</span></div>'+
+      '<div class="stat-sub">'+fmtCount(upcomingLeaves.length)+' approved request'+(upcomingLeaves.length===1?'':'s')+'</div></div>'+
     '<div class="stat-card green" style="cursor:pointer" onclick="showScreen(\'tracker\');showTrackerTab(\'projects\')"><div class="stat-label">Active Projects</div>'+
-      '<div class="stat-value"><span data-counter="'+activeProjects.length+'">'+fmtNum(activeProjects.length)+'</span></div>'+
+      '<div class="stat-value"><span data-counter="'+activeProjects.length+'">'+fmtCount(activeProjects.length)+'</span></div>'+
       '<div class="stat-sub">in flight</div></div>'+
     '<div class="stat-card mid" style="cursor:pointer" onclick="showScreen(\'tracker\');showTrackerTab(\'pocs\')"><div class="stat-label">Active POCs</div>'+
-      '<div class="stat-value"><span data-counter="'+activePocs.length+'">'+fmtNum(activePocs.length)+'</span></div>'+
+      '<div class="stat-value"><span data-counter="'+activePocs.length+'">'+fmtCount(activePocs.length)+'</span></div>'+
       '<div class="stat-sub">in flight</div></div>'+
     '<div class="stat-card eve"><div class="stat-label">Sessions this week</div>'+
-      '<div class="stat-value"><span data-counter="'+weekSessions.length+'">'+fmtNum(weekSessions.length)+'</span></div>'+
+      '<div class="stat-value"><span data-counter="'+weekSessions.length+'">'+fmtCount(weekSessions.length)+'</span></div>'+
       '<div class="stat-sub">logged in last 7 days</div></div>'+
     '</div>';
 
@@ -499,7 +496,7 @@ async function renderManagerDashboard() {
       ts: r.created_at || r.ot_date,
       html: '<div class="request-card" style="margin-bottom:8px;cursor:pointer" onclick="showScreen(\'approvals\')">'+
         '<strong>'+esc2(shortName(r.employee))+'</strong> submitted '+
-        fmtNum(r.credited_hours||0)+'h '+bandBadge(r)+' OT '+when+
+        fmtHours(r.credited_hours||0)+' '+bandBadge(r)+' OT '+when+
         statusBit+
       '</div>'
     });
@@ -511,7 +508,7 @@ async function renderManagerDashboard() {
     feed.push({
       ts: r.start_date,
       html: '<div class="request-card" style="margin-bottom:8px">'+
-        '<strong>'+esc2(shortName(r.employee))+'</strong> starts annual leave '+when+' ('+fmtNum(days)+' day'+(days===1?'':'s')+')'+
+        '<strong>'+esc2(shortName(r.employee))+'</strong> starts annual leave '+when+' ('+fmtDays(days)+')'+
       '</div>'
     });
   });

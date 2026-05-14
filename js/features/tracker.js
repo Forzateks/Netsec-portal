@@ -1077,7 +1077,7 @@ function renderMilestones() {
   var done = _msData.filter(function(m){return m.status==='completed';}).length;
   var pct  = Math.round((done / _msData.length) * 100);
   document.getElementById('trk-ms-progress-label').textContent = done+' of '+_msData.length+' milestones complete';
-  document.getElementById('trk-ms-progress-pct').textContent   = pct+'%';
+  document.getElementById('trk-ms-progress-pct').textContent   = fmtPct(pct);
   document.getElementById('trk-ms-progress-fill').style.width  = pct+'%';
   prog.style.display = 'block';
 
@@ -1092,7 +1092,7 @@ function renderMilestones() {
 
     var countBlock = hasCount
       ? '<div class="trk-ms-count">'+
-          '<div class="trk-ms-count-text"><span class="num">'+actual+' / '+m.target_count+'</span> <span class="dim">('+countPct+'%)</span></div>'+
+          '<div class="trk-ms-count-text"><span class="num">'+actual+' / '+m.target_count+'</span> <span class="dim">('+fmtPct(countPct)+')</span></div>'+
           '<div class="trk-ms-count-bar"><div class="trk-ms-count-fill" style="width:'+countPct+'%"></div></div>'+
         '</div>'
       : '';

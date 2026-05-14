@@ -805,18 +805,18 @@ async function renderPjEmployeeSummary() {
     const topEngs = Object.keys(d.engagements)
       .sort(function(a,b){ return d.engagements[b]-d.engagements[a]; })
       .slice(0,3)
-      .map(function(p){ return p+' ('+r2(d.engagements[p])+'h)'; })
+      .map(function(p){ return p+' ('+fmtHours(d.engagements[p])+')'; })
       .join(', ');
     return '<tr>'+
       '<td><strong>'+emp+'</strong></td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:13px">'+d.sessions+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:16px">'+r2(d.total)+'h</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.project)+'h</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.poc)+'h</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.amc)+'h</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.presales)+'h</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+r2(d.internal)+'h</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+r2(d.total/8)+' days</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:13px">'+fmtCount(d.sessions)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:16px">'+fmtHours(d.total)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.project)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.poc)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.amc)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.presales)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.internal)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+fmtDays(d.total/8)+'</td>'+
       '<td style="font-size:11px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(topEngs)+'">'+(topEngs||'-')+'</td>'+
     '</tr>';
   }).join('');
@@ -841,9 +841,9 @@ async function renderPjEmployeeSummary() {
       '<th>Working Days</th><th>Top Engagements</th></tr></thead>'+
     '<tbody>'+tableRows+
     '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>-</td>'+
-    '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+r2(totalHours)+'h</td>'+
+    '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+fmtHours(totalHours)+'</td>'+
     '<td colspan="5">-</td>'+
-    '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+r2(totalHours/8)+'</td><td>-</td></tr>'+
+    '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+fmtDays(totalHours/8)+'</td><td>-</td></tr>'+
     '</tbody></table></div>'+
     '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours / 8 | Hours are credited to every team member on a session (so a 4h session with 3 members shows 4h on each row, summing to 12h in TOTAL).</div>';
   if (typeof renderIcons === 'function') renderIcons();
@@ -928,7 +928,7 @@ function buildPieChart(data, unit) {
     html += '<div style="display:flex;align-items:center;gap:8px">'+
       '<div style="width:12px;height:12px;border-radius:3px;background:'+d.color+';flex-shrink:0"></div>'+
       '<div style="font-size:12px"><span style="font-weight:600">'+d.label+'</span> '+
-      '<span style="color:var(--muted)">'+r2(d.value)+(unit||'')+' ('+pct+'%)</span></div>'+
+      '<span style="color:var(--muted)">'+(unit==='h' ? fmtHours(d.value) : (fmtNumber(d.value,1)+(unit||'')))+' ('+pct+'%)</span></div>'+
       '</div>';
   });
   html += '</div></div>';

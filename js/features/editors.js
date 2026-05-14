@@ -30,9 +30,9 @@ function updateEditPreview() {
   var res=calcOT(date,start,end,_editEmp);
   if (!res) return;
   document.getElementById('edit-prev-band').textContent=res.band;
-  document.getElementById('edit-prev-dur').textContent=res.duration+'h';
+  document.getElementById('edit-prev-dur').textContent=fmtHours(res.duration);
   document.getElementById('edit-prev-rate').textContent=res.rate;
-  document.getElementById('edit-prev-cred').textContent=res.credited+'h';
+  document.getElementById('edit-prev-cred').textContent=fmtHours(res.credited);
 }
 async function saveEditOT() {
   var id=document.getElementById('edit-ot-id').value;

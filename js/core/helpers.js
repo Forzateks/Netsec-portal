@@ -291,6 +291,79 @@ function fmtTime(t){
   return String(t).slice(0,5);
 }
 function r2(n){return Math.round((n||0)*100)/100;}
+
+// ── Number/date display formatters ────────────────────────────────
+// Single source of truth for consistent number formatting across the
+// app. Use these instead of inline +'h' or +' days' concatenation so
+// hours, days, percentages, and counts all look the same everywhere.
+//
+//   fmtHours(2.5)  → "2.5h"
+//   fmtHours(8)    → "8h"        (no trailing .0)
+//   fmtHours(4.25) → "4.3h"      (rounds to 1 decimal max)
+//   fmtDays(22)    → "22 days"
+//   fmtDays(1)     → "1 day"     (singular)
+//   fmtDays(0.5)   → "0.5 days"
+//   fmtPct(74.56)  → "75%"       (no decimals)
+//   fmtCount(59)   → "59"        (whole numbers only)
+//
+// fmtNumber is the shared rounder — keeps whole numbers whole and
+// strips trailing zeros. The "h" / " days" / "%" suffixes live in
+// each typed helper so callers never have to think about it.
+function fmtNumber(n, maxDecimals) {
+  if (n === null || n === undefined || n === '' || isNaN(n)) return '0';
+  var max = (maxDecimals === undefined) ? 1 : maxDecimals;
+  var v = Number(n);
+  if (Math.abs(v - Math.round(v)) < 0.005) {
+    return Math.round(v).toLocaleString('en-US');
+  }
+  return v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: max });
+}
+function fmtHours(n) {
+  return fmtNumber(n, 1) + 'h';
+}
+function fmtDays(n) {
+  if (n === null || n === undefined || n === '' || isNaN(n)) return '0 days';
+  var v = Number(n);
+  var label = (Math.abs(v - 1) < 0.005) ? ' day' : ' days';
+  return fmtNumber(v, 1) + label;
+}
+function fmtPct(n) {
+  if (n === null || n === undefined || n === '' || isNaN(n)) return '0%';
+  return Math.round(Number(n)) + '%';
+}
+function fmtCount(n) {
+  if (n === null || n === undefined || n === '' || isNaN(n)) return '0';
+  return Math.round(Number(n)).toLocaleString('en-US');
+}
+// Datetime display: "08-May-2026, 14:32". Falls back to fmtDate for
+// date-only strings (no T separator).
+function fmtDateTime(iso) {
+  if (!iso) return '';
+  var s = String(iso);
+  if (s.indexOf('T') === -1) return fmtDate(s);
+  var datePart = fmtDate(s);
+  var timePart = s.split('T')[1].slice(0, 5);
+  return datePart + ', ' + timePart;
+}
+// Date range display:
+//   same year  → "08-May → 15-May-2026"  (year dropped from start)
+//   diff years → "28-Dec-2025 → 03-Jan-2026"
+//   missing    → falls back to whichever end is set
+function fmtDateRange(startIso, endIso) {
+  if (!startIso && !endIso) return '';
+  if (!startIso) return fmtDate(endIso);
+  if (!endIso)   return fmtDate(startIso);
+  var s = String(startIso).split('T')[0].split('-');
+  var e = String(endIso).split('T')[0].split('-');
+  if (s.length !== 3 || e.length !== 3) return fmtDate(startIso) + ' → ' + fmtDate(endIso);
+  if (s[0] === e[0]) {
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var sm = parseInt(s[1], 10);
+    var startShort = s[2] + '-' + (sm>=1 && sm<=12 ? months[sm-1] : s[1]);
+    return startShort + ' → ' + fmtDate(endIso);
+  }
+  return fmtDate(startIso) + ' → ' + fmtDate(endIso);
+}
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
 function statusIcon(s){return s==='approved'?'✅':s==='rejected'?'❌':'🟡';}
 function esc2(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}

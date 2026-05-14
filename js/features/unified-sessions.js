@@ -160,8 +160,8 @@ function updateUSPreview() {
   }
   var split = splitSessionHours(date, start, end, currentUser);
   if (!split) { totEl.textContent = '—'; offEl.textContent = '—'; otEl.textContent = '—'; return; }
-  totEl.textContent = split.total + 'h';
-  offEl.textContent = split.office + 'h';
+  totEl.textContent = fmtHours(split.total);
+  offEl.textContent = fmtHours(split.office);
   if (split.ot > 0 && split.otCalc) {
     var c = split.otCalc;
     otEl.textContent = split.ot + 'h  →  ' + c.band + ' · ' + c.rate + ' · credited ' + c.credited + 'h (pending approval)';
@@ -278,7 +278,7 @@ async function saveUnifiedSession() {
     } else {
       // Stamp the unified row with the new OT id
       await sb.from('unified_sessions').update({ linked_ot_session_id: otRes.data.id }).eq('id', unifiedId);
-      otSummary = ' · ' + c.band + ' OT ' + c.credited + 'h pending approval';
+      otSummary = ' · ' + c.band + ' OT ' + fmtHours(c.credited) + ' pending approval';
     }
   }
 
@@ -378,7 +378,7 @@ async function renderUSSessions() {
       '<td style="font-size:12px"><strong>'+esc2(engName)+'</strong></td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtDate(r.session_date)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px;white-space:nowrap">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+regionTag+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+r.total_hours+'h</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+fmtHours(r.total_hours)+'</td>'+
       '<td><span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+esc2(actType)+'</span></td>'+
       '<td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(info)+'">'+esc2(info||'-')+'</td>'+
       '<td style="font-size:12px;color:var(--muted)">'+esc2(emp)+'</td>'+
@@ -387,7 +387,7 @@ async function renderUSSessions() {
     cardsHtml += '<div class="us-card">'+
       '<div class="us-card-head">'+
         '<span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+esc2(t.label)+'</span>'+
-        '<span class="us-card-hours num">'+r.total_hours+'h</span>'+
+        '<span class="us-card-hours num">'+fmtHours(r.total_hours)+'</span>'+
       '</div>'+
       '<div class="us-card-name">'+esc2(engName)+'</div>'+
       '<div class="us-card-meta">'+esc2(custName)+'</div>'+
@@ -535,7 +535,7 @@ async function saveEditUS() {
   if (wasApproved) {
     var ok = await confirmAction({
       title: 'Recalculate this session?',
-      body: 'This session has APPROVED OT linked ('+oldOt.credited_hours+'h credited).\n\nSaving will recalculate the OT and reset its status to PENDING. The manager will need to re-approve. Comp-off balance for '+sessionEmployee+' may change.',
+      body: 'This session has APPROVED OT linked ('+fmtHours(oldOt.credited_hours)+' credited).\n\nSaving will recalculate the OT and reset its status to PENDING. The manager will need to re-approve. Comp-off balance for '+sessionEmployee+' may change.',
       confirmText: 'Save & reset to pending',
       danger: false
     });
@@ -739,15 +739,15 @@ async function renderEngagementSummary() {
     var cleanName = name.replace(/ · (Project|POC|Support\/AMC|Pre-Sales-Task)$/, '');
     var memberBreakdown = Object.keys(d.members).map(function(m){
       var label = (typeof empShortName === 'function') ? empShortName(m) : m.split(' ')[0];
-      return '<span class="badge" style="background:#f0f4ff;color:var(--navy);margin:1px">'+label+': '+r2(d.members[m])+'h</span>';
+      return '<span class="badge" style="background:#f0f4ff;color:var(--navy);margin:1px">'+label+': '+fmtHours(d.members[m])+'</span>';
     }).join(' ');
     var typeBadge = (typeKey==='all') ? (TYPE_BADGE[d.sessionType]||'') : '';
     return '<tr>'+
       '<td><strong>'+esc2(cleanName)+'</strong>'+(typeBadge?' '+typeBadge:'')+'</td>'+
       '<td style="font-size:12px;color:var(--muted)">'+esc2(d.customer)+'</td>'+
       '<td style="font-family:DM Mono,monospace">'+d.sessions+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:15px">'+r2(d.hours)+'h</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px;color:var(--muted)">'+r2(d.hours/8)+' days</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:15px">'+fmtHours(d.hours)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px;color:var(--muted)">'+fmtDays(d.hours/8)+'</td>'+
       '<td style="font-size:12px">'+memberBreakdown+'</td>'+
     '</tr>';
   }).join('');
@@ -773,7 +773,7 @@ async function renderEngagementSummary() {
       var seg = function(k, color, label){
         var pct = (byType[k]/mixTotal)*100;
         if (pct < 0.5) return '';
-        return '<div style="background:'+color+';height:100%;width:'+pct.toFixed(2)+'%;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700" title="'+label+': '+r2(byType[k])+'h ('+pct.toFixed(0)+'%)">'+(pct>=8?Math.round(pct)+'%':'')+'</div>';
+        return '<div style="background:'+color+';height:100%;width:'+pct.toFixed(2)+'%;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700" title="'+label+': '+fmtHours(byType[k])+' ('+fmtPct(pct)+')">'+(pct>=8?fmtPct(pct):'')+'</div>';
       };
       typeMixHtml =
         '<div class="card" style="margin-bottom:20px"><div class="card-title">Time Mix Across Types</div>'+
@@ -784,10 +784,10 @@ async function renderEngagementSummary() {
             seg('presales', '#BE185D','Pre-Sales-Task')+
           '</div>'+
           '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--muted)">'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Project '+r2(byType.project)+'h</span>'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#7C3AED;border-radius:2px;margin-right:6px;vertical-align:middle"></span>POC '+r2(byType.poc)+'h</span>'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Support/AMC '+r2(byType.amc)+'h</span>'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#BE185D;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Pre-Sales-Task '+r2(byType.presales)+'h</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Project '+fmtHours(byType.project)+'</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#7C3AED;border-radius:2px;margin-right:6px;vertical-align:middle"></span>POC '+fmtHours(byType.poc)+'</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Support/AMC '+fmtHours(byType.amc)+'</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#BE185D;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Pre-Sales-Task '+fmtHours(byType.presales)+'</span>'+
           '</div>'+
         '</div>';
     }
@@ -807,9 +807,9 @@ async function renderEngagementSummary() {
     '<div class="card" style="margin-bottom:20px"><div class="card-title">Quick Stats</div>'+
       '<div class="summary-grid">'+
         '<div class="stat-card navy"><div class="stat-label">Total '+esc2(typeLabel)+'s</div><div class="stat-value">'+sorted.length+'</div></div>'+
-        '<div class="stat-card teal"><div class="stat-label">Total Hours</div><div class="stat-value" style="font-size:20px">'+r2(totalHours)+'h</div></div>'+
-        '<div class="stat-card eve"><div class="stat-label">Total Sessions</div><div class="stat-value">'+totalSessions+'</div></div>'+
-        '<div class="stat-card wknd"><div class="stat-label">Total Customers</div><div class="stat-value">'+sortedCust.length+'</div></div>'+
+        '<div class="stat-card teal"><div class="stat-label">Total Hours</div><div class="stat-value" style="font-size:20px">'+fmtHours(totalHours)+'</div></div>'+
+        '<div class="stat-card eve"><div class="stat-label">Total Sessions</div><div class="stat-value">'+fmtCount(totalSessions)+'</div></div>'+
+        '<div class="stat-card wknd"><div class="stat-label">Total Customers</div><div class="stat-value">'+fmtCount(sortedCust.length)+'</div></div>'+
       '</div>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
@@ -897,14 +897,14 @@ async function renderUnifiedTypeSummary(typeKey) {
     var d = byEng[name];
     var memberBreakdown = Object.keys(d.members).map(function(m){
       var label = (typeof empShortName === 'function') ? empShortName(m) : m.split(' ')[0];
-      return '<span class="badge" style="background:#f0f4ff;color:var(--navy);margin:1px">'+label+': '+r2(d.members[m])+'h</span>';
+      return '<span class="badge" style="background:#f0f4ff;color:var(--navy);margin:1px">'+label+': '+fmtHours(d.members[m])+'</span>';
     }).join(' ');
     return '<tr>'+
       '<td><strong>'+esc2(name)+'</strong></td>'+
       '<td style="font-size:12px;color:var(--muted)">'+esc2(d.customer)+'</td>'+
       '<td style="font-family:DM Mono,monospace">'+d.sessions+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:15px">'+r2(d.hours)+'h</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px;color:var(--muted)">'+r2(d.hours/8)+' days</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:15px">'+fmtHours(d.hours)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px;color:var(--muted)">'+fmtDays(d.hours/8)+'</td>'+
       '<td style="font-size:12px">'+memberBreakdown+'</td>'+
     '</tr>';
   }).join('');
@@ -942,10 +942,10 @@ async function renderUnifiedTypeSummary(typeKey) {
     '</div>'+
     '<div class="card" style="margin-bottom:20px"><div class="card-title">Quick Stats</div>'+
       '<div class="summary-grid">'+
-        '<div class="stat-card navy"><div class="stat-label">Total '+typeKey.toUpperCase()+'s</div><div class="stat-value">'+sorted.length+'</div></div>'+
-        '<div class="stat-card teal"><div class="stat-label">Total Hours</div><div class="stat-value" style="font-size:20px">'+r2(totalHours)+'h</div></div>'+
-        '<div class="stat-card eve"><div class="stat-label">Total Sessions</div><div class="stat-value">'+totalSessions+'</div></div>'+
-        '<div class="stat-card wknd"><div class="stat-label">Total Customers</div><div class="stat-value">'+sortedCust.length+'</div></div>'+
+        '<div class="stat-card navy"><div class="stat-label">Total '+typeKey.toUpperCase()+'s</div><div class="stat-value">'+fmtCount(sorted.length)+'</div></div>'+
+        '<div class="stat-card teal"><div class="stat-label">Total Hours</div><div class="stat-value" style="font-size:20px">'+fmtHours(totalHours)+'</div></div>'+
+        '<div class="stat-card eve"><div class="stat-label">Total Sessions</div><div class="stat-value">'+fmtCount(totalSessions)+'</div></div>'+
+        '<div class="stat-card wknd"><div class="stat-label">Total Customers</div><div class="stat-value">'+fmtCount(sortedCust.length)+'</div></div>'+
       '</div>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
@@ -970,7 +970,7 @@ async function deleteUS(id) {
   var dOpts = { title: 'Delete this session?', body: 'This cannot be undone.', confirmText: 'Delete' };
   if (oldOt && oldOt.status === 'approved') {
     dOpts.title = 'Delete session with approved OT?';
-    dOpts.body  = 'This session has APPROVED OT linked ('+oldOt.credited_hours+'h credited as '+oldOt.band+').\n\nDeleting will also remove that OT row, reducing '+sessionEmployee+'\'s comp-off balance.\n\nThis cannot be undone.';
+    dOpts.body  = 'This session has APPROVED OT linked ('+fmtHours(oldOt.credited_hours)+' credited as '+oldOt.band+').\n\nDeleting will also remove that OT row, reducing '+sessionEmployee+'\'s comp-off balance.\n\nThis cannot be undone.';
   } else if (oldOtId) {
     dOpts.body = 'The linked '+(oldOt ? oldOt.status : 'pending')+' OT record will also be deleted.\n\nThis cannot be undone.';
   }

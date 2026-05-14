@@ -361,7 +361,7 @@ async function renderSessions() {
     var stBadge='<span class="badge '+badgeClass+'" style="font-size:10px" title="'+(esc2(s.manager_comment||'')||'')+'">'+icon+' '+label+'</span>';
     var infoIcon = '<button type="button" class="ot-info-btn" onclick="showOTExplainPopover(this,'+s.id+')" aria-label="Calculation details">i</button>';
     var driftMark = creditDriftMarker(s);
-    var creditedDisplay = (st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.credited_hours+'h</strong>' : '<span style="color:var(--muted);font-size:12px;text-decoration:line-through">'+s.credited_hours+'h</span>') + driftMark + infoIcon;
+    var creditedDisplay = (st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+fmtHours(s.credited_hours)+'</strong>' : '<span style="color:var(--muted);font-size:12px;text-decoration:line-through">'+fmtHours(s.credited_hours)+'</span>') + driftMark + infoIcon;
     var rowOpacity = (st==='rejected'||st==='archived') ? 'opacity:0.55' : '';
     return '<tr style="'+rowOpacity+'" title="'+(st==='archived'||st==='rejected'?(esc2(s.manager_comment||'')):'')+'">'+
     '<td style="color:var(--muted);font-family:\'DM Mono\',monospace">'+(i+1)+'</td>'+
@@ -370,7 +370,7 @@ async function renderSessions() {
     '<td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fmtDate(s.ot_date)+'<br><span style="font-size:11px;color:var(--muted)">'+(s.day_name||'')+'</span></td>'+
     '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+fmtTime(s.start_time)+'</td>'+
     '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+fmtTime(s.end_time)+'</td>'+
-    '<td style="font-family:\'DM Mono\',monospace">'+s.duration_hours+'h</td>'+
+    '<td style="font-family:\'DM Mono\',monospace">'+fmtHours(s.duration_hours)+'</td>'+
     '<td>'+bandBadge(s)+'</td>'+
     '<td><span class="badge '+(s.rate==='1:2'?'badge-12':'badge-11')+'">'+s.rate+'</span></td>'+
     '<td>'+creditedDisplay+'</td>'+
@@ -624,9 +624,9 @@ async function previewViolations() {
       '<td style="font-family:DM Mono,monospace">'+d.violators.length+'</td>'+
       '<td style="font-family:DM Mono,monospace;color:var(--danger);font-weight:700">'+d.recommendation.del.length+'</td>'+
       '<td style="font-family:DM Mono,monospace;color:var(--gold)">'+d.recommendation.keep.length+'</td>'+
-      '<td style="font-family:DM Mono,monospace">'+r2(d.used_days)+' days</td>'+
-      '<td style="font-family:DM Mono,monospace">'+r2(d.valid_credit)+'h</td>'+
-      '<td style="font-family:DM Mono,monospace;color:'+(newBalance<0?'var(--danger)':'var(--success)')+'">'+r2(newBalance)+' days</td>'+
+      '<td style="font-family:DM Mono,monospace">'+fmtDays(d.used_days)+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+fmtHours(d.valid_credit)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(newBalance<0?'var(--danger)':'var(--success)')+'">'+fmtDays(newBalance)+'</td>'+
       '</tr>';
   });
 
@@ -726,7 +726,7 @@ async function previewReevalArchived() {
     return '<tr><td>'+s.employee+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+s.ot_date+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtTime(s.start_time)+' to '+fmtTime(s.end_time)+'</td>'+
-      '<td style="font-family:DM Mono,monospace">'+s.credited_hours+'h -> <strong>'+r.credited+'h</strong></td>'+
+      '<td style="font-family:DM Mono,monospace">'+fmtHours(s.credited_hours)+' -> <strong>'+fmtHours(r.credited)+'</strong></td>'+
       '<td>'+bandBadge({band:r.band,start_time:s.start_time,end_time:s.end_time,employee:s.employee})+'</td>'+
       '</tr>';
   }).join('');
@@ -801,7 +801,7 @@ async function purgeOldArchived() {
 
   if (!await confirmAction({
     title: 'Permanently delete '+stale.length+' old session'+(stale.length===1?'':'s')+'?',
-    body: 'This will HARD-DELETE archived/rejected sessions older than 1 year (before '+cutoff.toISOString().split('T')[0]+').\n\nThis cannot be undone.',
+    body: 'This will HARD-DELETE archived/rejected sessions older than 1 year (before '+fmtDate(cutoff.toISOString())+').\n\nThis cannot be undone.',
     requireTyping: 'DELETE',
     confirmText: 'Continue'
   })) return;

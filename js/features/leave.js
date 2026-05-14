@@ -58,9 +58,9 @@ async function updateLeavePreview() {
     ]);
     const s = calcSummary(sessions||[], coRegs||[], currentUser);
     const balAfter = s.balance - reqDays;
-    document.getElementById('lv-prev-days').textContent = reqDays+' day';
-    document.getElementById('lv-prev-used').textContent = s.used+' / '+s.totalCO;
-    document.getElementById('lv-prev-bal').textContent  = balAfter+' days';
+    document.getElementById('lv-prev-days').textContent = fmtDays(reqDays);
+    document.getElementById('lv-prev-used').textContent = fmtNumber(s.used,1)+' / '+fmtNumber(s.totalCO,1);
+    document.getElementById('lv-prev-bal').textContent  = fmtDays(balAfter);
     document.getElementById('lv-prev-bal').style.color  = balAfter<0?'var(--danger)':balAfter<=1?'var(--gold)':'var(--success)';
     return;
   }
@@ -86,12 +86,9 @@ async function updateLeavePreview() {
   const year = start.split('-')[0];
   const used = await getLeaveDaysUsed(currentUser,year,ltype);
   const balAfter = allowance - used - days;
-  // Format with one decimal only when fractional, so "5 days" stays clean
-  // and "0.5 day" / "21.5 days" surface only when there's actually a half.
-  var fmt = function(n){ return (Math.abs(n - Math.round(n)) < 0.001) ? String(Math.round(n)) : (Math.round(n*10)/10).toFixed(1); };
-  document.getElementById('lv-prev-days').textContent = fmt(days)+' day'+(days===1?'':'s');
-  document.getElementById('lv-prev-used').textContent = fmt(used)+' / '+allowance;
-  document.getElementById('lv-prev-bal').textContent  = fmt(balAfter)+' days';
+  document.getElementById('lv-prev-days').textContent = fmtDays(days);
+  document.getElementById('lv-prev-used').textContent = fmtNumber(used,1)+' / '+allowance;
+  document.getElementById('lv-prev-bal').textContent  = fmtDays(balAfter);
   document.getElementById('lv-prev-bal').style.color  = balAfter<0?'var(--danger)':balAfter<=3?'var(--gold)':'var(--success)';
 }
 
@@ -359,7 +356,7 @@ async function renderLeaveHistory() {
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
         '<div><strong>'+r.employee+'</strong> <span style="font-size:11px;font-weight:600;color:var(--gold)">Comp Off ('+r.type+')</span><br>'+
         '<span style="font-family:DM Mono,monospace;font-size:13px">'+fmtDate(r.request_date)+'</span><br>'+
-        '<span style="font-size:12px;color:var(--muted)">'+r.days+' day'+(r.remarks?' | '+r.remarks:(r.related_activity?' | '+r.related_activity:''))+'</span></div>'+
+        '<span style="font-size:12px;color:var(--muted)">'+fmtDays(r.days)+(r.remarks?' | '+r.remarks:(r.related_activity?' | '+r.related_activity:''))+'</span></div>'+
         '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span></div>'+
         (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:4px">💬 '+r.manager_comment+'</div>':'')+
         '</div>';
@@ -409,7 +406,7 @@ async function renderLeaveTeam() {
       '<td><strong>'+emp+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(KSA_EMP.includes(emp)?'KSA — Fri/Sat':'UAE — Sat/Sun')+'</span></td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+annualUsed+' / '+LEAVE_ALLOWANCE+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:'+aColor+'">'+annualRem+'</td>'+
-      '<td><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+aPct+'%;background:'+aColor+';border-radius:4px"></div></div><div style="font-size:11px;color:var(--muted);margin-top:3px">'+Math.round(aPct)+'% used</div></td>'+
+      '<td><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+aPct+'%;background:'+aColor+';border-radius:4px"></div></div><div style="font-size:11px;color:var(--muted);margin-top:3px">'+fmtPct(aPct)+' used</div></td>'+
       '<td>'+aBadge+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+sickUsed+' / '+SICK_ALLOWANCE+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:'+sColor+'">'+sickRem+'</td>'+
@@ -424,7 +421,7 @@ async function renderLeaveTeam() {
     '<th>Annual Used</th><th>Annual Rem.</th><th>Usage</th><th>Status</th>'+
     '<th>Sick Used</th><th>Sick Rem.</th><th>Status</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Annual: '+LEAVE_ALLOWANCE+' days/yr &nbsp;|&nbsp; Sick: '+SICK_ALLOWANCE+' days/yr</div>'+
+    '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Annual: '+fmtDays(LEAVE_ALLOWANCE)+'/yr &nbsp;|&nbsp; Sick: '+fmtDays(SICK_ALLOWANCE)+'/yr</div>'+
     '</div>';
 }
 
@@ -773,8 +770,8 @@ function approvalCard(r,type) {
   else {
     var isHalf = (parseFloat(r.working_days) === 0.5);
     var halfBadge = isHalf ? ' <span class="badge" style="background:#EDE9FE;color:#5B21B6;font-size:10px">Half day</span>' : '';
-    var dateLabel = r.start_date===r.end_date ? fmtDate(r.start_date) : (fmtDate(r.start_date)+' to '+fmtDate(r.end_date));
-    info='<strong>'+r.employee+'</strong> — '+dateLabel+halfBadge+' ('+r.working_days+' day'+(parseFloat(r.working_days)===1?'':'s')+')'+(r.reason?' | '+r.reason:'');
+    var dateLabel = r.start_date===r.end_date ? fmtDate(r.start_date) : fmtDateRange(r.start_date, r.end_date);
+    info='<strong>'+r.employee+'</strong> — '+dateLabel+halfBadge+' ('+fmtDays(r.working_days)+')'+(r.reason?' | '+r.reason:'');
   }
 
   // Overlap warning for leave requests where another employee has a
