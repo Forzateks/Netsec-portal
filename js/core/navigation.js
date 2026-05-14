@@ -111,6 +111,7 @@ function showScreen(name) {
   if (name==='kb')         showKBTab('browse');
   if (name==='tracker')    { if (typeof showTrackerTab === 'function') showTrackerTab('all'); if (typeof loadTracker === 'function') loadTracker(); }
   if (name==='certificates') { if (typeof showCertTab === 'function') showCertTab('mine'); }
+  if (name==='amc') { if (typeof loadAMCContracts === 'function') loadAMCContracts(); }
 }
 
 // Parent-click handler for the projects accordions (Sessions / Reports).

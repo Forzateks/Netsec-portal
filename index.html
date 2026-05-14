@@ -254,6 +254,7 @@
   <div id="sidebar-manager-group" style="display:none">
     <div class="sidebar-item" id="sbi-projects-manage"    onclick="navigateSub('projects','manage');closeSidebarOnMobile()"><i data-lucide="settings-2" class="sidebar-icon"></i>Manage Engagements</div>
     <div class="sidebar-item" id="sbi-projects-vendors"   onclick="navigateSub('projects','vendors');closeSidebarOnMobile()"><i data-lucide="package" class="sidebar-icon"></i>Vendors &amp; Products</div>
+    <div class="sidebar-item" id="tab-amc"                onclick="showScreen('amc');closeSidebarOnMobile()"><i data-lucide="file-text" class="sidebar-icon"></i>AMC Contracts</div>
     <div class="sidebar-item" id="sbi-projects-otmanager" onclick="navigateSub('projects','otmanager');closeSidebarOnMobile()"><i data-lucide="shield-check" class="sidebar-icon"></i>Admin Tools</div>
   </div>
 
@@ -1245,7 +1246,32 @@
 </div><!-- /screen-inventory -->
 
 
-<!-- ══ CERTIFICATES SCREEN ══ -->
+<!-- ══ AMC CONTRACTS SCREEN (manager-only sidebar entry) ══ -->
+<div class="screen" id="screen-amc">
+  <div class="amc-page-header">
+    <div>
+      <div class="amc-page-title">AMC Contracts</div>
+      <div class="amc-page-sub">Commercial register of every active and past AMC. Use this for renewal tracking and revenue rollups.</div>
+    </div>
+    <button class="btn btn-primary manager-only-el" onclick="openAMCContractModal()"><i data-lucide="plus" class="btn-icon"></i>New Contract</button>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      <input id="amc-search" oninput="renderAMCContracts()" placeholder="Search client, SO, partner..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:220px;flex:1">
+      <label style="font-size:12px;color:var(--muted);font-weight:600">Region:</label>
+      <div class="ms" id="amc-filter-region"></div>
+      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Vendor:</label>
+      <div class="ms" id="amc-filter-vendor"></div>
+      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Year:</label>
+      <select id="amc-filter-year" onchange="renderAMCContracts()" style="width:auto;padding:7px 10px;font-size:13px"></select>
+      <button class="btn btn-sm btn-ghost" onclick="clearAMCFilters()">✕ Clear</button>
+    </div>
+  </div>
+
+  <div id="amc-load" class="loading"><div class="spinner"></div>Loading contracts...</div>
+  <div id="amc-content"></div>
+</div><!-- /screen-amc -->
 <div class="screen" id="screen-certificates">
   <div id="certtab-mine">
     <div class="card cert-header-card">
@@ -1962,6 +1988,73 @@
   </div>
 </div>
 
+<!-- ── AMC CONTRACT — ADD / EDIT MODAL ───────────────────────────── -->
+<div class="modal-overlay" id="amc-contract-modal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-title" id="amc-modal-title">New AMC Contract</div>
+    <div class="alert alert-error" id="amc-modal-error" style="display:none;margin-bottom:14px"></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Client *</label>
+        <select id="amc-cust" onchange="onAMCContractCustomerChange()"></select>
+      </div>
+      <div class="form-group">
+        <label>Partner *</label>
+        <input type="text" id="amc-partner" placeholder="e.g. Mannai, GBM, Mindware">
+      </div>
+      <div class="form-group">
+        <label>Region *</label>
+        <select id="amc-region"></select>
+      </div>
+      <div class="form-group">
+        <label>Vendor *</label>
+        <select id="amc-vendor"></select>
+      </div>
+      <div class="form-group">
+        <label>GIT Sales Order *</label>
+        <input type="text" id="amc-so" placeholder="e.g. SO-2026-0042">
+      </div>
+      <div class="form-group">
+        <label>AMC Value (USD) *</label>
+        <input type="number" id="amc-value" min="0" step="0.01" placeholder="e.g. 50000">
+      </div>
+      <div class="form-group">
+        <label>Start Date *</label>
+        <input type="date" id="amc-start">
+      </div>
+      <div class="form-group">
+        <label>End Date *</label>
+        <input type="date" id="amc-end">
+      </div>
+      <div class="form-group">
+        <label>Booking Year *</label>
+        <input type="number" id="amc-booking-yr" min="2000" max="2100">
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <textarea id="amc-notes" rows="2" placeholder="Optional remarks"></textarea>
+      </div>
+      <div class="form-group full">
+        <label>Linked Engagements</label>
+        <div id="amc-linked-engagements" class="amc-linked-wrap"></div>
+        <div class="amc-linked-hint">Tick any AMC engagements this contract covers. Filtered to the selected client's AMC engagements by default.</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAMCContractModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAMCContract()"><i data-lucide="save" class="btn-icon"></i>Save Contract</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── AMC CONTRACT — DETAIL MODAL ───────────────────────────────── -->
+<div class="modal-overlay" id="amc-detail-modal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-title">AMC Contract</div>
+    <div id="amc-detail-body"></div>
+  </div>
+</div>
+
 <!-- ── ADD ENGAGEMENT MODAL ─────────────────────────────────────────
      Single source of truth for creating engagements. Used by:
        1. Tracker page "+ New Engagement" button (trkOpenNew)
@@ -2040,6 +2133,7 @@
 <script src="js/features/knowledge-base.js"></script>
 <script src="js/features/tracker.js"></script>
 <script src="js/features/certificates.js"></script>
+<script src="js/features/amc-contracts.js"></script>
 <script src="js/core/init.js"></script>
 </body>
 </html>

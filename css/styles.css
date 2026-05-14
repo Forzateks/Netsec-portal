@@ -238,6 +238,84 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
    .top-bar at the top of the page. */
 .sidebar-section-label{font-size:11px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:18px 20px 6px}
 .sidebar-section-label:first-of-type{padding-top:14px}
+
+/* ── AMC CONTRACTS ─────────────────────────────────────────────── */
+.amc-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.amc-page-title{font-size:20px;font-weight:700;color:var(--navy);line-height:1.2}
+.amc-page-sub{font-size:12px;color:var(--muted);margin-top:2px;max-width:540px;line-height:1.4}
+
+/* Status chip strip above the filter bar — same idea as the Tracker
+   strip but visually simpler (no count gradient). */
+.amc-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.amc-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid var(--border);border-radius:999px;background:white;color:var(--navy);font-size:13px;font-weight:600;cursor:pointer;transition:all .12s;font-family:inherit}
+.amc-chip:hover{border-color:#94A3B8;background:#F8FAFC}
+.amc-chip-active{border-color:var(--teal);background:#E0F7FF;color:var(--navy);box-shadow:0 1px 2px rgba(0,160,210,.18)}
+.amc-chip-count{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);background:#F1F5F9;padding:1px 7px;border-radius:10px;font-weight:700}
+.amc-chip-active .amc-chip-count{background:#fff;color:var(--navy)}
+
+/* Status badges (table + detail view). Active/Expiring/Expired share
+   shape; colour scheme follows the existing app palette. */
+.amc-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.2px;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.amc-badge-active{background:#DCFCE7;color:#166534}
+.amc-badge-expiring{background:#FEF3C7;color:#92400E}
+.amc-badge-expired{background:#FEE2E2;color:#991B1B}
+.amc-badge-unknown{background:#F1F5F9;color:#64748B}
+
+.amc-table{width:100%;border-collapse:collapse;font-size:13px}
+.amc-table thead th{background:#F8FAFC;border-bottom:1px solid var(--border);padding:10px 12px;font-weight:600;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:left}
+.amc-table td{padding:10px 12px;border-bottom:1px solid #EEF1F5;vertical-align:middle}
+.amc-row{cursor:pointer;transition:background .12s}
+.amc-row:hover{background:#F8FAFC}
+
+/* Mobile cards — same data, vertical stack. Whole card is the tap
+   target into the detail modal. */
+.amc-cards{display:flex;flex-direction:column;gap:10px}
+.amc-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.amc-card:hover{border-color:#94A3B8;box-shadow:0 2px 6px rgba(15,23,42,.06)}
+.amc-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.amc-card-customer{font-weight:700;color:var(--navy);font-size:14px}
+.amc-card-meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+.amc-card-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--navy);font-weight:500}
+.amc-card-row.dim{color:var(--muted);font-weight:400;margin-top:4px}
+.amc-card-sep{color:#CBD5E1}
+.amc-card-actions{display:flex;gap:4px;justify-content:flex-end;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+
+/* Linked engagements picker inside the add/edit modal. */
+.amc-linked-wrap{max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;background:#FAFBFD;display:flex;flex-direction:column;gap:2px}
+.amc-linked-row{display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:13px;border-radius:6px;cursor:pointer;transition:background .1s}
+.amc-linked-row:hover{background:#F1F5F9}
+.amc-linked-cb{accent-color:var(--teal);width:14px;height:14px;flex-shrink:0}
+.amc-linked-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.amc-linked-empty{padding:14px;color:var(--muted);font-size:13px;text-align:center}
+.amc-linked-hint{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* Detail modal layout */
+.amc-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:14px;flex-wrap:wrap}
+.amc-detail-customer{font-size:18px;font-weight:700;color:var(--navy);line-height:1.2}
+.amc-detail-meta{font-size:13px;color:var(--muted);margin-top:2px}
+.amc-detail-status{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.amc-detail-days{font-size:11px;color:var(--muted);margin-top:4px}
+.amc-detail-days-active{color:#166534}
+.amc-detail-days-expired{color:#991B1B;font-weight:600}
+.amc-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;margin-bottom:14px}
+.amc-detail-field{display:flex;flex-direction:column;gap:2px}
+.amc-detail-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.amc-detail-value{font-size:14px;color:var(--navy);font-weight:500}
+.amc-detail-value.num{font-family:'DM Mono',monospace}
+.amc-detail-notes{background:#F8FAFC;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;line-height:1.5;color:var(--navy);white-space:pre-wrap}
+.amc-detail-section-title{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px}
+.amc-detail-engs{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
+.amc-detail-eng-row{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#FAFBFD;border-radius:6px;border:1px solid #EEF1F5}
+.amc-detail-eng-name{font-weight:600;color:var(--navy);font-size:13px}
+.amc-detail-eng-sub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+.amc-detail-eng-hours{font-family:'DM Mono',monospace;font-weight:700;color:var(--teal);font-size:14px}
+.amc-detail-empty{padding:14px;color:var(--muted);font-size:13px;text-align:center;background:#FAFBFD;border-radius:8px}
+
+@media(max-width:640px){
+  .amc-detail-grid{grid-template-columns:1fr}
+  .amc-detail-head{flex-direction:column;align-items:stretch}
+  .amc-detail-status{text-align:left;align-items:flex-start}
+}
 .sidebar-item{display:flex;align-items:center;gap:12px;padding:9px 20px 9px 17px;font-size:14px;color:var(--text);cursor:pointer;transition:background .15s,color .15s;border-left:3px solid transparent;font-weight:500;position:relative;user-select:none}
 .sidebar-item:hover{background:rgba(10,31,92,.04);color:var(--navy)}
 .sidebar-item.active{background:rgba(0,160,210,.08);color:var(--navy);border-left-color:var(--teal);font-weight:600}

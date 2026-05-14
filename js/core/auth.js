@@ -237,7 +237,7 @@ async function initApp(user) {
   var mgrGroup = document.getElementById('sidebar-manager-group');
   if (mgrGroup) mgrGroup.style.display = isManager ? '' : 'none';
   // Per-item gates inside the MANAGER section (kept for defense-in-depth).
-  ['sbi-projects-manage','sbi-projects-vendors','sbi-projects-otmanager'].forEach(function(id){
+  ['sbi-projects-manage','sbi-projects-vendors','sbi-projects-otmanager','tab-amc'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.style.display = isManager ? '' : 'none';
   });
   var sbiCertAll = document.getElementById('sbi-certificates-all');
