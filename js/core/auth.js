@@ -229,12 +229,17 @@ async function initApp(user) {
   }
 
   // Show/hide manager elements
-  var sbiOTManager = document.getElementById('sbi-projects-otmanager');
-  if (sbiOTManager) sbiOTManager.style.display = isManager ? '' : 'none';
-  var sbiManage = document.getElementById('sbi-projects-manage');
-  if (sbiManage) sbiManage.style.display = isManager ? '' : 'none';
-  var sbiVendors = document.getElementById('sbi-projects-vendors');
-  if (sbiVendors) sbiVendors.style.display = isManager ? '' : 'none';
+  // MANAGER section: hide the section label + its standalone-item container
+  // wholesale so employees don't even see a collapsed empty slot. The
+  // per-item `style="display:none"` defaults stay as defense-in-depth.
+  var mgrLabel = document.getElementById('sidebar-manager-label');
+  if (mgrLabel) mgrLabel.style.display = isManager ? '' : 'none';
+  var mgrGroup = document.getElementById('sidebar-manager-group');
+  if (mgrGroup) mgrGroup.style.display = isManager ? '' : 'none';
+  // Per-item gates inside the MANAGER section (kept for defense-in-depth).
+  ['sbi-projects-manage','sbi-projects-vendors','sbi-projects-otmanager'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.style.display = isManager ? '' : 'none';
+  });
   var sbiCertAll = document.getElementById('sbi-certificates-all');
   if (sbiCertAll) sbiCertAll.style.display = isManager ? '' : 'none';
   document.getElementById('tab-approvals').style.display  = isManager ? '' : 'none';

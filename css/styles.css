@@ -236,7 +236,7 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .sidebar-close:hover{background:rgba(0,0,0,.04);color:var(--navy)}
 /* Sidebar brand removed — the logo + brand text now live in the unified
    .top-bar at the top of the page. */
-.sidebar-section-label{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:18px 20px 6px}
+.sidebar-section-label{font-size:11px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:18px 20px 6px}
 .sidebar-section-label:first-of-type{padding-top:14px}
 .sidebar-item{display:flex;align-items:center;gap:12px;padding:9px 20px 9px 17px;font-size:14px;color:var(--text);cursor:pointer;transition:background .15s,color .15s;border-left:3px solid transparent;font-weight:500;position:relative;user-select:none}
 .sidebar-item:hover{background:rgba(10,31,92,.04);color:var(--navy)}

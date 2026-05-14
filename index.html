@@ -180,21 +180,26 @@
   </div>
 
   <div class="sidebar-section-label">Work</div>
-  <div class="sidebar-group" id="sbg-projects">
-    <div class="sidebar-item has-children" id="tab-projects" onclick="showScreen('projects');closeSidebarOnMobile()">
+  <!-- Sessions: action-oriented sub-tabs only (logging + viewing own work). -->
+  <div class="sidebar-group" id="sbg-sessions">
+    <div class="sidebar-item has-children" id="tab-sessions" onclick="toggleProjectGroup('sessions','uslog');closeSidebarOnMobile()">
       <i data-lucide="briefcase" class="sidebar-icon"></i>Sessions<span class="sidebar-chevron">›</span>
     </div>
     <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-projects-uslog"      onclick="navigateSub('projects','uslog')"><i data-lucide="plus-circle" class="sidebar-subicon"></i>Log Session</div>
-      <div class="sidebar-subitem" id="sbi-projects-ussess"     onclick="navigateSub('projects','ussess')"><i data-lucide="list" class="sidebar-subicon"></i>My Sessions</div>
+      <div class="sidebar-subitem" id="sbi-projects-uslog"  onclick="navigateSub('projects','uslog')"><i data-lucide="plus-circle" class="sidebar-subicon"></i>Log Session</div>
+      <div class="sidebar-subitem" id="sbi-projects-ussess" onclick="navigateSub('projects','ussess')"><i data-lucide="list" class="sidebar-subicon"></i>My Sessions</div>
+    </div>
+  </div>
+  <!-- Reports: analytics views across the same projects-screen routing. -->
+  <div class="sidebar-group" id="sbg-reports">
+    <div class="sidebar-item has-children" id="tab-reports" onclick="toggleProjectGroup('reports','otsessions');closeSidebarOnMobile()">
+      <i data-lucide="bar-chart-3" class="sidebar-icon"></i>Reports<span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
       <div class="sidebar-subitem" id="sbi-projects-otsessions" onclick="navigateSub('projects','otsessions')"><i data-lucide="timer" class="sidebar-subicon"></i>OT Sessions</div>
       <div class="sidebar-subitem" id="sbi-projects-otsummary"  onclick="navigateSub('projects','otsummary')"><i data-lucide="bar-chart-2" class="sidebar-subicon"></i>OT Summary</div>
       <div class="sidebar-subitem" id="sbi-projects-engagement" onclick="navigateSub('projects','engagement')"><i data-lucide="bar-chart-3" class="sidebar-subicon"></i>Engagement Summary</div>
       <div class="sidebar-subitem" id="sbi-projects-employee"   onclick="navigateSub('projects','employee')"><i data-lucide="users-round" class="sidebar-subicon"></i>Employee Summary</div>
-      <div class="sidebar-subitem" id="sbi-projects-otpolicy"   onclick="navigateSub('projects','otpolicy')"><i data-lucide="book-open" class="sidebar-subicon"></i>OT Policy</div>
-      <div class="sidebar-subitem" id="sbi-projects-otmanager"  onclick="navigateSub('projects','otmanager')" style="display:none"><i data-lucide="shield-check" class="sidebar-subicon"></i>Manager View</div>
-      <div class="sidebar-subitem" id="sbi-projects-manage"     onclick="navigateSub('projects','manage')" style="display:none"><i data-lucide="settings-2" class="sidebar-subicon"></i>Manage Engagements</div>
-      <div class="sidebar-subitem" id="sbi-projects-vendors"    onclick="navigateSub('projects','vendors')" style="display:none"><i data-lucide="package" class="sidebar-subicon"></i>Vendors &amp; Products</div>
     </div>
   </div>
 
@@ -242,6 +247,17 @@
     </div>
   </div>
 
+  <!-- MANAGER (manager only) — admin surfaces broken out of Sessions so the
+       day-to-day Sessions menu stays clean for employees. The whole section
+       (label + items) is hidden when isManager is false in auth.js. -->
+  <div class="sidebar-section-label" id="sidebar-manager-label" style="display:none">Manager</div>
+  <div id="sidebar-manager-group" style="display:none">
+    <div class="sidebar-item" id="sbi-projects-manage"    onclick="navigateSub('projects','manage');closeSidebarOnMobile()"><i data-lucide="settings-2" class="sidebar-icon"></i>Manage Engagements</div>
+    <div class="sidebar-item" id="sbi-projects-vendors"   onclick="navigateSub('projects','vendors');closeSidebarOnMobile()"><i data-lucide="package" class="sidebar-icon"></i>Vendors &amp; Products</div>
+    <div class="sidebar-item" id="sbi-projects-otmanager" onclick="navigateSub('projects','otmanager');closeSidebarOnMobile()"><i data-lucide="shield-check" class="sidebar-icon"></i>Admin Tools</div>
+  </div>
+
+  <div class="sidebar-section-label">System</div>
   <div class="sidebar-group" id="sbg-kb">
     <div class="sidebar-item has-children" id="tab-kb" onclick="showScreen('kb');closeSidebarOnMobile()">
       <i data-lucide="book-open-text" class="sidebar-icon"></i>Knowledge Base<span class="sidebar-chevron">›</span>
@@ -252,8 +268,9 @@
       <div class="sidebar-subitem" id="sbi-kb-mine"   onclick="navigateSub('kb','mine')"><i data-lucide="file-text" class="sidebar-subicon"></i>My Articles</div>
     </div>
   </div>
-
-  <div class="sidebar-section-label">System</div>
+  <!-- OT Policy is a reference doc, not an active tool — lives under System
+       alongside the Knowledge Base. Routes through showProjectTab still. -->
+  <div class="sidebar-item" id="sbi-projects-otpolicy" onclick="navigateSub('projects','otpolicy');closeSidebarOnMobile()"><i data-lucide="book-open" class="sidebar-icon"></i>OT Policy</div>
   <div class="sidebar-item" onclick="openChangePasswordModal();closeSidebarOnMobile()"><i data-lucide="key-round" class="sidebar-icon"></i>Change Password</div>
   <div class="sidebar-item sidebar-item-logout" onclick="doLogout()"><i data-lucide="log-out" class="sidebar-icon"></i>Logout</div>
 </aside>
