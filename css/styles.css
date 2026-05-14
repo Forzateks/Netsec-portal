@@ -1318,47 +1318,6 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .cert-table thead th,.cert-table tbody td{padding:9px 10px;font-size:12px}
 }
 
-/* Customer chips (Manage Engagements → Customers)
-   Compact pill that stays clean by default. Action buttons (edit / delete)
-   are hidden until the chip is hovered or focused; on touch devices they
-   stay visible since :hover doesn't apply. */
-.cust-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;background:white;font-size:13px;transition:border-color .15s,box-shadow .15s,background .15s,padding .15s}
-.cust-chip:hover{border-color:var(--teal);background:#F0F9FF;box-shadow:0 1px 3px rgba(15,23,42,.06);padding-right:6px}
-.cust-chip:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,160,210,.12);padding-right:6px}
-/* Chip body is the primary navigation surface — click to open the customer's
-   engagements in the Tracker. The right-arrow icon slides in on hover as a
-   visual affordance that this is navigational, not a static label. */
-.cust-chip-body{display:inline-flex;align-items:center;gap:6px;background:transparent;border:none;cursor:pointer;font-family:inherit;font-size:inherit;color:inherit;padding:0}
-.cust-chip-arrow{width:13px;height:13px;stroke-width:2;color:var(--muted);opacity:0;transform:translateX(-4px);transition:opacity .15s ease,transform .15s ease;flex-shrink:0}
-.cust-chip:hover .cust-chip-arrow,
-.cust-chip:focus-within .cust-chip-arrow{opacity:1;transform:translateX(0);color:var(--teal)}
-.cust-chip-archived{background:#F3F4F6}
-.cust-chip-archived .cust-chip-name{color:var(--muted);text-decoration:line-through}
-.cust-chip-name{color:var(--navy);font-weight:600}
-.cust-chip-count{font-size:11px;color:var(--muted);background:#F1F5F9;padding:1px 7px;border-radius:10px;font-weight:600;font-family:'DM Mono',monospace}
-
-/* Action buttons fade in on hover/focus. Use opacity + width transitions
-   instead of display:none so the layout doesn't jump when they appear. */
-.cust-chip-btn{
-  padding:0;min-height:0;width:0;height:22px;
-  display:inline-flex;align-items:center;justify-content:center;
-  background:transparent;border:1px solid transparent;border-radius:6px;cursor:pointer;color:var(--muted);
-  opacity:0;overflow:hidden;
-  transition:opacity .15s ease,width .15s ease,background .12s,color .12s,border-color .12s
-}
-.cust-chip-btn i{width:13px;height:13px;stroke-width:2;flex-shrink:0}
-.cust-chip:hover .cust-chip-btn,
-.cust-chip:focus-within .cust-chip-btn{opacity:1;width:22px}
-.cust-chip-btn:hover{background:#F1F5F9;color:var(--navy);border-color:var(--border)}
-.cust-chip-btn-danger:hover{background:#FEE2E2;color:#991B1B;border-color:#FCA5A5}
-
-/* Touch devices: keep actions visible since hover isn't reliable. */
-@media (hover: none) {
-  .cust-chip-btn{opacity:1;width:22px}
-  /* Touch devices can't hover — keep the navigate arrow visible. */
-  .cust-chip-arrow{opacity:.6;transform:translateX(0)}
-}
-
 /* ── Glow-pill button pattern ────────────────────────────────────────
    Two-state pattern: white "default" pill with a coloured dot, or solid
    green "active" pill with a glowing white dot. Used in EXACTLY THREE
@@ -1421,37 +1380,32 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 .db-status-label{font-weight:500;letter-spacing:.2px}
 
-/* Customers section: search input, inline add form, collapsible country groups. */
-.cust-search-row{position:relative;margin-bottom:14px;max-width:480px}
-.cust-search-row input{width:100%;padding:9px 36px 9px 34px;border:1px solid var(--color-border);border-radius:10px;font-size:13px;background:white;font-family:inherit;color:var(--color-text)}
-.cust-search-row input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,160,210,.12)}
-.cust-search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--color-text-subtle);pointer-events:none}
-.cust-search-clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--color-text-muted);font-size:18px;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;line-height:1;padding:0;font-family:inherit}
-.cust-search-clear:hover{background:#F1F5F9;color:var(--navy)}
+/* Manage Customers — compact table replacing the legacy chip wall. */
+.cust-tbl-search{
+  padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;
+  font-size:13px;font-family:inherit;background:white;min-width:220px;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.cust-tbl-search:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,160,210,.12)}
 
-.cust-add-row{display:flex;gap:8px;align-items:center;padding:12px;background:#F8FAFC;border:1px solid var(--color-border);border-radius:10px;margin-bottom:14px;flex-wrap:wrap}
-.cust-add-row input{flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;font-family:inherit}
-.cust-add-row input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,160,210,.12)}
-
-.cust-group{margin-bottom:14px}
-.cust-group-head{display:flex;align-items:center;gap:8px;background:transparent;border:none;cursor:pointer;font-size:13px;color:var(--navy);font-weight:600;padding:6px 4px;width:100%;text-align:left;font-family:inherit;border-radius:6px}
-.cust-group-head:hover{background:#F8FAFC}
-.cust-group-chevron{width:14px;height:14px;stroke-width:2.5;flex-shrink:0;transition:transform .15s ease}
-.cust-group-name{flex:1;text-align:left}
-.cust-group-count{font-size:11px;color:var(--color-text-muted);background:#F1F5F9;padding:2px 10px;border-radius:10px;font-family:'DM Mono',monospace;font-weight:600}
-.cust-group-chips{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0 0 22px}
+.cust-mgr-table{width:100%;border-collapse:collapse}
+.cust-mgr-table thead th{
+  background:#F8FAFC;border-bottom:1px solid var(--color-border);
+  padding:0;font-weight:600;font-size:12px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.4px;
+}
+.cust-mgr-table thead th:last-child{text-align:right;padding-right:12px}
+.cust-mgr-sort-btn{
+  background:transparent;border:none;cursor:pointer;font-family:inherit;
+  font-size:inherit;font-weight:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;
+  padding:12px;width:100%;text-align:left;display:flex;align-items:center;gap:6px;
+}
+.cust-mgr-sort-btn:hover{color:var(--navy)}
+.cust-mgr-sort-ico{width:12px;height:12px;stroke-width:2;color:var(--muted);opacity:.6;flex-shrink:0}
+.cust-mgr-sort-active{opacity:1;color:var(--teal)}
 
 @media(max-width:640px){
-  .cust-search-row{max-width:none}
-  .cust-group-chips{padding-left:0}
-  .cust-add-row{padding:10px}
-  .cust-add-row input{font-size:14px}
-  .cust-add-row button{flex:1;min-width:100px}
-}
-@media(max-width:380px){
-  /* Icon-only "+ Add Customer" button on narrow phones. */
-  .cust-add-toggle .cust-add-toggle-label{display:none}
-  .cust-add-toggle .btn-icon{margin-right:0}
+  .cust-tbl-search{min-width:0;width:100%}
 }
 
 /* Reusable multi-select dropdown (filter bars) */

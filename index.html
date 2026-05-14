@@ -544,25 +544,19 @@
     <div class="alert alert-success" id="pj-manage-success">✅ Saved!</div>
     <div class="alert alert-error"   id="pj-manage-error">⚠️ Please complete the form.</div>
 
-    <!-- Customers -->
+    <!-- Manage Customers (compact table) — chip wall removed, the Project
+         Tracker is the primary customer-browsing surface now. -->
     <div class="card" style="margin-bottom:20px">
       <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">🏢 Customers <span id="cust-total-count" style="font-weight:400;color:var(--muted);font-size:14px"></span></div>
-        <button class="btn btn-primary cust-add-toggle" onclick="toggleCustomerAdd()">
-          <i data-lucide="plus" class="btn-icon"></i><span class="cust-add-toggle-label">Add Customer</span>
-        </button>
+        <div class="card-title" style="margin-bottom:0">🏢 Manage Customers <span id="cust-mgr-count" style="font-weight:400;color:var(--muted);font-size:14px"></span></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="cust-mgr-search" oninput="renderCustomersTable()" class="cust-tbl-search" placeholder="Search customers...">
+        </div>
       </div>
-      <div class="cust-search-row">
-        <i data-lucide="search" class="cust-search-ico"></i>
-        <input id="cust-search" oninput="renderCustomersList()" placeholder="Search customers...">
-        <button class="cust-search-clear" id="cust-search-clear" onclick="clearCustomerSearch()" title="Clear search" style="display:none">×</button>
+      <div id="cust-mgr-content"></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+        Add a new customer from the Customer dropdown on the Add Engagement form below — pick <em>+ Add new customer…</em>.
       </div>
-      <div class="cust-add-row" id="cust-add-row" style="display:none">
-        <input type="text" id="cust-new-name" placeholder="e.g. Etisalat" onkeydown="if(event.key==='Enter')addCustomer()">
-        <button class="btn btn-primary" onclick="addCustomer()">Add</button>
-        <button class="btn btn-ghost" onclick="toggleCustomerAdd()">Cancel</button>
-      </div>
-      <div id="cust-list-content"></div>
     </div>
 
     <div class="card" style="margin-bottom:20px">

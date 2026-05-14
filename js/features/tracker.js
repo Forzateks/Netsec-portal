@@ -159,12 +159,13 @@ function _trkUpdateUrlFromSearch() {
   } catch (e) { /* no-op on older browsers */ }
 }
 
-// Read ?customer= from the URL (set by navigateToTrackerForCustomer in the
-// customers chip) and seed the tracker search input. Seed-only — the caller
-// is responsible for rendering. loadTracker calls this BEFORE renderTracker
-// so the first paint already carries the filter (no flash of unfiltered
-// rows). popstate calls this then renders explicitly because the screen is
-// already loaded by then.
+// Read ?customer= from the URL and seed the tracker search input. The
+// original chip-wall navigator that set this param is gone, but the
+// handler stays so other deep-links (manual URLs, future entry points)
+// keep working. Seed-only — the caller renders. loadTracker calls this
+// BEFORE renderTracker so the first paint already carries the filter (no
+// flash of unfiltered rows). popstate calls this then renders explicitly
+// because the screen is already loaded by then.
 function _trkApplyUrlParams() {
   try {
     var params = new URLSearchParams(window.location.search);

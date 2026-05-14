@@ -142,13 +142,30 @@ function projectsForCustomer(customerName) {
   return PROJECTS.filter(function(p){ return PROJECT_CUSTOMER[p] === customerName; });
 }
 
-// Populate a customer <select> by id
+// Populate a customer <select> by id. The Add Engagement form's picker
+// (#pj-new-customer) is the ONE place we surface a "+ Add new customer…"
+// sentinel — other dropdowns (filters + edit modals) already have their
+// own inline onchange handlers, and adding a customer from a filter / edit
+// context would be confusing.
 function fillCustomerSelect(selectId, includeAll) {
   var el = document.getElementById(selectId); if (!el) return;
   var cur = el.value;
+  var showAddNew = (selectId === 'pj-new-customer');
+  el.dataset.includeAll = includeAll ? 'true' : 'false';
   el.innerHTML = (includeAll ? '<option value="">All Customers</option>' : '<option value="">-- Select Customer --</option>')
-    + CUSTOMERS.map(function(c){ return '<option>'+c.name+'</option>'; }).join('');
+    + CUSTOMERS.map(function(c){ return '<option>'+esc2(c.name)+'</option>'; }).join('')
+    + (showAddNew ? '<option value="__add_new__">+ Add new customer…</option>' : '');
   if (cur) el.value = cur;
+  // Attach the sentinel handler only on the Add Engagement dropdown.
+  // _prevValue tracks the last "real" pick so onCustomerSelectAdd can roll
+  // back when the user cancels the prompt.
+  if (showAddNew) {
+    el._prevValue = el.value;
+    el.onchange = function() {
+      if (el.value === '__add_new__') onCustomerSelectAdd(selectId);
+      else el._prevValue = el.value;
+    };
+  }
 }
 
 // Populate a project <select> filtered by a customer name
@@ -300,196 +317,162 @@ async function updateProjectStatus(idOrName, newStatus) {
 
 
 // === CUSTOMERS CRUD (manager only) ==============================
-async function addCustomer() {
-  var nameEl = document.getElementById('cust-new-name');
-  var name = (nameEl.value||'').trim();
-  var errEl = document.getElementById('pj-manage-error');
-  if (!name) { errEl.textContent = 'Please enter a customer name.'; showAlert('pj-manage-error'); return; }
-  // Duplicate check (case-insensitive)
+// addCustomer accepts an optional name argument so it can be invoked
+// programmatically (from the inline +Add new customer dropdown flow).
+// Without an argument it returns false instead of throwing — the caller
+// decides how to surface the error.
+async function addCustomer(nameArg) {
+  var name = (nameArg !== undefined ? nameArg : '').trim();
+  if (!name) return null;
+  // Duplicate check (case-insensitive). Caller's validator usually catches
+  // this first; keep the guard so direct calls stay safe.
   var dup = (CUSTOMERS||[]).some(function(c){ return c.name.toLowerCase() === name.toLowerCase(); });
-  if (dup) { errEl.textContent = 'A customer named "'+name+'" already exists.'; showAlert('pj-manage-error'); return; }
+  if (dup) { showError('A customer named "'+name+'" already exists.'); return null; }
 
-  var {error} = await sb.from('customers').insert({ name: name, status: 'active' });
-  if (error) { showError('Error: '+error.message); return; }
-  nameEl.value = '';
+  var res = await sb.from('customers').insert({ name: name, status: 'active' }).select().single();
+  if (res.error) { showError('Error: '+res.error.message); return null; }
   showToast('Customer added ✓');
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
-  renderCustomersList();
+  if (typeof renderCustomersTable === 'function') renderCustomersTable();
   renderManageProjects();
+  return res.data; // {id, name, status}
 }
 
-// Collapsed-state for country groups persists within the session so toggling
-// one group doesn't reset siblings on every re-render.
-var _custGroupsCollapsed = {};
-
-// Walk ENGAGEMENTS once and derive a customer_id → group-label map.
-// 0 distinct countries → "Unassigned"; 1 → that country; 2+ → "Multi-country".
-function _custBuildCountryMap() {
-  var byCust = {};
-  (ENGAGEMENTS||[]).forEach(function(e){
-    var c = (e.country||'').trim();
-    if (!c) return;
-    if (!byCust[e.customer_id]) byCust[e.customer_id] = {};
-    byCust[e.customer_id][c] = 1;
+// Inline "+ Add new customer..." flow — called from the Customer dropdown
+// sentinel option. Opens promptInput, inserts the customer, then re-fills
+// the dropdown and selects the new row.
+async function onCustomerSelectAdd(selectId) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  // Roll back the sentinel selection BEFORE the modal opens so the dropdown
+  // doesn't sit on "__add_new__" if the user cancels.
+  sel.value = sel._prevValue || '';
+  var name = await promptInput({
+    title: 'Add Customer',
+    label: 'Customer name',
+    placeholder: 'e.g. Etisalat',
+    confirmText: 'Add Customer',
+    validate: function(v){
+      var dup = (CUSTOMERS||[]).some(function(c){ return c.name.toLowerCase() === v.toLowerCase(); });
+      return dup ? 'A customer named "'+v+'" already exists.' : null;
+    }
   });
-  var map = {};
-  Object.keys(byCust).forEach(function(cid){
-    var keys = Object.keys(byCust[cid]);
-    if (keys.length === 0)      map[cid] = 'Unassigned';
-    else if (keys.length === 1) map[cid] = keys[0];
-    else                        map[cid] = 'Multi-country';
-  });
-  return map;
-}
-
-function clearCustomerSearch() {
-  var el = document.getElementById('cust-search');
-  if (el) el.value = '';
-  renderCustomersList();
-}
-
-// Toggle the inline "+ Add Customer" form row visibility. The button in the
-// card header is the primary entry point; the form expands beneath it.
-function toggleCustomerAdd() {
-  var row = document.getElementById('cust-add-row');
-  if (!row) return;
-  var hidden = row.style.display === 'none' || !row.style.display;
-  row.style.display = hidden ? 'flex' : 'none';
-  if (hidden) {
-    var inp = document.getElementById('cust-new-name');
-    if (inp) { inp.focus(); inp.select(); }
-  }
-}
-
-function toggleCustomerGroup(country) {
-  _custGroupsCollapsed[country] = !_custGroupsCollapsed[country];
-  renderCustomersList();
-}
-
-// Click a customer chip → push the customer name into the URL and navigate
-// to the Tracker. Tracker's loadTracker reads ?customer= on mount and seeds
-// its search input, so the page lands pre-filtered. The pushState entry lets
-// the browser back button restore the previous tracker state.
-function navigateToTrackerForCustomer(name) {
   if (!name) return;
-  try {
-    var url = new URL(window.location.href);
-    url.searchParams.set('customer', name);
-    history.pushState({customer: name, from: 'customers'}, '', url.toString());
-  } catch (e) { /* older browsers — silently skip URL update */ }
-  if (typeof showScreen === 'function') showScreen('tracker');
+  var created = await addCustomer(name);
+  if (!created) return;
+  // Re-fill the dropdown so the new customer is in the option list, then
+  // select it. populateProjectDropdowns above already re-fills, but we
+  // explicitly set the value here in case the caller's onchange uses it.
+  fillCustomerSelect(selectId, sel.dataset.includeAll === 'true');
+  sel.value = name;
+  // Fire change so any dependent UI (engagement dropdown filter) updates.
+  if (typeof sel.onchange === 'function') sel.onchange();
+  else sel.dispatchEvent(new Event('change'));
+  sel._prevValue = name;
 }
 
-function renderCustomersList() {
-  var el = document.getElementById('cust-list-content');
+// ─── MANAGE CUSTOMERS TABLE ──────────────────────────────────────
+// Searchable + sortable table inside Sessions → Manage. Replaces the old
+// chip wall. Edit reuses the existing edit-customer modal; Delete blocks
+// when engagement_count > 0.
+var _custMgrSort   = { by: 'name', dir: 'asc' }; // by: 'name' | 'count'
+function _custMgrSetSort(by) {
+  if (_custMgrSort.by === by) {
+    _custMgrSort.dir = (_custMgrSort.dir === 'asc') ? 'desc' : 'asc';
+  } else {
+    _custMgrSort.by = by;
+    _custMgrSort.dir = (by === 'count') ? 'desc' : 'asc';
+  }
+  renderCustomersTable();
+}
+
+function renderCustomersTable() {
+  var el = document.getElementById('cust-mgr-content');
   if (!el) return;
 
   var allRows = (CUSTOMERS||[]).slice();
-  var search  = ((document.getElementById('cust-search')||{}).value||'').toLowerCase().trim();
+  var search  = ((document.getElementById('cust-mgr-search')||{}).value||'').toLowerCase().trim();
 
-  // Header total + Clear-search button visibility.
-  var totalEl = document.getElementById('cust-total-count');
+  // Header total
+  var totalEl = document.getElementById('cust-mgr-count');
   if (totalEl) totalEl.textContent = allRows.length ? '('+allRows.length+')' : '';
-  var clearBtn = document.getElementById('cust-search-clear');
-  if (clearBtn) clearBtn.style.display = search ? '' : 'none';
 
-  // Empty data state — friendly first-run message.
+  // Empty data state
   if (!allRows.length) {
     el.innerHTML = renderEmptyState({
       icon: 'building-2',
       heading: 'No customers yet',
-      sub: 'Customers organize your engagements. Add one to start tracking projects and POCs.',
-      btnText: 'Add first customer',
-      btnOnclick: 'toggleCustomerAdd()'
+      sub: 'Add the first customer from the Add Engagement form below.'
     });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
 
-  // Apply search filter against customer name.
+  // Engagement counts per customer (shown in the table + used by sort + delete-guard).
+  var counts = {};
+  (ENGAGEMENTS||[]).forEach(function(e){ counts[e.customer_id] = (counts[e.customer_id]||0) + 1; });
+
+  // Filter
   var filtered = search
     ? allRows.filter(function(c){ return String(c.name||'').toLowerCase().indexOf(search) !== -1; })
     : allRows;
 
-  // Search returned nothing — surface a Clear-search CTA so the user
-  // recovers in one click.
   if (!filtered.length) {
     el.innerHTML = renderEmptyState({
       icon: 'search-x',
       heading: 'No customers match "'+esc2(search)+'"',
-      sub: 'Try a different keyword or clear the search.',
-      btnText: 'Clear search',
-      btnIcon: 'x',
-      btnOnclick: 'clearCustomerSearch()'
+      sub: 'Try a different keyword.'
     });
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
 
-  // Engagement counts per customer (chip badge).
-  var counts = {};
-  (ENGAGEMENTS||[]).forEach(function(e){ counts[e.customer_id] = (counts[e.customer_id]||0) + 1; });
-
-  // Country derivation — built once per render.
-  var countryMap = _custBuildCountryMap();
-
-  // Bucket customers by group.
-  var groups = {};
-  filtered.forEach(function(c){
-    var g = countryMap[c.id] || 'Unassigned';
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(c);
+  // Sort
+  filtered.sort(function(a,b){
+    var av, bv;
+    if (_custMgrSort.by === 'count') {
+      av = counts[a.id] || 0;
+      bv = counts[b.id] || 0;
+    } else {
+      av = String(a.name||'').toLowerCase();
+      bv = String(b.name||'').toLowerCase();
+    }
+    if (av < bv) return _custMgrSort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return _custMgrSort.dir === 'asc' ?  1 : -1;
+    return 0;
   });
 
-  // Sort customers alphabetically inside each group.
-  Object.keys(groups).forEach(function(g){
-    groups[g].sort(function(a,b){
-      return String(a.name||'').toLowerCase().localeCompare(String(b.name||'').toLowerCase());
-    });
-  });
+  var sortArrow = function(col){
+    if (_custMgrSort.by !== col) return '<i data-lucide="chevrons-up-down" class="cust-mgr-sort-ico"></i>';
+    return _custMgrSort.dir === 'asc'
+      ? '<i data-lucide="arrow-up" class="cust-mgr-sort-ico cust-mgr-sort-active"></i>'
+      : '<i data-lucide="arrow-down" class="cust-mgr-sort-ico cust-mgr-sort-active"></i>';
+  };
 
-  // Group ordering: known countries alphabetically, then Multi-country, then
-  // Unassigned at the bottom. The special-bucket sort below assumes those
-  // are the only two special keys.
-  var groupOrder = Object.keys(groups).sort(function(a,b){
-    var rankA = (a === 'Multi-country') ? 1 : (a === 'Unassigned') ? 2 : 0;
-    var rankB = (b === 'Multi-country') ? 1 : (b === 'Unassigned') ? 2 : 0;
-    if (rankA !== rankB) return rankA - rankB;
-    return a.localeCompare(b);
-  });
-
-  el.innerHTML = groupOrder.map(function(country){
-    var customers = groups[country];
-    var collapsed = !!_custGroupsCollapsed[country];
-    var chevron   = collapsed ? 'chevron-right' : 'chevron-down';
-    var groupKey  = country.replace(/'/g, "\\'");
-    var chips = customers.map(function(c){
-      var n        = counts[c.id] || 0;
-      var archived = c.status === 'archived';
-      var safeName = (c.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      var ariaLabel = 'View '+esc2(c.name)+' engagements in Tracker';
-      return '<div class="cust-chip'+(archived?' cust-chip-archived':'')+'">'
-        + '<button class="cust-chip-body" onclick="navigateToTrackerForCustomer(\''+safeName+'\')" aria-label="'+ariaLabel+'">'
-        +   '<span class="cust-chip-name">'+esc2(c.name)+'</span>'
-        +   (n ? '<span class="cust-chip-count">'+n+'</span>' : '')
-        +   '<i data-lucide="arrow-right" class="cust-chip-arrow"></i>'
-        + '</button>'
-        + '<button class="cust-chip-btn" onclick="event.stopPropagation();openEditCustomer('+c.id+')" title="Edit"><i data-lucide="pencil-line"></i></button>'
-        + '<button class="cust-chip-btn cust-chip-btn-danger" onclick="event.stopPropagation();deleteCustomer('+c.id+",'"+safeName+"'"+')" title="Delete"><i data-lucide="x"></i></button>'
-        + '</div>';
-    }).join('');
-    return '<div class="cust-group">'
-      + '<button class="cust-group-head" onclick="toggleCustomerGroup(\''+groupKey+'\')" aria-expanded="'+(!collapsed)+'">'
-      +   '<i data-lucide="'+chevron+'" class="cust-group-chevron"></i>'
-      +   '<span class="cust-group-name">'+esc2(country)+'</span>'
-      +   '<span class="cust-group-count">'+customers.length+'</span>'
-      + '</button>'
-      + (collapsed ? '' : '<div class="cust-group-chips">'+chips+'</div>')
-      + '</div>';
+  var rows = filtered.map(function(c){
+    var n = counts[c.id] || 0;
+    var safeName = (c.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return '<tr>'+
+      '<td><strong style="color:var(--navy)">'+esc2(c.name)+'</strong></td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(n?'var(--navy)':'var(--muted)')+'">'+fmtCount(n)+'</td>'+
+      '<td style="white-space:nowrap;text-align:right">'+
+        '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openEditCustomer('+c.id+')" title="Rename"><i data-lucide="pencil"></i></button>'+
+        '<button class="btn btn-sm btn-danger btn-icon-only" onclick="deleteCustomer('+c.id+",'"+safeName+"'"+')" title="Delete"><i data-lucide="trash-2"></i></button>'+
+      '</td>'+
+    '</tr>';
   }).join('');
 
+  el.innerHTML =
+    '<div class="table-wrap"><table class="cust-mgr-table">'+
+      '<thead><tr>'+
+        '<th><button class="cust-mgr-sort-btn" onclick="_custMgrSetSort(\'name\')">Customer Name'+sortArrow('name')+'</button></th>'+
+        '<th><button class="cust-mgr-sort-btn" onclick="_custMgrSetSort(\'count\')">Engagements'+sortArrow('count')+'</button></th>'+
+        '<th style="text-align:right">Actions</th>'+
+      '</tr></thead>'+
+      '<tbody>'+rows+'</tbody>'+
+    '</table></div>';
   if (typeof renderIcons === 'function') renderIcons();
 }
 
@@ -534,7 +517,7 @@ async function saveEditCustomer() {
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
-  renderCustomersList();
+  if (typeof renderCustomersTable === 'function') renderCustomersTable();
   renderManageProjects();
   if (typeof loadTracker === 'function' && document.getElementById('screen-tracker') && document.getElementById('screen-tracker').classList.contains('active')) {
     loadTracker();
@@ -542,40 +525,28 @@ async function saveEditCustomer() {
 }
 
 async function deleteCustomer(id, name) {
-  // Cascade: customer → engagements → milestones (FK CASCADE handles milestones).
-  // Sessions snapshot customer_name/engagement_name as text, so the historical
-  // logs stay readable even after the customer + engagements are gone.
+  // Refusal path: delete is BLOCKED when the customer still has engagements.
+  // The old chip-wall flow cascade-deleted everything; the new Manage Customers
+  // table is intentionally stricter — managers must reassign or remove the
+  // child engagements first. This keeps accidental data loss off the table.
   var custEngagements = (ENGAGEMENTS||[]).filter(function(e){ return e.customer_id === id; });
-
-  // Count milestones cascade so the warning is accurate
-  var msCount = 0;
   if (custEngagements.length) {
-    var msRes = await sb.from('engagement_milestones')
-      .select('id', { count:'exact', head:true })
-      .in('engagement_id', custEngagements.map(function(e){return e.id;}));
-    msCount = msRes.count || 0;
+    await confirmAction({
+      title: 'Can’t delete customer "'+name+'" yet',
+      body: 'This customer has '+custEngagements.length+' engagement'+(custEngagements.length===1?'':'s')+' attached.\n\nRemove or reassign those engagements first, then come back and delete the customer.',
+      confirmText: 'OK',
+      danger: false
+    });
+    return;
   }
 
-  var body = 'This will permanently delete the customer';
-  if (custEngagements.length) {
-    body += ' and cascade to:\n  • '+custEngagements.length+' engagement'+(custEngagements.length===1?'':'s');
-    if (msCount) body += '\n  • '+msCount+' milestone'+(msCount===1?'':'s')+' under those engagements';
-    body += '\n\nLogged sessions referencing this customer keep their snapshot text but become unlinked.';
-  }
-  body += '\n\nThis cannot be undone.';
   if (!await confirmAction({
     title: 'Delete customer "'+name+'"?',
-    body: body,
+    body: 'This customer has no engagements attached. It will be removed from the database.\n\nThis cannot be undone.',
     requireTyping: name,
     confirmText: 'Delete customer'
   })) return;
 
-  // Delete engagements first; engagement_milestones cascade via FK.
-  if (custEngagements.length) {
-    var ids = custEngagements.map(function(e){return e.id;});
-    var de = await sb.from('engagements').delete().in('id', ids);
-    if (de.error) { showError('Error deleting engagements: '+de.error.message); return; }
-  }
   var {error} = await sb.from('customers').delete().eq('id', id);
   if (error) { showError('Error: '+error.message); return; }
 
@@ -583,7 +554,7 @@ async function deleteCustomer(id, name) {
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
-  renderCustomersList();
+  if (typeof renderCustomersTable === 'function') renderCustomersTable();
   renderManageProjects();
   // Refresh tracker too if it has been viewed in this session
   if (typeof loadTracker === 'function' && document.getElementById('screen-tracker') && document.getElementById('screen-tracker').classList.contains('active')) {
@@ -1137,7 +1108,7 @@ function showProjectTab(tab) {
   }
   if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
   if (tab==='otmanager')  { renderManager(); }
-  if (tab==='manage')     { populateProjectDropdowns(); renderCustomersList(); renderManageProjects(); }
+  if (tab==='manage')     { populateProjectDropdowns(); renderCustomersTable(); renderManageProjects(); }
   if (tab==='vendors')    { renderVendorsManage(); }
   setSidebarSubActive('projects', tab);
 }
