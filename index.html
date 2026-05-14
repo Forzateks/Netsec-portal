@@ -576,54 +576,15 @@
       </div>
     </div>
 
-    <div class="card" id="pj-add-engagement-card" style="margin-bottom:20px">
-      <div class="card-title">➕ Add New Engagement</div>
-      <div class="form-grid mb-4">
-        <div class="form-group">
-          <label>Customer *</label>
-          <select id="pj-new-customer">
-            <option value="">-- Select Customer --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Type *</label>
-          <select id="pj-new-type">
-            <option value="">-- Select Type --</option>
-            <option value="project">📁 Project</option>
-            <option value="poc">🎯 POC</option>
-            <option value="amc">🛠️ AMC</option>
-            <option value="support">🚨 Support</option>
-            <option value="presales">💼 Pre-Sales-Task</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Vendor *</label>
-          <select id="pj-new-vendor" onchange="onNewVendorChange()"></select>
-          <input type="text" id="pj-new-vendor-other" placeholder="Custom vendor name" style="display:none;margin-top:6px">
-        </div>
-        <div class="form-group">
-          <label>Product Line *</label>
-          <select id="pj-new-product-line" onchange="onNewProductLineChange()" disabled></select>
-          <input type="text" id="pj-new-product-line-other" placeholder="Custom product line" style="display:none;margin-top:6px">
-        </div>
-        <div class="form-group">
-          <label>Engagement Name *</label>
-          <input type="text" id="pj-new-name" placeholder="e.g. ENBD-PHASE3" style="text-transform:uppercase">
-        </div>
-        <div class="form-group">
-          <label>Status</label>
-          <select id="pj-new-status">
-            <option value="active">🟢 Active</option>
-            <option value="sign-off">✍️ Sign-off</option>
-            <option value="payment-pending">💰 Payment Pending</option>
-            <option value="completed">✅ Completed</option>
-            <option value="on-hold">⏸️ On Hold</option>
-            <option value="dormant">💤 Dormant</option>
-            <option value="cancelled">❌ Cancelled</option>
-          </select>
-        </div>
+    <!-- The Add Engagement form lives in #add-engagement-modal now (single
+         source of truth used by both this page's CTA and the Tracker's
+         "+ New Engagement" button). Card here is just the entry point. -->
+    <div class="card" id="pj-add-engagement-card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="card-title" style="margin-bottom:4px">➕ Add New Engagement</div>
+        <div style="font-size:13px;color:var(--muted)">Create a new Project, POC, AMC, Support, or Pre-Sales engagement under an existing customer.</div>
       </div>
-      <button class="btn btn-primary" onclick="addEngagement()"><i data-lucide="plus" class="btn-icon"></i>Add Engagement</button>
+      <button class="btn btn-primary" onclick="openAddEngagementModal()"><i data-lucide="plus" class="btn-icon"></i>Add Engagement</button>
     </div>
     <div class="card">
       <div class="flex-between mb-4">
@@ -1997,6 +1958,68 @@
     <div class="modal-actions">
       <button type="button" class="btn btn-ghost" id="prompt-modal-cancel">Cancel</button>
       <button type="button" class="btn btn-primary" id="prompt-modal-ok">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADD ENGAGEMENT MODAL ─────────────────────────────────────────
+     Single source of truth for creating engagements. Used by:
+       1. Tracker page "+ New Engagement" button (trkOpenNew)
+       2. Sessions → Manage Engagements page CTA
+     Field IDs match the original inline form so addEngagement() and the
+     onNew*Change handlers work without rewiring. -->
+<div class="modal-overlay" id="add-engagement-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title">➕ Add New Engagement</div>
+    <div class="alert alert-error" id="add-eng-error" style="display:none;margin-bottom:14px"></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Customer *</label>
+        <select id="pj-new-customer">
+          <option value="">-- Select Customer --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Type *</label>
+        <select id="pj-new-type">
+          <option value="">-- Select Type --</option>
+          <option value="project">📁 Project</option>
+          <option value="poc">🎯 POC</option>
+          <option value="amc">🛠️ AMC</option>
+          <option value="support">🚨 Support</option>
+          <option value="presales">💼 Pre-Sales-Task</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Vendor *</label>
+        <select id="pj-new-vendor" onchange="onNewVendorChange()"></select>
+        <input type="text" id="pj-new-vendor-other" placeholder="Custom vendor name" style="display:none;margin-top:6px">
+      </div>
+      <div class="form-group">
+        <label>Product Line *</label>
+        <select id="pj-new-product-line" onchange="onNewProductLineChange()" disabled></select>
+        <input type="text" id="pj-new-product-line-other" placeholder="Custom product line" style="display:none;margin-top:6px">
+      </div>
+      <div class="form-group full">
+        <label>Engagement Name *</label>
+        <input type="text" id="pj-new-name" placeholder="e.g. ENBD-PHASE3" style="text-transform:uppercase">
+      </div>
+      <div class="form-group full">
+        <label>Status</label>
+        <select id="pj-new-status">
+          <option value="active">🟢 Active</option>
+          <option value="sign-off">✍️ Sign-off</option>
+          <option value="payment-pending">💰 Payment Pending</option>
+          <option value="completed">✅ Completed</option>
+          <option value="on-hold">⏸️ On Hold</option>
+          <option value="dormant">💤 Dormant</option>
+          <option value="cancelled">❌ Cancelled</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAddEngagementModal()">Cancel</button>
+      <button class="btn btn-primary" id="add-eng-save-btn" onclick="addEngagement()"><i data-lucide="plus" class="btn-icon"></i>Add Engagement</button>
     </div>
   </div>
 </div>

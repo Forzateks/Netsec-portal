@@ -474,35 +474,11 @@ function trkClearDateInput(id) {
   renderTracker();
 }
 
-// Primary CTA on the tracker page. Engagements are created from the Manage
-// Engagements sub-tab (the single source of truth — no duplicate form here).
-// We navigate via navigateSub() so the new (post-v49) project sub-group
-// routing fires correctly, then scroll + focus the Add Engagement form so
-// it feels like a modal opened. The prior implementation had a typo
-// (showProjectsTab vs showProjectTab) AND a race (showScreen defaulted to
-// 'uslog' before any override), so users always landed on Log Session.
+// Primary CTA on the tracker page. Opens the shared Add Engagement modal
+// — no screen navigation needed since the modal overlays whatever page
+// the user is currently on.
 function trkOpenNew() {
-  if (typeof navigateSub !== 'function') return;
-  navigateSub('projects', 'manage');
-  // Wait one frame for pjtab-manage to flip to display:block, then scroll
-  // past the Manage Customers card to the Add Engagement form. The card
-  // gets a brief teal pulse so the user can see exactly where the form is.
-  requestAnimationFrame(function() {
-    var card = document.getElementById('pj-add-engagement-card');
-    if (card) {
-      try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
-      card.classList.remove('pj-card-flash');
-      // Force a reflow so the class re-add re-triggers the animation
-      void card.offsetWidth;
-      card.classList.add('pj-card-flash');
-    }
-    // Focus the first input after the scroll animation has had a beat to
-    // start — focusing immediately can jolt the page back to the input.
-    setTimeout(function() {
-      var first = document.getElementById('pj-new-customer');
-      if (first && first.focus) first.focus();
-    }, 350);
-  });
+  if (typeof openAddEngagementModal === 'function') openAddEngagementModal();
 }
 
 function renderTracker() {

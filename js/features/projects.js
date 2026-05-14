@@ -178,17 +178,72 @@ function fillProjectSelect(selectId, customerName, includeAll) {
   if (cur && list.indexOf(cur) >= 0) el.value = cur;
 }
 
-// ── ADD ENGAGEMENT (Project / POC / AMC) ────────────────────────
+// ── ADD ENGAGEMENT MODAL ────────────────────────────────────────
+// Single source of truth for creating engagements. Two entry points:
+//   1. Tracker "+ New Engagement" button (trkOpenNew)
+//   2. Sessions → Manage Engagements page CTA
+// Both call openAddEngagementModal which resets the fields, refreshes the
+// dropdowns from the latest CUSTOMERS/VENDORS caches, shows the modal,
+// and focuses the Customer field.
+function openAddEngagementModal() {
+  var modal = document.getElementById('add-engagement-modal');
+  if (!modal) return;
+  // Reset every field so a previous open doesn't bleed in. Defaults:
+  // status=active, type empty (forces user to pick).
+  document.getElementById('pj-new-name').value = '';
+  document.getElementById('pj-new-type').value = '';
+  document.getElementById('pj-new-customer').value = '';
+  document.getElementById('pj-new-status').value = 'active';
+  ['pj-new-vendor-other','pj-new-product-line-other'].forEach(function(id){
+    var el = document.getElementById(id); if (el) { el.value = ''; el.style.display = 'none'; }
+  });
+  // Refresh dropdowns from current caches (vendors/customers may have changed
+  // since the page first loaded).
+  fillCustomerSelect('pj-new-customer', false);
+  fillVendorSelect('pj-new-vendor', '');
+  fillProductLineSelect('pj-new-product-line', '', '');
+  var errEl = document.getElementById('add-eng-error');
+  if (errEl) errEl.style.display = 'none';
+  modal.classList.add('show');
+  // Focus the Customer dropdown after the modal animation has started.
+  setTimeout(function(){
+    var first = document.getElementById('pj-new-customer');
+    if (first && first.focus) first.focus();
+  }, 80);
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+function closeAddEngagementModal() {
+  var modal = document.getElementById('add-engagement-modal');
+  if (modal) modal.classList.remove('show');
+}
+
+// Surfaces a validation error inside the modal (instead of the old inline
+// banner on the Manage page). Falls back to showError toast when the modal
+// isn't mounted (defensive — addEngagement could in theory be invoked
+// outside the modal flow).
+function _addEngError(msg) {
+  var errEl = document.getElementById('add-eng-error');
+  if (errEl) {
+    errEl.textContent = '⚠️ ' + msg;
+    errEl.style.display = 'block';
+  } else {
+    showError(msg);
+  }
+}
+
 async function addEngagement() {
   const customer = document.getElementById('pj-new-customer').value;
   const type     = document.getElementById('pj-new-type').value;
   const name     = (document.getElementById('pj-new-name').value||'').trim().toUpperCase();
   const status   = document.getElementById('pj-new-status').value;
-  var errEl = document.getElementById('pj-manage-error');
+  // Hide any lingering error before re-validating
+  var errEl = document.getElementById('add-eng-error');
+  if (errEl) errEl.style.display = 'none';
 
-  if (!customer) { errEl.textContent = '⚠️ Please select a customer.';            showAlert('pj-manage-error'); return; }
-  if (!type)     { errEl.textContent = '⚠️ Please select an engagement type.';    showAlert('pj-manage-error'); return; }
-  if (!name)     { errEl.textContent = '⚠️ Please enter an engagement name.';     showAlert('pj-manage-error'); return; }
+  if (!customer) { _addEngError('Please select a customer.');         return; }
+  if (!type)     { _addEngError('Please select an engagement type.'); return; }
+  if (!name)     { _addEngError('Please enter an engagement name.');  return; }
 
   var custRow = CUSTOMERS.find(function(c){ return c.name === customer; });
   var customer_id = custRow ? custRow.id : null;
@@ -198,8 +253,8 @@ async function addEngagement() {
     return e.customer_id === customer_id && e.name === name && e.type === type;
   });
   if (dup) {
-    errEl.textContent = '⚠️ A '+type.toUpperCase()+' engagement named "'+name+'" already exists for this customer.';
-    showAlert('pj-manage-error'); return;
+    _addEngError('A '+type.toUpperCase()+' engagement named "'+name+'" already exists for this customer.');
+    return;
   }
 
   // Vendor + product line — required for NEW engagements. "Other (specify)"
@@ -214,8 +269,8 @@ async function addEngagement() {
   if (plVal === '__other__') {
     plVal = ((document.getElementById('pj-new-product-line-other')||{}).value||'').trim();
   }
-  if (!vendorVal) { errEl.textContent = '⚠️ Please select a vendor.';        showAlert('pj-manage-error'); return; }
-  if (!plVal)     { errEl.textContent = '⚠️ Please select a product line.'; showAlert('pj-manage-error'); return; }
+  if (!vendorVal) { _addEngError('Please select a vendor.');       return; }
+  if (!plVal)     { _addEngError('Please select a product line.'); return; }
 
   const {error} = await sb.from('engagements').insert({
     customer_id:  customer_id,
@@ -226,7 +281,7 @@ async function addEngagement() {
     product_line: plVal,
     created_by:   currentUser
   });
-  if (error) { showError('Error: '+error.message); return; }
+  if (error) { _addEngError('Error: '+error.message); return; }
 
   // Adopt any orphan sessions that share this engagement name.
   // Strategy:
@@ -243,16 +298,9 @@ async function addEngagement() {
   if (usCB.error) console.error('unified_sessions customer backfill failed:', usCB.error);
   if (usTB.error) console.error('unified_sessions type backfill failed:', usTB.error);
 
-  document.getElementById('pj-new-name').value = '';
-  document.getElementById('pj-new-status').value = 'active';
-  document.getElementById('pj-new-customer').value = '';
-  document.getElementById('pj-new-type').value = '';
-  // Reset vendor/product-line + their Other inputs
-  if (vendorSel) vendorSel.value = '';
-  if (plSel) { plSel.value = ''; plSel.disabled = true; plSel.innerHTML = '<option value="">-- Select Vendor first --</option>'; }
-  ['pj-new-vendor-other','pj-new-product-line-other'].forEach(function(id){
-    var el = document.getElementById(id); if (el) { el.value = ''; el.style.display = 'none'; }
-  });
+  // Close the modal on success — openAddEngagementModal resets fields on
+  // next open, so we don't need to clear them here.
+  closeAddEngagementModal();
   showToast('Engagement created ✓');
   _projectsLoaded = false;
   await loadProjects();
