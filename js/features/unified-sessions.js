@@ -369,13 +369,18 @@ async function renderUSSessions() {
     var actType  = r.activity_type || '-';
     var info     = r.session_info || '';
     var emp      = r.employee || '-';
+    // Region tag next to the time so it's obvious whether a session is logged
+    // in KSA or UAE local time — eyeballing the times alone is ambiguous
+    // (e.g. an 09:00-12:00 KSA session reads the same as a UAE one).
+    var region   = KSA_EMP.indexOf(r.employee) !== -1 ? 'KSA' : 'UAE';
+    var regionTag = '<span style="display:inline-block;margin-left:6px;padding:1px 5px;border-radius:3px;background:#F1F5F9;color:#64748B;font-family:DM Sans,sans-serif;font-size:9px;font-weight:700;letter-spacing:0.5px;vertical-align:1px">'+region+'</span>';
     tbodyHtml += '<tr>'+
       '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
       '<td><span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+esc2(t.label)+'</span></td>'+
       '<td style="font-size:12px;color:var(--navy);font-weight:600">'+esc2(custName)+'</td>'+
       '<td style="font-size:12px"><strong>'+esc2(engName)+'</strong></td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtDate(r.session_date)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px;white-space:nowrap">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+regionTag+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+r.total_hours+'h</td>'+
       '<td><span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+esc2(actType)+'</span></td>'+
       '<td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(info)+'">'+esc2(info||'-')+'</td>'+
@@ -392,7 +397,7 @@ async function renderUSSessions() {
       '<div class="us-card-row">'+
         '<span class="num">'+fmtDate(r.session_date)+'</span>'+
         '<span class="us-card-sep">·</span>'+
-        '<span class="num">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+'</span>'+
+        '<span class="num">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+'</span>'+regionTag+
       '</div>'+
       '<div class="us-card-row">'+
         '<span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+esc2(actType)+'</span>'+
