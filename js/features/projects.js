@@ -495,7 +495,8 @@ async function renderManageProjects() {
   const TYPE_BADGES = {
     'project':  {bg:'#EFF6FF',color:'#2563EB',label:'PROJECT'},
     'poc':      {bg:'#F5F3FF',color:'#7C3AED',label:'POC'},
-    'amc':      {bg:'#FFFBEB',color:'#B45309',label:'SUPPORT/AMC'},
+    'amc':      {bg:'#FFFBEB',color:'#B45309',label:'AMC'},
+    'support':  {bg:'#FFF1F2',color:'#9F1239',label:'SUPPORT'},
     'presales': {bg:'#FDF2F8',color:'#BE185D',label:'PRE-SALES-TASK'},
   };
 
@@ -764,7 +765,7 @@ async function renderPjEmployeeSummary() {
 
   const empData = {};
   EMPLOYEES.forEach(function(e){
-    empData[e] = { total:0, sessions:0, project:0, poc:0, amc:0, presales:0, internal:0, engagements:{} };
+    empData[e] = { total:0, sessions:0, project:0, poc:0, amc:0, support:0, presales:0, internal:0, engagements:{} };
   });
 
   rows.forEach(function(r) {
@@ -814,6 +815,7 @@ async function renderPjEmployeeSummary() {
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.project)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.poc)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.amc)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.support)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.presales)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.internal)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+fmtDays(d.total/8)+'</td>'+
@@ -835,14 +837,15 @@ async function renderPjEmployeeSummary() {
     '<thead><tr><th>Employee</th><th>Sessions</th><th>Total</th>'+
       '<th><span class="pj-th-ico"><i data-lucide="folder"></i>Project</span></th>'+
       '<th><span class="pj-th-ico"><i data-lucide="target"></i>POC</span></th>'+
-      '<th><span class="pj-th-ico"><i data-lucide="wrench"></i>Support/AMC</span></th>'+
+      '<th><span class="pj-th-ico"><i data-lucide="wrench"></i>AMC</span></th>'+
+      '<th><span class="pj-th-ico"><i data-lucide="life-buoy"></i>Support</span></th>'+
       '<th><span class="pj-th-ico"><i data-lucide="briefcase"></i>Pre-Sales</span></th>'+
       '<th><span class="pj-th-ico"><i data-lucide="cog"></i>Internal</span></th>'+
       '<th>Working Days</th><th>Top Engagements</th></tr></thead>'+
     '<tbody>'+tableRows+
     '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>-</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+fmtHours(totalHours)+'</td>'+
-    '<td colspan="5">-</td>'+
+    '<td colspan="6">-</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+fmtDays(totalHours/8)+'</td><td>-</td></tr>'+
     '</tbody></table></div>'+
     '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours / 8 | Hours are credited to every team member on a session (so a 4h session with 3 members shows 4h on each row, summing to 12h in TOTAL).</div>';
@@ -940,7 +943,7 @@ function showProjectTab(tab) {
   // Backward-compat: redirect the old per-type summaries to the unified
   // Engagement Summary, pre-selecting the type.
   var typePreset = null;
-  if (tab==='project' || tab==='poc' || tab==='amc' || tab==='presales') {
+  if (tab==='project' || tab==='poc' || tab==='amc' || tab==='support' || tab==='presales') {
     typePreset = tab; tab = 'engagement';
   }
   ['uslog','ussess','otsessions','otsummary','engagement','employee','otpolicy','otmanager','manage'].forEach(function(t) {

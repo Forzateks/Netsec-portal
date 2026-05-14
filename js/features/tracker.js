@@ -4,7 +4,7 @@
 // Phase 4 will add the edit form + milestone management.
 
 var _trkData      = [];
-var _trkActiveTab = 'all';   // 'all' | 'projects' | 'pocs'
+var _trkActiveTab = 'all';   // 'all' | 'projects' | 'pocs' | 'amc' | 'support'
 
 // Type-aware status options. Projects flow through delivery phases (HLD →
 // LLD → Pilot Sites Rollout → Migration → KT → Sign-off) so the project
@@ -198,6 +198,8 @@ function _trkFilteredRows() {
   var filtered = _trkData.filter(function(r){
     if (_trkActiveTab === 'projects' && r.type !== 'project') return false;
     if (_trkActiveTab === 'pocs'     && r.type !== 'poc')     return false;
+    if (_trkActiveTab === 'amc'      && r.type !== 'amc')     return false;
+    if (_trkActiveTab === 'support'  && r.type !== 'support') return false;
     if (countries.length && countries.indexOf(r.country)        === -1) return false;
     if (partners.length  && partners.indexOf(r.partner)         === -1) return false;
     // Compare against the NORMALIZED top-level status key so 'ongoing' /
@@ -297,6 +299,8 @@ function trkTopStatusBadge(raw) {
 function trkTypeBadge(t) {
   if (t === 'poc')     return '<span class="badge trk-type trk-type-poc">POC</span>';
   if (t === 'project') return '<span class="badge trk-type trk-type-project">Project</span>';
+  if (t === 'amc')     return '<span class="badge trk-type trk-type-amc">AMC</span>';
+  if (t === 'support') return '<span class="badge trk-type trk-type-support">Support</span>';
   return '<span class="badge">'+esc2((t||'').toUpperCase())+'</span>';
 }
 
@@ -480,15 +484,22 @@ function renderTracker() {
   var nAll = _trkData.length;
   var nP   = _trkData.filter(function(r){return r.type==='project';}).length;
   var nQ   = _trkData.filter(function(r){return r.type==='poc';}).length;
+  var nA   = _trkData.filter(function(r){return r.type==='amc';}).length;
+  var nS   = _trkData.filter(function(r){return r.type==='support';}).length;
   var tabBtn = function(key, label, count) {
     var active = (_trkActiveTab===key);
     return '<button class="trk-tab'+(active?' active':'')+'" onclick="showTrackerTab(\''+key+'\')">'+
       label+' <span class="trk-tab-count">'+count+'</span></button>';
   };
+  // AMC / Support tabs only surface once at least one engagement of that
+  // type exists. Keeps the strip uncluttered while the team ramps up the
+  // split categorisation.
   var tabBar = '<div class="trk-tab-bar">'+
     tabBtn('all','All',nAll)+
     tabBtn('projects','Projects',nP)+
     tabBtn('pocs','POCs',nQ)+
+    (nA ? tabBtn('amc','AMC',nA) : '')+
+    (nS ? tabBtn('support','Support',nS) : '')+
   '</div>';
 
   if (!rows.length) {
@@ -509,6 +520,7 @@ function renderTracker() {
   var TYPE_DEF = {
     'poc':      { icon:'target', text:'POC' },
     'amc':      { icon:'wrench', text:'AMC' },
+    'support':  { icon:'life-buoy', text:'Support' },
     'presales': { icon:'briefcase', text:'Pre-sales' },
     'project':  { icon:'folder', text:'Project' }
   };

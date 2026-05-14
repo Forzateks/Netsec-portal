@@ -2,10 +2,14 @@
 // Single form for Project / POC / AMC / Internal session logging.
 // Phase 2 only persists; OT integration arrives in Phase 3.
 
+// AMC = recurring paid maintenance contract (wrench)
+// Support = reactive one-off troubleshooting (life-buoy)
+// Visually distinct so summaries can tell them apart at a glance.
 const SESSION_TYPE_BADGES = {
   project:  { bg: '#EFF6FF', color: '#2563EB', label: '📁 Project' },
   poc:      { bg: '#F5F3FF', color: '#7C3AED', label: '🎯 POC' },
-  amc:      { bg: '#FFFBEB', color: '#B45309', label: '🛠️ Support/AMC' },
+  amc:      { bg: '#FFFBEB', color: '#B45309', label: '🛠️ AMC' },
+  support:  { bg: '#FFF1F2', color: '#9F1239', label: '🚨 Support' },
   presales: { bg: '#FDF2F8', color: '#BE185D', label: '💼 Pre-Sales-Task' },
   internal: { bg: '#F3F4F6', color: '#6B7280', label: '🔧 Internal' },
 };
@@ -69,7 +73,7 @@ function splitSessionHours(dateStr, startStr, endStr, employee) {
 // === FORM: type toggle + conditional fields ====================
 function onUSTypeChange() {
   var type = document.getElementById('us-type').value;
-  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'presales');
+  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
   var engRow = document.getElementById('us-engagement-row');
   if (engRow) engRow.style.display = isEng ? '' : 'none';
   var actRow = document.getElementById('us-activity-row');
@@ -337,7 +341,7 @@ async function saveUnifiedSession() {
   if (!type)  return fail('Please pick a session type.');
   if (!date || !start || !end) return fail('Date, start and end times are required.');
 
-  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'presales');
+  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
   if (isEng) {
     if (!customer)  return fail('Please pick a customer.');
     if (!engId)     return fail('Please pick an engagement.');
@@ -648,7 +652,7 @@ async function saveEditUS() {
   if (!date || !start || !end) return fail('Date and times required.');
   if (!info) return fail('Session info required.');
 
-  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'presales');
+  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
   var engId = null;
   if (isEng && engagement) {
     var engRow = (ENGAGEMENTS||[]).find(function(e){ return e.name === engagement && e.type === type; });
@@ -778,10 +782,10 @@ function clearEngagementFilters() {
   renderEngagementSummary();
 }
 
-// Unified Engagement Summary — replaces the four per-type summaries.
+// Unified Engagement Summary — replaces the per-type summaries.
 // Reads pj-eng-type / pj-eng-from / pj-eng-to / pj-eng-year. Type 'all'
-// covers Project + POC + AMC + Pre-Sales (excludes Internal which is not
-// engagement-based).
+// covers Project + POC + AMC + Support + Pre-Sales (excludes Internal
+// which is not engagement-based).
 async function renderEngagementSummary() {
   var typeEl = document.getElementById('pj-eng-type');
   var typeKey = (typeEl && typeEl.value) || 'all';
@@ -810,7 +814,7 @@ async function renderEngagementSummary() {
   var res = await fetchAllRows(function() {
     var q = sb.from('unified_sessions').select('*');
     if (typeKey === 'all') {
-      q = q.in('session_type', ['project','poc','amc','presales']);
+      q = q.in('session_type', ['project','poc','amc','support','presales']);
     } else {
       q = q.eq('session_type', typeKey);
     }
@@ -825,7 +829,7 @@ async function renderEngagementSummary() {
   document.getElementById('pj-eng-loading').style.display = 'none';
   var rows = res.data || [];
 
-  var TYPE_LABELS = { project:'Project', poc:'POC', amc:'Support/AMC', presales:'Pre-Sales-Task' };
+  var TYPE_LABELS = { project:'Project', poc:'POC', amc:'AMC', support:'Support', presales:'Pre-Sales-Task' };
   var typeLabel   = typeKey==='all' ? 'Engagement' : TYPE_LABELS[typeKey] || typeKey;
 
   if (!rows.length) {
@@ -873,13 +877,14 @@ async function renderEngagementSummary() {
   var TYPE_BADGE = {
     project:  '<span class="badge" style="background:#EFF6FF;color:#2563EB">PROJECT</span>',
     poc:      '<span class="badge" style="background:#F5F3FF;color:#7C3AED">POC</span>',
-    amc:      '<span class="badge" style="background:#FFFBEB;color:#B45309">SUPPORT/AMC</span>',
+    amc:      '<span class="badge" style="background:#FFFBEB;color:#B45309">AMC</span>',
+    support:  '<span class="badge" style="background:#FFF1F2;color:#9F1239">SUPPORT</span>',
     presales: '<span class="badge" style="background:#FDF2F8;color:#BE185D">PRE-SALES-TASK</span>'
   };
 
   var tableRows = sorted.map(function(name){
     var d = byEng[name];
-    var cleanName = name.replace(/ · (Project|POC|Support\/AMC|Pre-Sales-Task)$/, '');
+    var cleanName = name.replace(/ · (Project|POC|AMC|Support|Pre-Sales-Task)$/, '');
     var memberBreakdown = Object.keys(d.members).map(function(m){
       var label = (typeof empShortName === 'function') ? empShortName(m) : m.split(' ')[0];
       return '<span class="badge" style="background:#f0f4ff;color:var(--navy);margin:1px">'+label+': '+fmtHours(d.members[m])+'</span>';
@@ -909,9 +914,9 @@ async function renderEngagementSummary() {
   // Type-mix mini-bar (only when All Types is selected)
   var typeMixHtml = '';
   if (typeKey === 'all') {
-    var byType = { project:0, poc:0, amc:0, presales:0 };
+    var byType = { project:0, poc:0, amc:0, support:0, presales:0 };
     rows.forEach(function(r){ if (byType[r.session_type] !== undefined) byType[r.session_type] += parseFloat(r.total_hours||0); });
-    var mixTotal = byType.project + byType.poc + byType.amc + byType.presales;
+    var mixTotal = byType.project + byType.poc + byType.amc + byType.support + byType.presales;
     if (mixTotal > 0) {
       var seg = function(k, color, label){
         var pct = (byType[k]/mixTotal)*100;
@@ -923,13 +928,15 @@ async function renderEngagementSummary() {
           '<div style="display:flex;height:28px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f1f5f9">'+
             seg('project',  '#2563EB','Project')+
             seg('poc',      '#7C3AED','POC')+
-            seg('amc',      '#B45309','Support/AMC')+
+            seg('amc',      '#B45309','AMC')+
+            seg('support',  '#9F1239','Support')+
             seg('presales', '#BE185D','Pre-Sales-Task')+
           '</div>'+
           '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--muted)">'+
             '<span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Project '+fmtHours(byType.project)+'</span>'+
             '<span><span style="display:inline-block;width:10px;height:10px;background:#7C3AED;border-radius:2px;margin-right:6px;vertical-align:middle"></span>POC '+fmtHours(byType.poc)+'</span>'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Support/AMC '+fmtHours(byType.amc)+'</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:6px;vertical-align:middle"></span>AMC '+fmtHours(byType.amc)+'</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:#9F1239;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Support '+fmtHours(byType.support)+'</span>'+
             '<span><span style="display:inline-block;width:10px;height:10px;background:#BE185D;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Pre-Sales-Task '+fmtHours(byType.presales)+'</span>'+
           '</div>'+
         '</div>';
@@ -965,7 +972,8 @@ async function renderUnifiedTypeSummary(typeKey) {
   var ids = {
     project:  { year: 'pj-sum-year',      from: 'pj-sum-from',      to: 'pj-sum-to',      loading: 'pj-project-loading',  content: 'pj-project-content',  heading: 'Project' },
     poc:      { year: 'pj-poc-year',      from: 'pj-poc-from',      to: 'pj-poc-to',      loading: 'pj-poc-loading',      content: 'pj-poc-content',      heading: 'POC Engagements' },
-    amc:      { year: 'pj-amc-year',      from: 'pj-amc-from',      to: 'pj-amc-to',      loading: 'pj-amc-loading',      content: 'pj-amc-content',      heading: 'Support/AMC Engagements' },
+    amc:      { year: 'pj-amc-year',      from: 'pj-amc-from',      to: 'pj-amc-to',      loading: 'pj-amc-loading',      content: 'pj-amc-content',      heading: 'AMC Engagements' },
+    support:  { year: 'pj-support-year',  from: 'pj-support-from',  to: 'pj-support-to',  loading: 'pj-support-loading',  content: 'pj-support-content',  heading: 'Support Engagements' },
     presales: { year: 'pj-presales-year', from: 'pj-presales-from', to: 'pj-presales-to', loading: 'pj-presales-loading', content: 'pj-presales-content', heading: 'Pre-Sales-Task Engagements' },
   };
   var ui = ids[typeKey];

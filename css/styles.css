@@ -1142,6 +1142,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .badge.trk-type{font-size:10px;letter-spacing:.4px;text-transform:uppercase;padding:3px 8px;border-radius:4px}
 .trk-type-poc{background:#FEF3C7;color:#92400E}
 .trk-type-project{background:#DBEAFE;color:#1E3A8A}
+.trk-type-amc{background:#FFFBEB;color:#B45309}
+.trk-type-support{background:#FFF1F2;color:#9F1239}
 
 .badge.trk-status{font-size:11px;padding:3px 9px;border-radius:12px;text-transform:none;letter-spacing:0}
 .trk-status-yet-to-start{background:#F1F5F9;color:#475569}
