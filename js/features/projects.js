@@ -1172,15 +1172,33 @@ async function renderVendorsManage() {
   // Persist selection across refreshes; fall back to first vendor on first load.
   if (_vendorActiveId == null && VENDORS.length) _vendorActiveId = VENDORS[0].id;
 
+  // Product line counts per vendor for the badge on each row. Excludes the
+  // per-vendor "Other (specify)" placeholder from the count — it's an
+  // implementation detail, not a real line.
+  var lineCountByVendor = {};
+  (PRODUCT_LINES||[]).forEach(function(p){
+    if (p.name === 'Other (specify)') return;
+    lineCountByVendor[p.vendor_id] = (lineCountByVendor[p.vendor_id]||0) + 1;
+  });
+  var activeVendorCount = (VENDORS||[]).filter(function(v){ return v.is_active; }).length;
+  var realLineCount = (PRODUCT_LINES||[]).filter(function(p){ return p.is_active && p.name !== 'Other (specify)'; }).length;
+
   var vendorList = VENDORS.map(function(v){
     var active = (v.id === _vendorActiveId);
-    var statusBadge = v.is_active
-      ? ''
-      : '<span class="badge" style="background:#F3F4F6;color:#6B7280;font-size:10px;margin-left:6px">disabled</span>';
-    return '<div class="vendor-row'+(active?' vendor-row-active':'')+'" onclick="selectVendor('+v.id+')">'+
-      '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>'+esc2(v.name)+'</strong>'+statusBadge+'</div>'+
-      '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();renameVendorPrompt('+v.id+')" title="Rename"><i data-lucide="pencil"></i></button>'+
-      '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();toggleVendorActive('+v.id+')" title="'+(v.is_active?'Disable':'Re-enable')+'"><i data-lucide="'+(v.is_active?'eye-off':'eye')+'"></i></button>'+
+    var count = lineCountByVendor[v.id] || 0;
+    var disabledCls = v.is_active ? '' : ' vendor-row-disabled';
+    var disabledBadge = v.is_active ? '' :
+      '<span class="vendor-pill vendor-pill-muted">disabled</span>';
+    return '<div class="vendor-row'+(active?' vendor-row-active':'')+disabledCls+'" onclick="selectVendor('+v.id+')">'+
+      '<i data-lucide="package" class="vendor-row-icon"></i>'+
+      '<div class="vendor-row-main">'+
+        '<div class="vendor-row-name">'+esc2(v.name)+disabledBadge+'</div>'+
+        '<div class="vendor-row-sub">'+fmtCount(count)+' product line'+(count===1?'':'s')+'</div>'+
+      '</div>'+
+      '<div class="vendor-row-actions">'+
+        '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();renameVendorPrompt('+v.id+')" title="Rename"><i data-lucide="pencil"></i></button>'+
+        '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();toggleVendorActive('+v.id+')" title="'+(v.is_active?'Disable':'Re-enable')+'"><i data-lucide="'+(v.is_active?'eye-off':'eye')+'"></i></button>'+
+      '</div>'+
     '</div>';
   }).join('');
 
@@ -1190,39 +1208,64 @@ async function renderVendorsManage() {
     rightPanel = renderEmptyState({
       icon: 'package',
       heading: 'No vendor selected',
-      sub: 'Pick a vendor on the left to see its product lines.'
+      sub: 'Pick a vendor on the left to see and edit its product lines.'
     });
   } else {
-    var lines = PRODUCT_LINES.filter(function(p){ return p.vendor_id === activeVendor.id; });
+    // Sort so real product lines come before "Other (specify)" (display_order
+    // 999), then disabled lines drop to the bottom within each group.
+    var lines = PRODUCT_LINES
+      .filter(function(p){ return p.vendor_id === activeVendor.id; })
+      .slice()
+      .sort(function(a,b){
+        if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+        return (a.display_order||0) - (b.display_order||0);
+      });
     var lineRows = lines.length ? lines.map(function(p){
-      var statusBadge = p.is_active
-        ? ''
-        : '<span class="badge" style="background:#F3F4F6;color:#6B7280;font-size:10px;margin-left:6px">disabled</span>';
-      return '<div class="vendor-row">'+
-        '<div style="flex:1;min-width:0">'+esc2(p.name)+statusBadge+'</div>'+
+      var isOther = (p.name === 'Other (specify)');
+      var disabledCls = p.is_active ? '' : ' vendor-row-disabled';
+      var disabledBadge = p.is_active ? '' :
+        '<span class="vendor-pill vendor-pill-muted">disabled</span>';
+      var otherBadge = isOther ? '<span class="vendor-pill vendor-pill-fallback" title="Free-text fallback for engagements outside the predefined list">fallback</span>' : '';
+      // The auto-seeded "Other (specify)" entry isn't editable — users can't
+      // rename or disable it (would break the engagement form's fallback).
+      var actions = isOther ? '<span class="vendor-row-locked"><i data-lucide="lock"></i></span>' :
         '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="renameProductLinePrompt('+p.id+')" title="Rename"><i data-lucide="pencil"></i></button>'+
-        '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="toggleProductLineActive('+p.id+')" title="'+(p.is_active?'Disable':'Re-enable')+'"><i data-lucide="'+(p.is_active?'eye-off':'eye')+'"></i></button>'+
+        '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="toggleProductLineActive('+p.id+')" title="'+(p.is_active?'Disable':'Re-enable')+'"><i data-lucide="'+(p.is_active?'eye-off':'eye')+'"></i></button>';
+      return '<div class="vendor-row'+disabledCls+(isOther?' vendor-row-fallback':'')+'">'+
+        '<i data-lucide="layers" class="vendor-row-icon"></i>'+
+        '<div class="vendor-row-main">'+
+          '<div class="vendor-row-name">'+esc2(p.name)+disabledBadge+otherBadge+'</div>'+
+        '</div>'+
+        '<div class="vendor-row-actions">'+actions+'</div>'+
       '</div>';
-    }).join('') : '<div style="padding:14px;color:var(--muted);font-size:13px">No product lines yet.</div>';
+    }).join('') : '<div class="vendor-list-empty">No product lines yet — add the first one below.</div>';
+
+    var inactiveBadge = activeVendor.is_active ? '' :
+      '<span class="vendor-pill vendor-pill-muted" style="margin-left:8px">disabled</span>';
 
     rightPanel =
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
-        '<strong style="color:var(--navy);font-size:15px">'+esc2(activeVendor.name)+' — Product Lines</strong>'+
+      '<div class="vendor-panel-head">'+
+        '<div class="vendor-panel-title">'+esc2(activeVendor.name)+inactiveBadge+'</div>'+
         '<button class="btn btn-sm btn-primary" onclick="addProductLinePrompt('+activeVendor.id+')"><i data-lucide="plus" class="btn-icon"></i>Add Product Line</button>'+
       '</div>'+
       '<div class="vendor-list">'+lineRows+'</div>';
   }
 
   document.getElementById('pj-vendors-content').innerHTML =
+    '<div class="vendor-stats">'+
+      '<div class="vendor-stat"><div class="vendor-stat-num">'+fmtCount(activeVendorCount)+'</div><div class="vendor-stat-label">Active Vendors</div></div>'+
+      '<div class="vendor-stat"><div class="vendor-stat-num">'+fmtCount(realLineCount)+'</div><div class="vendor-stat-label">Active Product Lines</div></div>'+
+      '<div class="vendor-stat"><div class="vendor-stat-num">'+fmtCount((VENDORS||[]).length - activeVendorCount)+'</div><div class="vendor-stat-label">Disabled</div></div>'+
+    '</div>'+
     '<div class="vendor-mgmt-grid">'+
-      '<div>'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
-          '<strong style="color:var(--navy);font-size:15px">Vendors</strong>'+
+      '<div class="vendor-panel">'+
+        '<div class="vendor-panel-head">'+
+          '<div class="vendor-panel-title">Vendors</div>'+
           '<button class="btn btn-sm btn-primary" onclick="addVendorPrompt()"><i data-lucide="plus" class="btn-icon"></i>Add Vendor</button>'+
         '</div>'+
         '<div class="vendor-list">'+vendorList+'</div>'+
       '</div>'+
-      '<div>'+rightPanel+'</div>'+
+      '<div class="vendor-panel">'+rightPanel+'</div>'+
     '</div>';
   if (typeof renderIcons === 'function') renderIcons();
 }
@@ -1233,14 +1276,24 @@ function selectVendor(id) {
 }
 
 async function addVendorPrompt() {
-  var name = prompt('New vendor name:');
+  var name = await promptInput({
+    title: 'Add Vendor',
+    label: 'Vendor name',
+    placeholder: 'e.g. Check Point',
+    confirmText: 'Add Vendor',
+    validate: function(v){
+      var dup = (VENDORS||[]).some(function(x){ return x.name.toLowerCase() === v.toLowerCase(); });
+      return dup ? 'A vendor named "'+v+'" already exists.' : null;
+    }
+  });
   if (!name) return;
-  name = name.trim();
-  if (!name) return;
-  // Compute a display_order that places it after the existing entries.
+  // Slot the new vendor after the existing entries.
   var maxOrder = (VENDORS||[]).reduce(function(m,v){ return Math.max(m, v.display_order||0); }, 0);
   var {data, error} = await sb.from('vendors').insert({ name: name, display_order: maxOrder + 10 }).select().single();
   if (error) { showError('Could not add vendor: ' + error.message); return; }
+  // Seed the per-vendor "Other (specify)" entry so the new vendor immediately
+  // works with the engagement form's fallback.
+  await sb.from('product_lines').insert({ vendor_id: data.id, name: 'Other (specify)', display_order: 999 });
   _vendorActiveId = data.id;
   showToast('Vendor added ✓');
   await loadProjects();
@@ -1250,10 +1303,23 @@ async function addVendorPrompt() {
 async function renameVendorPrompt(id) {
   var v = (VENDORS||[]).find(function(x){ return x.id === id; });
   if (!v) return;
-  var newName = prompt('Rename vendor:', v.name);
-  if (!newName || newName.trim() === v.name) return;
-  var {error} = await sb.from('vendors').update({ name: newName.trim() }).eq('id', id);
+  var newName = await promptInput({
+    title: 'Rename Vendor',
+    label: 'Vendor name',
+    defaultValue: v.name,
+    confirmText: 'Save',
+    validate: function(val){
+      if (val === v.name) return null; // no-op = no validation error
+      var dup = (VENDORS||[]).some(function(x){ return x.id !== id && x.name.toLowerCase() === val.toLowerCase(); });
+      return dup ? 'A vendor named "'+val+'" already exists.' : null;
+    }
+  });
+  if (!newName || newName === v.name) return;
+  var {error} = await sb.from('vendors').update({ name: newName }).eq('id', id);
   if (error) { showError('Could not rename: ' + error.message); return; }
+  // Cascade: rename the vendor text on every engagement that references it
+  // (snapshot pattern — engagements.vendor is plain text, not FK).
+  await sb.from('engagements').update({ vendor: newName }).eq('vendor', v.name);
   showToast('Vendor renamed ✓');
   await loadProjects();
   renderVendorsManage();
@@ -1270,13 +1336,24 @@ async function toggleVendorActive(id) {
 }
 
 async function addProductLinePrompt(vendorId) {
-  var name = prompt('New product line name:');
-  if (!name) return;
-  name = name.trim();
+  var v = (VENDORS||[]).find(function(x){ return x.id === vendorId; });
+  var name = await promptInput({
+    title: 'Add Product Line',
+    body: v ? 'Under ' + v.name : '',
+    label: 'Product line name',
+    placeholder: 'e.g. FortiSASE',
+    confirmText: 'Add Product Line',
+    validate: function(val){
+      var dup = (PRODUCT_LINES||[]).some(function(p){ return p.vendor_id === vendorId && p.name.toLowerCase() === val.toLowerCase(); });
+      return dup ? 'This product line already exists under '+(v?v.name:'this vendor')+'.' : null;
+    }
+  });
   if (!name) return;
   var existing = (PRODUCT_LINES||[]).filter(function(p){ return p.vendor_id === vendorId; });
-  var maxOrder = existing.reduce(function(m,p){ return Math.max(m, p.display_order||0); }, 0);
-  // Keep "Other (specify)" at 999 — slot the new one before it
+  var maxOrder = existing.reduce(function(m,p){
+    // Skip "Other (specify)" at 999 when computing the next slot.
+    return p.display_order < 999 ? Math.max(m, p.display_order||0) : m;
+  }, 0);
   var newOrder = Math.min(maxOrder + 10, 990);
   var {error} = await sb.from('product_lines').insert({ vendor_id: vendorId, name: name, display_order: newOrder });
   if (error) { showError('Could not add product line: ' + error.message); return; }
@@ -1288,10 +1365,27 @@ async function addProductLinePrompt(vendorId) {
 async function renameProductLinePrompt(id) {
   var p = (PRODUCT_LINES||[]).find(function(x){ return x.id === id; });
   if (!p) return;
-  var newName = prompt('Rename product line:', p.name);
-  if (!newName || newName.trim() === p.name) return;
-  var {error} = await sb.from('product_lines').update({ name: newName.trim() }).eq('id', id);
+  var v = (VENDORS||[]).find(function(x){ return x.id === p.vendor_id; });
+  var newName = await promptInput({
+    title: 'Rename Product Line',
+    body: v ? 'Under ' + v.name : '',
+    label: 'Product line name',
+    defaultValue: p.name,
+    confirmText: 'Save',
+    validate: function(val){
+      if (val === p.name) return null;
+      var dup = (PRODUCT_LINES||[]).some(function(x){ return x.id !== id && x.vendor_id === p.vendor_id && x.name.toLowerCase() === val.toLowerCase(); });
+      return dup ? 'This product line already exists under '+(v?v.name:'this vendor')+'.' : null;
+    }
+  });
+  if (!newName || newName === p.name) return;
+  var {error} = await sb.from('product_lines').update({ name: newName }).eq('id', id);
   if (error) { showError('Could not rename: ' + error.message); return; }
+  // Cascade snapshot text on engagements that reference this line under this vendor.
+  if (v) {
+    await sb.from('engagements').update({ product_line: newName })
+      .eq('vendor', v.name).eq('product_line', p.name);
+  }
   showToast('Product line renamed ✓');
   await loadProjects();
   renderVendorsManage();

@@ -246,6 +246,69 @@ function confirmAction(opts) {
   });
 }
 
+// ── Themed single-field prompt ────────────────────────────────────
+// Drop-in replacement for window.prompt() that matches the app's modal
+// look. Returns a Promise that resolves to the trimmed string the user
+// entered, or null if they cancelled / left the input blank.
+// opts:
+//   title        — modal title (e.g. "New vendor")
+//   body         — optional explanatory line above the input
+//   label        — label for the input (default "Value")
+//   placeholder  — input placeholder
+//   defaultValue — pre-filled value (used for rename flows)
+//   confirmText  — primary button label (default "Save")
+//   validate     — optional sync (val) => string|null; non-null = error msg
+function promptInput(opts) {
+  opts = opts || {};
+  return new Promise(function(resolve) {
+    var modal    = document.getElementById('prompt-modal');
+    var titleEl  = document.getElementById('prompt-modal-title');
+    var bodyEl   = document.getElementById('prompt-modal-body');
+    var labelEl  = document.getElementById('prompt-modal-label');
+    var input    = document.getElementById('prompt-modal-input');
+    var errEl    = document.getElementById('prompt-modal-error');
+    var cancel   = document.getElementById('prompt-modal-cancel');
+    var ok       = document.getElementById('prompt-modal-ok');
+    if (!modal || !ok) { resolve(window.prompt(opts.title || opts.label || '')); return; }
+
+    titleEl.textContent = opts.title || 'Enter value';
+    if (opts.body) { bodyEl.textContent = opts.body; bodyEl.style.display = ''; }
+    else { bodyEl.textContent = ''; bodyEl.style.display = 'none'; }
+    labelEl.textContent = opts.label || 'Value';
+    input.placeholder = opts.placeholder || '';
+    input.value = opts.defaultValue || '';
+    errEl.style.display = 'none'; errEl.textContent = '';
+    ok.textContent = opts.confirmText || 'Save';
+
+    function close(result) {
+      modal.classList.remove('show');
+      cancel.onclick = null;
+      ok.onclick = null;
+      input.onkeydown = null;
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function submit() {
+      var val = (input.value || '').trim();
+      if (!val) { errEl.textContent = 'Please enter a value.'; errEl.style.display = ''; input.focus(); return; }
+      if (typeof opts.validate === 'function') {
+        var msg = opts.validate(val);
+        if (msg) { errEl.textContent = msg; errEl.style.display = ''; input.focus(); return; }
+      }
+      close(val);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') close(null);
+      else if (e.key === 'Enter' && document.activeElement === input) submit();
+    }
+    cancel.onclick = function(){ close(null); };
+    ok.onclick     = submit;
+    document.addEventListener('keydown', onKey);
+    modal.classList.add('show');
+    setTimeout(function(){ input.focus(); input.select(); }, 80);
+  });
+}
+
 // ── Empty-state HTML helper ────────────────────────────────────────
 // Single source of truth for empty-state markup so every list/table/
 // section uses the same icon + heading + subtext + optional CTA shape.

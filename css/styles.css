@@ -1146,15 +1146,60 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-type-support{background:#FFF1F2;color:#9F1239}
 
 /* ── VENDORS & PRODUCT LINES MANAGE ─────────────────────────────── */
-.vendor-mgmt-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:24px}
-.vendor-list{display:flex;flex-direction:column;gap:4px;max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;background:#fafafa}
-.vendor-row{display:flex;align-items:center;gap:6px;padding:8px 10px;font-size:13px;background:#fff;border-radius:6px;border:1px solid transparent;transition:background .12s,border-color .12s;cursor:default}
-.vendor-row:hover{background:#F8FAFC}
+/* Stats row across the top — three pill cards summarising the catalog
+   state (active vendors / active lines / disabled). Mirrors the
+   dash-stats look but compact. */
+.vendor-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.vendor-stat{background:linear-gradient(180deg,#fff 0%,#F8FAFC 100%);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.vendor-stat-num{font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:var(--navy);letter-spacing:-.5px;line-height:1}
+.vendor-stat-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+
+/* Two-column grid: vendors on the left, selected vendor's product lines
+   on the right. Each panel is its own card with a sticky-ish header. */
+.vendor-mgmt-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:20px}
+.vendor-panel{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 0 rgba(10,31,92,.02)}
+.vendor-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#FAFBFD 0%,#F4F6FA 100%);flex-wrap:wrap}
+.vendor-panel-title{font-weight:600;font-size:14px;color:var(--navy);letter-spacing:-.1px;display:inline-flex;align-items:center;gap:8px}
+
+/* Scrollable list inside each panel. Slight padding so rows don't kiss the edge. */
+.vendor-list{display:flex;flex-direction:column;gap:4px;max-height:62vh;overflow-y:auto;padding:8px}
+.vendor-list-empty{padding:24px 16px;color:var(--muted);font-size:13px;text-align:center}
+
+/* Row layout: icon · main (name + sub) · actions. Subtle border that
+   lights up navy on the active row. */
+.vendor-row{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:13px;background:#fff;border-radius:8px;border:1px solid #EEF1F5;transition:background .12s,border-color .12s,box-shadow .12s}
 .vendor-row[onclick]{cursor:pointer}
-.vendor-row-active{background:#EFF6FF;border-color:#BFDBFE}
-.vendor-row-active:hover{background:#DBEAFE}
+.vendor-row:hover{background:#F8FAFC;border-color:#E2E8F0}
+.vendor-row-active{background:linear-gradient(180deg,#F0F9FF 0%,#E0F2FE 100%);border-color:#7DD3FC;box-shadow:inset 3px 0 0 var(--teal)}
+.vendor-row-active:hover{background:#E0F2FE}
+.vendor-row-disabled{opacity:.55}
+.vendor-row-disabled .vendor-row-name{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.3)}
+.vendor-row-fallback{background:#FFFBEB;border-color:#FDE68A;border-style:dashed}
+.vendor-row-fallback:hover{background:#FEF3C7}
+
+.vendor-row-icon{width:18px;height:18px;color:var(--navy);flex-shrink:0;opacity:.7}
+.vendor-row-active .vendor-row-icon{color:var(--teal);opacity:1}
+
+.vendor-row-main{flex:1;min-width:0}
+.vendor-row-name{font-weight:600;color:var(--navy);font-size:13px;line-height:1.3;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.vendor-row-sub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+
+.vendor-row-actions{display:flex;gap:2px;flex-shrink:0}
+.vendor-row-locked{display:inline-flex;align-items:center;color:#94A3B8;padding:0 8px}
+.vendor-row-locked i{width:14px;height:14px}
+
+/* Pills used in vendor/product rows. Smaller than .badge so they sit
+   beside the name without dominating. */
+.vendor-pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;font-family:'DM Sans',sans-serif}
+.vendor-pill-muted{background:#F1F5F9;color:#64748B}
+.vendor-pill-fallback{background:#FEF3C7;color:#92400E}
+
 @media(max-width:640px){
+  .vendor-stats{grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .vendor-stat{padding:10px 12px}
+  .vendor-stat-num{font-size:20px}
   .vendor-mgmt-grid{grid-template-columns:1fr;gap:14px}
+  .vendor-list{max-height:50vh}
 }
 
 .badge.trk-status{font-size:11px;padding:3px 9px;border-radius:12px;text-transform:none;letter-spacing:0}

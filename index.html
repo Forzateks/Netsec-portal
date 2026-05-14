@@ -1973,6 +1973,23 @@
   </div>
 </div>
 
+<!-- ── PROMPT INPUT MODAL — themed replacement for window.prompt() ── -->
+<div class="modal-overlay" id="prompt-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title" id="prompt-modal-title">Enter value</div>
+    <div class="confirm-body" id="prompt-modal-body" style="margin-bottom:14px"></div>
+    <div class="form-group" style="margin-bottom:6px">
+      <label id="prompt-modal-label" style="margin-bottom:6px">Value</label>
+      <input type="text" id="prompt-modal-input" class="confirm-typing-input" autocomplete="off">
+      <div id="prompt-modal-error" style="display:none;color:var(--danger);font-size:12px;margin-top:6px"></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="prompt-modal-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="prompt-modal-ok">Save</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/core/state.js"></script>
 <script src="js/core/auth.js"></script>
 <script src="js/features/overtime.js"></script>
