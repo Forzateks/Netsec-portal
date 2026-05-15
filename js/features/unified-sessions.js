@@ -317,6 +317,57 @@ function updateUSPreview() {
   }
 }
 
+// ── MULTI-MEMBER OT HELPERS ──────────────────────────────────────
+// Build the canonical team list for a session: split CSV, trim, dedupe
+// (case-insensitive), and force the logger in front. Empty input still
+// returns the logger so they always get their own OT calc.
+function _buildTeamList(loggerName, teamCsv) {
+  var raw = (teamCsv || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  if (loggerName) raw.unshift(loggerName);
+  var seen = {};
+  var out = [];
+  raw.forEach(function(n){
+    var key = n.toLowerCase();
+    if (seen[key]) return;
+    seen[key] = 1;
+    out.push(n);
+  });
+  return out;
+}
+
+// Run calcOT for one team member and return the ot_sessions row payload
+// (without id / source / status — caller fills those). Returns null if
+// the member's region produces zero credited hours (no OT row needed).
+// "Unknown" members (not in EMPLOYEES) are skipped with a console
+// warning — the spec asks for a toast, surfaced by the calling save.
+function _buildMemberOTRow(memberName, date, start, end, isEng, customer, engagementName, actType, info) {
+  if (!EMPLOYEES || EMPLOYEES.indexOf(memberName) === -1) {
+    console.warn('Team member "'+memberName+'" not in EMPLOYEES — OT auto-gen skipped');
+    return { unknown: true, name: memberName };
+  }
+  var c = calcOT(date, start, end, memberName);
+  if (!c || !c.credited || c.credited <= 0) return null;
+  var activityLabel = isEng
+    ? ((customer || '') + ' / ' + (engagementName || '-') + ' — ' + info)
+    : info;
+  return {
+    employee:        memberName,
+    activity:        activityLabel,
+    ot_date:         date,
+    start_time:      start,
+    end_time:        end,
+    day_name:        c.dayName,
+    band:            c.band,
+    rate:            c.rate,
+    duration_hours:  c.duration,
+    credited_hours:  c.credited,
+    customer_name:   isEng ? (customer || null) : null,
+    project_name:    isEng ? engagementName     : null,
+    activity_type:   isEng ? (actType || null)  : null,
+    _calc:           c  // attached for the caller's summary toast only
+  };
+}
+
 async function saveUnifiedSession() {
   var type     = document.getElementById('us-type').value;
   var customer = document.getElementById('us-customer').value;
@@ -357,7 +408,8 @@ async function saveUnifiedSession() {
     if (engRow) engagement_name = engRow.name;
   }
 
-  // Compute office vs OT split using the existing OT policy
+  // Office/OT split — driven by the LOGGER's region for the unified row.
+  // Per-member OT is computed individually below.
   var split = splitSessionHours(date, start, end, currentUser);
   if (!split) return fail('Could not compute hours.');
 
@@ -391,40 +443,52 @@ async function saveUnifiedSession() {
   }
   var unifiedId = res.data.id;
 
-  // If OT detected, auto-create the linked ot_sessions record
+  // Per-member OT generation. The logger is auto-added by _buildTeamList
+  // so they always get their own region-correct OT (matches v52 behaviour
+  // for solo sessions and adds the new fan-out for team sessions).
   var otSummary = '';
-  if (split.ot > 0 && split.otCalc) {
-    var c = split.otCalc;
-    var activityLabel = isEng
-      ? ((customer || '') + ' / ' + (engagement_name || '-') + ' — ' + info)
-      : info;
-    var otRow = {
-      employee:          currentUser,
-      activity:          activityLabel,
-      ot_date:           date,
-      start_time:        start,
-      end_time:          end,
-      day_name:          c.dayName,
-      band:              c.band,
-      rate:              c.rate,
-      duration_hours:    c.duration,
-      credited_hours:    c.credited,
-      status:            'pending',
-      source:            'unified',
-      source_session_id: unifiedId,
-      customer_name:     isEng ? (customer || null) : null,
-      project_name:      isEng ? engagement_name : null,
-      activity_type:     isEng ? (actType || null) : null,
-    };
-    var otRes = await sb.from('ot_sessions').insert(otRow).select().single();
-    if (otRes.error) {
-      console.error('Linked OT creation failed:', otRes.error);
-      otSummary = ' (warning: linked OT record could not be created — '+otRes.error.message+')';
-    } else {
-      // Stamp the unified row with the new OT id
-      await sb.from('unified_sessions').update({ linked_ot_session_id: otRes.data.id }).eq('id', unifiedId);
-      otSummary = ' · ' + c.band + ' OT ' + fmtHours(c.credited) + ' pending approval';
+  var unknownMembers = [];
+  if (isEng) {
+    var team = _buildTeamList(currentUser, teamMembers);
+    var rowsToInsert = [];
+    var createdParts = [];
+    team.forEach(function(name){
+      var row = _buildMemberOTRow(name, date, start, end, isEng, customer, engagement_name, actType, info);
+      if (row && row.unknown) { unknownMembers.push(row.name); return; }
+      if (!row) return; // member's region yielded zero credit
+      var calc = row._calc; delete row._calc;
+      row.status            = 'pending';
+      row.source            = 'unified';
+      row.source_session_id = unifiedId;
+      rowsToInsert.push(row);
+      createdParts.push(name + ' ' + fmtHours(calc.credited) + ' ' + calc.band);
+    });
+    if (rowsToInsert.length) {
+      var insRes = await sb.from('ot_sessions').insert(rowsToInsert);
+      if (insRes.error) {
+        console.error('Multi-OT insert failed:', insRes.error);
+        otSummary = ' (warning: linked OT records could not be created — '+insRes.error.message+')';
+      } else {
+        otSummary = ' · OT pending: ' + createdParts.join(', ');
+      }
     }
+  } else if (split.ot > 0 && split.otCalc) {
+    // Internal session (no team field): generate OT for the logger only.
+    var ic = split.otCalc;
+    var iRow = _buildMemberOTRow(currentUser, date, start, end, false, null, null, null, info);
+    if (iRow && !iRow.unknown) {
+      delete iRow._calc;
+      iRow.status            = 'pending';
+      iRow.source            = 'unified';
+      iRow.source_session_id = unifiedId;
+      var iRes = await sb.from('ot_sessions').insert(iRow);
+      if (!iRes.error) otSummary = ' · ' + ic.band + ' OT ' + fmtHours(ic.credited) + ' pending approval';
+    }
+  }
+  if (unknownMembers.length) {
+    setTimeout(function(){
+      showError('OT not auto-generated for: ' + unknownMembers.join(', ') + ' — user not found in system.');
+    }, 400);
   }
 
   btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Session'; if (typeof renderIcons === 'function') renderIcons();
@@ -659,35 +723,69 @@ async function saveEditUS() {
     if (engRow) engId = engRow.id;
   }
 
-  // Read OLD row (need original employee for region-correct OT split + linked OT id)
+  // Read OLD row (need original employee for the unified totals split)
   var oldRes = await sb.from('unified_sessions').select('*').eq('id', id).single();
   if (oldRes.error || !oldRes.data) return fail('Could not load existing session.');
   var oldRow = oldRes.data;
   var sessionEmployee = oldRow.employee;
-  var oldOtId = oldRow.linked_ot_session_id;
 
-  // Read OLD linked OT row (if any) so we can detect approved status
-  var oldOt = null;
-  if (oldOtId) {
-    var oldOtRes = await sb.from('ot_sessions').select('*').eq('id', oldOtId).single();
-    if (!oldOtRes.error) oldOt = oldOtRes.data;
-  }
+  // Read ALL existing OT rows linked to this session (one per team member
+  // from the original save). v53 the link is multi-row via source_session_id.
+  var oldOtRes = await sb.from('ot_sessions')
+    .select('*').eq('source', 'unified').eq('source_session_id', id);
+  var oldOtRows = oldOtRes.error ? [] : (oldOtRes.data || []);
+  var oldByEmp = {};
+  oldOtRows.forEach(function(r){ oldByEmp[r.employee] = r; });
 
-  // Recompute hours under the session OWNER's region (not currentUser - manager edits!)
-  var split = splitSessionHours(date, start, end, sessionEmployee);
-  if (!split) return fail('Could not compute hours.');
+  // Build NEW team list (logger included, dedup'd) and pre-compute the
+  // OT row for each member so we can compare against the OLD rows.
+  var newTeam = isEng ? _buildTeamList(sessionEmployee, team) : [sessionEmployee];
+  var unknownMembers = [];
+  var newOtByEmp = {};
+  newTeam.forEach(function(name){
+    var row = _buildMemberOTRow(name, date, start, end, isEng, customer, engagement, actType, info);
+    if (row && row.unknown) { unknownMembers.push(row.name); return; }
+    if (!row) return; // their region yields no OT
+    delete row._calc;
+    newOtByEmp[name] = row;
+  });
 
-  // Approved-OT warning
-  var wasApproved = !!(oldOt && oldOt.status === 'approved');
-  if (wasApproved) {
+  // Diff against old to figure out approved-OT impact. Anything approved
+  // that will change (member dropped, times changed) needs a warning.
+  var approvedAffected = [];
+  oldOtRows.forEach(function(r){
+    if (r.status !== 'approved') return;
+    if (!newOtByEmp[r.employee]) {
+      approvedAffected.push({ name:r.employee, action:'removed', hrs:r.credited_hours, band:r.band });
+      return;
+    }
+    var n = newOtByEmp[r.employee];
+    var changed = (r.start_time !== n.start_time)
+      || (r.end_time   !== n.end_time)
+      || (r.ot_date    !== n.ot_date)
+      || (Number(r.credited_hours) !== Number(n.credited_hours))
+      || (r.band !== n.band);
+    if (changed) approvedAffected.push({ name:r.employee, action:'updated', hrs:r.credited_hours, band:r.band });
+  });
+
+  if (approvedAffected.length) {
+    var lines = approvedAffected.map(function(a){
+      return '  • '+a.name+' ('+fmtHours(a.hrs)+' '+a.band+') — '+a.action;
+    }).join('\n');
     var ok = await confirmAction({
-      title: 'Recalculate this session?',
-      body: 'This session has APPROVED OT linked ('+fmtHours(oldOt.credited_hours)+' credited).\n\nSaving will recalculate the OT and reset its status to PENDING. The manager will need to re-approve. Comp-off balance for '+sessionEmployee+' may change.',
+      title: 'Recalculate approved OT for '+approvedAffected.length+' team member'+(approvedAffected.length===1?'':'s')+'?',
+      body: 'This session has APPROVED OT linked for:\n\n'+lines+'\n\nSaving will reset their OT to PENDING (or remove it if they are no longer on the team). The manager will need to re-approve. Comp-off balances may change.',
       confirmText: 'Save & reset to pending',
       danger: false
     });
     if (!ok) return;
   }
+
+  // Recompute office/OT split on the session row for the LOGGER (the
+  // unified_sessions row's split fields are about the session itself,
+  // not per-member).
+  var split = splitSessionHours(date, start, end, sessionEmployee);
+  if (!split) return fail('Could not compute hours.');
 
   var payload = {
     session_type:    type,
@@ -711,58 +809,68 @@ async function saveEditUS() {
   var upd = await sb.from('unified_sessions').update(payload).eq('id', id);
   if (upd.error) return fail('Save failed: ' + upd.error.message);
 
-  // === Cascade to linked ot_sessions ===
-  var activityLabel = isEng
-    ? ((customer || '') + ' / ' + (engagement || '-') + ' — ' + info)
-    : info;
-
-  if (split.ot > 0 && split.otCalc) {
-    var c = split.otCalc;
-    var otPayload = {
-      activity:       activityLabel,
-      ot_date:        date,
-      start_time:     start,
-      end_time:       end,
-      day_name:       c.dayName,
-      band:           c.band,
-      rate:           c.rate,
-      duration_hours: c.duration,
-      credited_hours: c.credited,
-      customer_name:  isEng ? (customer || null) : null,
-      project_name:   isEng ? (engagement || null) : null,
-      activity_type:  isEng ? (actType || null) : null,
-    };
-    if (oldOt && oldOt.status === 'approved') {
-      // Reset to pending — manager re-approves
-      otPayload.status          = 'pending';
-      otPayload.manager_comment = null;
-      otPayload.reviewed_by     = null;
-      otPayload.reviewed_at     = null;
-    }
-    if (oldOtId) {
-      // Update existing OT row
-      await sb.from('ot_sessions').update(otPayload).eq('id', oldOtId);
+  // === Diff old vs new OT rows per team member ===
+  // For each old member missing from new   → DELETE their OT row
+  // For each old member present in new     → UPDATE their OT row (reset
+  //                                            to pending if was approved)
+  // For each new member missing from old   → INSERT their OT row (pending)
+  var approvedNotifs = [];
+  for (var i = 0; i < oldOtRows.length; i++) {
+    var r = oldOtRows[i];
+    var nrow = newOtByEmp[r.employee];
+    if (!nrow) {
+      await sb.from('ot_sessions').delete().eq('id', r.id);
+      if (r.status === 'approved') approvedNotifs.push({ name:r.employee, hrs:r.credited_hours, band:r.band, action:'removed' });
     } else {
-      // Create a new OT row (session previously had no OT)
-      otPayload.employee          = sessionEmployee;
-      otPayload.status            = 'pending';
-      otPayload.source            = 'unified';
-      otPayload.source_session_id = id;
-      var ins = await sb.from('ot_sessions').insert(otPayload).select().single();
-      if (!ins.error) {
-        await sb.from('unified_sessions').update({ linked_ot_session_id: ins.data.id }).eq('id', id);
+      var patch = {
+        activity:        nrow.activity,
+        ot_date:         nrow.ot_date,
+        start_time:      nrow.start_time,
+        end_time:        nrow.end_time,
+        day_name:        nrow.day_name,
+        band:            nrow.band,
+        rate:            nrow.rate,
+        duration_hours:  nrow.duration_hours,
+        credited_hours:  nrow.credited_hours,
+        customer_name:   nrow.customer_name,
+        project_name:    nrow.project_name,
+        activity_type:   nrow.activity_type
+      };
+      if (r.status === 'approved') {
+        patch.status          = 'pending';
+        patch.manager_comment = null;
+        patch.reviewed_by     = null;
+        patch.reviewed_at     = null;
+        approvedNotifs.push({ name:r.employee, hrs:r.credited_hours, band:r.band, action:'updated' });
       }
+      await sb.from('ot_sessions').update(patch).eq('id', r.id);
+      delete newOtByEmp[r.employee]; // mark handled
     }
-  } else if (oldOtId) {
-    // No more OT — delete the now-stale OT row
-    await sb.from('ot_sessions').delete().eq('id', oldOtId);
-    await sb.from('unified_sessions').update({ linked_ot_session_id: null }).eq('id', id);
+  }
+  // Remaining entries in newOtByEmp are members who weren't in old — insert.
+  var toInsert = Object.keys(newOtByEmp).map(function(name){
+    var n = newOtByEmp[name];
+    n.status            = 'pending';
+    n.source            = 'unified';
+    n.source_session_id = id;
+    return n;
+  });
+  if (toInsert.length) {
+    await sb.from('ot_sessions').insert(toInsert);
   }
 
-  // Notify manager if an approved OT was just reset
-  if (wasApproved && typeof notifyManagerOTEvent === 'function') {
-    var notifMsg = sessionEmployee + ' edited a session that had APPROVED OT (' + oldOt.credited_hours + 'h, ' + oldOt.band + '). It is now PENDING again — please review.';
-    notifyManagerOTEvent('ot_edited_after_approval', id, notifMsg);
+  // Notify manager once per affected approved-OT member.
+  if (typeof notifyManagerOTEvent === 'function') {
+    approvedNotifs.forEach(function(a){
+      var verb = (a.action === 'removed') ? 'removed from a session that had APPROVED OT' : 'edited a session that had APPROVED OT';
+      var msg  = a.name + ' was ' + verb + ' (' + a.hrs + 'h, ' + a.band + '). The OT row was '+ (a.action === 'removed' ? 'deleted.' : 'reset to PENDING.');
+      notifyManagerOTEvent('ot_edited_after_approval', id, msg);
+    });
+  }
+  if (unknownMembers.length) {
+    setTimeout(function(){
+      showError('OT not auto-generated for: ' + unknownMembers.join(', ') + ' — user not found in system.');
+    }, 400);
   }
 
   closeEditUS();
@@ -1138,37 +1246,41 @@ async function renderUnifiedTypeSummary(typeKey) {
 }
 
 async function deleteUS(id) {
-  // Read the row to find any linked OT and its status
-  var res = await sb.from('unified_sessions').select('linked_ot_session_id,employee').eq('id', id).single();
-  if (res.error) { showError('Could not load session.'); return; }
-  var oldOtId = res.data.linked_ot_session_id;
-  var sessionEmployee = res.data.employee;
+  // Read the session row (for employee/audit) + ALL linked OT rows
+  // (v53 the link is multi-row via source_session_id, not a single FK).
+  var sessRes = await sb.from('unified_sessions').select('employee').eq('id', id).single();
+  if (sessRes.error) { showError('Could not load session.'); return; }
+  var sessionEmployee = sessRes.data.employee;
 
-  var oldOt = null;
-  if (oldOtId) {
-    var otRes = await sb.from('ot_sessions').select('status,credited_hours,band').eq('id', oldOtId).single();
-    if (!otRes.error) oldOt = otRes.data;
-  }
+  var otRes = await sb.from('ot_sessions')
+    .select('id,employee,status,credited_hours,band')
+    .eq('source', 'unified').eq('source_session_id', id);
+  var linkedOTs = otRes.error ? [] : (otRes.data || []);
+  var approved  = linkedOTs.filter(function(r){ return r.status === 'approved'; });
 
   var dOpts = { title: 'Delete this session?', body: 'This cannot be undone.', confirmText: 'Delete' };
-  if (oldOt && oldOt.status === 'approved') {
+  if (approved.length) {
+    var lines = approved.map(function(a){ return '  • '+a.employee+' ('+fmtHours(a.credited_hours)+' '+a.band+')'; }).join('\n');
     dOpts.title = 'Delete session with approved OT?';
-    dOpts.body  = 'This session has APPROVED OT linked ('+fmtHours(oldOt.credited_hours)+' credited as '+oldOt.band+').\n\nDeleting will also remove that OT row, reducing '+sessionEmployee+'\'s comp-off balance.\n\nThis cannot be undone.';
-  } else if (oldOtId) {
-    dOpts.body = 'The linked '+(oldOt ? oldOt.status : 'pending')+' OT record will also be deleted.\n\nThis cannot be undone.';
+    dOpts.body  = 'This session has APPROVED OT linked for:\n\n'+lines+'\n\nDeleting will remove '+(approved.length===1?'that':'all those')+' OT row'+(approved.length===1?'':'s')+', reducing comp-off balance'+(approved.length===1?'':'s').slice(0,-1)+(approved.length===1?'':'s')+'.\n\nThis cannot be undone.';
+  } else if (linkedOTs.length) {
+    dOpts.body = 'The '+linkedOTs.length+' linked pending OT record'+(linkedOTs.length===1?'':'s')+' will also be deleted.\n\nThis cannot be undone.';
   }
   if (!await confirmAction(dOpts)) return;
 
-  if (oldOtId) {
-    await sb.from('ot_sessions').delete().eq('id', oldOtId);
+  // Delete linked OT rows (cascaded via source_session_id query, not FK).
+  if (linkedOTs.length) {
+    await sb.from('ot_sessions').delete().eq('source','unified').eq('source_session_id', id);
   }
   var del = await sb.from('unified_sessions').delete().eq('id', id);
   if (del.error) { showError('Error: ' + del.error.message); return; }
 
-  // Notify manager when an approved OT row was just deleted
-  if (oldOt && oldOt.status === 'approved' && typeof notifyManagerOTEvent === 'function') {
-    var nm = sessionEmployee + ' deleted a session that had APPROVED OT (' + oldOt.credited_hours + 'h, ' + oldOt.band + '). The credit has been removed from their balance.';
-    notifyManagerOTEvent('ot_deleted_after_approval', id, nm);
+  // Notify manager once per approved-OT member that was wiped.
+  if (typeof notifyManagerOTEvent === 'function') {
+    approved.forEach(function(a){
+      var msg = sessionEmployee + ' deleted a session that had APPROVED OT for ' + a.employee + ' (' + a.credited_hours + 'h, ' + a.band + '). The credit has been removed from their balance.';
+      notifyManagerOTEvent('ot_deleted_after_approval', id, msg);
+    });
   }
 
   showToast('Session deleted ✓');
