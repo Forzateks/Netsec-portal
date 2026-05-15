@@ -493,10 +493,19 @@ function openPocInsightsModal() {
   var modal = document.getElementById('poc-insights-modal');
   var body  = document.getElementById('poc-insights-body');
   if (!modal || !body) return;
-  var ctx = window._pocInsightsCtx || { pocsAll:[], pocWon:0, pocLost:0, pocConcluded:0, pocInProgress:0, winRate:null };
+  var ctx = window._pocInsightsCtx || { pocsAll:[], pocWon:0, pocLost:0, pocClosedSet:0, pocInProgress:0, pocDormant:0, winRate:null };
   var pocsAll = ctx.pocsAll;
-  var isWon  = function(s){return s==='Completed';};
-  var isLost = function(s){return s==='Lost' || s==='Cancelled' || s==='Ended';};
+  // Outcome classification — matches the dashboard math:
+  //   won  = converted_to_project=true
+  //   lost = status='cancelled'
+  //   ip   = status='active'
+  //   dor  = status='dormant'  (excluded from win rate)
+  // A 'closed' POC that isn't converted falls into neither won nor lost in the
+  // per-row sense, but counts toward the denominator (closed_set) for win rate.
+  var isWon = function(p){ return p.converted_to_project === true; };
+  var isLost = function(p){ return p.status === 'cancelled'; };
+  var isInProg = function(p){ return p.status === 'active'; };
+  var isDormant = function(p){ return p.status === 'dormant'; };
   function rateColor(r) {
     if (r === null || r === undefined) return 'var(--muted)';
     if (r >= 70) return '#059669';
@@ -509,16 +518,18 @@ function openPocInsightsModal() {
       var raw = (p[key] || '').trim();
       var display = raw || 'Unknown';
       var canon = display.toLowerCase();
-      if (!map[canon]) map[canon] = {name:display, total:0, won:0, lost:0, ip:0};
-      map[canon].total++;
-      if (isWon(p.tracker_status))      map[canon].won++;
-      else if (isLost(p.tracker_status)) map[canon].lost++;
-      else                                map[canon].ip++;
+      if (!map[canon]) map[canon] = {name:display, total:0, won:0, lost:0, ip:0, dor:0, closedSet:0};
+      var g = map[canon];
+      g.total++;
+      if (isWon(p))      g.won++;
+      if (isLost(p))     g.lost++;
+      if (isInProg(p))   g.ip++;
+      if (isDormant(p))  g.dor++;
+      if (p.status === 'closed' || p.status === 'cancelled') g.closedSet++;
     });
     return Object.keys(map).map(function(k){
       var g = map[k];
-      g.concluded = g.won + g.lost;
-      g.rate = g.concluded ? Math.round(g.won/g.concluded*100) : null;
+      g.rate = g.closedSet ? Math.round(g.won/g.closedSet*100) : null;
       return g;
     }).sort(function(a,b){
       if (b.total !== a.total) return b.total - a.total;
@@ -548,6 +559,9 @@ function openPocInsightsModal() {
       '</table></div>'+
     '</div>';
   }
+  var dormantFoot = ctx.pocDormant
+    ? '<div class="poc-mini-foot">Dormant POCs ('+ctx.pocDormant+') excluded from win rate calculation.</div>'
+    : '';
   body.innerHTML =
     '<div class="poc-mini-stats">'+
       '<div class="poc-mini"><div class="poc-mini-label">Total POCs</div><div class="poc-mini-value num">'+pocsAll.length+'</div></div>'+
@@ -556,9 +570,10 @@ function openPocInsightsModal() {
       '<div class="poc-mini"><div class="poc-mini-label">In Progress</div><div class="poc-mini-value num">'+ctx.pocInProgress+'</div></div>'+
       '<div class="poc-mini poc-mini-rate"><div class="poc-mini-label">Win Rate</div>'+
         '<div class="poc-mini-value num" style="color:'+rateColor(ctx.winRate)+'">'+(ctx.winRate==null?'—':(ctx.winRate+'%'))+'</div>'+
-        '<div class="dim" style="font-size:10px">of '+ctx.pocConcluded+' concluded</div>'+
+        '<div class="dim" style="font-size:10px">of '+ctx.pocClosedSet+' closed</div>'+
       '</div>'+
     '</div>'+
+    dormantFoot+
     '<div class="poc-insight-grid">'+
       tableHtml(groupPocs('partner'), 'By Partner', 6)+
       tableHtml(groupPocs('country'), 'By Region', 6)+
@@ -610,7 +625,7 @@ async function renderManagerDashboard() {
     T(sb.from('annual_leave').select('employee,start_date,end_date,working_days,reason').lte('start_date', thirtyAhead).gte('end_date', todayISO), 'annual_leave window'),
     // tracker_updated_at is the best available proxy for status-change time —
     // no dedicated status_changed_at / updated_at column on engagements.
-    T(sb.from('engagements').select('id,name,type,status,tracker_status,partner,country,tracker_updated_at,customer_id').neq('status','archived'), 'engagements all'),
+    T(sb.from('engagements').select('id,name,type,status,tracker_status,partner,country,tracker_updated_at,customer_id,converted_to_project').neq('status','archived'), 'engagements all'),
     T(sb.from('unified_sessions').select('id,employee,team_members,session_date,total_hours,engagement_name,engagement_id').gte('session_date', fourteenAgo), 'unified_sessions 14d'),
     T(sb.from('engagements').select('id,name,type,license_expiry,customer_id').not('license_expiry','is',null).lte('license_expiry', thirtyAhead).order('license_expiry',{ascending:true}), 'engagements license'),
     T(sb.from('customers').select('id,name'), 'customers'),
@@ -753,20 +768,29 @@ async function renderManagerDashboard() {
     '</div>';
 
   // === POC CONVERSION DATA (used by compact card + modal detail view) ===
-  // Group POCs by partner / region with case-insensitive keys so casing
-  // variants ('Qatar' / 'QATAR' / 'QAT') don't fragment the rollup.
-  var pocsAll = allEngagements.filter(function(e){return e.type==='poc';});
-  var isWon  = function(s){return s==='Completed';};
-  var isLost = function(s){return s==='Lost' || s==='Cancelled' || s==='Ended';};
-  var pocWon = pocsAll.filter(function(p){return isWon(p.tracker_status);}).length;
-  var pocLost = pocsAll.filter(function(p){return isLost(p.tracker_status);}).length;
-  var pocConcluded = pocWon + pocLost;
-  var pocInProgress = pocsAll.length - pocConcluded;
-  var winRate = pocConcluded ? Math.round(pocWon/pocConcluded*100) : null;
+  // POC outcome is derived from engagements.status + the converted_to_project
+  // boolean — NOT the legacy tracker_status string. Win rate excludes Dormant
+  // POCs from the denominator (they're neither won nor lost — just paused).
+  //   in_progress = status='active'
+  //   closed_set  = status IN ('closed','cancelled')   ← win rate denominator
+  //   dormant     = status='dormant'                   ← excluded from rate
+  //   won         = converted_to_project=true
+  //   lost        = status='cancelled'
+  var pocsAll        = allEngagements.filter(function(e){return e.type==='poc';});
+  var pocInProgress  = pocsAll.filter(function(p){return p.status==='active';}).length;
+  var pocClosedSet   = pocsAll.filter(function(p){return p.status==='closed' || p.status==='cancelled';}).length;
+  var pocDormant     = pocsAll.filter(function(p){return p.status==='dormant';}).length;
+  var pocWon         = pocsAll.filter(function(p){return p.converted_to_project===true;}).length;
+  var pocLost        = pocsAll.filter(function(p){return p.status==='cancelled';}).length;
+  var winRate        = pocClosedSet ? Math.round(pocWon/pocClosedSet*100) : null;
 
   // Stash for openPocInsightsModal — manager clicks the compact card,
   // modal pulls from this without re-fetching.
-  window._pocInsightsCtx = { pocsAll:pocsAll, pocWon:pocWon, pocLost:pocLost, pocConcluded:pocConcluded, pocInProgress:pocInProgress, winRate:winRate };
+  window._pocInsightsCtx = {
+    pocsAll:pocsAll, pocWon:pocWon, pocLost:pocLost,
+    pocClosedSet:pocClosedSet, pocInProgress:pocInProgress,
+    pocDormant:pocDormant, winRate:winRate
+  };
 
   // === NEEDS YOUR ATTENTION ===
   // Exception-based feed that surfaces only items the manager should look at
@@ -792,12 +816,16 @@ async function renderManagerDashboard() {
   // === POC COMPACT CARD (was POC Conversion Insights — full block moved to modal) ===
   if (pocsAll.length) {
     var winRateLbl = (winRate == null) ? 'pending' : (winRate + '%');
+    var dormantNote = pocDormant
+      ? '<div class="poc-compact-foot">Dormant POCs ('+fmtCount(pocDormant)+') excluded from win rate calculation.</div>'
+      : '';
     html += '<div class="card poc-compact-card" onclick="openPocInsightsModal()" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openPocInsightsModal();}">'+
       '<div class="poc-compact-head">'+
         '<div>'+
           '<div class="poc-compact-title">POCs</div>'+
           '<div class="poc-compact-num"><span data-counter="'+pocsAll.length+'">'+fmtCount(pocsAll.length)+'</span></div>'+
           '<div class="poc-compact-sub">'+fmtCount(pocInProgress)+' in progress · '+fmtCount(pocWon)+' won · '+fmtCount(pocLost)+' lost · Win rate: '+winRateLbl+'</div>'+
+          dormantNote+
         '</div>'+
         '<div class="poc-compact-cta">View POC details <i data-lucide="arrow-right" class="poc-compact-arrow"></i></div>'+
       '</div>'+

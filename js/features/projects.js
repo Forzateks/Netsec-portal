@@ -640,7 +640,7 @@ async function renderManageProjects() {
     'active':    {bg:'#DCFCE7',color:'#166534',icon:'circle',         label:'Active'},
     'sign-off':        {bg:'#FEF3C7',color:'#92400E',icon:'pen-tool',       label:'Sign-off'},
     'payment-pending': {bg:'#FEF9C3',color:'#854D0E',icon:'wallet',         label:'Payment Pending'},
-    'completed':       {bg:'#E0F2FE',color:'#075985',icon:'check-circle-2', label:'Completed'},
+    'closed':          {bg:'#E0F2FE',color:'#075985',icon:'check-circle-2', label:'Closed'},
     'on-hold':   {bg:'#FED7AA',color:'#9A3412',icon:'pause-circle',   label:'On Hold'},
     'dormant':   {bg:'#F3F4F6',color:'#4B5563',icon:'moon',           label:'Dormant'},
     'cancelled': {bg:'#FEE2E2',color:'#991B1B',icon:'x-circle',       label:'Cancelled'},
@@ -698,7 +698,35 @@ async function openEditProject(id) {
   ['edit-project-vendor-other','edit-project-product-line-other'].forEach(function(otherId){
     var el = document.getElementById(otherId); if (el) { el.value = ''; el.style.display = 'none'; }
   });
+  // POC conversion toggle — seed checkbox + stash engagement type for visibility logic
+  var epConv = document.getElementById('edit-project-converted');
+  if (epConv) {
+    epConv.checked = !!data.converted_to_project;
+    epConv.dataset.engType = data.type || '';
+  }
+  _epRefreshConvertedToggle();
   document.getElementById('edit-project-modal').classList.add('show');
+}
+
+// Show/hide + enable/disable the POC conversion toggle in the legacy
+// edit-project-modal based on current type + status. Mirrors the tracker
+// modal's _trkRefreshConvertedToggle so behaviour stays consistent.
+function _epRefreshConvertedToggle() {
+  var row = document.getElementById('edit-project-converted-row');
+  var cb  = document.getElementById('edit-project-converted');
+  var lbl = document.getElementById('edit-project-converted-label');
+  if (!row || !cb) return;
+  var engType = cb.dataset.engType || '';
+  if (engType !== 'poc') {
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = '';
+  var topStatus = (document.getElementById('edit-project-status')||{}).value || 'active';
+  var isActive  = (topStatus === 'active' || topStatus === '');
+  cb.disabled = isActive;
+  if (lbl) lbl.title = isActive ? 'Available once POC is no longer active' : '';
+  row.classList.toggle('poc-conv-disabled', isActive);
 }
 
 function closeEditProjectModal() {
@@ -733,11 +761,19 @@ async function saveEditProject() {
   var oldCustomerId = oldRes.data ? oldRes.data.customer_id : null;
   var oldType = oldRes.data ? oldRes.data.type : null;
 
-  var {error} = await sb.from('engagements').update({
+  // POC conversion toggle — only include in the patch when this row is a POC,
+  // matches the visibility rule on the form. DB trigger blocks employees from
+  // changing it server-side; the form also disables it for non-managers.
+  var updatePayload = {
     name: name, status: status, customer_id: customer_id, type: type,
     vendor:       vendorVal || null,
     product_line: plVal     || null
-  }).eq('id', id);
+  };
+  var epConvSave = document.getElementById('edit-project-converted');
+  if (epConvSave && epConvSave.dataset.engType === 'poc') {
+    updatePayload.converted_to_project = !!epConvSave.checked;
+  }
+  var {error} = await sb.from('engagements').update(updatePayload).eq('id', id);
   if (error) { showError('Error: '+error.message); return; }
 
   // If renamed, cascade the new name to every session table that snapshots it

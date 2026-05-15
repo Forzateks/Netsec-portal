@@ -310,6 +310,22 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .poc-compact-sub{font-size:12px;color:var(--muted)}
 .poc-compact-cta{font-size:13px;font-weight:600;color:var(--teal);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .poc-compact-arrow{width:14px;height:14px}
+/* Dormant-exclusion footnote on the compact POC card. Reads as a quiet
+   caveat — secondary type-size, muted colour, sits just under the sub line. */
+.poc-compact-foot{font-size:11px;color:var(--muted);margin-top:6px;font-style:italic}
+/* Matching footnote inside the POC Conversion Insights modal — same intent. */
+.poc-mini-foot{font-size:11px;color:var(--muted);margin:-6px 0 14px;font-style:italic}
+
+/* ── POC "Converted to project" toggle (Edit Engagement form, v56) ──
+   Lives directly under the Status field. Hidden when type != 'poc' and
+   visually muted while status == 'active' (still locked by the tooltip). */
+.poc-conv-row{margin-top:2px}
+.poc-conv-label{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:13px;color:var(--navy);min-height:44px;padding:6px 0;user-select:none}
+.poc-conv-cb{width:18px;height:18px;cursor:pointer;accent-color:var(--teal);flex-shrink:0}
+.poc-conv-text{line-height:1.4}
+.poc-conv-help{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4;max-width:520px}
+.poc-conv-row.poc-conv-disabled .poc-conv-label{opacity:.55;cursor:not-allowed}
+.poc-conv-row.poc-conv-disabled .poc-conv-cb{cursor:not-allowed}
 
 /* Manager Approvals queue: tiny amber pill on OT rows where credited > 12h. */
 .long-sess-flag{
@@ -1394,15 +1410,23 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    Used by the Tracker list "Status" column and the Manage Engagements
    status pill. Each pill uses the .badge base + one of these modifiers. */
 .badge.trk-st-active,.badge.trk-st-signoff,.badge.trk-st-paypending,
-.badge.trk-st-completed,.badge.trk-st-onhold,.badge.trk-st-dormant,
+.badge.trk-st-closed,.badge.trk-st-onhold,.badge.trk-st-dormant,
 .badge.trk-st-cancelled{font-size:11px;padding:3px 9px;border-radius:12px;letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;gap:4px}
 .trk-st-active    { background:#DCFCE7; color:#166534 }
 .trk-st-signoff   { background:#FEF3C7; color:#92400E }
 .trk-st-paypending{ background:#FEF9C3; color:#854D0E }
-.trk-st-completed { background:#E0F2FE; color:#075985 }
+.trk-st-closed    { background:#E0F2FE; color:#075985 }
 .trk-st-onhold    { background:#FED7AA; color:#9A3412 }
 .trk-st-dormant   { background:#F3F4F6; color:#4B5563 }
 .trk-st-cancelled { background:#FEE2E2; color:#991B1B }
+
+/* ── POC conversion outcome badge (v56) ──
+   Sits next to the status pill on closed POCs only. Communicates whether the
+   POC converted into a paid engagement (won) or not (lost / non-converted).
+   For active/dormant POCs the outcome is undefined and the badge is hidden. */
+.badge.trk-conv{font-size:11px;padding:3px 9px;border-radius:12px;letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;gap:4px;margin-left:6px}
+.trk-conv-won { background:#DCFCE7; color:#166534 }
+.trk-conv-none{ background:#F3F4F6; color:#6B7280 }
 /* Status-badge inner icon (Lucide SVG). Inherits text colour via
    stroke="currentColor" so each status renders in its own accent shade. */
 .trk-st-icon{width:13px;height:13px;stroke-width:2;flex-shrink:0;vertical-align:-2px}

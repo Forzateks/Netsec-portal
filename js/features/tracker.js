@@ -64,7 +64,7 @@ async function loadTracker() {
   // Avoids relying on Supabase nested-select FK metadata.
   var engRes = await fetchAllRows(function(){
     return sb.from('engagements')
-      .select('id,customer_id,name,type,status,vendor,product_line,country,partner,category,project_order_no,start_date,end_date,tracker_status,orch_version,ec_version,license_expiry,signed_off_on,owner_employee,tracker_remarks,tracker_updated_at,updated_by,created_at')
+      .select('id,customer_id,name,type,status,vendor,product_line,country,partner,category,project_order_no,start_date,end_date,tracker_status,orch_version,ec_version,license_expiry,signed_off_on,owner_employee,tracker_remarks,tracker_updated_at,updated_by,created_at,converted_to_project')
       .order('tracker_updated_at',{ascending:false,nullsFirst:false});
   });
   var custRes = await fetchAllRows(function(){
@@ -235,7 +235,7 @@ function _trkFilteredRows() {
   var STATUS_TIER = {
     'active':    0, 'sign-off':  0, 'payment-pending': 0,  // live work / needs follow-up
     'on-hold':   1,                                        // paused, expected to resume
-    'completed': 2, 'dormant':   2, 'cancelled': 2         // concluded
+    'closed':    2, 'dormant':   2, 'cancelled': 2         // concluded
   };
   filtered.sort(function(a,b){
     var at = STATUS_TIER[_trkTopStatusKey(a.status)];
@@ -262,10 +262,13 @@ function trkStatusBadge(s) {
 // the detail/edit modal as "Current Phase"). null/empty status renders as
 // Active per spec — legacy imports / freshly-inserted rows shouldn't read
 // as a blank cell.
-// Lifecycle order: Active → Sign-off → Payment Pending → Completed, with
+// Lifecycle order: Active → Sign-off → Payment Pending → Closed, with
 // On Hold / Dormant / Cancelled as off-ramp states after the happy path.
+// (Status 'closed' is the post-v56 rename of the old 'completed' value —
+// the row is finished regardless of POC-conversion outcome, which now
+// lives in its own engagements.converted_to_project boolean.)
 var TRK_TOP_STATUS_ORDER = [
-  'active','sign-off','payment-pending','completed','on-hold','dormant','cancelled'
+  'active','sign-off','payment-pending','closed','on-hold','dormant','cancelled'
 ];
 // Icon column carries a LUCIDE name (rendered as <i data-lucide>) for the
 // badge / strip / detail-modal surfaces. Filter dropdown options can't render
@@ -275,7 +278,7 @@ var TRK_TOP_STATUS_MAP = {
   'active':          { label:'Active',          icon:'circle',         cls:'trk-st-active' },
   'sign-off':        { label:'Sign-off',        icon:'pen-tool',       cls:'trk-st-signoff' },
   'payment-pending': { label:'Payment Pending', icon:'wallet',         cls:'trk-st-paypending' },
-  'completed':       { label:'Completed',       icon:'check-circle-2', cls:'trk-st-completed' },
+  'closed':          { label:'Closed',          icon:'check-circle-2', cls:'trk-st-closed' },
   'on-hold':   { label:'On Hold',   icon:'pause-circle',   cls:'trk-st-onhold' },
   'dormant':   { label:'Dormant',   icon:'moon',           cls:'trk-st-dormant' },
   'cancelled': { label:'Cancelled', icon:'x-circle',       cls:'trk-st-cancelled' }
@@ -283,7 +286,7 @@ var TRK_TOP_STATUS_MAP = {
 // Unicode glyphs for the multi-select dropdown labels only — those go
 // through esc2() so they can't render an SVG tag. Same six statuses.
 var TRK_STATUS_OPTION_GLYPH = {
-  'active':'🟢','sign-off':'✍️','payment-pending':'💰','completed':'✅','on-hold':'⏸️','dormant':'💤','cancelled':'❌'
+  'active':'🟢','sign-off':'✍️','payment-pending':'💰','closed':'✅','on-hold':'⏸️','dormant':'💤','cancelled':'❌'
 };
 function _trkTopStatusKey(raw) {
   var v = (raw == null ? '' : String(raw)).trim().toLowerCase();
@@ -303,6 +306,18 @@ function trkTopStatusBadge(raw) {
   var def = TRK_TOP_STATUS_MAP[key];
   if (!def) return '<span class="badge" style="background:#F3F4F6;color:#6B7280">'+esc2(raw||'—')+'</span>';
   return '<span class="badge '+def.cls+'"><i data-lucide="'+def.icon+'" class="trk-st-icon"></i> '+def.label+'</span>';
+}
+
+// Conversion badge — only rendered for closed POCs. Green "Converted" when
+// the customer adopted the POC into a paid engagement, grey "Not converted"
+// otherwise. For active / dormant POCs the outcome is undefined, so callers
+// should pass an empty string and we render nothing.
+function trkConvertedBadge(row) {
+  if (!row || row.type !== 'poc') return '';
+  if (row.status !== 'closed') return '';
+  return row.converted_to_project
+    ? '<span class="badge trk-conv trk-conv-won"><i data-lucide="check" class="trk-st-icon"></i> Converted</span>'
+    : '<span class="badge trk-conv trk-conv-none">Not converted</span>';
 }
 
 function trkTypeBadge(t) {
@@ -336,7 +351,7 @@ function renderTrackerStatRow() {
     'active':          rows.filter(function(r){return statusKey(r)==='active';}).length,
     'sign-off':        rows.filter(function(r){return statusKey(r)==='sign-off';}).length,
     'payment-pending': rows.filter(function(r){return statusKey(r)==='payment-pending';}).length,
-    'completed':       rows.filter(function(r){return statusKey(r)==='completed';}).length,
+    'closed':          rows.filter(function(r){return statusKey(r)==='closed';}).length,
     'on-hold':         rows.filter(function(r){return statusKey(r)==='on-hold';}).length,
     'dormant':         rows.filter(function(r){return statusKey(r)==='dormant';}).length,
     'cancelled':       rows.filter(function(r){return statusKey(r)==='cancelled';}).length
@@ -346,7 +361,7 @@ function renderTrackerStatRow() {
     'active':          {bg:'#DCFCE7', fg:'#166534'},
     'sign-off':        {bg:'#FEF3C7', fg:'#92400E'},
     'payment-pending': {bg:'#FEF9C3', fg:'#854D0E'},
-    'completed':       {bg:'#E0F2FE', fg:'#075985'},
+    'closed':          {bg:'#E0F2FE', fg:'#075985'},
     'on-hold':         {bg:'#FED7AA', fg:'#9A3412'},
     'dormant':         {bg:'#F3F4F6', fg:'#4B5563'},
     'cancelled':       {bg:'#FEE2E2', fg:'#991B1B'}
@@ -355,7 +370,7 @@ function renderTrackerStatRow() {
   // array reads as selected. Empty array = no filter; every segment subtle.
   var selected = msGetValues('trk-filter-status');
 
-  var segs = ['active','sign-off','payment-pending','completed','on-hold','dormant','cancelled'].map(function(k){
+  var segs = ['active','sign-off','payment-pending','closed','on-hold','dormant','cancelled'].map(function(k){
     var def = TRK_TOP_STATUS_MAP[k];
     var th  = THEME[k];
     var isSel = (selected.indexOf(k) !== -1);
@@ -567,7 +582,7 @@ function _trkRenderTable(rows, TYPE_DEF) {
     '</tr>';
   var body = rows.map(function(r){
     var sk = _trkTopStatusKey(r.status);
-    var muted = (sk === 'completed' || sk === 'cancelled' || sk === 'dormant');
+    var muted = (sk === 'closed' || sk === 'cancelled' || sk === 'dormant');
     var td = TYPE_DEF[r.type] || TYPE_DEF['project'];
     var remarksFull = (r.tracker_remarks || '').replace(/\s+/g,' ').trim();
     var remarksLine = remarksFull
@@ -590,7 +605,7 @@ function _trkRenderTable(rows, TYPE_DEF) {
         (r.country?'<div class="trk-cell-sub">'+esc2(r.country)+'</div>':'')+
       '</td>'+
       '<td class="hide-mobile">'+esc2(r.owner_employee||'—')+'</td>'+
-      '<td>'+trkTopStatusBadge(r.status)+'</td>'+
+      '<td>'+trkTopStatusBadge(r.status)+trkConvertedBadge(r)+'</td>'+
       '<td class="hide-mobile dim num" style="font-size:12px"'+(r.tracker_updated_at?' title="'+relativeTimeTitle(r.tracker_updated_at)+'"':'')+'>'+(r.tracker_updated_at?relativeTime(r.tracker_updated_at):'—')+'</td>'+
       '<td><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openTrackerDetail('+r.id+')"><i data-lucide="eye" class="btn-icon"></i><span class="hide-mobile">View</span></button></td>'+
     '</tr>';
@@ -605,7 +620,7 @@ function _trkRenderTable(rows, TYPE_DEF) {
 function _trkRenderCards(rows, TYPE_DEF) {
   var cards = rows.map(function(r){
     var sk = _trkTopStatusKey(r.status);
-    var muted = (sk === 'completed' || sk === 'cancelled' || sk === 'dormant');
+    var muted = (sk === 'closed' || sk === 'cancelled' || sk === 'dormant');
     var td = TYPE_DEF[r.type] || TYPE_DEF['project'];
     var remarksFull = (r.tracker_remarks || '').replace(/\s+/g,' ').trim();
     var customerLine = esc2(r.customer_name||'—') + (r.country ? ' · '+esc2(r.country) : '');
@@ -620,7 +635,7 @@ function _trkRenderCards(rows, TYPE_DEF) {
       (r.vendor?'<div class="trk-card-meta">'+esc2(r.vendor)+(r.product_line?' · '+esc2(r.product_line):'')+'</div>':'')+
       (r.owner_employee?'<div class="trk-card-meta">Owner: '+esc2(r.owner_employee)+'</div>':'')+
       '<div class="trk-card-foot">'+
-        trkTopStatusBadge(r.status)+
+        trkTopStatusBadge(r.status)+trkConvertedBadge(r)+
         '<span class="trk-card-date num"'+updatedTitle+'>'+updated+'</span>'+
       '</div>'+
       (remarksFull?'<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+esc2(remarksFull)+'</div>':'')+
@@ -653,7 +668,7 @@ function openTrackerDetail(id) {
   var r = _trkData.find(function(x){return x.id===id;});
   if (!r) return;
 
-  document.getElementById('trk-detail-type').innerHTML = trkTypeBadge(r.type) + ' ' + trkTopStatusBadge(r.status);
+  document.getElementById('trk-detail-type').innerHTML = trkTypeBadge(r.type) + ' ' + trkTopStatusBadge(r.status) + trkConvertedBadge(r);
   document.getElementById('trk-detail-name').textContent = r.name || '';
   document.getElementById('trk-detail-customer').textContent = (r.customer_name||'—') +
     (r.country?(' · '+r.country):'') +
@@ -792,6 +807,28 @@ function _trkUpdatePhaseEnabledState() {
   }
 }
 
+// POC conversion toggle row visibility + disabled state:
+//   - Hidden entirely when engagement type !== 'poc' (other types never see it)
+//   - Visible but DISABLED while POC status is 'active' — converted/not is
+//     only a meaningful decision after the POC has concluded.
+function _trkRefreshConvertedToggle() {
+  var row = document.getElementById('trk-edit-converted-row');
+  var cb  = document.getElementById('trk-edit-converted');
+  var lbl = document.getElementById('trk-edit-converted-label');
+  if (!row || !cb) return;
+  var engType = cb.dataset.engType || '';
+  if (engType !== 'poc') {
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = '';
+  var topStatus = (document.getElementById('trk-edit-status')||{}).value || 'active';
+  var isActive  = (topStatus === 'active' || topStatus === '');
+  cb.disabled = isActive;
+  if (lbl) lbl.title = isActive ? 'Available once POC is no longer active' : '';
+  row.classList.toggle('poc-conv-disabled', isActive);
+}
+
 function openTrackerEditModal(id) {
   // Employees can now open this modal to edit a limited field set
   // (Remarks / Phase / Versions / Category). The DB trigger
@@ -825,8 +862,17 @@ function openTrackerEditModal(id) {
   _trkSet('trk-edit-license-expiry',    r.license_expiry);
   _trkSet('trk-edit-signed-off-on',     r.signed_off_on);
   _trkSet('trk-edit-remarks',           r.tracker_remarks);
+  // POC conversion toggle — only meaningful for type='poc'. Seed from the
+  // row's current converted_to_project value (false on legacy rows), then
+  // _trkRefreshConvertedToggle handles visibility + the active-status lock.
+  var convCb = document.getElementById('trk-edit-converted');
+  if (convCb) {
+    convCb.checked  = !!r.converted_to_project;
+    convCb.dataset.engType = r.type || '';
+  }
   // Apply the Phase enable/disable rule based on the just-set top status.
   _trkUpdatePhaseEnabledState();
+  _trkRefreshConvertedToggle();
   document.getElementById('trk-edit-info').style.display = 'none';
 
   _trkApplyEmployeeLocks();
@@ -855,7 +901,8 @@ function _trkApplyEmployeeLocks() {
     'trk-edit-end-date',
     'trk-edit-license-expiry',
     'trk-edit-signed-off-on',
-    'trk-edit-project-order-no'
+    'trk-edit-project-order-no',
+    'trk-edit-converted'
   ];
   var locked = !isManager;
 
@@ -912,7 +959,7 @@ function _trkRefreshAutoCompleteHint() {
   var box = document.getElementById('trk-edit-info');
   if (!box) return;
   var willAutoFlip = signedOn &&
-    topStat !== 'completed' && topStat !== 'cancelled' &&
+    topStat !== 'closed' && topStat !== 'cancelled' &&
     topStat !== 'sign-off' && topStat !== 'payment-pending';
   if (willAutoFlip) {
     box.style.display = 'block';
@@ -961,12 +1008,22 @@ async function saveTrackerEdit() {
     tracker_updated_at: new Date().toISOString()
   };
 
+  // POC conversion toggle — only sent in the patch when the row is type='poc'
+  // (the toggle row is hidden otherwise and we don't want to overwrite the
+  // existing column on non-POC rows). The DB trigger reverts the field for
+  // non-managers; here we just send the desired value, the trigger handles
+  // the rest.
+  var convCb = document.getElementById('trk-edit-converted');
+  if (convCb && convCb.dataset.engType === 'poc') {
+    patch.converted_to_project = !!convCb.checked;
+  }
+
   // A sign-off date flips engagement.status to 'sign-off' unless the user
-  // has already chosen an end state (cancelled / completed / sign-off).
+  // has already chosen an end state (cancelled / closed / sign-off).
   // 'archived' is no longer a valid status after v22 so it's dropped from
-  // the guard.
+  // the guard. ('completed' was renamed to 'closed' in v56.)
   if (signedOn &&
-      patch.status !== 'completed' && patch.status !== 'cancelled' &&
+      patch.status !== 'closed' && patch.status !== 'cancelled' &&
       patch.status !== 'sign-off' && patch.status !== 'payment-pending') {
     patch.status = 'sign-off';
   }

@@ -607,7 +607,7 @@
             <option value="active">🟢 Active</option>
             <option value="sign-off">✍️ Sign-off</option>
             <option value="payment-pending">💰 Payment Pending</option>
-            <option value="completed">✅ Completed</option>
+            <option value="closed">✅ Closed</option>
             <option value="on-hold">⏸️ On Hold</option>
             <option value="dormant">💤 Dormant</option>
             <option value="cancelled">❌ Cancelled</option>
@@ -886,7 +886,7 @@
           <select id="trk-ms-new-status">
             <option value="pending">Pending</option>
             <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
+            <option value="closed">Closed</option>
             <option value="blocked">Blocked</option>
           </select>
         </div>
@@ -929,16 +929,26 @@
     <div class="form-grid">
       <div class="form-group full">
         <label>Status</label>
-        <select id="trk-edit-status" onchange="_trkUpdatePhaseEnabledState()">
+        <select id="trk-edit-status" onchange="_trkUpdatePhaseEnabledState();_trkRefreshConvertedToggle()">
           <option value="active">🟢 Active</option>
           <option value="sign-off">✍️ Sign-off</option>
           <option value="payment-pending">💰 Payment Pending</option>
-          <option value="completed">✅ Completed</option>
+          <option value="closed">✅ Closed</option>
           <option value="on-hold">⏸️ On Hold</option>
           <option value="dormant">💤 Dormant</option>
           <option value="cancelled">❌ Cancelled</option>
         </select>
         <div style="font-size:11px;color:var(--muted);margin-top:4px">High-level state of the engagement.</div>
+      </div>
+      <!-- POC conversion toggle. Hidden for non-POC types entirely; disabled
+           while POC is still status=active (per spec, you can only mark it
+           converted once it's no longer in-flight). -->
+      <div class="form-group full poc-conv-row" id="trk-edit-converted-row" style="display:none">
+        <label class="poc-conv-label" id="trk-edit-converted-label">
+          <input type="checkbox" id="trk-edit-converted" class="poc-conv-cb">
+          <span class="poc-conv-text">Converted to project</span>
+        </label>
+        <div class="poc-conv-help">Tick this if the customer adopted the POC and it became a paid engagement.</div>
       </div>
       <div class="form-group">
         <label>Country</label>
@@ -1924,17 +1934,24 @@
       </div>
       <div class="form-group">
         <label>Status</label>
-        <select id="edit-project-status">
+        <select id="edit-project-status" onchange="_epRefreshConvertedToggle()">
           <option value="active">🟢 Active</option>
           <option value="ongoing">🔵 Ongoing</option>
           <option value="sign-off">✍️ Sign-off</option>
           <option value="payment-pending">💰 Payment Pending</option>
-          <option value="completed">✅ Completed</option>
+          <option value="closed">✅ Closed</option>
           <option value="on-hold">⏸️ On Hold</option>
           <option value="dormant">💤 Dormant</option>
           <option value="cancelled">❌ Cancelled</option>
           <option value="archived">📦 Archived</option>
         </select>
+      </div>
+      <div class="form-group full poc-conv-row" id="edit-project-converted-row" style="display:none">
+        <label class="poc-conv-label" id="edit-project-converted-label">
+          <input type="checkbox" id="edit-project-converted" class="poc-conv-cb">
+          <span class="poc-conv-text">Converted to project</span>
+        </label>
+        <div class="poc-conv-help">Tick this if the customer adopted the POC and it became a paid engagement.</div>
       </div>
     </div>
     <div class="modal-actions">
@@ -2140,7 +2157,7 @@
           <option value="active">🟢 Active</option>
           <option value="sign-off">✍️ Sign-off</option>
           <option value="payment-pending">💰 Payment Pending</option>
-          <option value="completed">✅ Completed</option>
+          <option value="closed">✅ Closed</option>
           <option value="on-hold">⏸️ On Hold</option>
           <option value="dormant">💤 Dormant</option>
           <option value="cancelled">❌ Cancelled</option>
