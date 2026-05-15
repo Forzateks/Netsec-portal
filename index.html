@@ -423,6 +423,9 @@
           <label>End Time *</label>
           <input type="time" id="us-end" onchange="updateUSPreview()">
         </div>
+        <div class="form-group full">
+          <span id="us-duration-line" class="duration-line">Duration: —</span>
+        </div>
         <div class="form-group" id="us-mode-row">
           <label>Mode</label>
           <select id="us-mode">
@@ -1717,11 +1720,14 @@
       </div>
       <div class="form-group">
         <label>Start Time *</label>
-        <input type="time" id="edit-us-start">
+        <input type="time" id="edit-us-start" onchange="_updateEditUSDuration()">
       </div>
       <div class="form-group">
         <label>End Time *</label>
-        <input type="time" id="edit-us-end">
+        <input type="time" id="edit-us-end" onchange="_updateEditUSDuration()">
+      </div>
+      <div class="form-group full">
+        <span id="edit-us-duration-line" class="duration-line">Duration: —</span>
       </div>
       <div class="form-group full">
         <label>Session Info *</label>
@@ -1967,6 +1973,22 @@
     <div class="modal-actions">
       <button type="button" class="btn btn-ghost" id="confirm-modal-cancel">Cancel</button>
       <button type="button" class="btn btn-danger" id="confirm-modal-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── LONG-SESSION CONFIRMATION MODAL ──────────────────────────────
+     Intercepts saves of sessions where raw duration > 12.0h. Purely
+     a guardrail — Cancel is the default focused button. Esc cancels.
+     Enter is intentionally NOT wired so a focused Cancel can't be
+     accidentally bypassed. -->
+<div class="modal-overlay" id="long-session-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">⚠️ Long session — please confirm</div>
+    <div id="long-session-body"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost"   id="long-session-cancel">Cancel — let me fix it</button>
+      <button type="button" class="btn btn-primary" id="long-session-ok">Yes, the times are correct</button>
     </div>
   </div>
 </div>

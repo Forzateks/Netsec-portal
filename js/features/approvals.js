@@ -59,10 +59,17 @@ async function renderOTApprovals() {
 function otApprovalCard(r) {
   var isPending=r.status==='pending';
   var st=r.status||'approved';
+  // Auto-flag: credited > 12h is unusually high; surface a small amber
+  // badge so the manager double-checks with the employee. Informational
+  // only — does NOT block the Review / Approve flow.
+  var credited = parseFloat(r.credited_hours || 0);
+  var longFlag = credited > 12
+    ? ' <span class="long-sess-flag" title="Auto-flagged: long session ('+fmtHours(credited)+' credited). Worth double-checking with the employee.">⚠️ Long</span>'
+    : '';
   var info='<strong>'+r.employee+'</strong> — '+esc2(r.activity)+'<br>'+
     '<span style="font-size:12px;color:var(--muted)">'+fmtDate(r.ot_date)+' ('+r.day_name+') &nbsp;·&nbsp; '+
     fmtTime(r.start_time)+'–'+fmtTime(r.end_time)+' &nbsp;·&nbsp; '+fmtHours(r.duration_hours)+' &nbsp;·&nbsp; '+
-    bandBadge(r)+' &nbsp; '+r.rate+' &nbsp;·&nbsp; Credited: <strong>'+fmtHours(r.credited_hours)+'</strong>'+creditDriftMarker(r)+'</span>';
+    bandBadge(r)+' &nbsp; '+r.rate+' &nbsp;·&nbsp; Credited: <strong>'+fmtHours(r.credited_hours)+'</strong>'+creditDriftMarker(r)+longFlag+'</span>';
   return '<div class="request-card '+st+'" style="margin-bottom:10px">'+
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'+
     '<div style="font-size:13px;line-height:1.6">'+info+

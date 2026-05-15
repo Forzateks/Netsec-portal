@@ -2,6 +2,122 @@
 // Single form for Project / POC / AMC / Internal session logging.
 // Phase 2 only persists; OT integration arrives in Phase 3.
 
+// ── LONG-SESSION GUARDRAIL ─────────────────────────────────────
+// Raw input-time duration (cross-midnight aware). Used by both the
+// live form readout and the >12h save-confirm modal. Intentionally
+// independent of calcOT — this is purely about the times the user
+// typed, before any OT band / 1:2 amplification logic.
+function _rawDurationHours(startStr, endStr) {
+  if (!startStr || !endStr) return null;
+  var sp = startStr.split(':').map(Number);
+  var ep = endStr.split(':').map(Number);
+  if (sp.length < 2 || ep.length < 2 || isNaN(sp[0]) || isNaN(ep[0])) return null;
+  var sf = sp[0] + (sp[1]||0)/60;
+  var ef = ep[0] + (ep[1]||0)/60;
+  var dur = ef < sf ? (ef + 24 - sf) : (ef - sf);
+  return dur;
+}
+// "4h 30m" / "4h" / "0h 15m". Compact form used inline in the form.
+function _formatDurationShort(h) {
+  if (h == null || isNaN(h)) return '—';
+  var hrs = Math.floor(h);
+  var mins = Math.round((h - hrs) * 60);
+  if (mins === 60) { hrs++; mins = 0; }
+  if (mins === 0) return hrs + 'h';
+  return hrs + 'h ' + mins + 'm';
+}
+// "16 hours 30 minutes" — long form used inside the confirm modal.
+function _formatDurationLong(h) {
+  if (h == null || isNaN(h)) return '0 minutes';
+  var hrs = Math.floor(h);
+  var mins = Math.round((h - hrs) * 60);
+  if (mins === 60) { hrs++; mins = 0; }
+  var parts = [];
+  if (hrs > 0)  parts.push(hrs + ' hour' + (hrs===1?'':'s'));
+  if (mins > 0) parts.push(mins + ' minute' + (mins===1?'':'s'));
+  return parts.join(' ') || '0 minutes';
+}
+// "Thursday, 14 May 2026 — 23:00"
+function _formatLongDateTime(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return '';
+  var d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr + ' ' + timeStr;
+  var days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear() + ' — ' + timeStr.slice(0,5);
+}
+function _addOneDay(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  return d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0');
+}
+// Render the inline duration line under the start/end time fields.
+// elId points at a <span> the form HTML provides. Empty / invalid →
+// "Duration: —". >12h → amber + warning copy.
+function _renderDurationLine(elId, startStr, endStr) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  var dur = _rawDurationHours(startStr, endStr);
+  if (dur === null) {
+    el.className = 'duration-line';
+    el.textContent = 'Duration: —';
+    return;
+  }
+  var crosses = (endStr < startStr);
+  var crossLbl = crosses ? ' (crosses to next day)' : '';
+  if (dur > 12) {
+    el.className = 'duration-line duration-warn';
+    el.textContent = '⚠️ Duration: ' + _formatDurationShort(dur) + crossLbl + ' — double-check times';
+  } else {
+    el.className = 'duration-line';
+    el.textContent = 'Duration: ' + _formatDurationShort(dur) + crossLbl;
+  }
+}
+// Promise-returning confirmation. Resolves true if user confirms, false
+// if they cancel or Esc. Default focus on Cancel (per spec). Enter NOT
+// wired to confirm — only an explicit click on the Yes button does that.
+function confirmLongSession(dateStr, startStr, endStr) {
+  return new Promise(function(resolve) {
+    var modal  = document.getElementById('long-session-modal');
+    var body   = document.getElementById('long-session-body');
+    var cancel = document.getElementById('long-session-cancel');
+    var ok     = document.getElementById('long-session-ok');
+    if (!modal || !body || !cancel || !ok) {
+      // Defensive fallback if the modal markup isn't in the DOM yet.
+      resolve(window.confirm('This session is over 12 hours. Continue?'));
+      return;
+    }
+    var dur     = _rawDurationHours(startStr, endStr);
+    var crosses = (endStr < startStr);
+    var endDate = crosses ? _addOneDay(dateStr) : dateStr;
+    body.innerHTML =
+      '<div class="long-sess-row"><span class="long-sess-label">Start</span><span class="long-sess-val">'+esc2(_formatLongDateTime(dateStr, startStr))+'</span></div>' +
+      '<div class="long-sess-row"><span class="long-sess-label">End</span><span class="long-sess-val">to ' + esc2(_formatLongDateTime(endDate, endStr)) + '</span></div>' +
+      '<div class="long-sess-total"><strong>Total: ' + esc2(_formatDurationLong(dur)) + '</strong></div>' +
+      '<div class="long-sess-note">This is unusually long. Please confirm the times are correct.</div>';
+    function close(result) {
+      modal.classList.remove('show');
+      cancel.onclick = null;
+      ok.onclick = null;
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function onKey(e) {
+      // Esc cancels. Enter is intentionally NOT wired so the default-focused
+      // Cancel button can't be accidentally bypassed.
+      if (e.key === 'Escape') { e.preventDefault(); close(false); }
+    }
+    cancel.onclick = function(){ close(false); };
+    ok.onclick     = function(){ close(true);  };
+    document.addEventListener('keydown', onKey);
+    modal.classList.add('show');
+    // Default focus = Cancel per spec.
+    setTimeout(function(){ cancel.focus(); }, 80);
+  });
+}
+
 // AMC = recurring paid maintenance contract (wrench)
 // Support = reactive one-off troubleshooting (life-buoy)
 // Visually distinct so summaries can tell them apart at a glance.
@@ -294,6 +410,10 @@ function updateUSPreview() {
   var date  = document.getElementById('us-date').value;
   var start = document.getElementById('us-start').value;
   var end   = document.getElementById('us-end').value;
+  // Live duration readout — passive, fires on every keystroke via the
+  // onchange handlers on us-start/us-end. >12h flips it amber + adds
+  // a "double-check times" nudge.
+  _renderDurationLine('us-duration-line', start, end);
   var totEl = document.getElementById('us-preview-total');
   var offEl = document.getElementById('us-preview-office');
   var otEl  = document.getElementById('us-preview-ot');
@@ -400,6 +520,19 @@ async function saveUnifiedSession() {
     if (!teamMembers) return fail('Pick at least one team member.');
   }
   if (!info) return fail('Session info is required.');
+
+  // Long-session guardrail (strict > 12h, raw input duration). Fires for
+  // every session type. Cancel returns to the form and jumps focus to
+  // the Start Time field so the typo is the first thing the user fixes.
+  var rawDur = _rawDurationHours(start, end);
+  if (rawDur !== null && rawDur > 12) {
+    var longOk = await confirmLongSession(date, start, end);
+    if (!longOk) {
+      var startEl = document.getElementById('us-start');
+      if (startEl && startEl.focus) startEl.focus();
+      return;
+    }
+  }
 
   // Engagement snapshot (name) for non-internal
   var engagement_name = null;
@@ -688,11 +821,21 @@ async function openEditUS(id) {
   sel.value = r.engagement_name || '';
 
   document.getElementById('edit-us-error').style.display = 'none';
+  _updateEditUSDuration();
   document.getElementById('edit-unified-modal').classList.add('show');
 }
 
 function closeEditUS() {
   document.getElementById('edit-unified-modal').classList.remove('show');
+}
+
+// Live duration readout for the Edit Session modal. Mirrors the
+// updateUSPreview line for the Log Session form. Bound to onchange
+// on edit-us-start / edit-us-end.
+function _updateEditUSDuration() {
+  var s = ((document.getElementById('edit-us-start')||{}).value)||'';
+  var e = ((document.getElementById('edit-us-end')||{}).value)||'';
+  _renderDurationLine('edit-us-duration-line', s, e);
 }
 
 async function saveEditUS() {
@@ -715,6 +858,17 @@ async function saveEditUS() {
 
   if (!date || !start || !end) return fail('Date and times required.');
   if (!info) return fail('Session info required.');
+
+  // Long-session guardrail also fires on edit. Same threshold (raw > 12h).
+  var rawDur = _rawDurationHours(start, end);
+  if (rawDur !== null && rawDur > 12) {
+    var longOk = await confirmLongSession(date, start, end);
+    if (!longOk) {
+      var startEl = document.getElementById('edit-us-start');
+      if (startEl && startEl.focus) startEl.focus();
+      return;
+    }
+  }
 
   var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
   var engId = null;

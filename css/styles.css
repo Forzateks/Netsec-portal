@@ -239,6 +239,50 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .sidebar-section-label{font-size:11px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:18px 20px 6px}
 .sidebar-section-label:first-of-type{padding-top:14px}
 
+/* ── LONG-SESSION GUARDRAIL ────────────────────────────────────── */
+/* Inline duration readout under the time fields in Log Session +
+   Edit Session forms. Passive — no border, looks like helper text.
+   Amber + ⚠️ when duration > 12h. */
+.duration-line{
+  display:inline-block;font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;
+  padding:4px 0;line-height:1.4;
+}
+.duration-line.duration-warn{
+  color:#92400E;font-weight:600;font-family:'DM Sans',sans-serif;font-size:13px;
+}
+
+/* Confirmation modal body rows (start/end stacked, big total line, note). */
+#long-session-body .long-sess-row{
+  display:flex;gap:10px;font-size:14px;color:#374151;margin-bottom:6px;line-height:1.5;
+}
+#long-session-body .long-sess-label{
+  width:48px;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding-top:2px;flex-shrink:0;
+}
+#long-session-body .long-sess-val{flex:1;color:var(--navy);font-weight:500}
+#long-session-body .long-sess-total{
+  margin-top:14px;padding:10px 12px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;
+  color:#92400E;font-size:15px;
+}
+#long-session-body .long-sess-note{
+  margin-top:14px;font-size:13px;color:#374151;line-height:1.5;
+}
+
+/* Manager Approvals queue: tiny amber pill on OT rows where credited > 12h. */
+.long-sess-flag{
+  display:inline-block;padding:1px 7px;margin-left:6px;
+  background:#FEF3C7;color:#92400E;
+  font-size:10px;font-weight:700;letter-spacing:.3px;
+  border-radius:999px;border:1px solid #FDE68A;font-family:'DM Sans',sans-serif;
+  cursor:help;vertical-align:1px;
+}
+
+@media(max-width:480px){
+  /* Stack modal buttons vertically on narrow viewports so they're tappable */
+  #long-session-modal .modal-actions{flex-direction:column-reverse;gap:8px}
+  #long-session-modal .modal-actions .btn{width:100%;justify-content:center}
+  #long-session-body .long-sess-label{width:42px;font-size:10px}
+}
+
 /* ── AMC CONTRACTS ─────────────────────────────────────────────── */
 .amc-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .amc-page-title{font-size:20px;font-weight:700;color:var(--navy);line-height:1.2}
