@@ -267,6 +267,50 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
   margin-top:14px;font-size:13px;color:#374151;line-height:1.5;
 }
 
+/* ── NEEDS YOUR ATTENTION (manager dashboard) ───────────────────── */
+.attn-card{padding:18px 18px 12px}
+.attn-head{margin-bottom:10px}
+.attn-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.attn-list{display:flex;flex-direction:column;gap:2px}
+.attn-row{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 12px;border-radius:8px;cursor:pointer;
+  border:1px solid transparent;background:transparent;
+  transition:background .12s,border-color .12s;
+}
+.attn-row:hover, .attn-row:focus{
+  background:#F8FAFC;border-color:#E2E8F0;outline:none;
+}
+.attn-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center;line-height:1}
+.attn-text{flex:1;min-width:0}
+.attn-subject{font-weight:600;color:var(--navy);font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attn-body{font-size:12px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attn-chevron{width:14px;height:14px;color:#94A3B8;flex-shrink:0}
+.attn-empty{
+  text-align:center;color:var(--muted);font-size:13px;
+  padding:24px 12px;background:#F8FAFC;border-radius:8px;
+}
+.attn-more{
+  display:block;width:100%;margin-top:8px;padding:8px 12px;
+  background:transparent;border:1px dashed var(--border);border-radius:8px;
+  color:var(--navy);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
+}
+.attn-more:hover{background:#F8FAFC;border-color:#94A3B8}
+@media(max-width:640px){
+  .attn-row{padding:10px 8px}
+  .attn-subject,.attn-body{white-space:normal}
+}
+
+/* ── POC COMPACT CARD (replaces the full POC Conversion Insights block) ── */
+.poc-compact-card{cursor:pointer;transition:border-color .12s,box-shadow .12s;padding:18px}
+.poc-compact-card:hover, .poc-compact-card:focus{border-color:var(--teal);box-shadow:0 4px 12px rgba(0,160,210,.10);outline:none}
+.poc-compact-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.poc-compact-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.poc-compact-num{font-family:'DM Mono',monospace;font-size:32px;font-weight:700;color:var(--navy);line-height:1;margin-bottom:6px}
+.poc-compact-sub{font-size:12px;color:var(--muted)}
+.poc-compact-cta{font-size:13px;font-weight:600;color:var(--teal);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.poc-compact-arrow{width:14px;height:14px}
+
 /* Manager Approvals queue: tiny amber pill on OT rows where credited > 12h. */
 .long-sess-flag{
   display:inline-block;padding:1px 7px;margin-left:6px;

@@ -1993,6 +1993,21 @@
   </div>
 </div>
 
+<!-- ── POC CONVERSION INSIGHTS MODAL ─────────────────────────────────
+     Surfaces the by-partner / by-region win-rate tables that used to sit
+     full-width on the manager dashboard. Triggered from the compact POCs
+     card on the dashboard. -->
+<div class="modal-overlay" id="poc-insights-modal">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-title">POC Conversion Insights</div>
+    <div id="poc-insights-body"></div>
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closePocInsightsModal()">Close</button>
+      <button class="btn btn-primary" onclick="closePocInsightsModal();showScreen('tracker');if(typeof showTrackerTab==='function')showTrackerTab('pocs');"><i data-lucide="external-link" class="btn-icon"></i>Open POC List</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── PROMPT INPUT MODAL — themed replacement for window.prompt() ── -->
 <div class="modal-overlay" id="prompt-modal">
   <div class="modal" style="max-width:440px">
