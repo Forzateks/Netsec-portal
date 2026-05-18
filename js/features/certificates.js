@@ -141,6 +141,7 @@ function renderCertList() {
       '<td><span class="badge cert-status '+st.cls+'">'+esc2(st.label)+'</span></td>'+
       '<td class="hide-mobile" style="font-size:12px;color:var(--muted)">'+esc2(fileLabel)+'</td>'+
       '<td style="white-space:nowrap;text-align:right">'+
+        '<button class="btn btn-sm btn-ghost" onclick="previewCertificate('+c.id+')" title="Preview"><i data-lucide="eye" class="btn-icon" style="margin-right:0"></i></button>'+
         '<button class="btn btn-sm btn-ghost" onclick="downloadCertificate('+c.id+')" title="Download"><i data-lucide="download" class="btn-icon" style="margin-right:0"></i></button>'+
         (actionsOwn ? '<button class="btn btn-sm btn-ghost" onclick="openCertEditModal('+c.id+')" title="Edit"><i data-lucide="pencil-line" class="btn-icon" style="margin-right:0"></i></button>' : '')+
         ((actionsOwn||actionsMgr) ? '<button class="btn btn-sm btn-danger" onclick="confirmDeleteCertificate('+c.id+')" title="Delete"><i data-lucide="trash-2" class="btn-icon" style="margin-right:0"></i></button>' : '')+
