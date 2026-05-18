@@ -1493,6 +1493,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .cert-table thead th{background:#F8FAFC;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left}
 .cert-table tbody td{padding:11px 12px;border-bottom:1px solid #F1F5F9;font-size:13px;vertical-align:middle}
 .cert-table tbody tr:hover{background:#F8FAFC}
+/* Cert-name button — looks like a link, behaves like a button. Used as the
+   clickable target that opens the file inline in a new tab. Keyboard-focusable
+   for accessibility. */
+.cert-name-btn{background:none;border:0;padding:0;margin:0;font:inherit;color:var(--navy);font-weight:600;cursor:pointer;text-align:left}
+.cert-name-btn:hover{text-decoration:underline;color:var(--teal)}
+.cert-name-btn:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:3px}
 
 .cert-status{font-size:11px;padding:3px 9px;border-radius:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .cert-st-active{background:#D1FAE5;color:#065F46}

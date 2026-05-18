@@ -132,7 +132,7 @@ function renderCertList() {
     var fileLabel = (c.file_name && c.file_name.length > 32) ? (c.file_name.slice(0,30)+'…') : (c.file_name||'—');
     return '<tr>'+
       (isAll ? '<td style="font-weight:600">'+esc2(c.employee)+'</td>' : '')+
-      '<td><div style="font-weight:600;color:var(--navy)">'+esc2(c.name)+'</div></td>'+
+      '<td><button type="button" class="cert-name-btn" onclick="previewCertificate('+c.id+')" title="Click to preview">'+esc2(c.name)+'</button></td>'+
       '<td class="hide-mobile num">'+fmtDate(c.issue_date)+'</td>'+
       '<td class="num">'+fmtDate(c.expiry_date)+
         (st.key==='soon' ? '<div style="font-size:11px;color:#B45309;margin-top:2px">'+st.days+'d left</div>' : '')+
@@ -340,6 +340,23 @@ async function saveCertEdit() {
   closeCertEditModal();
   showToast('Certificate updated ✓');
   await loadCertificates();
+}
+
+// ── preview ────────────────────────────────────────────────────────
+// Opens the cert file in a new browser tab using a short-lived signed URL.
+// Omitting the {download:...} option means the browser renders inline —
+// PDFs in the native viewer, images as <img>. The download button below
+// keeps the explicit force-download path for users who prefer that.
+
+async function previewCertificate(id) {
+  var c = _certData.find(function(x){return x.id===id;});
+  if (!c) return;
+  var res = await sb.storage.from('certificates').createSignedUrl(c.file_url, 60);
+  if (res.error || !res.data || !res.data.signedUrl) {
+    showError('Could not preview: ' + ((res.error && res.error.message) || 'no URL returned'));
+    return;
+  }
+  window.open(res.data.signedUrl, '_blank', 'noopener');
 }
 
 // ── download ───────────────────────────────────────────────────────
