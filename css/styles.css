@@ -1820,3 +1820,71 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .confirm-typing-input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;outline:none;transition:border-color .12s,box-shadow .12s}
 .confirm-typing-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,160,210,.15)}
 .confirm-body{font-size:14px;color:#374151;line-height:1.6;white-space:pre-wrap;margin-top:-8px}
+
+/* ─── PROFESSIONAL SERVICES DEALS (v60) ───────────────────────────
+   Manager-only commercial register. Reuses the AMC page header
+   pattern + adds: modal section headers, USD/AED live readout,
+   repeating milestone/payment sub-rows, and tracker-detail "Linked
+   PS Deals" block. */
+
+.ps-table{width:100%;border-collapse:collapse;font-size:13px}
+.ps-table thead th{background:#F8FAFC;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.ps-table tbody td{padding:9px 10px;border-bottom:1px solid #F1F5F9;vertical-align:top}
+.ps-table tbody tr.ps-row{cursor:pointer;transition:background .12s}
+.ps-table tbody tr.ps-row:hover{background:#F8FAFC}
+.ps-table .num{font-family:'DM Mono',monospace}
+
+/* Status pills — one per status value, mapped via PS_STATUS_META.cls. */
+.ps-st-quoted    { background:#E5E7EB; color:#374151 }
+.ps-st-won       { background:#DCFCE7; color:#166534 }
+.ps-st-inprog    { background:#DBEAFE; color:#1E40AF }
+.ps-st-done      { background:#CFFAFE; color:#0E7490 }
+.ps-st-lost      { background:#FEE2E2; color:#991B1B }
+.ps-st-cancelled { background:#F3F4F6; color:#4B5563 }
+.ps-table .badge,.ps-card .badge,.ps-linked-row .badge{font-size:11px;padding:3px 9px;border-radius:12px;letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;gap:4px}
+
+/* Mobile card view — same content, vertical stack. */
+.ps-cards{display:grid;grid-template-columns:1fr;gap:10px}
+.ps-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.ps-card:hover{border-color:var(--teal);box-shadow:0 2px 8px rgba(0,160,210,.08)}
+.ps-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px}
+.ps-card-client{font-weight:600;color:var(--navy);font-size:14px;flex:1}
+.ps-card-meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+.ps-card-row{display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:2px}
+.ps-card-row.dim{color:var(--muted)}
+.ps-card-sep{color:var(--border)}
+
+/* Engagement-name chip inside a list cell (link icon + name). */
+.ps-eng-link{color:var(--teal);font-weight:500}
+
+/* Modal sizing — the form has 5 sections so it needs the room. */
+.ps-modal{max-width:720px}
+.ps-section-title{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.ps-section-title .dim{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
+
+/* USD input + live AED readout sit side-by-side */
+.ps-usd-row{display:flex;gap:10px;align-items:center}
+.ps-usd-row input{flex:1;min-width:0}
+.ps-aed-display{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);white-space:nowrap;min-width:160px}
+
+/* Repeating sub-rows for milestones + payments */
+.ps-subrow{display:grid;grid-template-columns:90px 1fr 1fr 32px;gap:8px;margin-bottom:6px;align-items:center}
+.ps-subrow .ps-year-input,.ps-subrow .ps-amount-input,.ps-subrow .ps-notes-input{padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box}
+.ps-subrow .ps-usd-row{gap:6px}
+.ps-subrow .ps-aed-display{font-size:11px;min-width:100px}
+@media(max-width:640px){
+  .ps-subrow{grid-template-columns:80px 1fr 32px;grid-template-rows:auto auto;gap:6px}
+  .ps-subrow .ps-notes-input{grid-column:1 / span 3}
+  .ps-subrow .ps-aed-display{min-width:80px}
+}
+
+/* Tracker detail integration — shows below the field grid + remarks
+   when the engagement has at least one linked PS deal. Manager-only. */
+.ps-linked-block{margin-top:18px;padding:12px 14px;background:#F8FAFC;border:1px solid var(--border);border-radius:8px}
+.ps-linked-head{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;margin-bottom:8px}
+.ps-linked-head .dim{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px}
+.ps-linked-row{display:flex;align-items:center;gap:10px;padding:7px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;margin-bottom:5px;cursor:pointer;transition:border-color .12s}
+.ps-linked-row:hover{border-color:var(--teal)}
+.ps-linked-row:last-child{margin-bottom:0}
+.ps-linked-client{font-weight:600;color:var(--navy);font-size:13px;flex:1}
+.ps-linked-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--teal);font-weight:600}

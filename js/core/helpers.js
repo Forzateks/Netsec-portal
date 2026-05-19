@@ -355,6 +355,31 @@ function fmtTime(t){
 }
 function r2(n){return Math.round((n||0)*100)/100;}
 
+// ── Currency helpers (USD / AED) ──────────────────────────────────
+// AED is pegged to USD at 3.6725 (fixed since 1997). PS Deals stores
+// every amount in USD; AED is derived at display time, never persisted.
+// That keeps the data clean if the peg ever changes — only this constant
+// needs to flip.
+const USD_TO_AED_RATE = 3.6725;
+function usdToAed(usd) {
+  if (usd === null || usd === undefined || usd === '' || isNaN(usd)) return null;
+  return Number(usd) * USD_TO_AED_RATE;
+}
+function fmtUsd(v, withCents) {
+  if (v === null || v === undefined || v === '' || isNaN(v)) return '—';
+  var opts = (withCents === false)
+    ? { minimumFractionDigits:0, maximumFractionDigits:0 }
+    : { minimumFractionDigits:2, maximumFractionDigits:2 };
+  return '$' + Number(v).toLocaleString('en-US', opts);
+}
+function fmtAed(v, withCents) {
+  if (v === null || v === undefined || v === '' || isNaN(v)) return '—';
+  var opts = (withCents === false)
+    ? { minimumFractionDigits:0, maximumFractionDigits:0 }
+    : { minimumFractionDigits:2, maximumFractionDigits:2 };
+  return 'AED ' + Number(v).toLocaleString('en-US', opts);
+}
+
 // ── Number/date display formatters ────────────────────────────────
 // Single source of truth for consistent number formatting across the
 // app. Use these instead of inline +'h' or +' days' concatenation so

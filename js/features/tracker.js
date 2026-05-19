@@ -715,9 +715,16 @@ function openTrackerDetail(id) {
       '<div style="font-size:13px;line-height:1.6;color:#1F2937;white-space:pre-wrap">'+esc2(remarks)+'</div></div>'
     : '';
 
+  // Manager-only: surface PS Deals linked to this engagement so commercial
+  // context is one click away. Helper returns '' for non-managers + no-link.
+  var linkedPsHtml = (typeof renderLinkedPsDealsForEngagement === 'function')
+    ? renderLinkedPsDealsForEngagement(r.id)
+    : '';
+
   document.getElementById('trk-detail-body').innerHTML =
     '<div class="trk-detail-grid">'+fieldHtml+'</div>'+
     remarksHtml +
+    linkedPsHtml +
     '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">'+
       '<button class="btn btn-primary" onclick="openTrackerEditModal('+r.id+')"><i data-lucide="pencil" class="btn-icon"></i>Edit</button>'+
       '<button class="btn btn-ghost" onclick="openMilestonesModal('+r.id+')"><i data-lucide="list-checks" class="btn-icon"></i>Milestones</button>'+

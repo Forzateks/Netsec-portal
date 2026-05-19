@@ -201,9 +201,60 @@ function onUSTypeChange() {
   var teamRow = document.getElementById('us-team-row');
   if (teamRow) teamRow.style.display = isEng ? '' : 'none';
 
+  // Repopulate the customer dropdown to only customers with at least one
+  // engagement of the chosen type. Drops customer count from ~86 to a
+  // meaningful subset so users don't fish through unrelated names.
+  _usPopulateCustomersByType(type);
+  // Customer + engagement may no longer be valid — reset both. The user
+  // re-picks from the now-filtered lists.
+  var custEl = document.getElementById('us-customer');
+  var engEl  = document.getElementById('us-engagement');
+  if (custEl) custEl.value = '';
+  if (engEl)  engEl.value  = '';
+
   // Repopulate engagement dropdown filtered by selected type
   if (isEng) populateUSEngagementDropdown();
   updateUSPreview();
+}
+
+// Filter the Log-Session customer dropdown to only customers that have at
+// least one engagement matching the chosen session type.
+//   - type === ''          → disabled "Select session type first" placeholder
+//   - type === 'internal'  → all customers (Internal sessions aren't tied to
+//                            an engagement record, so the engagement-based
+//                            filter would wrongly empty the list)
+//   - any other type       → filter CUSTOMERS to those with at least one
+//                            engagement of matching type, any status
+// Edit Session modal is untouched on purpose — editing an existing row must
+// keep the original customer visible even if no current engagement matches.
+function _usPopulateCustomersByType(type) {
+  var sel = document.getElementById('us-customer');
+  if (!sel) return;
+  if (!type) {
+    sel.innerHTML = '<option value="">-- Select session type first --</option>';
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+  if (type === 'internal') {
+    fillCustomerSelect('us-customer', false);
+    return;
+  }
+  // Collect customer_ids referenced by engagements of the chosen type.
+  // Status is ignored on purpose — Closed/Cancelled engagements can still
+  // accept retroactive sessions (e.g. final close-out work).
+  var matchIds = {};
+  (ENGAGEMENTS||[]).forEach(function(e){
+    if (e.type === type && e.customer_id) matchIds[e.customer_id] = 1;
+  });
+  var customers = (CUSTOMERS||[]).filter(function(c){ return matchIds[c.id]; });
+  if (!customers.length) {
+    sel.innerHTML = '<option value="">No customers with ' + esc2(type) + ' engagements</option>';
+    sel.disabled = true;
+    return;
+  }
+  sel.innerHTML = '<option value="">-- Select Customer --</option>'
+    + customers.map(function(c){ return '<option>' + esc2(c.name) + '</option>'; }).join('');
 }
 
 function onUSCustomerChange() {

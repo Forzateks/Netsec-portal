@@ -255,6 +255,7 @@
     <div class="sidebar-item" id="sbi-projects-manage"    onclick="navigateSub('projects','manage');closeSidebarOnMobile()"><i data-lucide="settings-2" class="sidebar-icon"></i>Manage Engagements</div>
     <div class="sidebar-item" id="sbi-projects-vendors"   onclick="navigateSub('projects','vendors');closeSidebarOnMobile()"><i data-lucide="package" class="sidebar-icon"></i>Vendors &amp; Products</div>
     <div class="sidebar-item" id="tab-amc"                onclick="showScreen('amc');closeSidebarOnMobile()"><i data-lucide="file-text" class="sidebar-icon"></i>AMC Contracts</div>
+    <div class="sidebar-item" id="tab-psdeals"            onclick="showScreen('psdeals');closeSidebarOnMobile()"><i data-lucide="briefcase" class="sidebar-icon"></i>PS Deals</div>
     <div class="sidebar-item" id="sbi-projects-otmanager" onclick="navigateSub('projects','otmanager');closeSidebarOnMobile()"><i data-lucide="shield-check" class="sidebar-icon"></i>Admin Tools</div>
   </div>
 
@@ -1285,6 +1286,160 @@
   <div id="amc-load" class="loading"><div class="spinner"></div>Loading contracts...</div>
   <div id="amc-content"></div>
 </div><!-- /screen-amc -->
+
+<!-- ══ PS DEALS SCREEN (manager-only) ══ -->
+<div class="screen" id="screen-psdeals">
+  <div class="amc-page-header">
+    <div>
+      <div class="amc-page-title">Professional Services Deals</div>
+      <div class="amc-page-sub">Commercial PS engagements register — manager only.</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost manager-only-el" onclick="downloadPsDealsCsv()" title="Download CSV"><i data-lucide="download" class="btn-icon"></i>CSV</button>
+      <button class="btn btn-primary manager-only-el" onclick="openPsDealModal()"><i data-lucide="plus" class="btn-icon"></i>New Deal</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      <input id="ps-search" oninput="renderPsDeals()" placeholder="Search client, partner, remarks..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:220px;flex:1">
+      <label style="font-size:12px;color:var(--muted);font-weight:600">Client:</label>
+      <select id="ps-filter-client" onchange="renderPsDeals()" style="width:auto;padding:7px 10px;font-size:13px"></select>
+      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Region:</label>
+      <select id="ps-filter-region" onchange="renderPsDeals()" style="width:auto;padding:7px 10px;font-size:13px"></select>
+      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Year:</label>
+      <select id="ps-filter-year" onchange="renderPsDeals()" style="width:auto;padding:7px 10px;font-size:13px"></select>
+      <button class="btn btn-sm btn-ghost" onclick="clearPsFilters()">✕ Clear</button>
+    </div>
+  </div>
+
+  <div id="ps-load" class="loading"><div class="spinner"></div>Loading deals...</div>
+  <div id="ps-content"></div>
+</div><!-- /screen-psdeals -->
+
+<!-- PS DEAL CREATE/EDIT MODAL -->
+<div class="modal-overlay" id="ps-deal-modal">
+  <div class="modal ps-modal">
+    <div class="modal-title" id="ps-modal-title">New PS Deal</div>
+    <div class="alert alert-error" id="ps-modal-error" style="display:none;margin-bottom:10px"></div>
+
+    <div class="ps-section-title">Deal Info</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Client *</label>
+        <input type="text" id="ps-client" list="ps-client-list" placeholder="Customer / client company name">
+        <datalist id="ps-client-list"></datalist>
+      </div>
+      <div class="form-group">
+        <label>Partner</label>
+        <input type="text" id="ps-partner" list="ps-partner-list" placeholder="e.g. HPE, Cisco, GBM">
+        <datalist id="ps-partner-list"></datalist>
+      </div>
+      <div class="form-group">
+        <label>Region</label>
+        <select id="ps-region"></select>
+      </div>
+      <div class="form-group">
+        <label>Mode</label>
+        <select id="ps-mode"></select>
+      </div>
+      <div class="form-group">
+        <label>Supplier</label>
+        <input type="text" id="ps-supplier" list="ps-supplier-list" placeholder="e.g. Aruba, Fortinet">
+        <datalist id="ps-supplier-list"></datalist>
+      </div>
+      <div class="form-group full">
+        <label>Linked Engagement <span class="dim" style="font-weight:400">(optional)</span></label>
+        <select id="ps-linked-eng"><option value="">— None / Standalone —</option></select>
+      </div>
+    </div>
+
+    <div class="ps-section-title">Quote Details</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Quoted Year</label>
+        <input type="number" id="ps-quoted-year" min="2000" max="2100">
+      </div>
+      <div class="form-group">
+        <label>Quoted Month</label>
+        <select id="ps-quoted-month">
+          <option value="">—</option>
+          <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+          <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+          <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+          <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Awarded Year <span class="dim" style="font-weight:400">(once Won)</span></label>
+        <input type="number" id="ps-awarded-year" min="2000" max="2100">
+      </div>
+      <div class="form-group">
+        <label>Man Days</label>
+        <input type="number" id="ps-man-days" min="0" step="0.5">
+      </div>
+      <div class="form-group full">
+        <label>PS Quoted by Tech (USD)</label>
+        <div class="ps-usd-row">
+          <input type="number" id="ps-tech-usd" min="0" step="0.01" oninput="_psUpdateAed('ps-tech-usd','ps-tech-aed')">
+          <span class="ps-aed-display" id="ps-tech-aed">≈ —</span>
+        </div>
+      </div>
+      <div class="form-group full">
+        <label>PS Quoted by Sales (USD)</label>
+        <div class="ps-usd-row">
+          <input type="number" id="ps-sales-usd" min="0" step="0.01" oninput="_psUpdateAed('ps-sales-usd','ps-sales-aed')">
+          <span class="ps-aed-display" id="ps-sales-aed">≈ —</span>
+        </div>
+      </div>
+      <div class="form-group full">
+        <label>Final PS Value (USD) <span class="dim" style="font-weight:400">— required once awarded</span></label>
+        <div class="ps-usd-row">
+          <input type="number" id="ps-final-usd" min="0" step="0.01" oninput="_psUpdateAed('ps-final-usd','ps-final-aed')">
+          <span class="ps-aed-display" id="ps-final-aed">≈ —</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ps-section-title">Status</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Status *</label>
+        <select id="ps-status">
+          <option value="quoted">📝 Quoted</option>
+          <option value="won">🏆 Won</option>
+          <option value="in_progress">🔵 In Progress</option>
+          <option value="completed">✅ Completed</option>
+          <option value="lost">❌ Lost</option>
+          <option value="cancelled">⏹ Cancelled</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Consulted with Tech Team</label>
+        <input type="text" id="ps-consulted" placeholder="e.g. Nasif, Prasanth">
+      </div>
+      <div class="form-group full">
+        <label>Remarks</label>
+        <textarea id="ps-remarks" rows="2" style="resize:vertical"></textarea>
+      </div>
+    </div>
+
+    <div class="ps-section-title">Milestones Completed <span class="dim" style="font-weight:400;font-size:11px">(per year)</span></div>
+    <div id="ps-milestones-wrap"></div>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="_psAddMilestoneRow()" style="margin-top:6px"><i data-lucide="plus" class="btn-icon"></i>Add milestone year</button>
+
+    <div class="ps-section-title" style="margin-top:18px">Payments Received <span class="dim" style="font-weight:400;font-size:11px">(per year)</span></div>
+    <div id="ps-payments-wrap"></div>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="_psAddPaymentRow()" style="margin-top:6px"><i data-lucide="plus" class="btn-icon"></i>Add payment year</button>
+
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closePsDealModal()">Cancel</button>
+      <button class="btn btn-danger-solid" id="ps-delete-btn" onclick="deletePsDealFromModal()" style="display:none"><i data-lucide="trash-2" class="btn-icon"></i>Delete</button>
+      <button class="btn btn-primary" id="ps-save-btn" onclick="savePsDeal()"><i data-lucide="check" class="btn-icon"></i>Save Deal</button>
+    </div>
+  </div>
+</div>
+
 <div class="screen" id="screen-certificates">
   <div id="certtab-mine">
     <div class="card cert-header-card">
@@ -2188,6 +2343,7 @@
 <script src="js/features/tracker.js"></script>
 <script src="js/features/certificates.js"></script>
 <script src="js/features/amc-contracts.js"></script>
+<script src="js/features/ps-deals.js"></script>
 <script src="js/core/init.js"></script>
 </body>
 </html>
