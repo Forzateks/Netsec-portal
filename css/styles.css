@@ -1923,9 +1923,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* ── PS Milestones v64 — discrete-phase row ─────────────────────── */
 /* Toolbar above the table: Add + Re-balance + running total. */
 .ps-mile-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
-.ps-mile-total{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500;padding:6px 10px;border-radius:6px;background:#F8FAFC}
+.ps-mile-total{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500;padding:6px 10px;border-radius:6px;background:#F8FAFC;line-height:1.4;text-align:right}
 .ps-mile-total.ps-mile-total-ok{color:#166534;background:#DCFCE7}
 .ps-mile-total.ps-mile-total-warn{color:#92400E;background:#FEF3C7}
+.ps-mile-total.ps-mile-total-over{color:#991B1B;background:#FEE2E2}
+.ps-mile-total-sub{font-size:11px;font-weight:400;color:inherit;opacity:.8;margin-top:1px}
 
 /* Wrapper that holds the milestone rows. The header pseudo-cells are
    implicit — each row carries its own labels via input placeholders, no
@@ -1934,15 +1936,16 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ps-mile-row{
   display:grid;
   grid-template-columns:
-    24px           /* # */
-    minmax(140px,1.4fr)  /* title */
-    minmax(120px,1.1fr)  /* amount + AED + % */
-    minmax(120px,1.1fr)  /* payment + AED */
-    minmax(130px,.9fr)   /* status */
-    minmax(120px,.8fr)   /* expected date */
-    minmax(120px,.8fr)   /* actual date */
-    minmax(120px,1fr)    /* notes */
-    32px;          /* remove */
+    24px                  /* # */
+    minmax(140px,1.4fr)   /* title */
+    78px                  /* % input */
+    minmax(110px,1.0fr)   /* amount display + AED */
+    minmax(120px,1.0fr)   /* payment input + AED */
+    minmax(130px,.9fr)    /* status */
+    minmax(120px,.8fr)    /* expected date */
+    minmax(120px,.8fr)    /* actual date */
+    minmax(120px,1fr)     /* notes */
+    32px;                 /* remove */
   gap:6px;
   align-items:center;
   padding:6px 4px;
@@ -1955,7 +1958,14 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ps-mile-num{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);text-align:right;padding-right:4px}
 .ps-mile-row input,.ps-mile-row select{padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;width:100%;box-sizing:border-box;background:#fff}
 .ps-mile-aed{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ps-mile-pct{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--teal);margin-top:1px;font-weight:600}
+/* % input cell — small inline suffix and a tinted background so it
+   reads as the primary editable axis. */
+.ps-mile-cell-pct{position:relative}
+.ps-mile-pct-input{padding-right:18px !important;background:#F0F9FF !important;font-family:'DM Mono',monospace !important;font-weight:600 !important;color:var(--navy) !important}
+.ps-mile-pct-suffix{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted);pointer-events:none}
+/* Read-only Amount cell — looks like a number block but isn't editable. */
+.ps-mile-amount-display{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--navy);padding:6px 4px;border-bottom:1px dashed transparent}
+.ps-mile-amount-display:empty::before{content:'—';color:var(--muted)}
 
 /* Mobile: stack each milestone vertically. Two-column grid for inputs
    so the form stays scannable on narrow screens. */
@@ -1966,14 +1976,14 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     gap:6px 8px;
   }
   .ps-mile-cell-title{grid-column:1 / span 3}
-  .ps-mile-cell-amount{grid-column:1 / span 1;grid-column:1 / -1}
-  .ps-mile-cell-pay,.ps-mile-cell-status,.ps-mile-cell-date,.ps-mile-cell-notes{grid-column:1 / -1}
+  .ps-mile-cell-pct,.ps-mile-cell-amount,.ps-mile-cell-pay,.ps-mile-cell-status,.ps-mile-cell-date,.ps-mile-cell-notes{grid-column:1 / -1}
   .ps-mile-num{text-align:left;padding-right:0;padding-left:2px}
-  .ps-mile-cell-amount,.ps-mile-cell-pay,.ps-mile-cell-status,.ps-mile-cell-date,.ps-mile-cell-notes{
+  .ps-mile-cell-pct,.ps-mile-cell-amount,.ps-mile-cell-pay,.ps-mile-cell-status,.ps-mile-cell-date,.ps-mile-cell-notes{
     display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:center;
   }
   /* Pseudo-label for each stacked input — readable form when there's
      no table header on mobile. */
+  .ps-mile-cell-pct::before{content:'Percent';font-size:11px;color:var(--muted);font-weight:600}
   .ps-mile-cell-amount::before{content:'Amount';font-size:11px;color:var(--muted);font-weight:600}
   .ps-mile-cell-pay::before{content:'Paid';font-size:11px;color:var(--muted);font-weight:600}
   .ps-mile-cell-status::before{content:'Status';font-size:11px;color:var(--muted);font-weight:600}

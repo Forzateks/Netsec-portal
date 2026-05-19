@@ -21,9 +21,13 @@ var _psEditingId  = null;          // null = create, number = edit
 var _psSubrowSeq  = 0;             // monotonic id for in-form sub-rows
 // Auto-split flag per modal session. False on modal open → "+ Add
 // milestone" recomputes an even split. The flag flips to true on the
-// first manual amount edit so subsequent adds don't silently overwrite
-// the user's numbers. "Re-balance evenly" resets it back to false.
+// first manual percentage edit so subsequent adds don't silently
+// overwrite the user's numbers. "Re-balance evenly" resets it back.
 var _psMilestonesUserEdited = false;
+// Snapshot of Final PS Value at the moment the modal opened. Used by
+// the change-confirmation flow: changing Final Value while milestones
+// already exist prompts the user before recalculating amounts.
+var _psFinalValueCommitted = null;
 
 var PS_REGIONS = ['UAE','KSA','Qatar','Oman','Bahrain','Kuwait','Other'];
 var PS_MODES   = ['Remote','Remote+Onsite','Onsite','Shared (GulfIT-Partner)'];
@@ -291,6 +295,9 @@ function openPsDealModal(id) {
   _psPopulateDatalists();
   _psPopulateLinkedEngagementSelect(d ? d.linked_engagement_id : null, d ? d.client_name : '');
   _psSeedForm(d);
+  // Snapshot the seeded Final PS Value so the change-confirmation flow
+  // has a baseline. Stays null until the field is actually populated.
+  _psFinalValueCommitted = (document.getElementById('ps-final-usd')||{}).value || '';
   _psRebuildSubrows(d);
 
   modal.classList.add('show');
@@ -410,6 +417,7 @@ function _psRebuildSubrows(deal) {
     _psAppendMilestoneRow({
       id: r.id,
       title: r.title,
+      percentage: r.percentage,
       amount: r.amount_usd,
       payment: r.payment_received_usd,
       status: r.status,
@@ -450,34 +458,36 @@ function _psBuildMilestoneRow(seed) {
   var seq = ++_psSubrowSeq;
   seed = seed || {};
   var rowId = 'ps-ms-row-' + seq;
-  var amtId = 'ps-ms-amt-' + seq;
-  var payId = 'ps-ms-pay-' + seq;
-  var aedAmtId = 'ps-ms-aed-amt-' + seq;
-  var aedPayId = 'ps-ms-aed-pay-' + seq;
   var pctId = 'ps-ms-pct-' + seq;
+  var amtDispId = 'ps-ms-amtd-' + seq;
+  var amtAedId  = 'ps-ms-amta-' + seq;
+  var payId = 'ps-ms-pay-' + seq;
+  var aedPayId = 'ps-ms-aed-pay-' + seq;
   var statusId = 'ps-ms-st-' + seq;
   var statusOpts = PS_MS_STATUSES.map(function(s){
     var meta = PS_MS_STATUS_META[s];
     var sel = (seed.status === s) ? ' selected' : '';
     return '<option value="'+s+'"'+sel+'>'+meta.label+'</option>';
   }).join('');
-  // Empty status default = 'not_started' if seed has nothing.
   if (!seed.status) statusOpts = statusOpts.replace('value="not_started"', 'value="not_started" selected');
 
   var dbAttr = seed.id ? ' data-db-id="'+seed.id+'"' : '';
-  var amtVal = (seed.amount  != null && seed.amount  !== '') ? String(seed.amount)  : '';
-  var payVal = (seed.payment != null && seed.payment !== '') ? String(seed.payment) : '';
+  var pctVal = (seed.percentage != null && seed.percentage !== '') ? String(seed.percentage) : '';
+  var payVal = (seed.payment    != null && seed.payment    !== '') ? String(seed.payment)    : '';
 
   return '<div class="ps-mile-row" id="'+rowId+'"'+dbAttr+'>'+
     '<div class="ps-mile-cell ps-mile-num"></div>'+
     '<div class="ps-mile-cell ps-mile-cell-title"><input type="text" class="ps-mile-title" placeholder="e.g. Kick-off &amp; design" value="'+esc2(seed.title||'')+'"></div>'+
+    '<div class="ps-mile-cell ps-mile-cell-pct">'+
+      '<input type="number" class="ps-mile-pct-input" id="'+pctId+'" min="0" max="100" step="0.01" placeholder="0.00" value="'+pctVal+'" oninput="_psOnMilestonePctInput(\''+rowId+'\')">'+
+      '<div class="ps-mile-pct-suffix">%</div>'+
+    '</div>'+
     '<div class="ps-mile-cell ps-mile-cell-amount">'+
-      '<input type="number" class="ps-mile-amount" id="'+amtId+'" min="0" step="0.01" placeholder="0.00" value="'+amtVal+'" oninput="_psOnMilestoneAmountInput(\''+rowId+'\',\''+amtId+'\',\''+aedAmtId+'\',\''+pctId+'\')">'+
-      '<div class="ps-mile-aed" id="'+aedAmtId+'">≈ —</div>'+
-      '<div class="ps-mile-pct" id="'+pctId+'">—</div>'+
+      '<div class="ps-mile-amount-display" id="'+amtDispId+'">—</div>'+
+      '<div class="ps-mile-aed" id="'+amtAedId+'">≈ —</div>'+
     '</div>'+
     '<div class="ps-mile-cell ps-mile-cell-pay">'+
-      '<input type="number" class="ps-mile-pay" id="'+payId+'" min="0" step="0.01" placeholder="0.00" value="'+payVal+'" oninput="_psUpdateAed(\''+payId+'\',\''+aedPayId+'\');_psRecalcMilestoneTotal();_psRefreshRowFlags(\''+rowId+'\')">'+
+      '<input type="number" class="ps-mile-pay" id="'+payId+'" min="0" step="0.01" placeholder="0.00" value="'+payVal+'" oninput="_psUpdateAed(\''+payId+'\',\''+aedPayId+'\');_psRecalcMilestoneTotal();_psRefreshRowFlags(\''+rowId+'\')" title="Actual amount received from customer (not the percentage split)">'+
       '<div class="ps-mile-aed" id="'+aedPayId+'">≈ —</div>'+
     '</div>'+
     '<div class="ps-mile-cell ps-mile-cell-status">'+
@@ -497,12 +507,9 @@ function _psAppendMilestoneRow(seed) {
   if (!wrap) return null;
   wrap.insertAdjacentHTML('beforeend', _psBuildMilestoneRow(seed));
   var row = wrap.lastElementChild;
-  // Seed live AED display + % cell from the inserted values.
-  var amt = row.querySelector('.ps-mile-amount');
-  var aedAmt = row.querySelector('.ps-mile-aed');
-  if (amt && aedAmt && amt.value !== '' && !isNaN(amt.value)) {
-    aedAmt.textContent = '≈ ' + fmtAed(usdToAed(amt.value), true);
-  }
+  // Seed the derived-Amount display from this row's percentage +
+  // current Final Value, and the payment-side AED if present.
+  _psRefreshRowAmountDisplay(row);
   var pay = row.querySelector('.ps-mile-pay');
   var aedPay = row.querySelector('.ps-mile-cell-pay .ps-mile-aed');
   if (pay && aedPay && pay.value !== '' && !isNaN(pay.value)) {
@@ -512,9 +519,35 @@ function _psAppendMilestoneRow(seed) {
   return row;
 }
 
-// "+ Add milestone" handler. If the user hasn't manually edited any
-// amount yet, spread Final Value evenly across all rows including the
-// new one. Otherwise add a blank row and let the user type a number.
+// Recompute one row's read-only Amount display from its percentage and
+// the current Final PS Value. "—" when either is missing.
+function _psRefreshRowAmountDisplay(row) {
+  if (!row) return;
+  var pctEl   = row.querySelector('.ps-mile-pct-input');
+  var dispEl  = row.querySelector('.ps-mile-amount-display');
+  var aedEl   = row.querySelector('.ps-mile-cell-amount .ps-mile-aed');
+  var V = _psFinalValue();
+  var pct = pctEl && pctEl.value !== '' && !isNaN(pctEl.value) ? Number(pctEl.value) : null;
+  if (V == null || V <= 0 || pct == null) {
+    if (dispEl) dispEl.textContent = '—';
+    if (aedEl)  aedEl.textContent  = '≈ —';
+    return;
+  }
+  var amt = Math.round((pct / 100) * V * 100) / 100;
+  if (dispEl) dispEl.textContent = fmtUsd(amt, true);
+  if (aedEl)  aedEl.textContent  = '≈ ' + fmtAed(usdToAed(amt), true);
+}
+
+function _psRefreshAllAmountDisplays() {
+  var wrap = document.getElementById('ps-milestones-wrap');
+  if (!wrap) return;
+  wrap.querySelectorAll('.ps-mile-row').forEach(_psRefreshRowAmountDisplay);
+}
+
+// "+ Add milestone" handler. Percentage is now the primary input.
+// If the user hasn't manually edited any percentage yet, spread 100%
+// evenly across all rows including the new one. Otherwise add a blank
+// row at 0% and let the user type their own number.
 function _psAddMilestoneRow() {
   var V = _psFinalValue();
   if (V == null || V <= 0) {
@@ -524,32 +557,26 @@ function _psAddMilestoneRow() {
   var wrap = document.getElementById('ps-milestones-wrap');
   if (!wrap) return;
   if (!_psMilestonesUserEdited) {
-    // Auto-split: redistribute evenly across existing + 1 new row.
     var existing = wrap.querySelectorAll('.ps-mile-row');
     var newN = existing.length + 1;
-    var per = Math.round((V / newN) * 100) / 100;
-    // Update existing rows
+    var perPct = Math.round((100 / newN) * 100) / 100;
     existing.forEach(function(row){
-      var amtEl = row.querySelector('.ps-mile-amount');
-      var aedEl = row.querySelector('.ps-mile-aed');
-      var pctEl = row.querySelector('.ps-mile-pct');
-      if (amtEl) amtEl.value = per;
-      if (aedEl) aedEl.textContent = '≈ ' + fmtAed(usdToAed(per), true);
-      if (pctEl) pctEl.textContent = _psPct(per, V);
+      var pctEl = row.querySelector('.ps-mile-pct-input');
+      if (pctEl) pctEl.value = perPct;
+      _psRefreshRowAmountDisplay(row);
     });
-    _psAppendMilestoneRow({ amount: per });
-    // Apply rounding remainder to the last row so the total matches exactly.
-    _psApplyRoundingRemainder(V);
+    _psAppendMilestoneRow({ percentage: perPct });
+    // Rounding remainder on last row so total ties exactly to 100.00
+    _psApplyPctRoundingRemainder();
   } else {
-    _psAppendMilestoneRow({});
+    _psAppendMilestoneRow({ percentage: 0 });
   }
   _psRefreshMilestoneToolbar();
   _psRecalcMilestoneTotal();
 }
 
-// Re-balance button → reset auto-split flag + evenly distribute Final
-// Value across the current set of rows, with any rounding delta on the
-// last row so the totals tie exactly.
+// Re-balance button → reset the auto-split flag and evenly distribute
+// 100% across the current rows, with rounding delta on the last row.
 function _psRebalanceMilestones() {
   var V = _psFinalValue();
   if (V == null || V <= 0) {
@@ -560,43 +587,42 @@ function _psRebalanceMilestones() {
   if (!wrap) return;
   var rows = wrap.querySelectorAll('.ps-mile-row');
   if (!rows.length) return;
-  var per = Math.round((V / rows.length) * 100) / 100;
+  var perPct = Math.round((100 / rows.length) * 100) / 100;
   rows.forEach(function(row){
-    var amtEl = row.querySelector('.ps-mile-amount');
-    var aedEl = row.querySelector('.ps-mile-aed');
-    var pctEl = row.querySelector('.ps-mile-pct');
-    if (amtEl) amtEl.value = per;
-    if (aedEl) aedEl.textContent = '≈ ' + fmtAed(usdToAed(per), true);
-    if (pctEl) pctEl.textContent = _psPct(per, V);
+    var pctEl = row.querySelector('.ps-mile-pct-input');
+    if (pctEl) pctEl.value = perPct;
+    _psRefreshRowAmountDisplay(row);
   });
-  _psApplyRoundingRemainder(V);
+  _psApplyPctRoundingRemainder();
   _psMilestonesUserEdited = false;
   _psRecalcMilestoneTotal();
 }
 
-// Float math leaves pennies on the table; dump the delta on the last
-// row so 5 × $1,666.66 + remainder = $10,000 exactly.
-function _psApplyRoundingRemainder(target) {
+// Float math leaves rounding crumbs (e.g. 3 × 33.33 = 99.99); dump the
+// delta on the last row so the percentage total is exactly 100.00.
+function _psApplyPctRoundingRemainder() {
   var wrap = document.getElementById('ps-milestones-wrap');
   if (!wrap) return;
   var rows = wrap.querySelectorAll('.ps-mile-row');
   if (!rows.length) return;
   var sum = 0;
   rows.forEach(function(row){
-    var v = row.querySelector('.ps-mile-amount').value;
+    var v = row.querySelector('.ps-mile-pct-input').value;
     sum += (v === '' || isNaN(v)) ? 0 : Number(v);
   });
   sum = Math.round(sum * 100) / 100;
-  var delta = Math.round((target - sum) * 100) / 100;
+  var delta = Math.round((100 - sum) * 100) / 100;
   if (Math.abs(delta) < 0.01) return;
   var last = rows[rows.length - 1];
-  var amtEl = last.querySelector('.ps-mile-amount');
-  var aedEl = last.querySelector('.ps-mile-aed');
-  var pctEl = last.querySelector('.ps-mile-pct');
-  var fixed = (Math.round(((Number(amtEl.value)||0) + delta) * 100) / 100);
-  amtEl.value = fixed;
-  if (aedEl) aedEl.textContent = '≈ ' + fmtAed(usdToAed(fixed), true);
-  if (pctEl) pctEl.textContent = _psPct(fixed, target);
+  var pctEl = last.querySelector('.ps-mile-pct-input');
+  if (!pctEl) return;
+  var fixed = Math.round(((Number(pctEl.value)||0) + delta) * 100) / 100;
+  // Clamp to [0, 100] in case a deeply skewed manual edit pushes the
+  // last row past the CHECK constraint at save time.
+  if (fixed < 0) fixed = 0;
+  if (fixed > 100) fixed = 100;
+  pctEl.value = fixed;
+  _psRefreshRowAmountDisplay(last);
 }
 
 function _psRemoveMilestoneRow(rowId) {
@@ -656,8 +682,9 @@ function _psRefreshMilestoneToolbar() {
   _psRenumberMilestones();
 }
 
-// Recompute the running total. Sum every row's amount; compare to
-// Final Value. Updates the indicator text + colour class.
+// Recompute the running total. Sum every row's percentage; compare to
+// 100. Also report the derived USD total alongside. Updates the
+// indicator text + colour class (green=100, amber=<100, red=>100).
 function _psRecalcMilestoneTotal() {
   var V = _psFinalValue();
   var wrap = document.getElementById('ps-milestones-wrap');
@@ -665,61 +692,59 @@ function _psRecalcMilestoneTotal() {
   if (!ind) return;
   var rows = wrap ? wrap.querySelectorAll('.ps-mile-row') : [];
   if (!rows.length) {
-    ind.textContent = 'No milestones yet';
+    ind.innerHTML = 'No milestones yet';
     ind.className = 'ps-mile-total';
     return;
   }
-  var sum = 0;
+  var pctSum = 0;
+  var amtSum = 0;
   rows.forEach(function(row){
-    var v = row.querySelector('.ps-mile-amount').value;
-    if (v !== '' && !isNaN(v)) sum += Number(v);
-    // Also refresh the % cell here so it follows Final-Value changes.
-    var pctEl = row.querySelector('.ps-mile-pct');
-    if (pctEl) pctEl.textContent = (V != null && V > 0) ? _psPct(v, V) : '—';
+    var p = row.querySelector('.ps-mile-pct-input').value;
+    if (p !== '' && !isNaN(p)) pctSum += Number(p);
   });
-  sum = Math.round(sum * 100) / 100;
-  if (V == null) {
-    ind.textContent = 'Milestones total: ' + fmtUsd(sum, false) + ' · Final Value not set';
-    ind.className = 'ps-mile-total ps-mile-total-warn';
-    return;
-  }
-  var delta = Math.round((sum - V) * 100) / 100;
-  var label = 'Milestones total: ' + fmtUsd(sum, false) + ' of ' + fmtUsd(V, false);
-  if (Math.abs(delta) < 0.01) {
-    ind.textContent = label;
-    ind.className = 'ps-mile-total ps-mile-total-ok';
-  } else if (delta < 0) {
-    ind.textContent = label + ' · ' + fmtUsd(-delta, false) + ' unallocated';
-    ind.className = 'ps-mile-total ps-mile-total-warn';
-  } else {
-    ind.textContent = label + ' · ' + fmtUsd(delta, false) + ' over';
-    ind.className = 'ps-mile-total ps-mile-total-warn';
-  }
-}
+  pctSum = Math.round(pctSum * 100) / 100;
+  if (V != null && V > 0) amtSum = Math.round((pctSum / 100) * V * 100) / 100;
 
-function _psPct(amt, total) {
-  if (total == null || total <= 0 || amt === '' || amt == null || isNaN(amt)) return '—';
-  var pct = (Number(amt) / Number(total)) * 100;
-  return (Math.round(pct * 10) / 10).toFixed(1) + '%';
+  var pctLabel = 'Milestones total: ' + pctSum.toFixed(2) + '% of 100%';
+  var amtLabel = (V != null && V > 0)
+    ? 'Total value: ' + fmtUsd(amtSum, true) + ' (≈ ' + fmtAed(usdToAed(amtSum), true) + ')'
+    : 'Total value: — (Final PS Value not set)';
+
+  var cls = 'ps-mile-total';
+  var delta = Math.round((pctSum - 100) * 100) / 100;
+  if (Math.abs(delta) < 0.01) {
+    cls += ' ps-mile-total-ok';
+  } else if (delta < 0) {
+    pctLabel += ' · ' + (-delta).toFixed(2) + '% unallocated';
+    cls += ' ps-mile-total-warn';
+  } else {
+    pctLabel += ' · over by ' + delta.toFixed(2) + '%';
+    cls += ' ps-mile-total-over';
+  }
+  ind.innerHTML = '<div>'+pctLabel+'</div><div class="ps-mile-total-sub">'+amtLabel+'</div>';
+  ind.className = cls;
 }
 
 // Per-row payment-vs-amount overcharge flag (amber row outline).
+// Compares actual payment received against the derived milestone amount.
 function _psRefreshRowFlags(rowId) {
   var row = document.getElementById(rowId);
   if (!row) return;
-  var amt = Number((row.querySelector('.ps-mile-amount')||{}).value || 0);
+  var pctEl = row.querySelector('.ps-mile-pct-input');
+  var V = _psFinalValue();
+  var pct = pctEl && pctEl.value !== '' && !isNaN(pctEl.value) ? Number(pctEl.value) : 0;
+  var derivedAmt = (V != null && V > 0) ? (pct / 100) * V : 0;
   var pay = Number((row.querySelector('.ps-mile-pay')||{}).value || 0);
-  row.classList.toggle('ps-mile-row-overpaid', pay > amt && amt > 0);
+  row.classList.toggle('ps-mile-row-overpaid', pay > derivedAmt && derivedAmt > 0);
 }
 
-// Amount input handler — flips auto-split off, refreshes AED + %.
-function _psOnMilestoneAmountInput(rowId, amtId, aedId, pctId) {
+// % input handler — flips auto-split off, recomputes the read-only
+// Amount cell, refreshes running totals and overpaid flag.
+function _psOnMilestonePctInput(rowId) {
   _psMilestonesUserEdited = true;
-  _psUpdateAed(amtId, aedId);
-  var V = _psFinalValue();
-  var pctEl = document.getElementById(pctId);
-  var amtEl = document.getElementById(amtId);
-  if (pctEl && amtEl) pctEl.textContent = (V != null && V > 0) ? _psPct(amtEl.value, V) : '—';
+  var row = document.getElementById(rowId);
+  if (!row) return;
+  _psRefreshRowAmountDisplay(row);
   _psRecalcMilestoneTotal();
   _psRefreshRowFlags(rowId);
 }
@@ -740,35 +765,81 @@ function _psOnMilestoneStatusChange(rowId) {
   }
 }
 
-// Final PS Value change → refresh toolbar (enables Add), refresh %
-// columns, refresh total indicator. Does NOT auto-rebalance.
+// Final PS Value live input handler — refresh AED + toolbar + the
+// derived Amount on every milestone row. The destructive prompt
+// ("Recalculate amounts?") fires from _psOnFinalValueCommit on blur.
 function _psOnFinalValueChange() {
   _psRefreshMilestoneToolbar();
+  _psRefreshAllAmountDisplays();
+  _psRecalcMilestoneTotal();
+}
+
+// Fired on blur of the Final PS Value field. If milestones exist and
+// the value actually changed since we snapshotted it on modal open
+// (or since the last confirmation), prompt the user before letting
+// the change stick. Cancel reverts the field.
+async function _psOnFinalValueCommit() {
+  var el = document.getElementById('ps-final-usd');
+  if (!el) return;
+  var newVal = el.value;
+  if (_psFinalValueCommitted == null) {
+    _psFinalValueCommitted = newVal;
+    return;
+  }
+  if (String(newVal) === String(_psFinalValueCommitted)) return;
+  var wrap = document.getElementById('ps-milestones-wrap');
+  var hasMilestones = wrap && wrap.querySelectorAll('.ps-mile-row').length > 0;
+  if (!hasMilestones) {
+    _psFinalValueCommitted = newVal;
+    return;
+  }
+  var ok = await confirmAction({
+    title: 'Final PS Value changed',
+    body:  'Milestone amounts will be recalculated using the new Final Value. Percentages will stay the same. Continue?',
+    confirmText: 'Apply and recalculate'
+  });
+  if (!ok) {
+    el.value = _psFinalValueCommitted;
+    _psUpdateAed('ps-final-usd', 'ps-final-aed');
+    _psRefreshAllAmountDisplays();
+    _psRecalcMilestoneTotal();
+    return;
+  }
+  _psFinalValueCommitted = newVal;
+  _psRefreshAllAmountDisplays();
   _psRecalcMilestoneTotal();
 }
 
 // Collect every milestone row in the form into a payload the save flow
-// can act on. Preserves DB id when present so save can do diff-update.
+// can act on. Percentage is the primary stored field; amount_usd is
+// derived at save time from percentage × Final Value so it stays in
+// sync. Preserves DB id when present so save can do diff-update.
 function _psCollectMilestoneRows() {
   var wrap = document.getElementById('ps-milestones-wrap');
   if (!wrap) return [];
+  var V = _psFinalValue();
   var rows = wrap.querySelectorAll('.ps-mile-row');
   var out = [];
   rows.forEach(function(row, i){
     var title = (row.querySelector('.ps-mile-title').value||'').trim();
-    var amt   = row.querySelector('.ps-mile-amount').value;
+    var pct   = row.querySelector('.ps-mile-pct-input').value;
     var pay   = row.querySelector('.ps-mile-pay').value;
     var st    = row.querySelector('.ps-mile-status').value || 'not_started';
     var exp   = row.querySelector('.ps-mile-expected').value || null;
     var act   = row.querySelector('.ps-mile-actual').value || null;
     var notes = (row.querySelector('.ps-mile-notes').value||'').trim();
     var dbId  = row.dataset.dbId ? parseInt(row.dataset.dbId, 10) : null;
+    var pctNum  = (pct === '' || isNaN(pct)) ? null : Number(pct);
+    var derived = (V != null && V > 0 && pctNum != null)
+      ? Math.round((pctNum / 100) * V * 100) / 100
+      : null;
     out.push({
       dbId:                 dbId,
       sequence_order:       i + 1,
       title:                title,
-      amount_usd:           (amt === '' || isNaN(amt)) ? null : Number(amt),
-      payment_received_usd: (pay === '' || isNaN(pay)) ? 0    : Number(pay),
+      percentage:           pctNum,
+      amount_usd:           derived,
+      payment_received_usd: (pay === '' || isNaN(pay)) ? 0 : Number(pay),
       status:               st,
       expected_completion_date: exp,
       actual_completion_date:   act,
@@ -816,15 +887,19 @@ async function savePsDeal() {
   }
 
   var milestones = _psCollectMilestoneRows();
-  // Hard validation per spec Part 5
+  // Hard validation
+  if (milestones.length && (finalUsd === '' || isNaN(finalUsd))) {
+    _psShowModalError('Final PS Value is required when milestones exist.');
+    return;
+  }
   for (var i = 0; i < milestones.length; i++) {
     var m = milestones[i];
     if (!m.title) {
       _psShowModalError('Milestone #'+(i+1)+' is missing a title.');
       return;
     }
-    if (m.amount_usd !== null && m.amount_usd < 0) {
-      _psShowModalError('Milestone #'+(i+1)+' has a negative amount.');
+    if (m.percentage === null || m.percentage < 0 || m.percentage > 100) {
+      _psShowModalError('Milestone #'+(i+1)+' percentage must be between 0 and 100.');
       return;
     }
     if (m.payment_received_usd < 0) {
@@ -889,6 +964,7 @@ async function savePsDeal() {
     var patch = {
       sequence_order:           mi.sequence_order,
       title:                    mi.title,
+      percentage:               mi.percentage,
       amount_usd:               mi.amount_usd,
       payment_received_usd:     mi.payment_received_usd,
       status:                   mi.status,
@@ -909,6 +985,7 @@ async function savePsDeal() {
       deal_id:                  dealId,
       sequence_order:           m.sequence_order,
       title:                    m.title,
+      percentage:               m.percentage,
       amount_usd:               m.amount_usd,
       payment_received_usd:     m.payment_received_usd,
       status:                   m.status,

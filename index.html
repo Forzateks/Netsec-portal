@@ -1401,7 +1401,7 @@
       <div class="form-group full">
         <label>Final PS Value (USD) <span class="dim" style="font-weight:400">— required once awarded</span></label>
         <div class="ps-usd-row">
-          <input type="number" id="ps-final-usd" min="0" step="0.01" oninput="_psUpdateAed('ps-final-usd','ps-final-aed');_psOnFinalValueChange()">
+          <input type="number" id="ps-final-usd" min="0" step="0.01" oninput="_psUpdateAed('ps-final-usd','ps-final-aed');_psOnFinalValueChange()" onchange="_psOnFinalValueCommit()">
           <span class="ps-aed-display" id="ps-final-aed">≈ —</span>
         </div>
       </div>
