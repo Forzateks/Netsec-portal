@@ -421,10 +421,80 @@ async function onCustomerSelectAdd(selectId) {
   sel._prevValue = name;
 }
 
+// ─── MANAGE CUSTOMERS / MANAGE ENGAGEMENTS CROSS-NAV ─────────────
+// The two manager pages share a customer dimension. Clicking an
+// engagement count on the Customers page deep-links into the
+// Engagements page filtered to that customer; clicking a customer
+// name on the Engagements page deep-links back to the matching row
+// on the Customers page with a brief pulse animation.
+
+function _pjGetUrlParam(key) {
+  try { return (new URLSearchParams(window.location.search)).get(key) || ''; }
+  catch (e) { return ''; }
+}
+function _pjSetUrlParam(key, value) {
+  try {
+    var url = new URL(window.location.href);
+    if (value) url.searchParams.set(key, value);
+    else       url.searchParams.delete(key);
+    history.pushState(history.state, '', url.toString());
+  } catch (e) { /* old browser */ }
+}
+
+// Open the Manage Engagements page pre-filtered to a single customer.
+// Uses pushState so the browser back button drops the filter naturally.
+function navigateToManageEngagementsForCustomer(name) {
+  _pjSetUrlParam('customer', name || '');
+  showScreen('projects');
+  showProjectTab('manage');
+}
+
+// Open Manage Customers and scroll/pulse the matching row. ?highlight=
+// is consumed by renderCustomersTable on render.
+function navigateToManageCustomersHighlight(name) {
+  _pjSetUrlParam('highlight', name || '');
+  showScreen('projects');
+  showProjectTab('custmgr');
+}
+
+function clearManageEngagementsCustomerFilter() {
+  _pjSetUrlParam('customer', '');
+  renderManageProjects();
+}
+
+// Back/forward → re-render whichever pj manager page is currently on
+// screen so URL params stay in sync with the UI. Mirrors the tracker's
+// popstate handler.
+window.addEventListener('popstate', function(){
+  var proj = document.getElementById('screen-projects');
+  if (!proj || !proj.classList.contains('active')) return;
+  var custTab = document.getElementById('pjtab-custmgr');
+  var mgrTab  = document.getElementById('pjtab-manage');
+  if (custTab && custTab.style.display !== 'none' && typeof renderCustomersTable === 'function') renderCustomersTable();
+  if (mgrTab  && mgrTab.style.display  !== 'none' && typeof renderManageProjects   === 'function') renderManageProjects();
+});
+
+// Dedicated "+ Add Customer" entry point for the new Manage Customers
+// page. Reuses the same promptInput + addCustomer flow as the inline
+// dropdown sentinel, so duplicate-prevention stays single-sourced.
+async function addCustomerPrompt() {
+  var name = await promptInput({
+    title: 'Add Customer',
+    label: 'Customer name',
+    placeholder: 'e.g. Etisalat',
+    confirmText: 'Add Customer',
+    validate: function(v){
+      var dup = (CUSTOMERS||[]).some(function(c){ return c.name.toLowerCase() === v.toLowerCase(); });
+      return dup ? 'A customer named "'+v+'" already exists.' : null;
+    }
+  });
+  if (!name) return;
+  await addCustomer(name);
+}
+
 // ─── MANAGE CUSTOMERS TABLE ──────────────────────────────────────
-// Searchable + sortable table inside Sessions → Manage. Replaces the old
-// chip wall. Edit reuses the existing edit-customer modal; Delete blocks
-// when engagement_count > 0.
+// Searchable + sortable table on its own page. Edit reuses the
+// existing edit-customer modal; Delete blocks when engagement_count > 0.
 var _custMgrSort   = { by: 'name', dir: 'asc' }; // by: 'name' | 'count'
 function _custMgrSetSort(by) {
   if (_custMgrSort.by === by) {
@@ -499,12 +569,21 @@ function renderCustomersTable() {
       : '<i data-lucide="arrow-down" class="cust-mgr-sort-ico cust-mgr-sort-active"></i>';
   };
 
+  var highlightName = _pjGetUrlParam('highlight');
+
   var rows = filtered.map(function(c){
     var n = counts[c.id] || 0;
     var safeName = (c.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return '<tr>'+
+    var rowCls = (highlightName && c.name === highlightName) ? ' cust-row-highlight' : '';
+    // Engagement count is a clickable link to Manage Engagements filtered
+    // to this customer. Zero-count rows still navigate (filter shows empty
+    // state on the engagements side rather than being silently inert).
+    var countCell = n
+      ? '<button type="button" class="cust-count-link" onclick="navigateToManageEngagementsForCustomer(\''+safeName+'\')" title="View engagements">'+fmtCount(n)+'</button>'
+      : '<span class="dim">'+fmtCount(n)+'</span>';
+    return '<tr class="cust-mgr-row'+rowCls+'" data-cust-name="'+esc2(c.name||'')+'">'+
       '<td><strong style="color:var(--navy)">'+esc2(c.name)+'</strong></td>'+
-      '<td style="font-family:DM Mono,monospace;color:'+(n?'var(--navy)':'var(--muted)')+'">'+fmtCount(n)+'</td>'+
+      '<td class="num">'+countCell+'</td>'+
       '<td style="white-space:nowrap;text-align:right">'+
         '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openEditCustomer('+c.id+')" title="Rename"><i data-lucide="pencil"></i></button>'+
         '<button class="btn btn-sm btn-danger btn-icon-only" onclick="deleteCustomer('+c.id+",'"+safeName+"'"+')" title="Delete"><i data-lucide="trash-2"></i></button>'+
@@ -522,6 +601,18 @@ function renderCustomersTable() {
       '<tbody>'+rows+'</tbody>'+
     '</table></div>';
   if (typeof renderIcons === 'function') renderIcons();
+
+  // If we landed here via "highlight a customer" deep link, scroll the
+  // matching row into view and trigger the brief pulse animation.
+  if (highlightName) {
+    setTimeout(function(){
+      var row = el.querySelector('.cust-row-highlight');
+      if (row && row.scrollIntoView) row.scrollIntoView({ behavior:'smooth', block:'center' });
+      // The CSS animation fires on the class itself; clear the URL param
+      // after a beat so a manual reload doesn't re-pulse forever.
+      setTimeout(function(){ _pjSetUrlParam('highlight', ''); }, 1800);
+    }, 60);
+  }
 }
 
 async function openEditCustomer(id) {
@@ -616,6 +707,23 @@ async function renderManageProjects() {
   document.getElementById('pj-manage-content').innerHTML = '';
   const statusFilter = document.getElementById('pj-manage-filter').value;
   const typeFilter   = (document.getElementById('pj-manage-type-filter')||{}).value || '';
+  const searchRaw    = ((document.getElementById('pj-manage-search')||{}).value || '').trim().toLowerCase();
+  const custParam    = _pjGetUrlParam('customer');
+
+  // Filter banner reflects the URL state — keeps deep links and back/
+  // forward in sync with the visible UI.
+  var banner = document.getElementById('pj-manage-filter-banner');
+  var bannerTxt = document.getElementById('pj-manage-filter-banner-text');
+  if (banner && bannerTxt) {
+    if (custParam) {
+      banner.style.display = '';
+      bannerTxt.textContent = 'Showing engagements for ' + custParam;
+    } else {
+      banner.style.display = 'none';
+      bannerTxt.textContent = '';
+    }
+    if (typeof renderIcons === 'function') renderIcons();
+  }
 
   let q = sb.from('engagements').select('*').order('type').order('name');
   if (statusFilter) q = q.eq('status', statusFilter);
@@ -623,12 +731,38 @@ async function renderManageProjects() {
   const {data} = await q;
   document.getElementById('pj-manage-loading').style.display = 'none';
 
-  const rows = data || [];
+  var custById = {}; (CUSTOMERS||[]).forEach(function(c){ custById[c.id] = c.name; });
+
+  // Build the row set:
+  //   - apply ?customer= filter (exact name match against snapshot)
+  //   - apply free-text search across customer + engagement + type + status
+  var rows = (data || []).filter(function(p){
+    var cn = custById[p.customer_id] || '';
+    if (custParam && cn !== custParam) return false;
+    if (!searchRaw) return true;
+    return [cn, p.name, p.type, p.status]
+      .some(function(s){ return s && String(s).toLowerCase().indexOf(searchRaw) !== -1; });
+  });
+
   if (!rows.length) {
+    var heading, sub;
+    if (custParam) {
+      // Customer filter active but no match — likely a stale deep link
+      // after a rename. Surface that hypothesis so the manager isn't
+      // confused.
+      heading = 'No engagements for ' + custParam;
+      sub     = 'The customer may have been renamed since this link was created, or simply has no engagements yet.';
+    } else if (searchRaw || statusFilter || typeFilter) {
+      heading = 'No engagements match the current filters';
+      sub     = 'Try clearing the search or adjusting the filters above.';
+    } else {
+      heading = 'No engagements found';
+      sub     = 'Adjust the filters above, or create a new engagement.';
+    }
     document.getElementById('pj-manage-content').innerHTML = renderEmptyState({
-      icon: 'folder-open',
-      heading: 'No engagements found',
-      sub: 'Adjust the filters above, or create a new engagement.'
+      icon: custParam ? 'search-x' : 'folder-open',
+      heading: heading,
+      sub: sub
     });
     if (typeof renderIcons === 'function') renderIcons();
     return;
@@ -653,19 +787,21 @@ async function renderManageProjects() {
     'presales': {bg:'#FDF2F8',color:'#BE185D',label:'PRE-SALES-TASK'},
   };
 
-  var custById = {}; (CUSTOMERS||[]).forEach(function(c){ custById[c.id] = c.name; });
-
   document.getElementById('pj-manage-content').innerHTML =
-    '<div class="table-wrap"><table>'+
+    '<div class="table-wrap"><table class="pj-manage-table">'+
     '<thead><tr><th>#</th><th>Customer</th><th>Type</th><th>Engagement Name</th><th>Status</th><th>Actions</th></tr></thead>'+
     '<tbody>'+
     rows.map(function(p,i){
       var sc = STATUS_COLORS[p.status] || STATUS_COLORS['active'];
       var tb = TYPE_BADGES[p.type] || {bg:'#F3F4F6',color:'#6B7280',label:(p.type||'-').toUpperCase()};
       var custName = custById[p.customer_id] || PROJECT_CUSTOMER[p.name] || '-';
+      var safeCust = String(custName).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      var custCell = (custName && custName !== '-')
+        ? '<button type="button" class="pj-cust-link" onclick="navigateToManageCustomersHighlight(\''+safeCust+'\')" title="View this customer">'+esc2(custName)+'</button>'
+        : '<span class="dim">—</span>';
       return '<tr>'+
         '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
-        '<td style="font-size:13px;color:var(--navy);font-weight:600">'+custName+'</td>'+
+        '<td>'+custCell+'</td>'+
         '<td><span style="background:'+tb.bg+';color:'+tb.color+';padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">'+tb.label+'</span></td>'+
         '<td><strong>'+p.name+'</strong></td>'+
         '<td><span class="pj-status-badge" style="background:'+sc.bg+';color:'+sc.color+'"><i data-lucide="'+sc.icon+'"></i>'+sc.label+'</span></td>'+
@@ -1188,7 +1324,7 @@ function showProjectTab(tab) {
   if (tab==='project' || tab==='poc' || tab==='amc' || tab==='support' || tab==='presales') {
     typePreset = tab; tab = 'engagement';
   }
-  ['uslog','ussess','otsessions','otsummary','engagement','employee','otpolicy','otmanager','manage','vendors'].forEach(function(t) {
+  ['uslog','ussess','otsessions','otsummary','engagement','employee','otpolicy','otmanager','custmgr','manage','vendors'].forEach(function(t) {
     const el  = document.getElementById('pjtab-'+t);
     const sub = document.getElementById('pjsub-'+t);
     if (!el) return;
@@ -1217,7 +1353,8 @@ function showProjectTab(tab) {
   }
   if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
   if (tab==='otmanager')  { renderManager(); }
-  if (tab==='manage')     { populateProjectDropdowns(); renderCustomersTable(); renderManageProjects(); }
+  if (tab==='custmgr')    { populateProjectDropdowns(); renderCustomersTable(); }
+  if (tab==='manage')     { populateProjectDropdowns(); renderManageProjects(); }
   if (tab==='vendors')    { renderVendorsManage(); }
   setSidebarSubActive('projects', tab);
 }

@@ -1600,8 +1600,61 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .cust-mgr-sort-ico{width:12px;height:12px;stroke-width:2;color:var(--muted);opacity:.6;flex-shrink:0}
 .cust-mgr-sort-active{opacity:1;color:var(--teal)}
 
+/* Tighten row density on both manager pages — was loose enough to add
+   noticeable vertical scroll. Padding shrunk from ~16px to ~10px, row
+   height target ~36-40px. Font size unchanged. */
+.cust-mgr-table tbody td{padding:8px 12px;font-size:13px;border-bottom:1px solid #F1F5F9}
+.cust-mgr-table tbody tr.cust-mgr-row{transition:background .12s}
+.cust-mgr-table tbody tr.cust-mgr-row:hover{background:#F8FAFC}
+.cust-mgr-table tbody td .btn-icon-only{width:24px;height:24px;padding:0}
+.cust-mgr-table tbody td .btn-icon-only i{width:14px;height:14px}
+
+/* Engagement count rendered as a link — preserves DM Mono so the
+   numbers still align with the rest of the table. */
+.cust-count-link{
+  background:none;border:0;padding:0;margin:0;
+  font-family:'DM Mono',monospace;font-size:13px;color:var(--navy);font-weight:600;
+  cursor:pointer;
+}
+.cust-count-link:hover{color:var(--teal);text-decoration:underline}
+.cust-count-link:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:3px}
+
+/* Manage Engagements table — same density tightening as customers. */
+.pj-manage-table{width:100%;border-collapse:collapse;font-size:13px}
+.pj-manage-table thead th{background:#F8FAFC;border-bottom:1px solid var(--border);padding:9px 12px;font-weight:600;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:left}
+.pj-manage-table tbody td{padding:8px 12px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+.pj-manage-table tbody tr:hover{background:#F8FAFC}
+.pj-manage-table .btn-icon-only{width:24px;height:24px;padding:0}
+.pj-manage-table .btn-icon-only i{width:14px;height:14px}
+
+/* Customer name rendered as a deep-link button on the Engagements page. */
+.pj-cust-link{
+  background:none;border:0;padding:0;margin:0;
+  font:inherit;font-size:13px;color:var(--navy);font-weight:600;
+  cursor:pointer;text-align:left;
+}
+.pj-cust-link:hover{color:var(--teal);text-decoration:underline}
+.pj-cust-link:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:3px}
+
+/* Filter banner above the engagements table when ?customer= is set. */
+.pj-filter-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-bottom:14px;padding:9px 14px;
+  background:#E0F7FF;border:1px solid #BAE6FD;border-radius:8px;
+  font-size:13px;color:#075985;font-weight:500;
+}
+
+/* Highlight pulse when arriving via "view this customer" deep-link. */
+@keyframes pj-row-pulse{
+  0%,100%{ background:transparent; }
+  20%,60%{ background:#FEF3C7; }
+}
+.cust-row-highlight{animation:pj-row-pulse 1.5s ease-out}
+
 @media(max-width:640px){
   .cust-tbl-search{min-width:0;width:100%}
+  .cust-mgr-table tbody td,.pj-manage-table tbody td{padding:7px 8px;font-size:12px}
+  .pj-filter-banner{flex-wrap:wrap}
 }
 
 /* Reusable multi-select dropdown (filter bars) */

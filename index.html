@@ -252,6 +252,7 @@
        (label + items) is hidden when isManager is false in auth.js. -->
   <div class="sidebar-section-label" id="sidebar-manager-label" style="display:none">Manager</div>
   <div id="sidebar-manager-group" style="display:none">
+    <div class="sidebar-item" id="sbi-projects-custmgr"   onclick="navigateSub('projects','custmgr');closeSidebarOnMobile()"><i data-lucide="building" class="sidebar-icon"></i>Manage Customers</div>
     <div class="sidebar-item" id="sbi-projects-manage"    onclick="navigateSub('projects','manage');closeSidebarOnMobile()"><i data-lucide="settings-2" class="sidebar-icon"></i>Manage Engagements</div>
     <div class="sidebar-item" id="sbi-projects-vendors"   onclick="navigateSub('projects','vendors');closeSidebarOnMobile()"><i data-lucide="package" class="sidebar-icon"></i>Vendors &amp; Products</div>
     <div class="sidebar-item" id="tab-amc"                onclick="showScreen('amc');closeSidebarOnMobile()"><i data-lucide="file-text" class="sidebar-icon"></i>AMC Contracts</div>
@@ -563,39 +564,42 @@
   </div>
 
   <!-- MANAGE ENGAGEMENTS (manager only) -->
+  <!-- MANAGE CUSTOMERS (manager-only, sibling page of Manage Engagements) -->
+  <div id="pjtab-custmgr" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="card-title" style="margin-bottom:4px">🏢 Manage Customers <span id="cust-mgr-count" style="font-weight:400;color:var(--muted);font-size:14px"></span></div>
+          <div style="font-size:13px;color:var(--muted)">Master list of all customers. Each customer can have multiple engagements.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="cust-mgr-search" oninput="renderCustomersTable()" class="cust-tbl-search" placeholder="Search customers...">
+          <button class="btn btn-primary" onclick="addCustomerPrompt()"><i data-lucide="plus" class="btn-icon"></i>Add Customer</button>
+        </div>
+      </div>
+      <div id="cust-mgr-content"></div>
+    </div>
+  </div>
+
   <div id="pjtab-manage" style="display:none">
     <div class="alert alert-success" id="pj-manage-success">✅ Saved!</div>
     <div class="alert alert-error"   id="pj-manage-error">⚠️ Please complete the form.</div>
 
-    <!-- Manage Customers (compact table) — chip wall removed, the Project
-         Tracker is the primary customer-browsing surface now. -->
-    <div class="card" style="margin-bottom:20px">
-      <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">🏢 Manage Customers <span id="cust-mgr-count" style="font-weight:400;color:var(--muted);font-size:14px"></span></div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input id="cust-mgr-search" oninput="renderCustomersTable()" class="cust-tbl-search" placeholder="Search customers...">
-        </div>
-      </div>
-      <div id="cust-mgr-content"></div>
-      <div style="margin-top:10px;font-size:12px;color:var(--muted)">
-        Add a new customer from the Customer dropdown on the Add Engagement form below — pick <em>+ Add new customer…</em>.
-      </div>
+    <!-- Filter banner — shows when ?customer=<name> is in the URL (e.g.
+         after clicking an engagement count on Manage Customers). -->
+    <div id="pj-manage-filter-banner" class="pj-filter-banner" style="display:none">
+      <span id="pj-manage-filter-banner-text"></span>
+      <button type="button" class="btn btn-sm btn-ghost" onclick="clearManageEngagementsCustomerFilter()"><i data-lucide="x" class="btn-icon"></i>Clear filter</button>
     </div>
 
-    <!-- The Add Engagement form lives in #add-engagement-modal now (single
-         source of truth used by both this page's CTA and the Tracker's
-         "+ New Engagement" button). Card here is just the entry point. -->
-    <div class="card" id="pj-add-engagement-card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-      <div>
-        <div class="card-title" style="margin-bottom:4px">➕ Add New Engagement</div>
-        <div style="font-size:13px;color:var(--muted)">Create a new Project, POC, AMC, Support, or Pre-Sales engagement under an existing customer.</div>
-      </div>
-      <button class="btn btn-primary" onclick="openAddEngagementModal()"><i data-lucide="plus" class="btn-icon"></i>Add Engagement</button>
-    </div>
     <div class="card">
-      <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0">All Engagements</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="flex-between mb-4" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="card-title" style="margin-bottom:4px">📋 Manage Engagements</div>
+          <div style="font-size:13px;color:var(--muted)">All engagements across customers — projects, POCs, AMCs, support, pre-sales.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="pj-manage-search" oninput="renderManageProjects()" class="cust-tbl-search" placeholder="Search engagements...">
           <select id="pj-manage-type-filter" onchange="renderManageProjects()" style="width:auto;padding:7px 12px">
             <option value="">All Types</option>
             <option value="project">📁 Project</option>
@@ -614,6 +618,7 @@
             <option value="dormant">💤 Dormant</option>
             <option value="cancelled">❌ Cancelled</option>
           </select>
+          <button class="btn btn-primary" onclick="openAddEngagementModal()"><i data-lucide="plus" class="btn-icon"></i>Add Engagement</button>
         </div>
       </div>
       <div id="pj-manage-loading" class="loading"><div class="spinner"></div>Loading...</div>
