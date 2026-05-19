@@ -203,6 +203,9 @@
     </div>
   </div>
 
+  <div class="sidebar-section-label">Team</div>
+  <div class="sidebar-item" id="tab-skills" onclick="showScreen('skills');closeSidebarOnMobile()"><i data-lucide="users" class="sidebar-icon"></i>Team Skills</div>
+
   <div class="sidebar-section-label">Tracker</div>
   <div class="sidebar-group" id="sbg-tracker">
     <div class="sidebar-item has-children" id="tab-tracker" onclick="showScreen('tracker');closeSidebarOnMobile()">
@@ -1440,6 +1443,91 @@
   </div>
 </div>
 
+<!-- ══ TEAM SKILLS SCREEN ══ -->
+<div class="screen" id="screen-skills">
+  <div class="amc-page-header">
+    <div>
+      <div class="amc-page-title">Team Skills Matrix</div>
+      <div class="amc-page-sub">Who knows what — click any cell to view or edit.</div>
+    </div>
+    <button class="btn btn-primary" onclick="openSkillModal()"><i data-lucide="plus" class="btn-icon"></i>Add Skill</button>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      <input id="sk-search" oninput="renderSkillsMatrix()" placeholder="Search product..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:200px;flex:1">
+      <label style="font-size:12px;color:var(--muted);font-weight:600">Vendor:</label>
+      <select id="sk-filter-vendor" onchange="renderSkillsMatrix()" style="width:auto;padding:7px 10px;font-size:13px"></select>
+      <label class="sk-toggle"><input type="checkbox" id="sk-only-mine" onchange="renderSkillsMatrix()"> Only my skills</label>
+      <label class="sk-toggle"><input type="checkbox" id="sk-show-empty" onchange="renderSkillsMatrix()"> Show empty products</label>
+      <button class="btn btn-sm btn-ghost" onclick="clearSkillFilters()">✕ Clear</button>
+    </div>
+  </div>
+
+  <div id="sk-load" class="loading"><div class="spinner"></div>Loading skills...</div>
+  <div id="sk-content"></div>
+</div><!-- /screen-skills -->
+
+<!-- SKILL ADD/EDIT MODAL -->
+<div class="modal-overlay" id="sk-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title" id="sk-modal-title">Add Skill</div>
+    <div class="alert alert-error" id="sk-modal-error" style="display:none;margin-bottom:10px"></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Employee</label>
+        <select id="sk-employee"></select>
+      </div>
+      <div class="form-group">
+        <label>Product Line</label>
+        <select id="sk-product-line"></select>
+      </div>
+      <div class="form-group full">
+        <label>Level *</label>
+        <div class="sk-level-row">
+          <label class="sk-level-opt"><input type="radio" name="sk-level" value="beginner"><span class="sk-pill sk-pill-beginner">Beginner</span></label>
+          <label class="sk-level-opt"><input type="radio" name="sk-level" value="intermediate"><span class="sk-pill sk-pill-intermediate">Intermediate</span></label>
+          <label class="sk-level-opt"><input type="radio" name="sk-level" value="expert"><span class="sk-pill sk-pill-expert">Expert</span></label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Last Used Year <span class="dim" style="font-weight:400">(optional)</span></label>
+        <input type="number" id="sk-last-year" min="2000" max="2100" placeholder="e.g. 2026">
+      </div>
+      <div class="form-group">
+        <label>Last Used Month <span class="dim" style="font-weight:400">(optional)</span></label>
+        <select id="sk-last-month">
+          <option value="">—</option>
+          <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+          <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+          <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+          <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Notes <span class="dim" style="font-weight:400">(optional, max 500)</span></label>
+        <textarea id="sk-notes" rows="2" maxlength="500" style="resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeSkillModal()">Cancel</button>
+      <button class="btn btn-danger-solid" id="sk-delete-btn" onclick="deleteSkillFromModal()" style="display:none"><i data-lucide="trash-2" class="btn-icon"></i>Delete Skill</button>
+      <button class="btn btn-primary" id="sk-save-btn" onclick="saveSkill()"><i data-lucide="check" class="btn-icon"></i>Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- SKILL VIEW POPOVER (read-only — used when non-managers click someone else's cell) -->
+<div class="modal-overlay" id="sk-view-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title" id="sk-view-title">Skill</div>
+    <div id="sk-view-body"></div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn btn-primary" onclick="closeSkillViewModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="screen" id="screen-certificates">
   <div id="certtab-mine">
     <div class="card cert-header-card">
@@ -2344,6 +2432,7 @@
 <script src="js/features/certificates.js"></script>
 <script src="js/features/amc-contracts.js"></script>
 <script src="js/features/ps-deals.js"></script>
+<script src="js/features/team-skills.js"></script>
 <script src="js/core/init.js"></script>
 </body>
 </html>

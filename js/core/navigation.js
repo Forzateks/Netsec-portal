@@ -113,6 +113,7 @@ function showScreen(name) {
   if (name==='certificates') { if (typeof showCertTab === 'function') showCertTab('mine'); }
   if (name==='amc') { if (typeof loadAMCContracts === 'function') loadAMCContracts(); }
   if (name==='psdeals') { if (typeof loadPsDeals === 'function') loadPsDeals(); }
+  if (name==='skills')  { if (typeof loadSkills === 'function')  loadSkills(); }
 }
 
 // Parent-click handler for the projects accordions (Sessions / Reports).

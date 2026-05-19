@@ -1204,6 +1204,9 @@ function showProjectTab(tab) {
 var _vendorActiveId = null;
 
 async function renderVendorsManage() {
+  // Load skills if not cached so the "X skilled" badge appears on
+  // first visit. Cheap (a few rows max), idempotent — no-op when cached.
+  if (typeof ensureSkillsLoaded === 'function') await ensureSkillsLoaded();
   if (!isManager) {
     document.getElementById('pj-vendors-content').innerHTML = renderEmptyState({
       icon: 'lock',
@@ -1285,11 +1288,13 @@ async function renderVendorsManage() {
       // rename or disable it (would break the engagement form's fallback).
       var actions = isOther ? '<span class="vendor-row-locked"><i data-lucide="lock"></i></span>' :
         '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="renameProductLinePrompt('+p.id+')" title="Rename"><i data-lucide="pencil"></i></button>'+
-        '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="toggleProductLineActive('+p.id+')" title="'+(p.is_active?'Disable':'Re-enable')+'"><i data-lucide="'+(p.is_active?'eye-off':'eye')+'"></i></button>';
+        '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="toggleProductLineActive('+p.id+')" title="'+(p.is_active?'Disable':'Re-enable')+'"><i data-lucide="'+(p.is_active?'eye-off':'eye')+'"></i></button>'+
+        '<button class="btn btn-sm btn-danger btn-icon-only" onclick="deleteProductLinePrompt('+p.id+')" title="Delete"><i data-lucide="trash-2"></i></button>';
+      var skillBadge = (typeof renderSkillCountBadge === 'function') ? renderSkillCountBadge(p.id) : '';
       return '<div class="vendor-row'+disabledCls+(isOther?' vendor-row-fallback':'')+'">'+
         '<i data-lucide="layers" class="vendor-row-icon"></i>'+
         '<div class="vendor-row-main">'+
-          '<div class="vendor-row-name">'+esc2(p.name)+disabledBadge+otherBadge+'</div>'+
+          '<div class="vendor-row-name">'+esc2(p.name)+disabledBadge+otherBadge+(skillBadge?' '+skillBadge:'')+'</div>'+
         '</div>'+
         '<div class="vendor-row-actions">'+actions+'</div>'+
       '</div>';
@@ -1452,6 +1457,55 @@ async function toggleProductLineActive(id) {
   var {error} = await sb.from('product_lines').update({ is_active: !p.is_active }).eq('id', id);
   if (error) { showError('Could not toggle: ' + error.message); return; }
   showToast(p.is_active ? 'Product line disabled ✓' : 'Product line re-enabled ✓');
+  await loadProjects();
+  renderVendorsManage();
+}
+
+// Hard delete with two-pronged reference protection:
+//   1. engagements.vendor + engagements.product_line are text snapshots
+//      (not FK columns), so the check is a count on the matching pair.
+//   2. employee_skills.product_line_id IS an FK with ON DELETE RESTRICT,
+//      so an UI bypass still fails at the DB. We pre-check here so the
+//      manager gets a friendly message instead of a Postgres constraint
+//      error.
+// Toggle-disable stays available as a safer alternative; this is only
+// for genuinely unused product lines that should disappear.
+async function deleteProductLinePrompt(id) {
+  var p = (PRODUCT_LINES||[]).find(function(x){ return x.id === id; });
+  if (!p) return;
+  var v = (VENDORS||[]).find(function(x){ return x.id === p.vendor_id; });
+  // Count engagements that snapshot this exact (vendor, product_line) pair.
+  var engPromise = v
+    ? sb.from('engagements').select('id', { count:'exact', head:true }).eq('vendor', v.name).eq('product_line', p.name)
+    : Promise.resolve({ count:0 });
+  // Count skill rows referencing this line by FK.
+  var skillPromise = sb.from('employee_skills').select('id', { count:'exact', head:true }).eq('product_line_id', id);
+  var [engRes, skillRes] = await Promise.all([engPromise, skillPromise]);
+  if (engRes && engRes.error)   { showError('Reference check failed: '+engRes.error.message); return; }
+  if (skillRes && skillRes.error){ showError('Reference check failed: '+skillRes.error.message); return; }
+  var engCount   = engRes && engRes.count   ? engRes.count   : 0;
+  var skillCount = skillRes && skillRes.count ? skillRes.count : 0;
+  if (engCount > 0 || skillCount > 0) {
+    var parts = [];
+    if (engCount > 0)   parts.push(engCount   + ' engagement' + (engCount===1?'':'s'));
+    if (skillCount > 0) parts.push(skillCount + ' skill record' + (skillCount===1?'':'s'));
+    await confirmAction({
+      title: 'Can’t delete "'+p.name+'" yet',
+      body:  'This product line is referenced by '+parts.join(' and ')+'.\n\nRemove those references first, or use Disable to keep the line but hide it from new forms.',
+      confirmText: 'OK',
+      danger: false
+    });
+    return;
+  }
+  if (!await confirmAction({
+    title: 'Delete product line "'+p.name+'"?',
+    body:  'No engagements or skill records reference this line — safe to remove.\n\nThis cannot be undone.',
+    requireTyping: p.name,
+    confirmText: 'Delete product line'
+  })) return;
+  var {error} = await sb.from('product_lines').delete().eq('id', id);
+  if (error) { showError('Delete failed: '+error.message); return; }
+  showToast('Product line deleted ✓');
   await loadProjects();
   renderVendorsManage();
 }

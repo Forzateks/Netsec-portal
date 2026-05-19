@@ -1888,3 +1888,74 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ps-linked-row:last-child{margin-bottom:0}
 .ps-linked-client{font-weight:600;color:var(--navy);font-size:13px;flex:1}
 .ps-linked-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--teal);font-weight:600}
+
+/* ─── TEAM SKILLS (v61) ───────────────────────────────────────────
+   Self-rated proficiency matrix. Pills colour-coded by level; clicking
+   a cell opens the add/edit modal (self+manager) or read-only popover
+   (others). Mobile collapses to per-employee accordions. */
+
+/* Filter-bar toggles (Only my skills / Show empty products) */
+.sk-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:600;cursor:pointer}
+.sk-toggle input{accent-color:var(--teal)}
+
+/* Matrix table */
+.sk-matrix{width:100%;border-collapse:collapse;font-size:13px}
+.sk-matrix thead th{background:#F8FAFC;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
+.sk-matrix thead th.sk-rowhead,.sk-matrix thead th.sk-vendorhead{text-align:left}
+.sk-matrix tbody td{padding:8px 10px;border-bottom:1px solid #F1F5F9;vertical-align:middle;text-align:center}
+.sk-matrix tbody td.sk-rowhead,.sk-matrix tbody td.sk-vendorhead{text-align:left}
+.sk-matrix tbody td.sk-rowhead strong{color:var(--navy)}
+.sk-matrix tbody td.sk-vendorhead{color:var(--muted);font-size:12px}
+.sk-cell{cursor:default;transition:background .12s}
+.sk-cell-filled,.sk-cell-empty{cursor:pointer}
+.sk-cell-filled:hover,.sk-cell-empty:hover{background:#F8FAFC}
+.sk-cell-add{display:inline-block;width:18px;height:18px;line-height:16px;border:1.5px dashed var(--border);color:var(--muted);border-radius:50%;font-size:13px;font-weight:600;text-align:center;opacity:0;transition:opacity .12s}
+.sk-cell-empty:hover .sk-cell-add{opacity:.7}
+/* Subtle highlight on the current user's column so it's findable. */
+.sk-col-mine{background:rgba(0,160,210,.04)}
+.sk-emphead.sk-col-mine{background:rgba(0,160,210,.08)}
+
+/* Level pills */
+.sk-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap}
+.sk-pill-beginner    { background:#F3F4F6; color:#4B5563 }
+.sk-pill-intermediate{ background:#DBEAFE; color:#1E40AF }
+.sk-pill-expert      { background:#DCFCE7; color:#166534 }
+.sk-pill-empty       { background:transparent; color:var(--muted) }
+
+/* Level radio row in the modal — each option is a clickable pill. */
+.sk-level-row{display:flex;gap:10px;flex-wrap:wrap}
+.sk-level-opt{display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:6px 4px}
+.sk-level-opt input{accent-color:var(--teal);cursor:pointer}
+.sk-level-opt .sk-pill{font-size:12px;padding:4px 11px}
+
+/* Read-only view modal — used when a non-manager clicks someone else's pill */
+.sk-view-grid{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.sk-view-row{display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:start;font-size:13px}
+.sk-view-row .dim{color:var(--muted);font-size:12px}
+
+/* Reverse-lookup popover sections (grouped by level) */
+.sk-rev-section{margin-bottom:14px}
+.sk-rev-section:last-child{margin-bottom:0}
+.sk-rev-head{font-size:12px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.sk-rev-names{display:flex;flex-direction:column;gap:4px;padding-left:6px}
+.sk-rev-name{font-size:13px;padding:4px 8px;background:#F8FAFC;border-radius:6px}
+
+/* "X skilled" badge inside the product line row in Vendors & Products */
+.sk-count-badge{display:inline-flex;align-items:center;gap:4px;background:#E0F7FF;color:#075985;border:1px solid #BAE6FD;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;margin-left:8px;transition:background .12s,border-color .12s}
+.sk-count-badge:hover{background:#BAE6FD;border-color:#0EA5E9}
+
+/* Mobile accordion (< 720px) — one section per employee */
+.sk-acc{display:flex;flex-direction:column;gap:8px}
+.sk-acc-emp{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.sk-acc-summary{padding:12px 14px;cursor:pointer;font-weight:600;color:var(--navy);font-size:14px;list-style:none;user-select:none;display:flex;align-items:center;justify-content:space-between}
+.sk-acc-summary::-webkit-details-marker{display:none}
+.sk-acc-summary::after{content:'›';font-size:18px;color:var(--muted);transition:transform .15s}
+.sk-acc-emp[open] .sk-acc-summary::after{transform:rotate(90deg)}
+.sk-acc-emp[open] .sk-acc-summary{border-bottom:1px solid var(--border);background:#F8FAFC}
+.sk-acc-rows{display:flex;flex-direction:column}
+.sk-acc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:1px solid #F1F5F9;cursor:pointer;transition:background .12s}
+.sk-acc-row:last-child{border-bottom:0}
+.sk-acc-row:hover{background:#F8FAFC}
+.sk-acc-row-name{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.sk-acc-row-name strong{color:var(--navy);font-size:13px}
+.sk-acc-row-pill{flex-shrink:0}
