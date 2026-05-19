@@ -871,19 +871,44 @@ function onPjFilterCustomerChange() {
   renderPjSessions();
 }
 
+// Delivery-side activity list — applies to Project / POC / AMC / Support
+// sessions. Pre-Sales-Task sessions get their own short list below; the
+// generic engagement-style activities don't apply to pre-sales work.
 const ACTIVITY_TYPES = [
   'HLD Discussion','HLD Documentation','LLD Discussion','LLD Documentation',
   'Pilot Sites Rollout','As-Built Documentation','KT / Training','Migration',
   'Troubleshooting','Initial Configuration'
 ];
 
+// Pre-Sales-Task-specific activity list (session_type='presales').
+const PRESALES_ACTIVITY_TYPES = ['PS Calculation','SOW','Tech Proposal'];
+
 const DEVICE_MODELS = ['EC-XS','EC-SP','EC-M','EC-10104','EC-10106'];
 
-function fillActivitySelect(selectId) {
+// Return the activity-type options that apply for a given session type.
+// Future session types can plug in here without touching the call sites.
+function activityTypesForSession(sessionType) {
+  if (sessionType === 'presales') return PRESALES_ACTIVITY_TYPES;
+  return ACTIVITY_TYPES;
+}
+
+// Populate an Activity Type <select>.
+//   sessionType  — optional, picks the right list. Defaults to delivery.
+//   legacyValue  — optional, the row's existing activity_type when
+//                  editing. If it isn't in the new filtered list (e.g.
+//                  an old 'presales' session saved before this filter),
+//                  we still surface it as "<value> (legacy)" so the
+//                  form doesn't silently drop it.
+function fillActivitySelect(selectId, sessionType, legacyValue) {
   var el = document.getElementById(selectId); if (!el) return;
   var cur = el.value;
-  el.innerHTML = '<option value="">-- Select --</option>'
-    + ACTIVITY_TYPES.map(function(a){ return '<option>'+a+'</option>'; }).join('');
+  var list = activityTypesForSession(sessionType);
+  var html = '<option value="">-- Select --</option>'
+    + list.map(function(a){ return '<option>'+esc2(a)+'</option>'; }).join('');
+  if (legacyValue && list.indexOf(legacyValue) === -1) {
+    html += '<option value="'+esc2(legacyValue)+'">'+esc2(legacyValue)+' (legacy)</option>';
+  }
+  el.innerHTML = html;
   if (cur) el.value = cur;
 }
 

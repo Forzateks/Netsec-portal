@@ -209,8 +209,14 @@ function onUSTypeChange() {
   // re-picks from the now-filtered lists.
   var custEl = document.getElementById('us-customer');
   var engEl  = document.getElementById('us-engagement');
+  var actEl  = document.getElementById('us-activity-type');
   if (custEl) custEl.value = '';
   if (engEl)  engEl.value  = '';
+  // Activity Type list depends on session type — presales gets its
+  // own short list, everything else gets the delivery list. Reset
+  // value to placeholder on type change (acceptance criterion #7).
+  if (actEl) actEl.value = '';
+  fillActivitySelect('us-activity-type', type);
 
   // Repopulate engagement dropdown filtered by selected type
   if (isEng) populateUSEngagementDropdown();
@@ -855,9 +861,12 @@ async function openEditUS(id) {
   document.getElementById('edit-us-stake').value = r.stake_holders || '';
   document.getElementById('edit-us-mode').value = r.mode || '';
   document.getElementById('edit-us-remarks').value = r.remarks || '';
-  // Populate dropdowns
+  // Populate dropdowns. Activity Type list is filtered by session_type
+  // (presales gets the short list, everything else gets the delivery
+  // list); the row's existing activity_type is passed in as legacyValue
+  // so an out-of-list option still surfaces as "<value> (legacy)".
   fillCustomerSelect('edit-us-customer', false);
-  fillActivitySelect('edit-us-activity-type');
+  fillActivitySelect('edit-us-activity-type', r.session_type, r.activity_type);
   document.getElementById('edit-us-customer').value = r.customer_name || '';
   document.getElementById('edit-us-activity-type').value = r.activity_type || '';
   // Engagement dropdown
