@@ -1,10 +1,13 @@
 // == PROFESSIONAL SERVICES DEALS ===================================
 // Manager-only commercial register of PS deals quoted/sold to clients.
 //
-// Three tables back this:
+// Two tables back this:
 //   ps_deals       — one row per deal (header info, financials, status)
-//   ps_milestones  — per-year work completed against a deal
-//   ps_payments    — per-year cash received against a deal
+//   ps_milestones  — discrete project phases per deal. Each row carries
+//                    the milestone's amount, payment received, status,
+//                    and dates. Replaces the v60 split (year-bucket
+//                    milestones + year-bucket payments) with one row
+//                    per real-world phase.
 //
 // RLS keeps these manager-only at the DB layer; this module also guards
 // at the UI layer (Manager-section sidebar hidden for employees).
@@ -14,9 +17,13 @@
 
 var PS_DEALS      = [];
 var PS_MILESTONES = [];
-var PS_PAYMENTS   = [];
 var _psEditingId  = null;          // null = create, number = edit
 var _psSubrowSeq  = 0;             // monotonic id for in-form sub-rows
+// Auto-split flag per modal session. False on modal open → "+ Add
+// milestone" recomputes an even split. The flag flips to true on the
+// first manual amount edit so subsequent adds don't silently overwrite
+// the user's numbers. "Re-balance evenly" resets it back to false.
+var _psMilestonesUserEdited = false;
 
 var PS_REGIONS = ['UAE','KSA','Qatar','Oman','Bahrain','Kuwait','Other'];
 var PS_MODES   = ['Remote','Remote+Onsite','Onsite','Shared (GulfIT-Partner)'];
@@ -29,22 +36,30 @@ var PS_STATUS_META = {
   cancelled:   { label:'Cancelled',   cls:'ps-st-cancelled' }
 };
 
+// Per-milestone status (separate vocabulary from deal status). Five
+// states from "Not Started" through "Completed".
+var PS_MS_STATUSES = ['not_started','active','awaiting_signoff','awaiting_payment','completed'];
+var PS_MS_STATUS_META = {
+  not_started:       { label:'Not Started',        cls:'ps-msst-notstarted' },
+  active:            { label:'Active',             cls:'ps-msst-active' },
+  awaiting_signoff:  { label:'Awaiting Sign-off',  cls:'ps-msst-signoff' },
+  awaiting_payment:  { label:'Awaiting Payment',   cls:'ps-msst-payment' },
+  completed:         { label:'Completed',          cls:'ps-msst-done' }
+};
+
 // ── LOAD ──────────────────────────────────────────────────────────
 async function loadPsDeals() {
   var loadEl = document.getElementById('ps-load');
   if (loadEl) loadEl.style.display = 'flex';
-  var [dRes, mRes, pRes] = await Promise.all([
+  var [dRes, mRes] = await Promise.all([
     sb.from('ps_deals').select('*').order('quoted_year',{ascending:false,nullsFirst:false}).order('quoted_month',{ascending:false,nullsFirst:false}),
-    sb.from('ps_milestones').select('*'),
-    sb.from('ps_payments').select('*')
+    sb.from('ps_milestones').select('*').order('sequence_order',{ascending:true})
   ]);
   if (loadEl) loadEl.style.display = 'none';
   if (dRes.error) { showError('Could not load PS deals: '+dRes.error.message); return; }
   if (mRes.error) { showError('Could not load milestones: '+mRes.error.message); return; }
-  if (pRes.error) { showError('Could not load payments: '+pRes.error.message); return; }
   PS_DEALS      = dRes.data || [];
   PS_MILESTONES = mRes.data || [];
-  PS_PAYMENTS   = pRes.data || [];
   _psPopulateFilters();
   renderPsDeals();
 }
@@ -128,14 +143,30 @@ function _psQuotedLabel(d) {
   return String(d.quoted_year);
 }
 
-// Build "2024: $20K · 2025: $22K" summary from child rows.
-function _psChildSummary(dealId, source) {
-  var rows = source.filter(function(r){ return r.deal_id === dealId; });
-  if (!rows.length) return '<span class="dim">—</span>';
-  rows.sort(function(a,b){ return a.year - b.year; });
-  return rows.map(function(r){
-    return r.year + ': ' + fmtUsd(r.amount_usd, false);
-  }).join(' · ');
+// Roll up milestone counts + payment totals for a deal. Returns an
+// object the list view and tracker integration both consume.
+function _psDealProgress(dealId) {
+  var ms = (PS_MILESTONES||[]).filter(function(m){ return m.deal_id === dealId; });
+  var doneCount = 0;
+  var paidTotal = 0;
+  ms.forEach(function(m){
+    if (m.status === 'completed') doneCount += 1;
+    paidTotal += Number(m.payment_received_usd) || 0;
+  });
+  return { total: ms.length, done: doneCount, paid: paidTotal };
+}
+
+// "3 / 5 done · $6,000 / $10,000 paid" — list view summary cell.
+function _psProgressCell(deal) {
+  var p = _psDealProgress(deal.id);
+  if (!p.total) return '<span class="dim">—</span>';
+  var final = deal.final_ps_value_usd;
+  var paidLabel = (final != null && final !== '')
+    ? (fmtUsd(p.paid, false) + ' / ' + fmtUsd(final, false) + ' paid')
+    : (fmtUsd(p.paid, false) + ' paid');
+  return '<div class="num" style="font-size:11px;line-height:1.4">'+
+    p.done + ' / ' + p.total + ' done · ' + paidLabel +
+  '</div>';
 }
 
 function _psUsdCell(usd) {
@@ -192,8 +223,7 @@ function _psRenderTable(rows) {
       '<td class="hide-mobile">'+_psUsdCell(d.ps_quoted_sales_usd)+'</td>'+
       '<td>'+_psUsdCell(d.final_ps_value_usd)+'</td>'+
       '<td>'+_psStatusBadge(d.status)+'</td>'+
-      '<td class="hide-mobile" style="font-size:11px">'+_psChildSummary(d.id, PS_MILESTONES)+'</td>'+
-      '<td class="hide-mobile" style="font-size:11px">'+_psChildSummary(d.id, PS_PAYMENTS)+'</td>'+
+      '<td class="hide-mobile">'+_psProgressCell(d)+'</td>'+
       '<td class="hide-mobile" style="font-size:12px">'+_psLinkedEngagementLabel(d.linked_engagement_id)+'</td>'+
       '<td style="white-space:nowrap;text-align:right" onclick="event.stopPropagation()">'+
         '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openPsDealModal('+d.id+')" title="Edit"><i data-lucide="pencil"></i></button>'+
@@ -216,8 +246,7 @@ function _psRenderTable(rows) {
         '<th class="hide-mobile">PS Sales</th>'+
         '<th>Final</th>'+
         '<th>Status</th>'+
-        '<th class="hide-mobile">Milestones</th>'+
-        '<th class="hide-mobile">Payments</th>'+
+        '<th class="hide-mobile">Progress</th>'+
         '<th class="hide-mobile">Engagement</th>'+
         '<th></th>'+
       '</tr></thead><tbody>'+body+'</tbody></table></div>'+
@@ -362,18 +391,38 @@ function _psSeedForm(d) {
   _psUpdateAed('ps-final-usd','ps-final-aed');
 }
 
+// Rebuild the milestone rows when the modal opens. For a new deal,
+// leaves the table empty (user clicks "+ Add milestone" once Final
+// Value is entered). For an edit, replays each persisted row in
+// sequence_order with its DB id stashed so save can do an UPDATE
+// vs INSERT diff.
 function _psRebuildSubrows(deal) {
-  var mWrap = document.getElementById('ps-milestones-wrap');
-  var pWrap = document.getElementById('ps-payments-wrap');
-  if (mWrap) mWrap.innerHTML = '';
-  if (pWrap) pWrap.innerHTML = '';
-  if (!deal) return;
+  var wrap = document.getElementById('ps-milestones-wrap');
+  if (wrap) wrap.innerHTML = '';
+  _psMilestonesUserEdited = false;
+  if (!deal) {
+    _psRefreshMilestoneToolbar();
+    return;
+  }
   var ms = PS_MILESTONES.filter(function(r){ return r.deal_id === deal.id; })
-                        .sort(function(a,b){ return a.year - b.year; });
-  ms.forEach(function(r){ _psAddMilestoneRow(r.year, r.amount_usd, r.notes); });
-  var py = PS_PAYMENTS.filter(function(r){ return r.deal_id === deal.id; })
-                      .sort(function(a,b){ return a.year - b.year; });
-  py.forEach(function(r){ _psAddPaymentRow(r.year, r.amount_usd, r.notes); });
+                        .sort(function(a,b){ return (a.sequence_order||0) - (b.sequence_order||0); });
+  ms.forEach(function(r){
+    _psAppendMilestoneRow({
+      id: r.id,
+      title: r.title,
+      amount: r.amount_usd,
+      payment: r.payment_received_usd,
+      status: r.status,
+      expected: r.expected_completion_date,
+      actual: r.actual_completion_date,
+      notes: r.notes
+    });
+  });
+  // Existing rows count as "user edited" content — don't silently
+  // overwrite them on the first "+ Add milestone" click.
+  if (ms.length) _psMilestonesUserEdited = true;
+  _psRefreshMilestoneToolbar();
+  _psRecalcMilestoneTotal();
 }
 
 // ── MODAL: USD ↔ AED LIVE READOUT ─────────────────────────────────
@@ -386,68 +435,345 @@ function _psUpdateAed(inputId, spanId) {
   span.textContent = '≈ ' + fmtAed(usdToAed(v), true);
 }
 
-// ── MODAL: SUB-ROWS (milestones + payments share the row template) ─
-function _psBuildSubrow(kind, year, amount, notes) {
-  var id = ++_psSubrowSeq;
-  var rowId = 'ps-'+kind+'-row-'+id;
-  var aedId = 'ps-'+kind+'-aed-'+id;
-  var amtId = 'ps-'+kind+'-amt-'+id;
-  var yrEl = (year != null) ? String(year) : '';
-  var amtEl = (amount != null) ? String(amount) : '';
-  var notesEl = notes != null ? esc2(notes) : '';
-  return '<div class="ps-subrow" id="'+rowId+'" data-kind="'+kind+'">'+
-    '<input type="number" class="ps-year-input" min="2000" max="2100" placeholder="Year" value="'+yrEl+'">'+
-    '<div class="ps-usd-row">'+
-      '<input type="number" class="ps-amount-input" id="'+amtId+'" min="0" step="0.01" placeholder="0.00" value="'+amtEl+'" oninput="_psUpdateAed(\''+amtId+'\',\''+aedId+'\')">'+
-      '<span class="ps-aed-display" id="'+aedId+'">≈ —</span>'+
+// ── MODAL: MILESTONE ROWS ─────────────────────────────────────────
+// Each row is a single self-contained block. data-row-id is a synthetic
+// monotonic id for DOM lookups; data-db-id (when set) carries the
+// persisted ps_milestones.id so save can UPDATE vs INSERT.
+
+function _psFinalValue() {
+  var raw = (document.getElementById('ps-final-usd')||{}).value;
+  if (raw === '' || raw == null || isNaN(raw)) return null;
+  return Number(raw);
+}
+
+function _psBuildMilestoneRow(seed) {
+  var seq = ++_psSubrowSeq;
+  seed = seed || {};
+  var rowId = 'ps-ms-row-' + seq;
+  var amtId = 'ps-ms-amt-' + seq;
+  var payId = 'ps-ms-pay-' + seq;
+  var aedAmtId = 'ps-ms-aed-amt-' + seq;
+  var aedPayId = 'ps-ms-aed-pay-' + seq;
+  var pctId = 'ps-ms-pct-' + seq;
+  var statusId = 'ps-ms-st-' + seq;
+  var statusOpts = PS_MS_STATUSES.map(function(s){
+    var meta = PS_MS_STATUS_META[s];
+    var sel = (seed.status === s) ? ' selected' : '';
+    return '<option value="'+s+'"'+sel+'>'+meta.label+'</option>';
+  }).join('');
+  // Empty status default = 'not_started' if seed has nothing.
+  if (!seed.status) statusOpts = statusOpts.replace('value="not_started"', 'value="not_started" selected');
+
+  var dbAttr = seed.id ? ' data-db-id="'+seed.id+'"' : '';
+  var amtVal = (seed.amount  != null && seed.amount  !== '') ? String(seed.amount)  : '';
+  var payVal = (seed.payment != null && seed.payment !== '') ? String(seed.payment) : '';
+
+  return '<div class="ps-mile-row" id="'+rowId+'"'+dbAttr+'>'+
+    '<div class="ps-mile-cell ps-mile-num"></div>'+
+    '<div class="ps-mile-cell ps-mile-cell-title"><input type="text" class="ps-mile-title" placeholder="e.g. Kick-off &amp; design" value="'+esc2(seed.title||'')+'"></div>'+
+    '<div class="ps-mile-cell ps-mile-cell-amount">'+
+      '<input type="number" class="ps-mile-amount" id="'+amtId+'" min="0" step="0.01" placeholder="0.00" value="'+amtVal+'" oninput="_psOnMilestoneAmountInput(\''+rowId+'\',\''+amtId+'\',\''+aedAmtId+'\',\''+pctId+'\')">'+
+      '<div class="ps-mile-aed" id="'+aedAmtId+'">≈ —</div>'+
+      '<div class="ps-mile-pct" id="'+pctId+'">—</div>'+
     '</div>'+
-    '<input type="text" class="ps-notes-input" placeholder="Notes" value="'+notesEl+'">'+
-    '<button type="button" class="btn btn-sm btn-ghost btn-icon-only" onclick="_psRemoveSubrow(\''+rowId+'\')" title="Remove"><i data-lucide="x"></i></button>'+
+    '<div class="ps-mile-cell ps-mile-cell-pay">'+
+      '<input type="number" class="ps-mile-pay" id="'+payId+'" min="0" step="0.01" placeholder="0.00" value="'+payVal+'" oninput="_psUpdateAed(\''+payId+'\',\''+aedPayId+'\');_psRecalcMilestoneTotal();_psRefreshRowFlags(\''+rowId+'\')">'+
+      '<div class="ps-mile-aed" id="'+aedPayId+'">≈ —</div>'+
+    '</div>'+
+    '<div class="ps-mile-cell ps-mile-cell-status">'+
+      '<select class="ps-mile-status" id="'+statusId+'" onchange="_psOnMilestoneStatusChange(\''+rowId+'\')">'+statusOpts+'</select>'+
+    '</div>'+
+    '<div class="ps-mile-cell ps-mile-cell-date"><input type="date" class="ps-mile-expected" value="'+esc2(seed.expected||'')+'"></div>'+
+    '<div class="ps-mile-cell ps-mile-cell-date"><input type="date" class="ps-mile-actual" value="'+esc2(seed.actual||'')+'"></div>'+
+    '<div class="ps-mile-cell ps-mile-cell-notes"><input type="text" class="ps-mile-notes" placeholder="Notes" value="'+esc2(seed.notes||'')+'"></div>'+
+    '<div class="ps-mile-cell ps-mile-cell-remove"><button type="button" class="btn btn-sm btn-ghost btn-icon-only" onclick="_psRemoveMilestoneRow(\''+rowId+'\')" title="Remove"><i data-lucide="x"></i></button></div>'+
   '</div>';
 }
 
-function _psAddMilestoneRow(year, amount, notes) {
+// Append a milestone row from a seed object. Used by _psRebuildSubrows
+// (replay from DB) and the auto-split + add flow.
+function _psAppendMilestoneRow(seed) {
+  var wrap = document.getElementById('ps-milestones-wrap');
+  if (!wrap) return null;
+  wrap.insertAdjacentHTML('beforeend', _psBuildMilestoneRow(seed));
+  var row = wrap.lastElementChild;
+  // Seed live AED display + % cell from the inserted values.
+  var amt = row.querySelector('.ps-mile-amount');
+  var aedAmt = row.querySelector('.ps-mile-aed');
+  if (amt && aedAmt && amt.value !== '' && !isNaN(amt.value)) {
+    aedAmt.textContent = '≈ ' + fmtAed(usdToAed(amt.value), true);
+  }
+  var pay = row.querySelector('.ps-mile-pay');
+  var aedPay = row.querySelector('.ps-mile-cell-pay .ps-mile-aed');
+  if (pay && aedPay && pay.value !== '' && !isNaN(pay.value)) {
+    aedPay.textContent = '≈ ' + fmtAed(usdToAed(pay.value), true);
+  }
+  if (typeof renderIcons === 'function') renderIcons();
+  return row;
+}
+
+// "+ Add milestone" handler. If the user hasn't manually edited any
+// amount yet, spread Final Value evenly across all rows including the
+// new one. Otherwise add a blank row and let the user type a number.
+function _psAddMilestoneRow() {
+  var V = _psFinalValue();
+  if (V == null || V <= 0) {
+    showError('Enter Final PS Value before adding milestones.');
+    return;
+  }
   var wrap = document.getElementById('ps-milestones-wrap');
   if (!wrap) return;
-  wrap.insertAdjacentHTML('beforeend', _psBuildSubrow('m', year, amount, notes));
-  // Seed AED next to the amount we just inserted
-  var lastAmt = wrap.lastElementChild.querySelector('.ps-amount-input');
-  var lastAed = wrap.lastElementChild.querySelector('.ps-aed-display');
-  if (lastAmt && lastAed) {
-    var v = lastAmt.value;
-    if (v !== '' && !isNaN(v)) lastAed.textContent = '≈ ' + fmtAed(usdToAed(v), true);
+  if (!_psMilestonesUserEdited) {
+    // Auto-split: redistribute evenly across existing + 1 new row.
+    var existing = wrap.querySelectorAll('.ps-mile-row');
+    var newN = existing.length + 1;
+    var per = Math.round((V / newN) * 100) / 100;
+    // Update existing rows
+    existing.forEach(function(row){
+      var amtEl = row.querySelector('.ps-mile-amount');
+      var aedEl = row.querySelector('.ps-mile-aed');
+      var pctEl = row.querySelector('.ps-mile-pct');
+      if (amtEl) amtEl.value = per;
+      if (aedEl) aedEl.textContent = '≈ ' + fmtAed(usdToAed(per), true);
+      if (pctEl) pctEl.textContent = _psPct(per, V);
+    });
+    _psAppendMilestoneRow({ amount: per });
+    // Apply rounding remainder to the last row so the total matches exactly.
+    _psApplyRoundingRemainder(V);
+  } else {
+    _psAppendMilestoneRow({});
   }
-  if (typeof renderIcons === 'function') renderIcons();
+  _psRefreshMilestoneToolbar();
+  _psRecalcMilestoneTotal();
 }
 
-function _psAddPaymentRow(year, amount, notes) {
-  var wrap = document.getElementById('ps-payments-wrap');
+// Re-balance button → reset auto-split flag + evenly distribute Final
+// Value across the current set of rows, with any rounding delta on the
+// last row so the totals tie exactly.
+function _psRebalanceMilestones() {
+  var V = _psFinalValue();
+  if (V == null || V <= 0) {
+    showError('Enter Final PS Value before re-balancing.');
+    return;
+  }
+  var wrap = document.getElementById('ps-milestones-wrap');
   if (!wrap) return;
-  wrap.insertAdjacentHTML('beforeend', _psBuildSubrow('p', year, amount, notes));
-  var lastAmt = wrap.lastElementChild.querySelector('.ps-amount-input');
-  var lastAed = wrap.lastElementChild.querySelector('.ps-aed-display');
-  if (lastAmt && lastAed) {
-    var v = lastAmt.value;
-    if (v !== '' && !isNaN(v)) lastAed.textContent = '≈ ' + fmtAed(usdToAed(v), true);
-  }
-  if (typeof renderIcons === 'function') renderIcons();
+  var rows = wrap.querySelectorAll('.ps-mile-row');
+  if (!rows.length) return;
+  var per = Math.round((V / rows.length) * 100) / 100;
+  rows.forEach(function(row){
+    var amtEl = row.querySelector('.ps-mile-amount');
+    var aedEl = row.querySelector('.ps-mile-aed');
+    var pctEl = row.querySelector('.ps-mile-pct');
+    if (amtEl) amtEl.value = per;
+    if (aedEl) aedEl.textContent = '≈ ' + fmtAed(usdToAed(per), true);
+    if (pctEl) pctEl.textContent = _psPct(per, V);
+  });
+  _psApplyRoundingRemainder(V);
+  _psMilestonesUserEdited = false;
+  _psRecalcMilestoneTotal();
 }
 
-function _psRemoveSubrow(rowId) {
+// Float math leaves pennies on the table; dump the delta on the last
+// row so 5 × $1,666.66 + remainder = $10,000 exactly.
+function _psApplyRoundingRemainder(target) {
+  var wrap = document.getElementById('ps-milestones-wrap');
+  if (!wrap) return;
+  var rows = wrap.querySelectorAll('.ps-mile-row');
+  if (!rows.length) return;
+  var sum = 0;
+  rows.forEach(function(row){
+    var v = row.querySelector('.ps-mile-amount').value;
+    sum += (v === '' || isNaN(v)) ? 0 : Number(v);
+  });
+  sum = Math.round(sum * 100) / 100;
+  var delta = Math.round((target - sum) * 100) / 100;
+  if (Math.abs(delta) < 0.01) return;
+  var last = rows[rows.length - 1];
+  var amtEl = last.querySelector('.ps-mile-amount');
+  var aedEl = last.querySelector('.ps-mile-aed');
+  var pctEl = last.querySelector('.ps-mile-pct');
+  var fixed = (Math.round(((Number(amtEl.value)||0) + delta) * 100) / 100);
+  amtEl.value = fixed;
+  if (aedEl) aedEl.textContent = '≈ ' + fmtAed(usdToAed(fixed), true);
+  if (pctEl) pctEl.textContent = _psPct(fixed, target);
+}
+
+function _psRemoveMilestoneRow(rowId) {
   var el = document.getElementById(rowId);
-  if (el && el.parentNode) el.parentNode.removeChild(el);
+  if (!el) return;
+  var pay = Number((el.querySelector('.ps-mile-pay')||{}).value || 0);
+  // Soft confirm when removing a row that has recorded payment — the
+  // payment number disappears with the row; user should know.
+  if (pay > 0) {
+    confirmAction({
+      title: 'Remove this milestone?',
+      body:  'This milestone has '+fmtUsd(pay, false)+' recorded as payment received. Removing it will drop that record on save.\n\nContinue?',
+      confirmText: 'Remove milestone'
+    }).then(function(ok){
+      if (!ok) return;
+      el.parentNode.removeChild(el);
+      _psRenumberMilestones();
+      _psRefreshMilestoneToolbar();
+      _psRecalcMilestoneTotal();
+    });
+    return;
+  }
+  el.parentNode.removeChild(el);
+  _psRenumberMilestones();
+  _psRefreshMilestoneToolbar();
+  _psRecalcMilestoneTotal();
 }
 
-function _psCollectSubrows(wrapId) {
-  var wrap = document.getElementById(wrapId);
+// Update the leading "1." / "2." numbers so removal renumbers cleanly.
+function _psRenumberMilestones() {
+  var wrap = document.getElementById('ps-milestones-wrap');
+  if (!wrap) return;
+  var rows = wrap.querySelectorAll('.ps-mile-row');
+  rows.forEach(function(row, i){
+    var n = row.querySelector('.ps-mile-num');
+    if (n) n.textContent = (i+1) + '.';
+  });
+}
+
+// Refresh the toolbar — enable/disable Add + Re-balance based on
+// Final Value presence and row count.
+function _psRefreshMilestoneToolbar() {
+  var V = _psFinalValue();
+  var has = V != null && V > 0;
+  var addBtn = document.getElementById('ps-add-milestone-btn');
+  var rebBtn = document.getElementById('ps-rebalance-btn');
+  var wrap   = document.getElementById('ps-milestones-wrap');
+  var rowN   = wrap ? wrap.querySelectorAll('.ps-mile-row').length : 0;
+  if (addBtn) {
+    addBtn.disabled = !has;
+    addBtn.title = has ? 'Add a milestone' : 'Enter Final PS Value first';
+  }
+  if (rebBtn) {
+    rebBtn.disabled = !has || rowN === 0;
+    rebBtn.title = !has ? 'Enter Final PS Value first' : (rowN === 0 ? 'Add milestones first' : 'Split Final PS Value evenly across all milestones');
+  }
+  _psRenumberMilestones();
+}
+
+// Recompute the running total. Sum every row's amount; compare to
+// Final Value. Updates the indicator text + colour class.
+function _psRecalcMilestoneTotal() {
+  var V = _psFinalValue();
+  var wrap = document.getElementById('ps-milestones-wrap');
+  var ind = document.getElementById('ps-mile-total');
+  if (!ind) return;
+  var rows = wrap ? wrap.querySelectorAll('.ps-mile-row') : [];
+  if (!rows.length) {
+    ind.textContent = 'No milestones yet';
+    ind.className = 'ps-mile-total';
+    return;
+  }
+  var sum = 0;
+  rows.forEach(function(row){
+    var v = row.querySelector('.ps-mile-amount').value;
+    if (v !== '' && !isNaN(v)) sum += Number(v);
+    // Also refresh the % cell here so it follows Final-Value changes.
+    var pctEl = row.querySelector('.ps-mile-pct');
+    if (pctEl) pctEl.textContent = (V != null && V > 0) ? _psPct(v, V) : '—';
+  });
+  sum = Math.round(sum * 100) / 100;
+  if (V == null) {
+    ind.textContent = 'Milestones total: ' + fmtUsd(sum, false) + ' · Final Value not set';
+    ind.className = 'ps-mile-total ps-mile-total-warn';
+    return;
+  }
+  var delta = Math.round((sum - V) * 100) / 100;
+  var label = 'Milestones total: ' + fmtUsd(sum, false) + ' of ' + fmtUsd(V, false);
+  if (Math.abs(delta) < 0.01) {
+    ind.textContent = label;
+    ind.className = 'ps-mile-total ps-mile-total-ok';
+  } else if (delta < 0) {
+    ind.textContent = label + ' · ' + fmtUsd(-delta, false) + ' unallocated';
+    ind.className = 'ps-mile-total ps-mile-total-warn';
+  } else {
+    ind.textContent = label + ' · ' + fmtUsd(delta, false) + ' over';
+    ind.className = 'ps-mile-total ps-mile-total-warn';
+  }
+}
+
+function _psPct(amt, total) {
+  if (total == null || total <= 0 || amt === '' || amt == null || isNaN(amt)) return '—';
+  var pct = (Number(amt) / Number(total)) * 100;
+  return (Math.round(pct * 10) / 10).toFixed(1) + '%';
+}
+
+// Per-row payment-vs-amount overcharge flag (amber row outline).
+function _psRefreshRowFlags(rowId) {
+  var row = document.getElementById(rowId);
+  if (!row) return;
+  var amt = Number((row.querySelector('.ps-mile-amount')||{}).value || 0);
+  var pay = Number((row.querySelector('.ps-mile-pay')||{}).value || 0);
+  row.classList.toggle('ps-mile-row-overpaid', pay > amt && amt > 0);
+}
+
+// Amount input handler — flips auto-split off, refreshes AED + %.
+function _psOnMilestoneAmountInput(rowId, amtId, aedId, pctId) {
+  _psMilestonesUserEdited = true;
+  _psUpdateAed(amtId, aedId);
+  var V = _psFinalValue();
+  var pctEl = document.getElementById(pctId);
+  var amtEl = document.getElementById(amtId);
+  if (pctEl && amtEl) pctEl.textContent = (V != null && V > 0) ? _psPct(amtEl.value, V) : '—';
+  _psRecalcMilestoneTotal();
+  _psRefreshRowFlags(rowId);
+}
+
+// Status change handler — auto-fill actual_completion_date when
+// transitioning to "completed" and the field is empty. Doesn't
+// overwrite a value the user already set.
+function _psOnMilestoneStatusChange(rowId) {
+  var row = document.getElementById(rowId);
+  if (!row) return;
+  var statusEl = row.querySelector('.ps-mile-status');
+  if (!statusEl) return;
+  if (statusEl.value === 'completed') {
+    var actEl = row.querySelector('.ps-mile-actual');
+    if (actEl && !actEl.value) {
+      actEl.value = new Date().toISOString().slice(0,10);
+    }
+  }
+}
+
+// Final PS Value change → refresh toolbar (enables Add), refresh %
+// columns, refresh total indicator. Does NOT auto-rebalance.
+function _psOnFinalValueChange() {
+  _psRefreshMilestoneToolbar();
+  _psRecalcMilestoneTotal();
+}
+
+// Collect every milestone row in the form into a payload the save flow
+// can act on. Preserves DB id when present so save can do diff-update.
+function _psCollectMilestoneRows() {
+  var wrap = document.getElementById('ps-milestones-wrap');
   if (!wrap) return [];
+  var rows = wrap.querySelectorAll('.ps-mile-row');
   var out = [];
-  wrap.querySelectorAll('.ps-subrow').forEach(function(row){
-    var year = row.querySelector('.ps-year-input').value;
-    var amt  = row.querySelector('.ps-amount-input').value;
-    var nt   = row.querySelector('.ps-notes-input').value;
-    if (!year || amt === '' || isNaN(amt)) return; // skip blank/incomplete rows
-    out.push({ year: parseInt(year,10), amount_usd: Number(amt), notes: nt || null });
+  rows.forEach(function(row, i){
+    var title = (row.querySelector('.ps-mile-title').value||'').trim();
+    var amt   = row.querySelector('.ps-mile-amount').value;
+    var pay   = row.querySelector('.ps-mile-pay').value;
+    var st    = row.querySelector('.ps-mile-status').value || 'not_started';
+    var exp   = row.querySelector('.ps-mile-expected').value || null;
+    var act   = row.querySelector('.ps-mile-actual').value || null;
+    var notes = (row.querySelector('.ps-mile-notes').value||'').trim();
+    var dbId  = row.dataset.dbId ? parseInt(row.dataset.dbId, 10) : null;
+    out.push({
+      dbId:                 dbId,
+      sequence_order:       i + 1,
+      title:                title,
+      amount_usd:           (amt === '' || isNaN(amt)) ? null : Number(amt),
+      payment_received_usd: (pay === '' || isNaN(pay)) ? 0    : Number(pay),
+      status:               st,
+      expected_completion_date: exp,
+      actual_completion_date:   act,
+      notes:                notes || null
+    });
   });
   return out;
 }
@@ -489,12 +815,23 @@ async function savePsDeal() {
     return;
   }
 
-  var milestones = _psCollectSubrows('ps-milestones-wrap');
-  var payments   = _psCollectSubrows('ps-payments-wrap');
-  // UNIQUE(deal_id, year) — catch duplicate years in the UI so the user
-  // sees a friendly message instead of a Postgres constraint error.
-  if (_psHasDupYear(milestones)) { _psShowModalError('Two milestone rows share the same year — please consolidate.'); return; }
-  if (_psHasDupYear(payments))   { _psShowModalError('Two payment rows share the same year — please consolidate.'); return; }
+  var milestones = _psCollectMilestoneRows();
+  // Hard validation per spec Part 5
+  for (var i = 0; i < milestones.length; i++) {
+    var m = milestones[i];
+    if (!m.title) {
+      _psShowModalError('Milestone #'+(i+1)+' is missing a title.');
+      return;
+    }
+    if (m.amount_usd !== null && m.amount_usd < 0) {
+      _psShowModalError('Milestone #'+(i+1)+' has a negative amount.');
+      return;
+    }
+    if (m.payment_received_usd < 0) {
+      _psShowModalError('Milestone #'+(i+1)+' has a negative payment amount.');
+      return;
+    }
+  }
 
   var btn = document.getElementById('ps-save-btn');
   var orig = btn ? btn.innerHTML : '';
@@ -531,23 +868,58 @@ async function savePsDeal() {
     dealId = ins.data.id;
   }
 
-  // Wipe-and-replace strategy for children. Cleaner than diff logic for the
-  // tiny row counts here (≤10 milestones, ≤10 payments per deal). UNIQUE
-  // constraint protects against duplicates.
-  var delM = await sb.from('ps_milestones').delete().eq('deal_id', dealId);
-  var delP = await sb.from('ps_payments').delete().eq('deal_id', dealId);
-  if (delM.error) { _psResetSaveBtn(btn, orig); _psShowModalError('Milestone wipe failed: '+delM.error.message); return; }
-  if (delP.error) { _psResetSaveBtn(btn, orig); _psShowModalError('Payment wipe failed: '+delP.error.message); return; }
+  // Id-preserving diff-update for milestones:
+  //   - Rows with dbId → UPDATE that row in place (keeps timestamps + id).
+  //   - Rows without dbId → INSERT new.
+  //   - DB rows linked to this deal NOT in the form → DELETE (user
+  //     removed them). Compare by id; we already loaded the existing
+  //     set in PS_MILESTONES.
+  var existingIds = (PS_MILESTONES||[])
+    .filter(function(m){ return m.deal_id === dealId; })
+    .map(function(m){ return m.id; });
+  var keepIds = milestones.filter(function(m){ return m.dbId; }).map(function(m){ return m.dbId; });
+  var toDelete = existingIds.filter(function(id){ return keepIds.indexOf(id) === -1; });
 
-  if (milestones.length) {
-    var msRows = milestones.map(function(m){ return { deal_id: dealId, year: m.year, amount_usd: m.amount_usd, notes: m.notes }; });
-    var insM = await sb.from('ps_milestones').insert(msRows);
-    if (insM.error) { _psResetSaveBtn(btn, orig); _psShowModalError('Milestones save failed: '+insM.error.message); return; }
+  // Updates first (so a unique-style constraint on sequence_order in
+  // the future wouldn't trip on overlapping numbers). Then deletes.
+  // Then inserts. Each step short-circuits on error.
+  for (var ui = 0; ui < milestones.length; ui++) {
+    var mi = milestones[ui];
+    if (!mi.dbId) continue;
+    var patch = {
+      sequence_order:           mi.sequence_order,
+      title:                    mi.title,
+      amount_usd:               mi.amount_usd,
+      payment_received_usd:     mi.payment_received_usd,
+      status:                   mi.status,
+      expected_completion_date: mi.expected_completion_date,
+      actual_completion_date:   mi.actual_completion_date,
+      notes:                    mi.notes,
+      updated_at:               new Date().toISOString()
+    };
+    var u = await sb.from('ps_milestones').update(patch).eq('id', mi.dbId);
+    if (u.error) { _psResetSaveBtn(btn, orig); _psShowModalError('Milestone update failed: '+u.error.message); return; }
   }
-  if (payments.length) {
-    var pyRows = payments.map(function(p){ return { deal_id: dealId, year: p.year, amount_usd: p.amount_usd, notes: p.notes }; });
-    var insP = await sb.from('ps_payments').insert(pyRows);
-    if (insP.error) { _psResetSaveBtn(btn, orig); _psShowModalError('Payments save failed: '+insP.error.message); return; }
+  if (toDelete.length) {
+    var d = await sb.from('ps_milestones').delete().in('id', toDelete);
+    if (d.error) { _psResetSaveBtn(btn, orig); _psShowModalError('Milestone cleanup failed: '+d.error.message); return; }
+  }
+  var inserts = milestones.filter(function(m){ return !m.dbId; }).map(function(m){
+    return {
+      deal_id:                  dealId,
+      sequence_order:           m.sequence_order,
+      title:                    m.title,
+      amount_usd:               m.amount_usd,
+      payment_received_usd:     m.payment_received_usd,
+      status:                   m.status,
+      expected_completion_date: m.expected_completion_date,
+      actual_completion_date:   m.actual_completion_date,
+      notes:                    m.notes
+    };
+  });
+  if (inserts.length) {
+    var ins2 = await sb.from('ps_milestones').insert(inserts);
+    if (ins2.error) { _psResetSaveBtn(btn, orig); _psShowModalError('Milestone insert failed: '+ins2.error.message); return; }
   }
 
   _psResetSaveBtn(btn, orig);
@@ -563,15 +935,6 @@ function _psResetSaveBtn(btn, orig) {
   if (typeof renderIcons === 'function') renderIcons();
 }
 
-function _psHasDupYear(rows) {
-  var seen = {};
-  for (var i = 0; i < rows.length; i++) {
-    if (seen[rows[i].year]) return true;
-    seen[rows[i].year] = 1;
-  }
-  return false;
-}
-
 // ── DELETE ────────────────────────────────────────────────────────
 async function deletePsDealFromModal() {
   if (!_psEditingId) return;
@@ -579,7 +942,7 @@ async function deletePsDealFromModal() {
   if (!d) return;
   if (!await confirmAction({
     title: 'Delete deal "'+(d.client_name||'')+'"?',
-    body: 'This removes the deal and all linked milestones + payments.\n\nThis cannot be undone.',
+    body: 'This removes the deal and all linked milestones.\n\nThis cannot be undone.',
     requireTyping: d.client_name,
     confirmText: 'Delete deal'
   })) return;
@@ -600,10 +963,15 @@ function renderLinkedPsDealsForEngagement(engagementId) {
   var linked = (PS_DEALS||[]).filter(function(d){ return d.linked_engagement_id === engagementId; });
   if (!linked.length) return '';
   var rows = linked.map(function(d){
+    var p = _psDealProgress(d.id);
+    var msSuffix = p.total
+      ? '<span class="ps-linked-progress dim">'+p.done+' / '+p.total+' milestones done</span>'
+      : '';
     return '<div class="ps-linked-row" onclick="event.stopPropagation();openPsDealModal('+d.id+')">'+
       '<span class="ps-linked-client">'+esc2(d.client_name||'—')+'</span>'+
       '<span class="ps-linked-val num">'+fmtUsd(d.final_ps_value_usd, false)+'</span>'+
       _psStatusBadge(d.status)+
+      msSuffix+
     '</div>';
   }).join('');
   return '<div class="ps-linked-block">'+
@@ -620,33 +988,42 @@ function downloadPsDealsCsv() {
     'S.No','Client','Partner','Region','Mode','Supplier',
     'Quoted Year','Quoted Month','Awarded Year','Man Days',
     'PS Tech USD','PS Sales USD','Final USD',
-    'Status','Milestones','Payments','Linked Engagement','Consulted','Remarks'
+    'Status','Milestones Done','Total Milestones','Paid USD','Milestones',
+    'Linked Engagement','Consulted','Remarks'
   ];
   function esc(v) {
     if (v === null || v === undefined) return '';
     var s = String(v).replace(/"/g, '""');
     return '"' + s + '"';
   }
-  function summarise(dealId, src) {
-    var arr = src.filter(function(r){ return r.deal_id === dealId; })
-                 .sort(function(a,b){ return a.year - b.year; });
-    return arr.map(function(r){ return r.year + ':' + r.amount_usd; }).join(',');
+  // Per-deal milestone breakdown, formatted as
+  //   "Phase 1: $2K Completed | Phase 2: $2K Active | ..."
+  // pipe-separated so it survives the comma-split inside one CSV cell.
+  function milestoneSummary(dealId) {
+    var arr = (PS_MILESTONES||[])
+      .filter(function(r){ return r.deal_id === dealId; })
+      .sort(function(a,b){ return (a.sequence_order||0) - (b.sequence_order||0); });
+    return arr.map(function(m){
+      var meta = PS_MS_STATUS_META[m.status] || { label: m.status || '' };
+      return (m.title||'') + ': ' + fmtUsd(m.amount_usd, false) + ' ' + meta.label;
+    }).join(' | ');
   }
   var lines = [ header.map(esc).join(',') ];
   rows.forEach(function(d, i){
     var eng = (ENGAGEMENTS||[]).find(function(e){ return e.id === d.linked_engagement_id; });
+    var p = _psDealProgress(d.id);
     lines.push([
       i+1, d.client_name, d.partner, d.region, d.mode, d.supplier,
       d.quoted_year, d.quoted_month, d.awarded_year, d.man_days,
       d.ps_quoted_tech_usd, d.ps_quoted_sales_usd, d.final_ps_value_usd,
       d.status,
-      summarise(d.id, PS_MILESTONES),
-      summarise(d.id, PS_PAYMENTS),
+      p.done, p.total, p.paid,
+      milestoneSummary(d.id),
       eng ? eng.name : '',
       d.consulted_with_tech, d.remarks
     ].map(esc).join(','));
   });
-  if (rows.length === 0) lines.push(esc('No data') + ',,,,,,,,,,,,,,,,,,'); // header + 1 row so the file isn't empty
+  if (rows.length === 0) lines.push(esc('No data') + ',,,,,,,,,,,,,,,,,,,,'); // header + 1 row so the file isn't empty
   var blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8' });
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');

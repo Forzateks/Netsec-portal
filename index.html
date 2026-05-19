@@ -1396,7 +1396,7 @@
       <div class="form-group full">
         <label>Final PS Value (USD) <span class="dim" style="font-weight:400">— required once awarded</span></label>
         <div class="ps-usd-row">
-          <input type="number" id="ps-final-usd" min="0" step="0.01" oninput="_psUpdateAed('ps-final-usd','ps-final-aed')">
+          <input type="number" id="ps-final-usd" min="0" step="0.01" oninput="_psUpdateAed('ps-final-usd','ps-final-aed');_psOnFinalValueChange()">
           <span class="ps-aed-display" id="ps-final-aed">≈ —</span>
         </div>
       </div>
@@ -1425,13 +1425,13 @@
       </div>
     </div>
 
-    <div class="ps-section-title">Milestones Completed <span class="dim" style="font-weight:400;font-size:11px">(per year)</span></div>
-    <div id="ps-milestones-wrap"></div>
-    <button type="button" class="btn btn-sm btn-ghost" onclick="_psAddMilestoneRow()" style="margin-top:6px"><i data-lucide="plus" class="btn-icon"></i>Add milestone year</button>
-
-    <div class="ps-section-title" style="margin-top:18px">Payments Received <span class="dim" style="font-weight:400;font-size:11px">(per year)</span></div>
-    <div id="ps-payments-wrap"></div>
-    <button type="button" class="btn btn-sm btn-ghost" onclick="_psAddPaymentRow()" style="margin-top:6px"><i data-lucide="plus" class="btn-icon"></i>Add payment year</button>
+    <div class="ps-section-title">Milestones <span class="dim" style="font-weight:400;font-size:11px">(discrete project phases — delivery + payment in one row)</span></div>
+    <div class="ps-mile-toolbar">
+      <button type="button" id="ps-add-milestone-btn" class="btn btn-sm btn-primary" onclick="_psAddMilestoneRow()" disabled title="Enter Final PS Value first"><i data-lucide="plus" class="btn-icon"></i>Add milestone</button>
+      <button type="button" id="ps-rebalance-btn" class="btn btn-sm btn-ghost" onclick="_psRebalanceMilestones()" disabled title="Split Final PS Value evenly across all milestones"><i data-lucide="scale" class="btn-icon"></i>Re-balance evenly</button>
+      <div id="ps-mile-total" class="ps-mile-total">No milestones yet</div>
+    </div>
+    <div id="ps-milestones-wrap" class="ps-mile-table"></div>
 
     <div class="modal-actions" style="margin-top:18px">
       <button class="btn btn-ghost" onclick="closePsDealModal()">Cancel</button>

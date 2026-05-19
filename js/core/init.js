@@ -9,7 +9,7 @@
 // SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
 // HTTP-cached copy of /sw.js can't be served when this file ships. The
 // version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=63';
+var SW_REGISTRATION_URL = '/sw.js?v=64';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;

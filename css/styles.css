@@ -1867,16 +1867,78 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ps-usd-row input{flex:1;min-width:0}
 .ps-aed-display{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);white-space:nowrap;min-width:160px}
 
-/* Repeating sub-rows for milestones + payments */
-.ps-subrow{display:grid;grid-template-columns:90px 1fr 1fr 32px;gap:8px;margin-bottom:6px;align-items:center}
-.ps-subrow .ps-year-input,.ps-subrow .ps-amount-input,.ps-subrow .ps-notes-input{padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box}
-.ps-subrow .ps-usd-row{gap:6px}
-.ps-subrow .ps-aed-display{font-size:11px;min-width:100px}
-@media(max-width:640px){
-  .ps-subrow{grid-template-columns:80px 1fr 32px;grid-template-rows:auto auto;gap:6px}
-  .ps-subrow .ps-notes-input{grid-column:1 / span 3}
-  .ps-subrow .ps-aed-display{min-width:80px}
+/* ── PS Milestones v64 — discrete-phase row ─────────────────────── */
+/* Toolbar above the table: Add + Re-balance + running total. */
+.ps-mile-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.ps-mile-total{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500;padding:6px 10px;border-radius:6px;background:#F8FAFC}
+.ps-mile-total.ps-mile-total-ok{color:#166534;background:#DCFCE7}
+.ps-mile-total.ps-mile-total-warn{color:#92400E;background:#FEF3C7}
+
+/* Wrapper that holds the milestone rows. The header pseudo-cells are
+   implicit — each row carries its own labels via input placeholders, no
+   sticky header (modal is narrow). */
+.ps-mile-table{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.ps-mile-row{
+  display:grid;
+  grid-template-columns:
+    24px           /* # */
+    minmax(140px,1.4fr)  /* title */
+    minmax(120px,1.1fr)  /* amount + AED + % */
+    minmax(120px,1.1fr)  /* payment + AED */
+    minmax(130px,.9fr)   /* status */
+    minmax(120px,.8fr)   /* expected date */
+    minmax(120px,.8fr)   /* actual date */
+    minmax(120px,1fr)    /* notes */
+    32px;          /* remove */
+  gap:6px;
+  align-items:center;
+  padding:6px 4px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#fff;
 }
+.ps-mile-row-overpaid{border-color:#FBBF24;background:#FFFBEB}
+.ps-mile-cell{min-width:0}
+.ps-mile-num{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);text-align:right;padding-right:4px}
+.ps-mile-row input,.ps-mile-row select{padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;width:100%;box-sizing:border-box;background:#fff}
+.ps-mile-aed{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-mile-pct{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--teal);margin-top:1px;font-weight:600}
+
+/* Mobile: stack each milestone vertically. Two-column grid for inputs
+   so the form stays scannable on narrow screens. */
+@media(max-width:720px){
+  .ps-mile-row{
+    grid-template-columns:24px 1fr 32px;
+    grid-template-rows:auto;
+    gap:6px 8px;
+  }
+  .ps-mile-cell-title{grid-column:1 / span 3}
+  .ps-mile-cell-amount{grid-column:1 / span 1;grid-column:1 / -1}
+  .ps-mile-cell-pay,.ps-mile-cell-status,.ps-mile-cell-date,.ps-mile-cell-notes{grid-column:1 / -1}
+  .ps-mile-num{text-align:left;padding-right:0;padding-left:2px}
+  .ps-mile-cell-amount,.ps-mile-cell-pay,.ps-mile-cell-status,.ps-mile-cell-date,.ps-mile-cell-notes{
+    display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:center;
+  }
+  /* Pseudo-label for each stacked input — readable form when there's
+     no table header on mobile. */
+  .ps-mile-cell-amount::before{content:'Amount';font-size:11px;color:var(--muted);font-weight:600}
+  .ps-mile-cell-pay::before{content:'Paid';font-size:11px;color:var(--muted);font-weight:600}
+  .ps-mile-cell-status::before{content:'Status';font-size:11px;color:var(--muted);font-weight:600}
+  .ps-mile-cell-notes::before{content:'Notes';font-size:11px;color:var(--muted);font-weight:600}
+}
+
+/* Per-milestone status pills — distinct from deal status (.ps-st-*). */
+.ps-msst-notstarted{ background:#F3F4F6; color:#4B5563 }
+.ps-msst-active    { background:#DBEAFE; color:#1E40AF }
+.ps-msst-signoff   { background:#FEF3C7; color:#92400E }
+.ps-msst-payment   { background:#FED7AA; color:#9A3412 }
+.ps-msst-done      { background:#DCFCE7; color:#166534 }
+
+/* Progress cell in the deal list view. */
+.ps-table .ps-progress{font-size:11px;line-height:1.4}
+
+/* "X / Y milestones done" suffix in the engagement tracker linked-PS row */
+.ps-linked-progress{font-size:11px;margin-left:auto}
 
 /* Tracker detail integration — shows below the field grid + remarks
    when the engagement has at least one linked PS deal. Manager-only. */
