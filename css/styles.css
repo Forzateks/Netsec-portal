@@ -1911,7 +1911,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ps-eng-link{color:var(--teal);font-weight:500}
 
 /* Modal sizing — the form has 5 sections so it needs the room. */
-.ps-modal{max-width:720px}
+/* Wider than other modals to fit the 10-column milestone row without
+   clipping. min() backstop caps at 90vw so the modal never overflows
+   the viewport even at unusual browser-zoom or narrow desktop sizes. */
+.ps-modal{max-width:min(1180px,90vw)}
 .ps-section-title{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 .ps-section-title .dim{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
 
@@ -1932,6 +1935,44 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Wrapper that holds the milestone rows. The header pseudo-cells are
    implicit — each row carries its own labels via input placeholders, no
    sticky header (modal is narrow). */
+/* Sticky column header above the milestone rows. Same grid template
+   as .ps-mile-row so labels align with the inputs below. Stays glued
+   to the top of the (scrolling) modal so the user can scroll through
+   many rows without losing the column legend. Hidden on mobile —
+   each card carries its own field labels via pseudo-elements. */
+.ps-mile-header{
+  display:grid;
+  grid-template-columns:
+    24px
+    minmax(140px,1.4fr)
+    78px
+    minmax(110px,1.0fr)
+    minmax(120px,1.0fr)
+    minmax(130px,.9fr)
+    minmax(120px,.8fr)
+    minmax(120px,.8fr)
+    minmax(120px,1fr)
+    32px;
+  gap:6px;
+  align-items:end;
+  padding:8px 4px 6px;
+  margin-bottom:4px;
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.3px;
+  text-transform:uppercase;
+  color:var(--muted);
+  background:#fff;
+  border-bottom:1px solid var(--border);
+  position:sticky;
+  top:0;
+  z-index:5;
+}
+.ps-mile-header > div{padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:720px){
+  .ps-mile-header{display:none !important}
+}
+
 .ps-mile-table{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
 .ps-mile-row{
   display:grid;

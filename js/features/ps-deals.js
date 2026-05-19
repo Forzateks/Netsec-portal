@@ -410,6 +410,7 @@ function _psRebuildSubrows(deal) {
   _psMilestonesUserEdited = false;
   if (!deal) {
     _psRefreshMilestoneToolbar();
+    _psRefreshMilestoneHeader();
     return;
   }
   var ms = PS_MILESTONES.filter(function(r){ return r.deal_id === deal.id; })
@@ -431,6 +432,7 @@ function _psRebuildSubrows(deal) {
   // overwrite them on the first "+ Add milestone" click.
   if (ms.length) _psMilestonesUserEdited = true;
   _psRefreshMilestoneToolbar();
+  _psRefreshMilestoneHeader();
   _psRecalcMilestoneTotal();
 }
 
@@ -545,6 +547,18 @@ function _psRefreshAllAmountDisplays() {
   wrap.querySelectorAll('.ps-mile-row').forEach(_psRefreshRowAmountDisplay);
 }
 
+// Toggle the milestone column-header row based on whether any
+// milestones exist. Header is sticky so it stays visible while the
+// modal scrolls; hidden on mobile because the stacked card layout
+// already labels each field inline.
+function _psRefreshMilestoneHeader() {
+  var hdr  = document.getElementById('ps-milestones-header');
+  var wrap = document.getElementById('ps-milestones-wrap');
+  if (!hdr || !wrap) return;
+  var hasRows = wrap.querySelectorAll('.ps-mile-row').length > 0;
+  hdr.style.display = hasRows ? '' : 'none';
+}
+
 // "+ Add milestone" handler. Percentage is now the primary input.
 // If the user hasn't manually edited any percentage yet, spread 100%
 // evenly across all rows including the new one. Otherwise add a blank
@@ -573,6 +587,7 @@ function _psAddMilestoneRow() {
     _psAppendMilestoneRow({ percentage: 0 });
   }
   _psRefreshMilestoneToolbar();
+  _psRefreshMilestoneHeader();
   _psRecalcMilestoneTotal();
 }
 
@@ -642,6 +657,7 @@ function _psRemoveMilestoneRow(rowId) {
       el.parentNode.removeChild(el);
       _psRenumberMilestones();
       _psRefreshMilestoneToolbar();
+      _psRefreshMilestoneHeader();
       _psRecalcMilestoneTotal();
     });
     return;
@@ -649,6 +665,7 @@ function _psRemoveMilestoneRow(rowId) {
   el.parentNode.removeChild(el);
   _psRenumberMilestones();
   _psRefreshMilestoneToolbar();
+  _psRefreshMilestoneHeader();
   _psRecalcMilestoneTotal();
 }
 
