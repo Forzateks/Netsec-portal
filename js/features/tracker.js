@@ -222,7 +222,10 @@ function _trkFilteredRows() {
     if (startFrom && (r.start_date == null || r.start_date < startFrom)) return false;
     if (startTo   && (r.start_date == null || r.start_date > startTo))   return false;
     if (search) {
-      var hay = [r.name, r.customer_name, r.partner, r.country, r.owner_employee, r.tracker_remarks, r.category, r.project_order_no]
+      // tracker_status carries the workflow phase (Migration, HLD
+      // Discussion, etc.) — including it here means typing "Migration"
+      // or "HLD" surfaces every engagement at that phase.
+      var hay = [r.name, r.customer_name, r.partner, r.country, r.owner_employee, r.tracker_remarks, r.category, r.project_order_no, r.tracker_status]
         .map(function(x){return (x||'').toLowerCase();}).join(' ');
       if (hay.indexOf(search) === -1) return false;
     }
@@ -302,11 +305,23 @@ function _trkTopStatusKey(raw) {
   if (v === 'archived')                    return 'dormant';  // retired in v22
   return v; // unknown — let the renderer fall back to muted
 }
-function trkTopStatusBadge(raw) {
+// Render the top-level status pill. When the engagement is Active and
+// a workflow phase (tracker_status) is set, append "· <phase>" inside
+// the same pill so the manager can see the workflow stage at scan
+// level. Other statuses ignore the phase suffix — phase only matters
+// when the engagement is in motion.
+function trkTopStatusBadge(raw, phase) {
   var key = _trkTopStatusKey(raw);
   var def = TRK_TOP_STATUS_MAP[key];
   if (!def) return '<span class="badge" style="background:#F3F4F6;color:#6B7280">'+esc2(raw||'—')+'</span>';
-  return '<span class="badge '+def.cls+'"><i data-lucide="'+def.icon+'" class="trk-st-icon"></i> '+def.label+'</span>';
+  var phaseLbl = (phase && String(phase).trim()) ? String(phase).trim() : '';
+  // Drop the literal placeholder some forms send instead of NULL.
+  if (phaseLbl === '— None —' || phaseLbl === '-- None --' || phaseLbl === 'None') phaseLbl = '';
+  var phaseSuffix = '';
+  if (key === 'active' && phaseLbl) {
+    phaseSuffix = '<span class="trk-st-phase" title="Phase: '+esc2(phaseLbl)+'"> · '+esc2(phaseLbl)+'</span>';
+  }
+  return '<span class="badge '+def.cls+'"><i data-lucide="'+def.icon+'" class="trk-st-icon"></i> '+def.label+phaseSuffix+'</span>';
 }
 
 // Conversion badge — only rendered for closed POCs. Green "Converted" when
@@ -606,7 +621,7 @@ function _trkRenderTable(rows, TYPE_DEF) {
         (r.country?'<div class="trk-cell-sub">'+esc2(r.country)+'</div>':'')+
       '</td>'+
       '<td class="hide-mobile">'+esc2(r.owner_employee||'—')+'</td>'+
-      '<td>'+trkTopStatusBadge(r.status)+trkConvertedBadge(r)+'</td>'+
+      '<td>'+trkTopStatusBadge(r.status, r.tracker_status)+trkConvertedBadge(r)+'</td>'+
       '<td class="hide-mobile dim num" style="font-size:12px"'+(r.tracker_updated_at?' title="'+relativeTimeTitle(r.tracker_updated_at)+'"':'')+'>'+(r.tracker_updated_at?relativeTime(r.tracker_updated_at):'—')+'</td>'+
       '<td><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openTrackerDetail('+r.id+')"><i data-lucide="eye" class="btn-icon"></i><span class="hide-mobile">View</span></button></td>'+
     '</tr>';
@@ -636,7 +651,7 @@ function _trkRenderCards(rows, TYPE_DEF) {
       (r.vendor?'<div class="trk-card-meta">'+esc2(r.vendor)+(r.product_line?' · '+esc2(r.product_line):'')+'</div>':'')+
       (r.owner_employee?'<div class="trk-card-meta">Owner: '+esc2(r.owner_employee)+'</div>':'')+
       '<div class="trk-card-foot">'+
-        trkTopStatusBadge(r.status)+trkConvertedBadge(r)+
+        trkTopStatusBadge(r.status, r.tracker_status)+trkConvertedBadge(r)+
         '<span class="trk-card-date num"'+updatedTitle+'>'+updated+'</span>'+
       '</div>'+
       (remarksFull?'<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+esc2(remarksFull)+'</div>':'')+
@@ -669,7 +684,7 @@ function openTrackerDetail(id) {
   var r = _trkData.find(function(x){return x.id===id;});
   if (!r) return;
 
-  document.getElementById('trk-detail-type').innerHTML = trkTypeBadge(r.type) + ' ' + trkTopStatusBadge(r.status) + trkConvertedBadge(r);
+  document.getElementById('trk-detail-type').innerHTML = trkTypeBadge(r.type) + ' ' + trkTopStatusBadge(r.status, r.tracker_status) + trkConvertedBadge(r);
   document.getElementById('trk-detail-name').textContent = r.name || '';
   document.getElementById('trk-detail-customer').textContent = (r.customer_name||'—') +
     (r.country?(' · '+r.country):'') +

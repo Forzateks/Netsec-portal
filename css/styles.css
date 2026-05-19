@@ -1449,6 +1449,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Status-badge inner icon (Lucide SVG). Inherits text colour via
    stroke="currentColor" so each status renders in its own accent shade. */
 .trk-st-icon{width:13px;height:13px;stroke-width:2;flex-shrink:0;vertical-align:-2px}
+
+/* Phase suffix inside the status pill — shown only for Active rows
+   when tracker_status (workflow phase) is set. Slightly smaller and
+   lighter so the status itself stays the primary signal. Truncates
+   with ellipsis on tight columns; full text in the title tooltip. */
+.trk-st-phase{font-weight:500;opacity:.85;font-size:10.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:-1px}
 /* Active-status badge gets a filled dot rather than an outlined glyph so
    the "green dot" reads at a glance. */
 .trk-st-active .trk-st-icon{fill:#166534;color:#166534}
