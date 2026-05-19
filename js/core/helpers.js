@@ -768,3 +768,29 @@ async function downloadBackup(btnEl) {
   }
 }
 
+// ── ARCHIVED ITEM READ-ONLY MODAL HELPERS (v72) ───────────────────
+// Soft-deleted (archived) AMC contracts, engagements, and PS deals
+// shouldn't be edited via their normal modals. When openXxx is called
+// on an archived row (rare — happens via direct URL, stale tab, or a
+// cross-link from somewhere outside the Archived view), these helpers
+// inject a banner and toggle .modal-readonly so inputs sink to
+// pointer-events:none + dimmed. Save buttons hide.
+function setModalArchivedBanner(modalEl, itemLabel) {
+  if (!modalEl) return;
+  var existing = modalEl.querySelector('.modal-archived-banner');
+  if (existing) existing.remove();
+  modalEl.classList.toggle('modal-readonly', !!itemLabel);
+  // Hide every primary save button inside the modal-actions row.
+  var actions = modalEl.querySelectorAll('.modal-actions .btn-primary');
+  actions.forEach(function(b){ b.style.display = itemLabel ? 'none' : ''; });
+  if (!itemLabel) return;
+  var banner = document.createElement('div');
+  banner.className = 'modal-archived-banner';
+  banner.innerHTML = '⚠️ This ' + esc2(itemLabel) + ' is archived. Restore it from the Archived view to edit.';
+  // Insert right after the modal-title so it sits at the top of the
+  // visible content area below the gradient header.
+  var title = modalEl.querySelector('.modal-title');
+  if (title) title.insertAdjacentElement('afterend', banner);
+  else modalEl.insertBefore(banner, modalEl.firstChild);
+}
+

@@ -528,9 +528,14 @@ function renderCustomersTable() {
     return;
   }
 
-  // Engagement counts per customer (shown in the table + used by sort + delete-guard).
+  // Engagement counts per customer (shown in the table + used by sort
+  // + delete-guard). Archived engagements are excluded so the count
+  // reflects what's actually visible in Manage Engagements.
   var counts = {};
-  (ENGAGEMENTS||[]).forEach(function(e){ counts[e.customer_id] = (counts[e.customer_id]||0) + 1; });
+  (ENGAGEMENTS||[]).forEach(function(e){
+    if (e.is_archived) return;
+    counts[e.customer_id] = (counts[e.customer_id]||0) + 1;
+  });
 
   // Filter
   var filtered = search
@@ -668,6 +673,10 @@ async function deleteCustomer(id, name) {
   // The old chip-wall flow cascade-deleted everything; the new Manage Customers
   // table is intentionally stricter — managers must reassign or remove the
   // child engagements first. This keeps accidental data loss off the table.
+  // Include archived engagements in the reference check — even an
+  // archived engagement should keep its customer around (the customer
+  // name is snapshotted on sessions, but the FK to customers still
+  // exists on the engagement row).
   var custEngagements = (ENGAGEMENTS||[]).filter(function(e){ return e.customer_id === id; });
   if (custEngagements.length) {
     await confirmAction({
@@ -702,6 +711,9 @@ async function deleteCustomer(id, name) {
 }
 
 // ── RENDER MANAGE ENGAGEMENTS LIST ───────────────────────────────
+var _pjShowArchived = false;     // false = active engagements, true = Archived view
+function _pjToggleArchivedView() { _pjShowArchived = !_pjShowArchived; renderManageProjects(); }
+
 async function renderManageProjects() {
   document.getElementById('pj-manage-loading').style.display = 'flex';
   document.getElementById('pj-manage-content').innerHTML = '';
@@ -709,6 +721,18 @@ async function renderManageProjects() {
   const typeFilter   = (document.getElementById('pj-manage-type-filter')||{}).value || '';
   const searchRaw    = ((document.getElementById('pj-manage-search')||{}).value || '').trim().toLowerCase();
   const custParam    = _pjGetUrlParam('customer');
+
+  // Refresh the Archived toggle button — count + label reflect current view.
+  var archivedCount = (ENGAGEMENTS||[]).filter(function(e){return !!e.is_archived;}).length;
+  var togBtn = document.getElementById('pj-archived-toggle');
+  if (togBtn) {
+    togBtn.style.display = (archivedCount === 0 && !_pjShowArchived) ? 'none' : '';
+    togBtn.classList.toggle('archived-toggle-on', _pjShowArchived);
+    togBtn.innerHTML = _pjShowArchived
+      ? '<i data-lucide="arrow-left" class="btn-icon"></i>Back to Active'
+      : '<i data-lucide="archive" class="btn-icon"></i>Archived ('+archivedCount+')';
+    if (typeof renderIcons === 'function') renderIcons();
+  }
 
   // Filter banner reflects the URL state — keeps deep links and back/
   // forward in sync with the visible UI.
@@ -725,7 +749,10 @@ async function renderManageProjects() {
     if (typeof renderIcons === 'function') renderIcons();
   }
 
-  let q = sb.from('engagements').select('*').order('type').order('name');
+  // Archived view splits the list — archived rows are only visible
+  // when the manager explicitly opens the Archived view. Every other
+  // filter still applies within the chosen side.
+  let q = sb.from('engagements').select('*').eq('is_archived', _pjShowArchived).order('type').order('name');
   if (statusFilter) q = q.eq('status', statusFilter);
   if (typeFilter)   q = q.eq('type',   typeFilter);
   const {data} = await q;
@@ -799,16 +826,19 @@ async function renderManageProjects() {
       var custCell = (custName && custName !== '-')
         ? '<button type="button" class="pj-cust-link" onclick="navigateToManageCustomersHighlight(\''+safeCust+'\')" title="View this customer">'+esc2(custName)+'</button>'
         : '<span class="dim">—</span>';
+      var safeNameEsc = (p.name||'').replace(/'/g,"\\'");
+      var actions = _pjShowArchived
+        ? '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="restoreEngagement('+p.id+')" title="Restore" style="margin-right:4px"><i data-lucide="rotate-ccw"></i></button>'+
+          (isManager ? '<button class="btn btn-sm btn-danger btn-icon-only" onclick="permanentlyDeleteEngagement('+p.id+',\''+safeNameEsc+'\')" title="Permanently Delete (cannot be undone)"><i data-lucide="trash-2"></i></button>' : '')
+        : '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openEditProject('+p.id+')" title="Edit" style="margin-right:4px"><i data-lucide="pencil"></i></button>'+
+          '<button class="btn btn-sm btn-danger btn-icon-only" onclick="archiveEngagement('+p.id+',\''+safeNameEsc+'\')" title="Archive"><i data-lucide="trash-2"></i></button>';
       return '<tr>'+
         '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
         '<td>'+custCell+'</td>'+
         '<td><span style="background:'+tb.bg+';color:'+tb.color+';padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">'+tb.label+'</span></td>'+
         '<td><strong>'+p.name+'</strong></td>'+
         '<td><span class="pj-status-badge" style="background:'+sc.bg+';color:'+sc.color+'"><i data-lucide="'+sc.icon+'"></i>'+sc.label+'</span></td>'+
-        '<td style="white-space:nowrap">'+
-          '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openEditProject('+p.id+')" title="Edit" style="margin-right:4px"><i data-lucide="pencil"></i></button>'+
-          '<button class="btn btn-sm btn-danger btn-icon-only" onclick="deleteProject('+p.id+',\''+ (p.name||'').replace(/'/g,"\\'") +'\')" title="Delete"><i data-lucide="trash-2"></i></button>'+
-        '</td>'+
+        '<td style="white-space:nowrap">'+actions+'</td>'+
         '</tr>';
     }).join('')+
     '</tbody></table></div>';
@@ -819,6 +849,13 @@ async function renderManageProjects() {
 async function openEditProject(id) {
   var {data, error} = await sb.from('engagements').select('*').eq('id', id).single();
   if (error || !data) { showError('Could not load engagement.'); return; }
+  // Defense-in-depth: if the engagement is archived, show the banner
+  // and disable the form. Archived rows shouldn't normally reach here
+  // (Archived view's action column shows Restore + Permanent Delete).
+  if (typeof setModalArchivedBanner === 'function') {
+    var modalBox = document.querySelector('#edit-project-modal .modal');
+    setModalArchivedBanner(modalBox, data.is_archived ? 'engagement' : null);
+  }
   document.getElementById('edit-project-id').value = data.id;
   document.getElementById('edit-project-name').value = data.name || '';
   document.getElementById('edit-project-status').value = data.status || 'active';
@@ -949,21 +986,68 @@ async function saveEditProject() {
   renderManageProjects();
 }
 
-async function deleteProject(id, name) {
+// Soft-delete: archive moves the engagement out of every active list
+// but leaves its sessions/links intact. Existing snapshot text on
+// session tables is unchanged; the engagement row remains for restore.
+async function archiveEngagement(id, name) {
   if (!await confirmAction({
-    title: 'Delete engagement "'+name+'"?',
-    body: 'This only removes it from the Projects registry. Existing OT/Project sessions that referenced it remain unchanged (they keep their snapshot text).\n\nThis cannot be undone.',
-    requireTyping: name,
-    confirmText: 'Delete engagement'
+    title: 'Archive engagement "'+name+'"?',
+    body:  'This will move the engagement to the Archived view. It will no longer appear in active lists, dropdowns, or the tracker, but can be restored later.\n\nSessions previously logged against it stay intact.',
+    confirmText: 'Archive'
   })) return;
-  var {error} = await sb.from('engagements').delete().eq('id', id);
-  if (error) { showError('Error: '+error.message); return; }
-  showToast('Engagement deleted ✓');
+  var {error} = await sb.from('engagements').update({
+    is_archived: true,
+    archived_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) { showError('Could not archive: '+error.message); return; }
+  showToast('Archived ✓');
   _projectsLoaded = false;
   await loadProjects();
   populateProjectDropdowns();
   renderManageProjects();
 }
+
+async function restoreEngagement(id) {
+  var e = (ENGAGEMENTS||[]).find(function(x){ return x.id === id; });
+  if (!e) return;
+  if (!await confirmAction({
+    title: 'Restore engagement "'+(e.name||'')+'"?',
+    body:  'It will return to the active engagements list.',
+    confirmText: 'Restore',
+    danger: false
+  })) return;
+  var {error} = await sb.from('engagements').update({
+    is_archived: false,
+    archived_at: null
+  }).eq('id', id);
+  if (error) { showError('Could not restore: '+error.message); return; }
+  showToast('Restored ✓');
+  _projectsLoaded = false;
+  await loadProjects();
+  populateProjectDropdowns();
+  renderManageProjects();
+}
+
+async function permanentlyDeleteEngagement(id, name) {
+  if (!isManager) { showError('Manager access only.'); return; }
+  if (!await confirmAction({
+    title: 'Permanently delete engagement "'+name+'"?',
+    body:  '⚠️ This cannot be undone. The engagement record will be permanently removed. Existing sessions keep their snapshot text but lose any future link.',
+    requireTyping: name,
+    confirmText: 'Permanently Delete'
+  })) return;
+  var {error} = await sb.from('engagements').delete().eq('id', id);
+  if (error) { showError('Could not delete: '+error.message); return; }
+  showToast('Permanently deleted ✓');
+  _projectsLoaded = false;
+  await loadProjects();
+  populateProjectDropdowns();
+  renderManageProjects();
+}
+
+// Back-compat shim — anything that still calls deleteProject (e.g. an
+// old onclick somewhere) lands on the new archive flow.
+async function deleteProject(id, name) { return archiveEngagement(id, name); }
 
 // ── POPULATE ALL PROJECT DROPDOWNS ───────────────────────────────
 function populateProjectDropdowns() {

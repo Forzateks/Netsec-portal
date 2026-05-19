@@ -64,7 +64,8 @@ async function loadTracker() {
   // Avoids relying on Supabase nested-select FK metadata.
   var engRes = await fetchAllRows(function(){
     return sb.from('engagements')
-      .select('id,customer_id,name,type,status,vendor,product_line,country,partner,category,project_order_no,start_date,end_date,tracker_status,orch_version,ec_version,license_expiry,signed_off_on,owner_employee,tracker_remarks,tracker_updated_at,updated_by,created_at,converted_to_project')
+      .select('id,customer_id,name,type,status,vendor,product_line,country,partner,category,project_order_no,start_date,end_date,tracker_status,orch_version,ec_version,license_expiry,signed_off_on,owner_employee,tracker_remarks,tracker_updated_at,updated_by,created_at,converted_to_project,is_archived')
+      .eq('is_archived', false)
       .order('tracker_updated_at',{ascending:false,nullsFirst:false});
   });
   var custRes = await fetchAllRows(function(){
@@ -846,6 +847,13 @@ function openTrackerEditModal(id) {
   var r = _trkData.find(function(x){return x.id===id;});
   if (!r) return;
   closeTrackerDetail();
+  // Defense-in-depth: _trkData already filters out archived rows at
+  // load time, but a stale tab or a direct URL could still land here.
+  // Show the banner and disable the form.
+  if (typeof setModalArchivedBanner === 'function') {
+    var modalBox = document.querySelector('#trk-edit-modal .modal');
+    setModalArchivedBanner(modalBox, r.is_archived ? 'engagement' : null);
+  }
   _trkPopulateOwnerOptions();
   _trkPopulateStatusOptions(r.type, r.tracker_status);
 
@@ -1065,19 +1073,23 @@ async function deleteTrackerEngagement() {
   if (!id) return;
   var r = _trkData.find(function(x){return x.id===id;});
   if (!r) return;
-  // Cascade-deletes any milestones via the FK.
+  // Soft-delete: archive. Milestones stay (no cascade until permanent
+  // delete from the Archived view). Sessions remain with their
+  // snapshot text untouched.
   if (!await confirmAction({
-    title: 'Delete engagement "'+r.name+'"?',
-    body: 'This will also delete its milestones (cascade). Any logged sessions referencing this engagement keep their snapshotted name and remain intact.\n\nThis cannot be undone.',
-    requireTyping: r.name,
-    confirmText: 'Delete engagement'
+    title: 'Archive engagement "'+r.name+'"?',
+    body:  'This will move the engagement to the Archived view. It will no longer appear in active lists, dropdowns, or the tracker, but can be restored later.\n\nLinked milestones and sessions stay intact.',
+    confirmText: 'Archive'
   })) return;
   var btn = document.getElementById('trk-edit-delete-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Deleting…'; }
-  var { error } = await sb.from('engagements').delete().eq('id', id);
-  if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="trash-2" class="btn-icon"></i>Delete Engagement'; if (typeof renderIcons === 'function') renderIcons(); }
-  if (error) { showError('Error deleting: '+error.message); return; }
-  showToast('Engagement deleted ✓');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Archiving…'; }
+  var { error } = await sb.from('engagements').update({
+    is_archived: true,
+    archived_at: new Date().toISOString()
+  }).eq('id', id);
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="archive" class="btn-icon"></i>Archive Engagement'; if (typeof renderIcons === 'function') renderIcons(); }
+  if (error) { showError('Could not archive: '+error.message); return; }
+  showToast('Archived ✓');
   // Invalidate the projects cache so the deleted engagement disappears from
   // session dropdowns / Manage Engagements / Engagement Summary everywhere.
   if (typeof _projectsLoaded !== 'undefined') {

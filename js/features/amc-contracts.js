@@ -12,7 +12,7 @@
 var AMC_CONTRACTS    = [];               // [{id, customer_id, ...}]
 var AMC_CONTRACT_LINKS = [];             // [{contract_id, engagement_id}]
 var _amcLastLoaded   = 0;
-var _amcStatusFilter = 'all';            // 'all' | 'active' | 'expiring' | 'expired'
+var _amcStatusFilter = 'all';            // 'all' | 'active' | 'expiring' | 'expired' | 'archived'
 var _amcEditingId    = null;             // null = add, number = edit
 
 // Region dropdown is hardcoded — small fixed list, not worth a table.
@@ -65,9 +65,17 @@ function _amcFilteredContracts() {
   var vendors = (typeof msGetValues === 'function') ? msGetValues('amc-filter-vendor') : [];
   var year    = ((document.getElementById('amc-filter-year')||{}).value)||'';
 
-  var rows = (AMC_CONTRACTS||[]).slice();
-  if (_amcStatusFilter !== 'all') {
-    rows = rows.filter(function(c){ return _amcStatusFor(c).key === _amcStatusFilter; });
+  // Archived view is its own filter — show archived rows, all other
+  // filters still apply within that set. Every other chip hides archived
+  // by default (the Archived chip is the only path to them).
+  var rows;
+  if (_amcStatusFilter === 'archived') {
+    rows = (AMC_CONTRACTS||[]).filter(function(c){ return !!c.is_archived; });
+  } else {
+    rows = (AMC_CONTRACTS||[]).filter(function(c){ return !c.is_archived; });
+    if (_amcStatusFilter !== 'all') {
+      rows = rows.filter(function(c){ return _amcStatusFor(c).key === _amcStatusFilter; });
+    }
   }
   if (search) {
     rows = rows.filter(function(c){
@@ -82,8 +90,13 @@ function _amcFilteredContracts() {
 }
 
 function _amcCountByStatus() {
-  var c = { all:0, active:0, expiring:0, expired:0 };
+  // Counts feed the chip badges. "All" + lifecycle counts (active /
+  // expiring / expired) include only non-archived rows so the active
+  // workflow numbers are honest. "archived" is the separate counter
+  // that drives the visibility of the Archived chip.
+  var c = { all:0, active:0, expiring:0, expired:0, archived:0 };
   (AMC_CONTRACTS||[]).forEach(function(row){
+    if (row.is_archived) { c.archived += 1; return; }
     c.all += 1;
     var k = _amcStatusFor(row).key;
     if (c[k] !== undefined) c[k] += 1;
@@ -131,6 +144,10 @@ function renderAMCContracts() {
       chip('active',   '🟢 Active',      counts.active)+
       chip('expiring', '🟡 Expiring Soon', counts.expiring)+
       chip('expired',  '🔴 Expired',     counts.expired)+
+      // Archived chip only renders if there's at least one archived row
+      // — keeps the toolbar clean for fresh installs and after a full
+      // restore. Neutral grey to signal "historical, not workflow".
+      (counts.archived ? chip('archived', '📦 Archived', counts.archived) : '')+
     '</div>';
 
   if (!rows.length) {
@@ -204,13 +221,17 @@ function _amcBadge(status) {
 
 function _amcRenderTable(rows, linksByContract) {
   var manager = !!isManager;
+  var archivedView = (_amcStatusFilter === 'archived');
   var body = rows.map(function(c, i){
     var st  = _amcStatusFor(c);
     var n   = linksByContract[c.id] || 0;
     var safeName = (c.customer_name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var actions = manager
-      ? '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();openAMCContractModal('+c.id+')" title="Edit"><i data-lucide="pencil"></i></button>'+
-        '<button class="btn btn-sm btn-danger btn-icon-only" onclick="event.stopPropagation();deleteAMCContract('+c.id+",'"+safeName+"'"+')" title="Delete"><i data-lucide="trash-2"></i></button>'
+      ? (archivedView
+          ? '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();restoreAMCContract('+c.id+')" title="Restore"><i data-lucide="rotate-ccw"></i></button>'+
+            '<button class="btn btn-sm btn-danger btn-icon-only" onclick="event.stopPropagation();permanentlyDeleteAMCContract('+c.id+",'"+safeName+"'"+')" title="Permanently Delete (cannot be undone)"><i data-lucide="trash-2"></i></button>'
+          : '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();openAMCContractModal('+c.id+')" title="Edit"><i data-lucide="pencil"></i></button>'+
+            '<button class="btn btn-sm btn-danger btn-icon-only" onclick="event.stopPropagation();archiveAMCContract('+c.id+",'"+safeName+"'"+')" title="Archive"><i data-lucide="trash-2"></i></button>')
       : '';
     return '<tr class="amc-row" onclick="openAMCContractDetail('+c.id+')">'+
       '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
@@ -249,6 +270,7 @@ function _amcRenderTable(rows, linksByContract) {
 
 function _amcRenderCards(rows, linksByContract) {
   var manager = !!isManager;
+  var archivedView = (_amcStatusFilter === 'archived');
   return '<div class="amc-cards">' + rows.map(function(c){
     var st = _amcStatusFor(c);
     var n  = linksByContract[c.id] || 0;
@@ -270,8 +292,11 @@ function _amcRenderCards(rows, linksByContract) {
       '</div>'+
       (manager
         ? '<div class="amc-card-actions" onclick="event.stopPropagation()">'+
-            '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openAMCContractModal('+c.id+')" title="Edit"><i data-lucide="pencil"></i></button>'+
-            '<button class="btn btn-sm btn-danger btn-icon-only" onclick="deleteAMCContract('+c.id+",'"+safeName+"'"+')" title="Delete"><i data-lucide="trash-2"></i></button>'+
+            (archivedView
+              ? '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="restoreAMCContract('+c.id+')" title="Restore"><i data-lucide="rotate-ccw"></i></button>'+
+                '<button class="btn btn-sm btn-danger btn-icon-only" onclick="permanentlyDeleteAMCContract('+c.id+",'"+safeName+"'"+')" title="Permanently Delete (cannot be undone)"><i data-lucide="trash-2"></i></button>'
+              : '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openAMCContractModal('+c.id+')" title="Edit"><i data-lucide="pencil"></i></button>'+
+                '<button class="btn btn-sm btn-danger btn-icon-only" onclick="archiveAMCContract('+c.id+",'"+safeName+"'"+')" title="Archive"><i data-lucide="trash-2"></i></button>')+
           '</div>'
         : '')+
     '</div>';
@@ -314,6 +339,14 @@ function openAMCContractModal(id) {
   _amcEditingId = id || null;
   var c = id ? (AMC_CONTRACTS||[]).find(function(x){ return x.id === id; }) : null;
   document.getElementById('amc-modal-title').textContent = c ? 'Edit AMC Contract' : 'New AMC Contract';
+  // Defense-in-depth: if the opener was reached on an archived row
+  // (stale tab, direct URL, future deep-link), surface a banner and
+  // make the form read-only. The Archived view's action column no
+  // longer offers Edit, so this is the safety net.
+  if (typeof setModalArchivedBanner === 'function') {
+    var modalBox = modal.querySelector('.modal');
+    setModalArchivedBanner(modalBox, c && c.is_archived ? 'AMC contract' : null);
+  }
 
   // Customer (reuses CUSTOMERS — same select pattern as engagement modal)
   fillCustomerSelect('amc-cust', false);
@@ -388,7 +421,7 @@ function _amcRenderLinkedEngagements(contract) {
   // Filter source list: AMC type + non-archived. If a customer is selected,
   // narrow to that customer's engagements; otherwise show all AMC engagements.
   var list = (ENGAGEMENTS||[])
-    .filter(function(e){ return e.type === 'amc' && e.status !== 'archived'; })
+    .filter(function(e){ return e.type === 'amc' && e.status !== 'archived' && !e.is_archived; })
     .filter(function(e){ return !custId || e.customer_id === custId; });
   // Always include any pre-linked engagements even if they don't match
   // the current filter (legacy or cross-customer links).
@@ -493,24 +526,62 @@ async function saveAMCContract() {
   await loadAMCContracts();
 }
 
-async function deleteAMCContract(id, name) {
+// Soft-delete: archive moves the contract out of every active list
+// but leaves the row + its engagement links intact for restore.
+async function archiveAMCContract(id, name) {
   if (!isManager) { showError('Manager access only.'); return; }
-  // Count linked engagements for the confirm body so the manager knows
-  // what they're cleaning up. The engagements themselves are NOT deleted
-  // — only the link rows.
   var linkCount = (AMC_CONTRACT_LINKS||[]).filter(function(l){ return l.contract_id === id; }).length;
-  var body = 'This will permanently delete the AMC contract.';
-  if (linkCount) body += '\n\nThe ' + linkCount + ' linked engagement'+(linkCount===1?'':'s')+' will be unlinked but the engagement record'+(linkCount===1?'':'s')+' will remain intact.';
-  body += '\n\nThis cannot be undone.';
+  var body = 'This will move the contract to the Archived view. It will no longer appear in active lists but can be restored later.';
+  if (linkCount) body += '\n\nThe ' + linkCount + ' linked engagement'+(linkCount===1?'':'s')+' will stay linked — restoring the contract brings them back together.';
   if (!await confirmAction({
-    title: 'Delete contract for "'+name+'"?',
+    title: 'Archive contract for "'+name+'"?',
     body: body,
+    confirmText: 'Archive'
+  })) return;
+  var { error } = await sb.from('amc_contracts').update({
+    is_archived: true,
+    archived_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) { showError('Could not archive: '+error.message); return; }
+  showToast('Archived ✓');
+  await loadAMCContracts();
+}
+
+async function restoreAMCContract(id) {
+  if (!isManager) { showError('Manager access only.'); return; }
+  var c = (AMC_CONTRACTS||[]).find(function(x){ return x.id === id; });
+  if (!c) return;
+  if (!await confirmAction({
+    title: 'Restore contract for "'+(c.customer_name||'')+'"?',
+    body:  'It will return to the active contracts list.',
+    confirmText: 'Restore',
+    danger: false
+  })) return;
+  var { error } = await sb.from('amc_contracts').update({
+    is_archived: false,
+    archived_at: null
+  }).eq('id', id);
+  if (error) { showError('Could not restore: '+error.message); return; }
+  showToast('Restored ✓');
+  await loadAMCContracts();
+}
+
+// Hard delete from the archive. Requires type-the-name confirmation
+// because it really IS gone — cascade-deletes engagement links.
+async function permanentlyDeleteAMCContract(id, name) {
+  if (!isManager) { showError('Manager access only.'); return; }
+  var linkCount = (AMC_CONTRACT_LINKS||[]).filter(function(l){ return l.contract_id === id; }).length;
+  var body = '⚠️ This cannot be undone. The contract and all linked data will be permanently removed from the database.';
+  if (linkCount) body += '\n\nThe ' + linkCount + ' engagement link'+(linkCount===1?'':'s')+' will be removed; the engagement record'+(linkCount===1?'':'s')+' themselves stay intact.';
+  if (!await confirmAction({
+    title: 'Permanently delete "'+name+'"?',
+    body:  body,
     requireTyping: name,
-    confirmText: 'Delete contract'
+    confirmText: 'Permanently Delete'
   })) return;
   var { error } = await sb.from('amc_contracts').delete().eq('id', id);
   if (error) { showError('Could not delete: '+error.message); return; }
-  showToast('Contract deleted ✓');
+  showToast('Permanently deleted ✓');
   await loadAMCContracts();
 }
 

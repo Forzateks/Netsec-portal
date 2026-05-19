@@ -19,6 +19,7 @@
 var PS_DEALS      = [];
 var PS_MILESTONES = [];
 var _psEditingId  = null;          // null = create, number = edit
+var _psShowArchived = false;       // false = active list, true = Archived view
 var _psSubrowSeq  = 0;             // monotonic id for in-form sub-rows
 // Auto-split flag per modal session. False on modal open → "+ Add
 // milestone" recomputes an even split. The flag flips to true on the
@@ -115,12 +116,22 @@ function clearPsFilters() {
   renderPsDeals();
 }
 
+function _psToggleArchivedView() {
+  _psShowArchived = !_psShowArchived;
+  renderPsDeals();
+}
+
 function _psFilteredDeals() {
   var search = (((document.getElementById('ps-search')||{}).value)||'').toLowerCase().trim();
   var client = ((document.getElementById('ps-filter-client')||{}).value)||'';
   var region = ((document.getElementById('ps-filter-region')||{}).value)||'';
   var year   = ((document.getElementById('ps-filter-year')||{}).value)||'';
-  var rows = (PS_DEALS||[]).slice();
+  // Archived toggle splits the universe in two — either show archived
+  // deals only or active deals only. Every other filter applies within
+  // whichever side is active.
+  var rows = (PS_DEALS||[]).filter(function(d){
+    return _psShowArchived ? !!d.is_archived : !d.is_archived;
+  });
   if (client) rows = rows.filter(function(d){ return d.client_name === client; });
   if (region) rows = rows.filter(function(d){ return d.region === region; });
   if (year)   rows = rows.filter(function(d){ return String(d.quoted_year) === String(year); });
@@ -184,13 +195,30 @@ function _psLinkedEngagementLabel(engId) {
   if (!engId) return '<span class="dim">—</span>';
   var eng = (ENGAGEMENTS||[]).find(function(e){ return e.id === engId; });
   if (!eng) return '<span class="dim">(deleted)</span>';
-  return '<span class="ps-eng-link" title="Linked engagement"><i data-lucide="link-2" style="width:11px;height:11px;vertical-align:-1px"></i> '+esc2(eng.name)+'</span>';
+  // Engagement may have been archived after the link was made. The link
+  // itself stays valid (FK SET NULL only fires on permanent delete) but
+  // the deal display should signal that the engagement is no longer in
+  // the active list.
+  var archBadge = eng.is_archived
+    ? ' <span class="ps-linked-arch-badge">archived</span>'
+    : '';
+  return '<span class="ps-eng-link" title="Linked engagement"><i data-lucide="link-2" style="width:11px;height:11px;vertical-align:-1px"></i> '+esc2(eng.name)+archBadge+'</span>';
 }
 
 // ── RENDER ────────────────────────────────────────────────────────
 function renderPsDeals() {
   var content = document.getElementById('ps-content');
   if (!content) return;
+  // Refresh the Archived toggle button — count + label reflect current view.
+  var archivedCount = (PS_DEALS||[]).filter(function(d){return !!d.is_archived;}).length;
+  var togBtn = document.getElementById('ps-archived-toggle');
+  if (togBtn) {
+    togBtn.style.display = (archivedCount === 0 && !_psShowArchived) ? 'none' : '';
+    togBtn.classList.toggle('archived-toggle-on', _psShowArchived);
+    togBtn.innerHTML = _psShowArchived
+      ? '<i data-lucide="arrow-left" class="btn-icon"></i>Back to Active'
+      : '<i data-lucide="archive" class="btn-icon"></i>Archived ('+archivedCount+')';
+  }
   var rows = _psFilteredDeals();
   if (!rows.length) {
     var total = (PS_DEALS||[]).length;
@@ -213,8 +241,14 @@ function renderPsDeals() {
 }
 
 function _psRenderTable(rows) {
+  var archived = _psShowArchived;
   var body = rows.map(function(d, i){
-    return '<tr class="ps-row" onclick="openPsDealModal('+d.id+')">'+
+    var actions = archived
+      ? '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();restorePsDeal('+d.id+')" title="Restore"><i data-lucide="rotate-ccw"></i></button>'+
+        (isManager ? '<button class="btn btn-sm btn-danger btn-icon-only" onclick="event.stopPropagation();permanentlyDeletePsDeal('+d.id+')" title="Permanently Delete (cannot be undone)"><i data-lucide="trash-2"></i></button>' : '')
+      : '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openPsDealModal('+d.id+')" title="Edit"><i data-lucide="pencil"></i></button>';
+    var rowClick = archived ? '' : 'onclick="openPsDealModal('+d.id+')"';
+    return '<tr class="ps-row'+(archived?' ps-row-archived':'')+'" '+rowClick+'>'+
       '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
       '<td><strong style="color:var(--navy)">'+esc2(d.client_name||'—')+'</strong></td>'+
       '<td class="hide-mobile" style="font-size:12px">'+esc2(d.partner||'—')+'</td>'+
@@ -231,7 +265,7 @@ function _psRenderTable(rows) {
       '<td class="hide-mobile">'+_psProgressCell(d)+'</td>'+
       '<td class="hide-mobile" style="font-size:12px">'+_psLinkedEngagementLabel(d.linked_engagement_id)+'</td>'+
       '<td style="white-space:nowrap;text-align:right" onclick="event.stopPropagation()">'+
-        '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openPsDealModal('+d.id+')" title="Edit"><i data-lucide="pencil"></i></button>'+
+        actions+
       '</td>'+
     '</tr>';
   }).join('');
@@ -289,6 +323,14 @@ function openPsDealModal(id) {
   document.getElementById('ps-modal-title').textContent = d ? 'Edit Professional Services Deal' : 'New Professional Services Deal';
   var delBtn = document.getElementById('ps-delete-btn');
   if (delBtn) delBtn.style.display = d ? '' : 'none';
+  // Archived rows are reached only by the defense-in-depth path; mark
+  // the modal read-only and hide the Archive button along with Save.
+  var isArch = !!(d && d.is_archived);
+  if (typeof setModalArchivedBanner === 'function') {
+    var modalBox = modal.querySelector('.modal');
+    setModalArchivedBanner(modalBox, isArch ? 'PS deal' : null);
+  }
+  if (delBtn && isArch) delBtn.style.display = 'none';
   var errEl = document.getElementById('ps-modal-error');
   if (errEl) errEl.style.display = 'none';
 
@@ -358,10 +400,12 @@ function _psPopulateLinkedEngagementSelect(currentEngId, clientName) {
   if (!sel) return;
   var custRow = (CUSTOMERS||[]).find(function(c){ return clientName && c.name === clientName; });
   var custId  = custRow ? custRow.id : null;
-  var list = (ENGAGEMENTS||[]).slice();
+  // Default to active (non-archived) engagements. Archived engagements
+  // stay out of new picks; the current saved link (if any) is added
+  // back at the top so editing a deal doesn't silently lose the ref.
+  var list = (ENGAGEMENTS||[]).filter(function(e){ return !e.is_archived; });
   if (custId) list = list.filter(function(e){ return e.customer_id === custId; });
   list.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
-  // Make sure the current link is in the list even if filter would drop it
   if (currentEngId && !list.some(function(e){ return e.id === currentEngId; })) {
     var match = (ENGAGEMENTS||[]).find(function(e){ return e.id === currentEngId; });
     if (match) list.unshift(match);
@@ -1030,21 +1074,61 @@ function _psResetSaveBtn(btn, orig) {
   if (typeof renderIcons === 'function') renderIcons();
 }
 
-// ── DELETE ────────────────────────────────────────────────────────
-async function deletePsDealFromModal() {
+// ── ARCHIVE / RESTORE / PERMANENT DELETE ──────────────────────────
+// The trash button in the active-list edit modal now archives instead
+// of deleting. Restore + Permanent Delete live in the Archived view.
+
+async function archivePsDealFromModal() {
   if (!_psEditingId) return;
   var d = (PS_DEALS||[]).find(function(x){ return x.id === _psEditingId; });
   if (!d) return;
   if (!await confirmAction({
-    title: 'Delete deal "'+(d.client_name||'')+'"?',
-    body: 'This removes the deal and all linked milestones.\n\nThis cannot be undone.',
-    requireTyping: d.client_name,
-    confirmText: 'Delete deal'
+    title: 'Archive deal for "'+(d.client_name||'')+'"?',
+    body:  'This will move the deal to the Archived view. It will no longer appear in active lists but can be restored later.',
+    confirmText: 'Archive'
   })) return;
-  var res = await sb.from('ps_deals').delete().eq('id', _psEditingId);
-  if (res.error) { showError('Delete failed: '+res.error.message); return; }
+  var res = await sb.from('ps_deals').update({
+    is_archived: true,
+    archived_at: new Date().toISOString()
+  }).eq('id', _psEditingId);
+  if (res.error) { showError('Archive failed: '+res.error.message); return; }
   closePsDealModal();
-  showToast('Deal deleted ✓');
+  showToast('Archived ✓');
+  await loadPsDeals();
+}
+
+async function restorePsDeal(id) {
+  if (!isManager) { showError('Manager access only.'); return; }
+  var d = (PS_DEALS||[]).find(function(x){ return x.id === id; });
+  if (!d) return;
+  if (!await confirmAction({
+    title: 'Restore deal for "'+(d.client_name||'')+'"?',
+    body:  'It will return to the active deals list.',
+    confirmText: 'Restore',
+    danger: false
+  })) return;
+  var res = await sb.from('ps_deals').update({
+    is_archived: false,
+    archived_at: null
+  }).eq('id', id);
+  if (res.error) { showError('Could not restore: '+res.error.message); return; }
+  showToast('Restored ✓');
+  await loadPsDeals();
+}
+
+async function permanentlyDeletePsDeal(id) {
+  if (!isManager) { showError('Manager access only.'); return; }
+  var d = (PS_DEALS||[]).find(function(x){ return x.id === id; });
+  if (!d) return;
+  if (!await confirmAction({
+    title: 'Permanently delete deal for "'+(d.client_name||'')+'"?',
+    body:  '⚠️ This cannot be undone. The deal and ALL its milestones will be permanently removed from the database.',
+    requireTyping: d.client_name,
+    confirmText: 'Permanently Delete'
+  })) return;
+  var res = await sb.from('ps_deals').delete().eq('id', id);
+  if (res.error) { showError('Could not delete: '+res.error.message); return; }
+  showToast('Permanently deleted ✓');
   await loadPsDeals();
 }
 

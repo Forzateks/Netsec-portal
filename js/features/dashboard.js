@@ -625,9 +625,9 @@ async function renderManagerDashboard() {
     T(sb.from('annual_leave').select('employee,start_date,end_date,working_days,reason').lte('start_date', thirtyAhead).gte('end_date', todayISO), 'annual_leave window'),
     // tracker_updated_at is the best available proxy for status-change time —
     // no dedicated status_changed_at / updated_at column on engagements.
-    T(sb.from('engagements').select('id,name,type,status,tracker_status,partner,country,tracker_updated_at,customer_id,converted_to_project').neq('status','archived'), 'engagements all'),
+    T(sb.from('engagements').select('id,name,type,status,tracker_status,partner,country,tracker_updated_at,customer_id,converted_to_project').neq('status','archived').eq('is_archived', false), 'engagements all'),
     T(sb.from('unified_sessions').select('id,employee,team_members,session_date,total_hours,engagement_name,engagement_id').gte('session_date', fourteenAgo), 'unified_sessions 14d'),
-    T(sb.from('engagements').select('id,name,type,license_expiry,customer_id').not('license_expiry','is',null).lte('license_expiry', thirtyAhead).order('license_expiry',{ascending:true}), 'engagements license'),
+    T(sb.from('engagements').select('id,name,type,license_expiry,customer_id').eq('is_archived', false).not('license_expiry','is',null).lte('license_expiry', thirtyAhead).order('license_expiry',{ascending:true}), 'engagements license'),
     T(sb.from('customers').select('id,name'), 'customers'),
     // Oldest pending approval per type — for the "Approvals aging" exception.
     // Each returns at most 1 row (the oldest still-pending entry > 48h old).
@@ -637,7 +637,7 @@ async function renderManagerDashboard() {
     // Certificates expiring within 30 days (future-only — past expiries handled by their own list).
     T(sb.from('certificates').select('id,name,employee,expiry_date').gte('expiry_date', todayISO).lte('expiry_date', thirtyAhead).order('expiry_date',{ascending:true}), 'certs expiring 30d'),
     // AMC contracts renewing within 60 days (amc_end_date = renewal point).
-    T(sb.from('amc_contracts').select('id,customer_name,amc_end_date,vendor').gte('amc_end_date', todayISO).lte('amc_end_date', sixtyAhead).order('amc_end_date',{ascending:true}), 'amc renewing 60d')
+    T(sb.from('amc_contracts').select('id,customer_name,amc_end_date,vendor').eq('is_archived', false).gte('amc_end_date', todayISO).lte('amc_end_date', sixtyAhead).order('amc_end_date',{ascending:true}), 'amc renewing 60d')
   ]);
   var coPending = results[0].count || 0;
   var lvPending = results[1].count || 0;

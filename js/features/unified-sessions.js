@@ -278,6 +278,7 @@ function populateUSEngagementDropdown() {
   var options = (ENGAGEMENTS||[]).filter(function(e){
     return e.type === type
       && e.status !== 'archived'
+      && !e.is_archived
       && (!customer_id || e.customer_id === customer_id);
   });
   sel.innerHTML = '<option value="">-- Select Engagement --</option>'

@@ -606,6 +606,7 @@
             <option value="cancelled">❌ Cancelled</option>
           </select>
           <button class="btn btn-primary" onclick="openAddEngagementModal()"><i data-lucide="plus" class="btn-icon"></i>Add Engagement</button>
+          <button class="btn btn-sm btn-ghost archived-toggle-btn" id="pj-archived-toggle" onclick="_pjToggleArchivedView()" style="display:none"></button>
         </div>
       </div>
       <div id="pj-manage-loading" class="loading"><div class="spinner"></div>Loading...</div>
@@ -1006,7 +1007,7 @@
     <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-primary" id="trk-edit-save-btn" onclick="saveTrackerEdit()"><i data-lucide="save" class="btn-icon"></i>Save Changes</button>
       <button class="btn btn-ghost" onclick="closeTrackerEditModal()">Cancel</button>
-      <button class="btn btn-danger" id="trk-edit-delete-btn" onclick="deleteTrackerEngagement()" style="margin-left:auto"><i data-lucide="trash-2" class="btn-icon"></i>Delete Engagement</button>
+      <button class="btn btn-danger" id="trk-edit-delete-btn" onclick="deleteTrackerEngagement()" style="margin-left:auto"><i data-lucide="archive" class="btn-icon"></i>Archive Engagement</button>
     </div>
   </div>
 </div>
@@ -1304,6 +1305,7 @@
       <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Year:</label>
       <select id="ps-filter-year" onchange="renderPsDeals()" style="width:auto;padding:7px 10px;font-size:13px"></select>
       <button class="btn btn-sm btn-ghost" onclick="clearPsFilters()">✕ Clear</button>
+      <button class="btn btn-sm btn-ghost archived-toggle-btn" id="ps-archived-toggle" onclick="_psToggleArchivedView()" style="margin-left:auto"></button>
     </div>
   </div>
 
@@ -1440,7 +1442,7 @@
 
     <div class="modal-actions" style="margin-top:18px">
       <button class="btn btn-ghost" onclick="closePsDealModal()">Cancel</button>
-      <button class="btn btn-danger-solid" id="ps-delete-btn" onclick="deletePsDealFromModal()" style="display:none"><i data-lucide="trash-2" class="btn-icon"></i>Delete</button>
+      <button class="btn btn-danger-solid" id="ps-delete-btn" onclick="archivePsDealFromModal()" style="display:none"><i data-lucide="archive" class="btn-icon"></i>Archive</button>
       <button class="btn btn-primary" id="ps-save-btn" onclick="savePsDeal()"><i data-lucide="check" class="btn-icon"></i>Save Deal</button>
     </div>
   </div>

@@ -2075,6 +2075,54 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ps-linked-client{font-weight:600;color:var(--navy);font-size:13px;flex:1}
 .ps-linked-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--teal);font-weight:600}
 
+/* ── SOFT-DELETE (ARCHIVE) UI — v72 ────────────────────────────────
+   Common chrome shared by AMC Contracts, Engagements (Manage page +
+   Tracker modal), and Professional Services. Archive replaces hard
+   delete in those three modules; Restore + Permanent Delete live in
+   the Archived view. */
+
+/* Toolbar toggle button — switches the page between Active and
+   Archived views. Neutral grey when inactive; muted-amber when on. */
+.archived-toggle-btn{margin-left:auto;font-size:12px}
+.archived-toggle-btn.archived-toggle-on{background:#FEF3C7;border:1px solid #FBBF24;color:#92400E}
+.archived-toggle-btn .btn-icon{width:13px;height:13px}
+
+/* Archived chip variant — sits inside .amc-chip-row alongside the
+   status chips. Neutral grey signals "historical, not workflow." */
+.amc-chip.amc-chip-archived{background:#F9FAFB;color:#4B5563;border-color:#E5E7EB}
+.amc-chip.amc-chip-archived.amc-chip-active{background:#F3F4F6;border-color:#9CA3AF;color:#374151}
+
+/* PS deal row in the Archived view — subtle dim + non-pointer so it
+   reads as "historical, not interactive". Action column overrides
+   pointer for the row's icon buttons. */
+.ps-row.ps-row-archived{background:#FAFBFD;opacity:.85;cursor:default}
+.ps-row.ps-row-archived:hover{background:#F1F5F9}
+
+/* "(archived)" badge next to a linked engagement name in PS deal
+   rows. Small, italic, mid-grey — signal without shouting. */
+.ps-linked-arch-badge{display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:#92400E;background:#FEF3C7;padding:1px 6px;border-radius:8px;margin-left:4px;vertical-align:1px}
+
+/* Read-only modal — banner across the top + dimmed/inert form fields.
+   pointer-events:none on inputs blocks edits without disabling them
+   (which would skip the visual cue + keep keyboard navigation broken).
+   Save buttons are hidden via JS in setModalArchivedBanner; this CSS
+   covers the rest. */
+.modal-archived-banner{
+  background:#FEF3C7;color:#92400E;border:1px solid #FBBF24;border-radius:8px;
+  padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:500;line-height:1.4;
+}
+.modal-readonly .form-grid input,
+.modal-readonly .form-grid select,
+.modal-readonly .form-grid textarea,
+.modal-readonly input[type="text"],
+.modal-readonly input[type="number"],
+.modal-readonly input[type="date"],
+.modal-readonly select,
+.modal-readonly textarea{
+  pointer-events:none;background:#F8FAFC !important;color:var(--muted);opacity:.85;
+}
+.modal-readonly .btn:not(.btn-ghost){pointer-events:none;opacity:.5}
+
 /* ─── TEAM SKILLS (v61) ───────────────────────────────────────────
    Self-rated proficiency matrix. Pills colour-coded by level; clicking
    a cell opens the add/edit modal (self+manager) or read-only popover
