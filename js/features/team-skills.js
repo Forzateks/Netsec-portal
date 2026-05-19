@@ -1,7 +1,8 @@
 // == TEAM SKILLS ====================================================
-// Self-rated proficiency on product_lines for every team member.
-// Visibility: read-all-authenticated. Write: own rows for employees,
-// manager has full override (matches existing RLS pattern elsewhere).
+// Manager-only register of each employee's proficiency on product_lines.
+// RLS exposes the table only when is_manager_user() is true, so a
+// non-manager direct fetch returns zero rows. The sidebar entry sits
+// inside #sidebar-manager-group which is hidden for non-managers.
 //
 // Storage shape (employee_skills):
 //   employee_name + product_line_id (UNIQUE)
@@ -24,7 +25,22 @@ var SKILL_LEVEL_RANK = { beginner:1, intermediate:2, expert:3 };
 
 // ── LOAD ──────────────────────────────────────────────────────────
 async function loadSkills() {
+  var content = document.getElementById('sk-content');
   var loadEl = document.getElementById('sk-load');
+  // Sidebar is hidden for non-managers, but a direct URL or stale tab
+  // can still land them on this screen. RLS returns zero rows server-
+  // side; surface a friendly "not authorized" state so the page isn't
+  // a confusing blank.
+  if (!isManager) {
+    if (loadEl) loadEl.style.display = 'none';
+    if (content) content.innerHTML = renderEmptyState({
+      icon: 'lock',
+      heading: 'Not authorized',
+      sub: 'Team Skills is a manager-only register. Contact your manager if you need access.'
+    });
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
   if (loadEl) loadEl.style.display = 'flex';
   var res = await sb.from('employee_skills').select('*').order('employee_name').order('product_line_id');
   if (loadEl) loadEl.style.display = 'none';
@@ -52,7 +68,6 @@ function _skPopulateVendorFilter() {
 
 function clearSkillFilters() {
   ['sk-search','sk-filter-vendor'].forEach(function(id){ var el=document.getElementById(id); if (el) el.value=''; });
-  var mine = document.getElementById('sk-only-mine');   if (mine) mine.checked = false;
   var empty = document.getElementById('sk-show-empty'); if (empty) empty.checked = false;
   renderSkillsMatrix();
 }
@@ -115,8 +130,6 @@ function _skFilteredLines() {
 }
 
 function _skEmployees() {
-  var onlyMine = !!(document.getElementById('sk-only-mine')||{}).checked;
-  if (onlyMine && currentUser) return [currentUser];
   // EMPLOYEES is the canonical team list seeded in state.js.
   return (EMPLOYEES||[]).slice();
 }
@@ -132,9 +145,9 @@ function renderSkillsMatrix() {
     // Genuine empty state — no skills logged anywhere yet.
     content.innerHTML = renderEmptyState({
       icon: 'users',
-      heading: 'No team skills yet',
-      sub: 'Add your products to the skills register so the team knows who is the right person for new work.',
-      btnText: '+ Add your first skill',
+      heading: 'No team skills logged yet',
+      sub: 'Record each team member’s proficiency on the products you sell so you know who to assign new work to.',
+      btnText: '+ Add a skill',
       btnOnclick: 'openSkillModal()'
     });
     if (typeof renderIcons === 'function') renderIcons();
@@ -164,12 +177,10 @@ function _skRenderMatrix(lines, emps) {
   var byKey = {};
   SKILLS.forEach(function(s){ byKey[s.employee_name + '|' + s.product_line_id] = s; });
 
-  var meHeaderCls = function(emp){ return emp === currentUser ? ' sk-col-mine' : ''; };
-
   var head = '<tr>'+
     '<th class="sk-rowhead">Product Line</th>'+
     '<th class="sk-vendorhead hide-mobile">Vendor</th>'+
-    emps.map(function(e){ return '<th class="sk-emphead'+meHeaderCls(e)+'">'+esc2(_skFirstName(e))+'</th>'; }).join('')+
+    emps.map(function(e){ return '<th class="sk-emphead">'+esc2(_skFirstName(e))+'</th>'; }).join('')+
   '</tr>';
 
   var body = lines.map(function(p){
@@ -179,17 +190,14 @@ function _skRenderMatrix(lines, emps) {
       '<td class="sk-vendorhead hide-mobile">'+esc2(v?v.name:'—')+'</td>'+
       emps.map(function(e){
         var sk = byKey[e+'|'+p.id];
-        var cls = 'sk-cell' + meHeaderCls(e) + (sk ? ' sk-cell-filled' : ' sk-cell-empty');
+        var cls = 'sk-cell' + (sk ? ' sk-cell-filled' : ' sk-cell-empty');
         var inner = sk
           ? _skPillHtml(sk, false)
           : '<span class="sk-cell-add" aria-hidden="true">+</span>';
-        var canEdit = (e === currentUser) || isManager;
         var onclick = sk
-          ? 'onSkillCellClick('+sk.id+')'
-          : (canEdit
-              ? 'openSkillModal(null, '+JSON.stringify(e).replace(/"/g,'&quot;')+', '+p.id+')'
-              : '');
-        return '<td class="'+cls+'"'+(onclick?' onclick="'+onclick+'"':'')+'>'+inner+'</td>';
+          ? 'openSkillModal('+sk.id+')'
+          : 'openSkillModal(null, '+JSON.stringify(e).replace(/"/g,'&quot;')+', '+p.id+')';
+        return '<td class="'+cls+'" onclick="'+onclick+'">'+inner+'</td>';
       }).join('')+
     '</tr>';
   }).join('');
@@ -203,20 +211,20 @@ function _skRenderAccordion(lines, emps) {
   var byKey = {};
   SKILLS.forEach(function(s){ byKey[s.employee_name + '|' + s.product_line_id] = s; });
   return '<div class="sk-acc">' + emps.map(function(e){
-    var isMe = (e === currentUser);
     var rows = lines.map(function(p){
       var sk = byKey[e+'|'+p.id];
       var v = _skVendorFor(p);
       var pill = sk ? _skPillHtml(sk, true) : '<span class="sk-pill sk-pill-empty">—</span>';
-      var onclick = sk ? 'onSkillCellClick('+sk.id+')'
-                       : (isMe || isManager ? 'openSkillModal(null, '+JSON.stringify(e).replace(/"/g,'&quot;')+', '+p.id+')' : '');
-      return '<div class="sk-acc-row"'+(onclick?' onclick="'+onclick+'"':'')+'>'+
+      var onclick = sk
+        ? 'openSkillModal('+sk.id+')'
+        : 'openSkillModal(null, '+JSON.stringify(e).replace(/"/g,'&quot;')+', '+p.id+')';
+      return '<div class="sk-acc-row" onclick="'+onclick+'">'+
         '<div class="sk-acc-row-name"><strong>'+esc2(p.name)+'</strong><span class="dim" style="font-size:11px">'+esc2(v?v.name:'—')+'</span></div>'+
         '<div class="sk-acc-row-pill">'+pill+'</div>'+
       '</div>';
     }).join('');
-    return '<details class="sk-acc-emp"'+(isMe?' open':'')+'>'+
-      '<summary class="sk-acc-summary">'+esc2(e)+(isMe?' <span class="dim">(you)</span>':'')+'</summary>'+
+    return '<details class="sk-acc-emp">'+
+      '<summary class="sk-acc-summary">'+esc2(e)+'</summary>'+
       '<div class="sk-acc-rows">'+rows+'</div>'+
     '</details>';
   }).join('') + '</div>';
@@ -228,41 +236,18 @@ function _skFirstName(full) {
   return parts.length === 1 ? parts[0] : (parts[0] + ' ' + parts[parts.length-1].charAt(0) + '.');
 }
 
-// ── CELL CLICK ROUTER ─────────────────────────────────────────────
-// Filled cell → edit (own / manager) or view (others). Empty cells
-// route via openSkillModal with seed args, handled at the call site.
-function onSkillCellClick(skillId) {
-  var s = SKILLS.find(function(x){ return x.id === skillId; });
-  if (!s) return;
-  var isOwn = (s.employee_name === currentUser);
-  if (isOwn || isManager) openSkillModal(skillId);
-  else openSkillViewModal(skillId);
-}
-
-// ── VIEW MODAL (read-only for non-managers on someone else's skill) ─
-function openSkillViewModal(skillId) {
-  var s = SKILLS.find(function(x){ return x.id === skillId; });
-  if (!s) return;
-  var pl = (PRODUCT_LINES||[]).find(function(p){ return p.id === s.product_line_id; });
-  var v  = pl ? _skVendorFor(pl) : null;
-  var meta = SKILL_LEVEL_META[s.level] || { label:s.level, cls:'sk-pill-beginner' };
-  var last = _skFmtLastUsed(s);
-  document.getElementById('sk-view-title').textContent = (pl ? pl.name : 'Skill') + ' — ' + (s.employee_name||'');
-  document.getElementById('sk-view-body').innerHTML =
-    '<div class="sk-view-grid">'+
-      '<div class="sk-view-row"><span class="dim">Vendor</span><span>'+esc2(v?v.name:'—')+'</span></div>'+
-      '<div class="sk-view-row"><span class="dim">Level</span><span class="sk-pill '+meta.cls+'">'+esc2(meta.label)+'</span></div>'+
-      '<div class="sk-view-row"><span class="dim">Last used</span><span>'+(last?esc2(last):'<span class="dim">—</span>')+'</span></div>'+
-      '<div class="sk-view-row"><span class="dim">Notes</span><span style="white-space:pre-wrap">'+esc2(s.notes||'—')+'</span></div>'+
-    '</div>';
-  document.getElementById('sk-view-modal').classList.add('show');
-}
+// The reverse-lookup popover (openSkillReverseLookup) shares this
+// modal element so we keep the close helper. The per-skill read-only
+// view modal that used to live here was for non-managers; with manager-
+// only access it's no longer reachable and has been removed.
 function closeSkillViewModal() {
-  document.getElementById('sk-view-modal').classList.remove('show');
+  var modal = document.getElementById('sk-view-modal');
+  if (modal) modal.classList.remove('show');
 }
 
 // ── ADD / EDIT MODAL ──────────────────────────────────────────────
 function openSkillModal(skillId, seedEmployee, seedProductLineId) {
+  if (!isManager) { showError('Manager access only.'); return; }
   var modal = document.getElementById('sk-modal');
   if (!modal) return;
   var s = skillId ? SKILLS.find(function(x){ return x.id === skillId; }) : null;
@@ -274,11 +259,12 @@ function openSkillModal(skillId, seedEmployee, seedProductLineId) {
     ? ('Edit Skill — ' + (s.employee_name||'') + ' / ' + _skProductLineName(s.product_line_id))
     : 'Add Skill';
 
-  // Employee select — locked to currentUser for non-managers.
+  // Employee select — manager can pick any team member. Manager-only
+  // screen, so no lock needed.
   var empSel = document.getElementById('sk-employee');
   empSel.innerHTML = (EMPLOYEES||[]).map(function(e){ return '<option value="'+esc2(e)+'">'+esc2(e)+'</option>'; }).join('');
-  empSel.value = s ? (s.employee_name||'') : (seedEmployee || currentUser || '');
-  empSel.disabled = !isManager;
+  empSel.value = s ? (s.employee_name||'') : (seedEmployee || '');
+  empSel.disabled = false;
 
   // Product line select — sourced from PRODUCT_LINES, hides "Other (specify)"
   // and disabled lines (unless the skill itself references one of them so
@@ -362,13 +348,6 @@ async function saveSkill() {
   }
   if (notes.length > 500) { _skShowModalError('Notes must be 500 characters or fewer.'); return; }
 
-  // Self-write guard for non-managers — server RLS enforces this too, but
-  // catching it client-side gives a friendlier message.
-  if (!isManager && emp !== currentUser) {
-    _skShowModalError('You can only edit your own skills.');
-    return;
-  }
-
   var btn = document.getElementById('sk-save-btn');
   var orig = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Saving…'; }
@@ -423,8 +402,9 @@ async function deleteSkillFromModal() {
 // ── REVERSE LOOKUP (used by Vendors & Products page) ──────────────
 // Returns a small markup string for the "X skilled" badge + popover
 // trigger for a given product_line_id, or '' when nobody has the
-// skill logged yet. Hidden entirely until the team uses the module.
+// skill logged yet. Manager-only — non-managers don't see the badge.
 function renderSkillCountBadge(productLineId) {
+  if (!isManager) return '';
   if (!SKILLS || !SKILLS.length) return '';
   var n = SKILLS.filter(function(s){ return s.product_line_id === productLineId; }).length;
   if (!n) return '';
@@ -462,8 +442,11 @@ function openSkillReverseLookup(productLineId) {
 
 // ── PRE-FETCH FROM OTHER MODULES ──────────────────────────────────
 // Called by Vendors & Products page so the "X skilled" badge appears
-// even when the user hasn't visited Team Skills yet. Quick, idempotent.
+// even when the manager hasn't visited Team Skills yet. Manager-only;
+// skipping it for non-managers avoids a wasted round trip (RLS would
+// return zero rows anyway).
 async function ensureSkillsLoaded() {
+  if (!isManager) return;
   if (SKILLS && SKILLS.length) return;
   var res = await sb.from('employee_skills').select('*');
   if (!res.error) SKILLS = res.data || [];

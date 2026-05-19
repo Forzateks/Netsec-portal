@@ -1911,9 +1911,6 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .sk-cell-filled:hover,.sk-cell-empty:hover{background:#F8FAFC}
 .sk-cell-add{display:inline-block;width:18px;height:18px;line-height:16px;border:1.5px dashed var(--border);color:var(--muted);border-radius:50%;font-size:13px;font-weight:600;text-align:center;opacity:0;transition:opacity .12s}
 .sk-cell-empty:hover .sk-cell-add{opacity:.7}
-/* Subtle highlight on the current user's column so it's findable. */
-.sk-col-mine{background:rgba(0,160,210,.04)}
-.sk-emphead.sk-col-mine{background:rgba(0,160,210,.08)}
 
 /* Level pills */
 .sk-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap}
