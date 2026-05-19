@@ -116,6 +116,7 @@ function renderAMCContracts() {
 
   var rows = _amcFilteredContracts();
   var counts = _amcCountByStatus();
+  _amcRenderTotalCard(rows);
 
   // Status chip row (lives above the filter bar)
   var chip = function(key, label, count) {
@@ -157,6 +158,37 @@ function renderAMCContracts() {
   content.innerHTML = chipBar + listHtml +
     '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Showing '+rows.length+' of '+counts.all+' contracts · Sorted by end date</div>';
   if (typeof renderIcons === 'function') renderIcons();
+}
+
+// Total AMC Value card — sits above the chip row, recalculates from
+// whatever rows the current filter combination produces. NULL/missing
+// amc_value_usd values are excluded from the sum but counted; if any
+// are excluded a small footnote calls that out.
+function _amcRenderTotalCard(rows) {
+  var card = document.getElementById('amc-total-card');
+  if (!card) return;
+  var n = rows ? rows.length : 0;
+  var sum = 0;
+  var missing = 0;
+  (rows||[]).forEach(function(r){
+    var v = r.amc_value_usd;
+    if (v === null || v === undefined || v === '' || isNaN(v)) missing++;
+    else sum += Number(v);
+  });
+  var foot = missing > 0
+    ? '<div class="amc-total-foot">Note: '+missing+' contract'+(missing===1?'':'s')+' excluded from total due to missing value.</div>'
+    : '';
+  var aed = (typeof usdToAed === 'function') ? usdToAed(sum) : null;
+  var aedLine = aed != null
+    ? '<div class="amc-total-aed">≈ ' + (typeof fmtAed === 'function' ? fmtAed(aed, true) : 'AED ' + aed.toFixed(2)) + '</div>'
+    : '';
+  card.innerHTML =
+    '<div class="amc-total-label">Total AMC Value</div>'+
+    '<div class="amc-total-value">'+_amcFmtUSD(sum, true)+'</div>'+
+    aedLine+
+    '<div class="amc-total-sub">Across '+n+' contract'+(n===1?'':'s')+'</div>'+
+    foot;
+  card.style.display = '';
 }
 
 function _amcBadge(status) {

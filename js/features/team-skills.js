@@ -17,11 +17,23 @@ var SKILLS = [];              // [{id, employee_name, product_line_id, level, ..
 var _skEditing = null;        // null = add, {id, ...} = edit
 
 var SKILL_LEVEL_META = {
-  beginner:     { label:'Beginner',     shortLabel:'B', cls:'sk-pill-beginner' },
-  intermediate: { label:'Intermediate', shortLabel:'I', cls:'sk-pill-intermediate' },
-  expert:       { label:'Expert',       shortLabel:'E', cls:'sk-pill-expert' }
+  beginner:       { label:'Beginner',       shortLabel:'B',   cls:'sk-pill-beginner' },
+  intermediate:   { label:'Intermediate',   shortLabel:'I',   cls:'sk-pill-intermediate' },
+  expert:         { label:'Expert',         shortLabel:'E',   cls:'sk-pill-expert' },
+  // Non-proficiency states (v71). Visually muted; semantically separate
+  // from real skill levels but stored in the same column.
+  na:             { label:'N/A',            shortLabel:'—',   cls:'sk-pill-na' },
+  to_be_trained:  { label:'To be trained',  shortLabel:'T2T', cls:'sk-pill-to-train' },
+  under_training: { label:'Under Training', shortLabel:'UT',  cls:'sk-pill-under-train' }
 };
-var SKILL_LEVEL_RANK = { beginner:1, intermediate:2, expert:3 };
+// Sort rank for the reverse-lookup popover. Real skills sort highest;
+// in-training states sort below; N/A sinks to the bottom.
+var SKILL_LEVEL_RANK = { expert:5, intermediate:4, beginner:3, under_training:2, to_be_trained:1, na:0 };
+// Levels treated as "in training" — counted separately in the reverse
+// badge and grouped under their own section in the lookup popover.
+var SKILL_LEVELS_IN_TRAINING = ['to_be_trained','under_training'];
+// Levels that count toward "skilled". N/A is excluded.
+var SKILL_LEVELS_SKILLED     = ['beginner','intermediate','expert'];
 
 // ── LOAD ──────────────────────────────────────────────────────────
 async function loadSkills() {
@@ -400,16 +412,24 @@ async function deleteSkillFromModal() {
 }
 
 // ── REVERSE LOOKUP (used by Vendors & Products page) ──────────────
-// Returns a small markup string for the "X skilled" badge + popover
-// trigger for a given product_line_id, or '' when nobody has the
-// skill logged yet. Manager-only — non-managers don't see the badge.
+// Returns a small markup string for the "X skilled · Y in training"
+// badge + popover trigger for a given product_line_id, or '' when no
+// rows exist. "skilled" counts beginner/intermediate/expert only;
+// "in training" counts to_be_trained/under_training; N/A is excluded.
+// Manager-only.
 function renderSkillCountBadge(productLineId) {
   if (!isManager) return '';
   if (!SKILLS || !SKILLS.length) return '';
-  var n = SKILLS.filter(function(s){ return s.product_line_id === productLineId; }).length;
-  if (!n) return '';
+  var rows = SKILLS.filter(function(s){ return s.product_line_id === productLineId; });
+  if (!rows.length) return '';
+  var skilled  = rows.filter(function(s){ return SKILL_LEVELS_SKILLED.indexOf(s.level)     !== -1; }).length;
+  var training = rows.filter(function(s){ return SKILL_LEVELS_IN_TRAINING.indexOf(s.level) !== -1; }).length;
+  if (!skilled && !training) return ''; // only N/A entries — no badge worth showing
+  var parts = [];
+  if (skilled)  parts.push(skilled  + ' skilled');
+  if (training) parts.push(training + ' in training');
   return '<button type="button" class="sk-count-badge" onclick="event.stopPropagation();openSkillReverseLookup('+productLineId+')" title="See who is skilled in this product line">'+
-    '<i data-lucide="users" style="width:11px;height:11px;vertical-align:-1px"></i> '+n+' skilled'+
+    '<i data-lucide="users" style="width:11px;height:11px;vertical-align:-1px"></i> '+parts.join(' · ')+
   '</button>';
 }
 
@@ -421,22 +441,37 @@ function openSkillReverseLookup(productLineId) {
   if (!rows.length) return;
   rows.sort(function(a,b){ return (SKILL_LEVEL_RANK[b.level]||0) - (SKILL_LEVEL_RANK[a.level]||0); });
   var pl = (PRODUCT_LINES||[]).find(function(p){ return p.id === productLineId; });
-  var byLevel = { expert:[], intermediate:[], beginner:[] };
-  rows.forEach(function(s){ if (byLevel[s.level]) byLevel[s.level].push(s); });
-  var sect = function(level) {
-    if (!byLevel[level] || !byLevel[level].length) return '';
-    var meta = SKILL_LEVEL_META[level];
+  // Buckets: real-skill levels each get their own section; the two
+  // training states share one "In Training" section; N/A gets its own
+  // muted section at the bottom (spec Part 5 reverse view).
+  var byLevel = { expert:[], intermediate:[], beginner:[], in_training:[], na:[] };
+  rows.forEach(function(s){
+    if (s.level === 'to_be_trained' || s.level === 'under_training') byLevel.in_training.push(s);
+    else if (byLevel[s.level]) byLevel[s.level].push(s);
+  });
+  var sect = function(key, label, cls) {
+    if (!byLevel[key] || !byLevel[key].length) return '';
     return '<div class="sk-rev-section">'+
-      '<div class="sk-rev-head"><span class="sk-pill '+meta.cls+'">'+meta.label+'</span> <span class="dim">('+byLevel[level].length+')</span></div>'+
-      '<div class="sk-rev-names">'+byLevel[level].map(function(s){
+      '<div class="sk-rev-head"><span class="sk-pill '+cls+'">'+label+'</span> <span class="dim">('+byLevel[key].length+')</span></div>'+
+      '<div class="sk-rev-names">'+byLevel[key].map(function(s){
         var last = _skFmtLastUsed(s);
-        return '<div class="sk-rev-name"><strong>'+esc2(s.employee_name||'')+'</strong>'+(last?' <span class="dim">· '+esc2(last)+'</span>':'')+'</div>';
+        // For the In Training section, include which sub-state.
+        var subLabel = '';
+        if (key === 'in_training') {
+          var meta = SKILL_LEVEL_META[s.level];
+          subLabel = meta ? ' <span class="dim">· '+esc2(meta.label)+'</span>' : '';
+        }
+        return '<div class="sk-rev-name"><strong>'+esc2(s.employee_name||'')+'</strong>'+subLabel+(last?' <span class="dim">· '+esc2(last)+'</span>':'')+'</div>';
       }).join('')+'</div>'+
     '</div>';
   };
   document.getElementById('sk-view-title').textContent = pl ? ('Skilled in ' + pl.name) : 'Skilled team members';
   document.getElementById('sk-view-body').innerHTML =
-    sect('expert') + sect('intermediate') + sect('beginner');
+    sect('expert',       'Expert',       'sk-pill-expert') +
+    sect('intermediate', 'Intermediate', 'sk-pill-intermediate') +
+    sect('beginner',     'Beginner',     'sk-pill-beginner') +
+    sect('in_training',  'In Training',  'sk-pill-under-train') +
+    sect('na',           'N/A',          'sk-pill-na');
   document.getElementById('sk-view-modal').classList.add('show');
 }
 

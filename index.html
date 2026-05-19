@@ -172,8 +172,8 @@
       <i data-lucide="bell" class="sidebar-icon"></i>Approvals<span class="notif-badge" id="notif-badge" style="display:none">0</span><span class="sidebar-chevron">›</span>
     </div>
     <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-approvals-leave" onclick="navigateSub('approvals','leave')"><i data-lucide="calendar-check" class="sidebar-subicon"></i>Time Off Requests</div>
-      <div class="sidebar-subitem" id="sbi-approvals-ot"    onclick="navigateSub('approvals','ot')"><i data-lucide="timer" class="sidebar-subicon"></i>OT Sessions</div>
+      <div class="sidebar-subitem" id="sbi-approvals-leave" onclick="navigateSub('approvals','leave')"><i data-lucide="calendar-check" class="sidebar-subicon"></i>Leave Requests</div>
+      <div class="sidebar-subitem" id="sbi-approvals-ot"    onclick="navigateSub('approvals','ot')"><i data-lucide="timer" class="sidebar-subicon"></i>OT Requests</div>
     </div>
   </div>
 
@@ -193,7 +193,7 @@
       <i data-lucide="palmtree" class="sidebar-icon"></i>Leave<span class="sidebar-chevron">›</span>
     </div>
     <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-leave-log"     onclick="navigateSub('leave','log')"><i data-lucide="pencil-line" class="sidebar-subicon"></i>Request Time Off</div>
+      <div class="sidebar-subitem" id="sbi-leave-log"     onclick="navigateSub('leave','log')"><i data-lucide="pencil-line" class="sidebar-subicon"></i>Request Leave</div>
       <div class="sidebar-subitem" id="sbi-leave-history" onclick="navigateSub('leave','history')"><i data-lucide="clipboard-list" class="sidebar-subicon"></i><span id="sbi-leave-history-label">My Requests</span></div>
       <div class="sidebar-subitem" id="sbi-leave-team"    onclick="navigateSub('leave','team')"><i data-lucide="users" class="sidebar-subicon"></i><span id="sbi-leave-team-label">Team Overview</span></div>
     </div>
@@ -294,7 +294,7 @@
     <div class="alert alert-success" id="leave-success">✅ Leave request submitted! Awaiting manager approval.</div>
     <div class="alert alert-error" id="leave-error">⚠️ Please fill all required fields.</div>
     <div class="card">
-      <div class="card-title">Request Time Off</div>
+      <div class="card-title">Request Leave</div>
       <div class="form-grid mb-4">
         <div class="form-group full">
           <label>Type *</label>
@@ -339,7 +339,7 @@
   <div id="ltab-history" style="display:none">
     <div class="card">
       <div class="flex-between mb-4">
-        <div class="card-title" style="margin-bottom:0" id="lv-hist-card-title">Time Off Requests</div>
+        <div class="card-title" style="margin-bottom:0" id="lv-hist-card-title">Leave Requests</div>
         <select id="lv-hist-filter" onchange="renderLeaveHistory()" style="width:auto;padding:7px 12px" class="manager-only-el">
           <option value="">All Employees</option>
           <option>Ahmed Ali</option><option>Venkatesan</option><option>Prasanth</option>
@@ -1276,6 +1276,7 @@
     </div>
   </div>
 
+  <div id="amc-total-card" class="amc-total-card" style="display:none"></div>
   <div id="amc-load" class="loading"><div class="spinner"></div>Loading contracts...</div>
   <div id="amc-content"></div>
 </div><!-- /screen-amc -->
@@ -1489,6 +1490,9 @@
           <label class="sk-level-opt"><input type="radio" name="sk-level" value="beginner"><span class="sk-pill sk-pill-beginner">Beginner</span></label>
           <label class="sk-level-opt"><input type="radio" name="sk-level" value="intermediate"><span class="sk-pill sk-pill-intermediate">Intermediate</span></label>
           <label class="sk-level-opt"><input type="radio" name="sk-level" value="expert"><span class="sk-pill sk-pill-expert">Expert</span></label>
+          <label class="sk-level-opt"><input type="radio" name="sk-level" value="na"><span class="sk-pill sk-pill-na">N/A</span></label>
+          <label class="sk-level-opt"><input type="radio" name="sk-level" value="to_be_trained"><span class="sk-pill sk-pill-to-train">To be trained</span></label>
+          <label class="sk-level-opt"><input type="radio" name="sk-level" value="under_training"><span class="sk-pill sk-pill-under-train">Under Training</span></label>
         </div>
       </div>
       <div class="form-group">
