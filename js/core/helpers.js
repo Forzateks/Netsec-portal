@@ -356,7 +356,7 @@ function fmtTime(t){
 function r2(n){return Math.round((n||0)*100)/100;}
 
 // ── Currency helpers (USD / AED) ──────────────────────────────────
-// AED is pegged to USD at 3.6725 (fixed since 1997). PS Deals stores
+// AED is pegged to USD at 3.6725 (fixed since 1997). Professional Services stores
 // every amount in USD; AED is derived at display time, never persisted.
 // That keeps the data clean if the peg ever changes — only this constant
 // needs to flip.

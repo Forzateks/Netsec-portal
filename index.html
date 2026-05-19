@@ -256,7 +256,7 @@
     <div class="sidebar-item" id="sbi-projects-manage"    onclick="navigateSub('projects','manage');closeSidebarOnMobile()"><i data-lucide="settings-2" class="sidebar-icon"></i>Manage Engagements</div>
     <div class="sidebar-item" id="sbi-projects-vendors"   onclick="navigateSub('projects','vendors');closeSidebarOnMobile()"><i data-lucide="package" class="sidebar-icon"></i>Vendors &amp; Products</div>
     <div class="sidebar-item" id="tab-amc"                onclick="showScreen('amc');closeSidebarOnMobile()"><i data-lucide="file-text" class="sidebar-icon"></i>AMC Contracts</div>
-    <div class="sidebar-item" id="tab-psdeals"            onclick="showScreen('psdeals');closeSidebarOnMobile()"><i data-lucide="briefcase" class="sidebar-icon"></i>PS Deals</div>
+    <div class="sidebar-item" id="tab-psdeals"            onclick="showScreen('psdeals');closeSidebarOnMobile()"><i data-lucide="briefcase" class="sidebar-icon"></i>Professional Services</div>
     <div class="sidebar-item" id="tab-skills"             onclick="showScreen('skills');closeSidebarOnMobile()"><i data-lucide="users" class="sidebar-icon"></i>Team Skills</div>
     <div class="sidebar-item" id="sbi-projects-otmanager" onclick="navigateSub('projects','otmanager');closeSidebarOnMobile()"><i data-lucide="shield-check" class="sidebar-icon"></i>Admin Tools</div>
   </div>
@@ -1297,8 +1297,8 @@
 <div class="screen" id="screen-psdeals">
   <div class="amc-page-header">
     <div>
-      <div class="amc-page-title">Professional Services Deals</div>
-      <div class="amc-page-sub">Commercial PS engagements register — manager only.</div>
+      <div class="amc-page-title">Professional Services</div>
+      <div class="amc-page-sub">Commercial register of Professional Services engagements — manager only.</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-ghost manager-only-el" onclick="downloadPsDealsCsv()" title="Download CSV"><i data-lucide="download" class="btn-icon"></i>CSV</button>
@@ -1326,7 +1326,7 @@
 <!-- PS DEAL CREATE/EDIT MODAL -->
 <div class="modal-overlay" id="ps-deal-modal">
   <div class="modal ps-modal">
-    <div class="modal-title" id="ps-modal-title">New PS Deal</div>
+    <div class="modal-title" id="ps-modal-title">New Professional Services Deal</div>
     <div class="alert alert-error" id="ps-modal-error" style="display:none;margin-bottom:10px"></div>
 
     <div class="ps-section-title">Deal Info</div>
@@ -1350,9 +1350,9 @@
         <select id="ps-mode"></select>
       </div>
       <div class="form-group">
-        <label>Supplier</label>
-        <input type="text" id="ps-supplier" list="ps-supplier-list" placeholder="e.g. Aruba, Fortinet">
-        <datalist id="ps-supplier-list"></datalist>
+        <label>Vendor</label>
+        <input type="text" id="ps-vendor" list="ps-vendor-list" placeholder="e.g. Aruba, Fortinet">
+        <datalist id="ps-vendor-list"></datalist>
       </div>
       <div class="form-group full">
         <label>Linked Engagement <span class="dim" style="font-weight:400">(optional)</span></label>
@@ -2310,7 +2310,7 @@
         <select id="amc-vendor"></select>
       </div>
       <div class="form-group">
-        <label>GIT Sales Order *</label>
+        <label>GIT Sales Order <span class="dim" style="font-weight:400">(optional)</span></label>
         <input type="text" id="amc-so" placeholder="e.g. SO-2026-0042">
       </div>
       <div class="form-group">

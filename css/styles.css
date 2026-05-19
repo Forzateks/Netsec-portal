@@ -1878,7 +1878,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    Manager-only commercial register. Reuses the AMC page header
    pattern + adds: modal section headers, USD/AED live readout,
    repeating milestone/payment sub-rows, and tracker-detail "Linked
-   PS Deals" block. */
+   Professional Services" block. */
 
 .ps-table{width:100%;border-collapse:collapse;font-size:13px}
 .ps-table thead th{background:#F8FAFC;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
@@ -2004,7 +2004,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ps-linked-progress{font-size:11px;margin-left:auto}
 
 /* Tracker detail integration — shows below the field grid + remarks
-   when the engagement has at least one linked PS deal. Manager-only. */
+   when the engagement has at least one linked Professional Services
+   deal. Manager-only. */
 .ps-linked-block{margin-top:18px;padding:12px 14px;background:#F8FAFC;border:1px solid var(--border);border-radius:8px}
 .ps-linked-head{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;margin-bottom:8px}
 .ps-linked-head .dim{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px}

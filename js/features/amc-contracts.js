@@ -16,7 +16,7 @@ var _amcStatusFilter = 'all';            // 'all' | 'active' | 'expiring' | 'exp
 var _amcEditingId    = null;             // null = add, number = edit
 
 // Region dropdown is hardcoded — small fixed list, not worth a table.
-var AMC_REGIONS = ['UAE', 'KSA', 'Qatar', 'Oman', 'Bahrain', 'Kuwait', 'Other'];
+var AMC_REGIONS = ['UAE', 'KSA', 'Qatar', 'Oman', 'Bahrain', 'Kuwait', 'Kenya', 'Other'];
 
 // Derive status from end_date relative to today. Days-to-end is
 // surfaced separately so the badge can read "Expires in 62 days".
@@ -409,7 +409,6 @@ async function saveAMCContract() {
   if (!partner)      return _amcModalError('Please enter a partner.');
   if (!region)       return _amcModalError('Please select a region.');
   if (!vendor)       return _amcModalError('Please select a vendor.');
-  if (!so)           return _amcModalError('Please enter the GIT Sales Order number.');
   if (isNaN(value) || value <= 0) return _amcModalError('AMC value must be greater than 0.');
   if (!start)        return _amcModalError('Please pick a start date.');
   if (!end)          return _amcModalError('Please pick an end date.');
@@ -428,7 +427,7 @@ async function saveAMCContract() {
     partner:         partner,
     region:          region,
     vendor:          vendor,
-    git_sales_order: so,
+    git_sales_order: so || null,
     amc_value_usd:   value,
     amc_start_date:  start,
     amc_end_date:    end,

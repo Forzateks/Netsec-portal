@@ -715,7 +715,7 @@ function openTrackerDetail(id) {
       '<div style="font-size:13px;line-height:1.6;color:#1F2937;white-space:pre-wrap">'+esc2(remarks)+'</div></div>'
     : '';
 
-  // Manager-only: surface PS Deals linked to this engagement so commercial
+  // Manager-only: surface Professional Services deals linked to this engagement so commercial
   // context is one click away. Helper returns '' for non-managers + no-link.
   var linkedPsHtml = (typeof renderLinkedPsDealsForEngagement === 'function')
     ? renderLinkedPsDealsForEngagement(r.id)

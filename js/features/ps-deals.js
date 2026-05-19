@@ -1,5 +1,6 @@
-// == PROFESSIONAL SERVICES DEALS ===================================
-// Manager-only commercial register of PS deals quoted/sold to clients.
+// == PROFESSIONAL SERVICES =========================================
+// Manager-only commercial register of Professional Services deals
+// quoted/sold to clients.
 //
 // Two tables back this:
 //   ps_deals       — one row per deal (header info, financials, status)
@@ -60,7 +61,7 @@ async function loadPsDeals() {
     sb.from('ps_milestones').select('*').order('sequence_order',{ascending:true})
   ]);
   if (loadEl) loadEl.style.display = 'none';
-  if (dRes.error) { showError('Could not load PS deals: '+dRes.error.message); return; }
+  if (dRes.error) { showError('Could not load Professional Services deals: '+dRes.error.message); return; }
   if (mRes.error) { showError('Could not load milestones: '+mRes.error.message); return; }
   PS_DEALS      = dRes.data || [];
   PS_MILESTONES = mRes.data || [];
@@ -125,7 +126,7 @@ function _psFilteredDeals() {
   if (year)   rows = rows.filter(function(d){ return String(d.quoted_year) === String(year); });
   if (search) {
     rows = rows.filter(function(d){
-      return [d.client_name, d.partner, d.remarks, d.supplier, d.consulted_with_tech]
+      return [d.client_name, d.partner, d.remarks, d.vendor, d.consulted_with_tech]
         .some(function(f){ return f && String(f).toLowerCase().indexOf(search) !== -1; });
     });
   }
@@ -195,7 +196,7 @@ function renderPsDeals() {
     var total = (PS_DEALS||[]).length;
     content.innerHTML = renderEmptyState({
       icon: total === 0 ? 'briefcase' : 'search-x',
-      heading: total === 0 ? 'No PS deals yet' : 'No deals match the current filters',
+      heading: total === 0 ? 'No Professional Services deals yet' : 'No deals match the current filters',
       sub: total === 0
         ? 'Manager-only register. Click + New Deal to add the first one.'
         : 'Try adjusting or clearing the filters.',
@@ -219,7 +220,7 @@ function _psRenderTable(rows) {
       '<td class="hide-mobile" style="font-size:12px">'+esc2(d.partner||'—')+'</td>'+
       '<td class="hide-mobile" style="font-size:12px">'+esc2(d.region||'—')+'</td>'+
       '<td class="hide-mobile" style="font-size:12px">'+esc2(d.mode||'—')+'</td>'+
-      '<td class="hide-mobile" style="font-size:12px">'+esc2(d.supplier||'—')+'</td>'+
+      '<td class="hide-mobile" style="font-size:12px">'+esc2(d.vendor||'—')+'</td>'+
       '<td class="num" style="font-size:12px">'+_psQuotedLabel(d)+'</td>'+
       '<td class="num hide-mobile" style="font-size:12px">'+(d.awarded_year||'—')+'</td>'+
       '<td class="num hide-mobile">'+(d.man_days!=null?d.man_days:'—')+'</td>'+
@@ -242,7 +243,7 @@ function _psRenderTable(rows) {
         '<th class="hide-mobile">Partner</th>'+
         '<th class="hide-mobile">Region</th>'+
         '<th class="hide-mobile">Mode</th>'+
-        '<th class="hide-mobile">Supplier</th>'+
+        '<th class="hide-mobile">Vendor</th>'+
         '<th>Quoted</th>'+
         '<th class="hide-mobile">Awarded</th>'+
         '<th class="hide-mobile">Man&nbsp;Days</th>'+
@@ -285,7 +286,7 @@ function openPsDealModal(id) {
   if (!modal) return;
   _psEditingId = id || null;
   var d = id ? (PS_DEALS||[]).find(function(x){ return x.id === id; }) : null;
-  document.getElementById('ps-modal-title').textContent = d ? 'Edit PS Deal' : 'New PS Deal';
+  document.getElementById('ps-modal-title').textContent = d ? 'Edit Professional Services Deal' : 'New Professional Services Deal';
   var delBtn = document.getElementById('ps-delete-btn');
   if (delBtn) delBtn.style.display = d ? '' : 'none';
   var errEl = document.getElementById('ps-modal-error');
@@ -340,12 +341,12 @@ function _psPopulateDatalists() {
     PS_DEALS.forEach(function(d){ if (d.partner) pSeen[d.partner] = 1; });
     partnerList.innerHTML = Object.keys(pSeen).sort().map(function(n){ return '<option value="'+esc2(n)+'">'; }).join('');
   }
-  var supplierList = document.getElementById('ps-supplier-list');
-  if (supplierList) {
+  var vendorList = document.getElementById('ps-vendor-list');
+  if (vendorList) {
     var sSeen = {};
     (typeof VENDORS !== 'undefined' && VENDORS || []).forEach(function(v){ if (v && v.name) sSeen[v.name] = 1; });
-    PS_DEALS.forEach(function(d){ if (d.supplier) sSeen[d.supplier] = 1; });
-    supplierList.innerHTML = Object.keys(sSeen).sort().map(function(n){ return '<option value="'+esc2(n)+'">'; }).join('');
+    PS_DEALS.forEach(function(d){ if (d.vendor) sSeen[d.vendor] = 1; });
+    vendorList.innerHTML = Object.keys(sSeen).sort().map(function(n){ return '<option value="'+esc2(n)+'">'; }).join('');
   }
 }
 
@@ -381,7 +382,7 @@ function _psSeedForm(d) {
   document.getElementById('ps-partner').value        = d ? (d.partner||'') : '';
   document.getElementById('ps-region').value         = d ? (d.region||'') : '';
   document.getElementById('ps-mode').value           = d ? (d.mode||'') : '';
-  document.getElementById('ps-supplier').value       = d ? (d.supplier||'') : '';
+  document.getElementById('ps-vendor').value         = d ? (d.vendor||'') : '';
   document.getElementById('ps-quoted-year').value    = d ? (d.quoted_year||cur) : cur;
   document.getElementById('ps-quoted-month').value   = d ? (d.quoted_month||'') : '';
   document.getElementById('ps-awarded-year').value   = d ? (d.awarded_year||'') : '';
@@ -866,7 +867,7 @@ async function savePsDeal() {
   var partner   = (document.getElementById('ps-partner').value||'').trim();
   var region    = document.getElementById('ps-region').value || null;
   var mode      = document.getElementById('ps-mode').value || null;
-  var supplier  = (document.getElementById('ps-supplier').value||'').trim();
+  var vendor    = (document.getElementById('ps-vendor').value||'').trim();
   var qYear     = document.getElementById('ps-quoted-year').value;
   var qMonth    = document.getElementById('ps-quoted-month').value;
   var aYear     = document.getElementById('ps-awarded-year').value;
@@ -917,7 +918,7 @@ async function savePsDeal() {
     partner:              partner || null,
     region:               region,
     mode:                 mode,
-    supplier:             supplier || null,
+    vendor:               vendor   || null,
     quoted_year:          qYear  ? parseInt(qYear,10)  : null,
     quoted_month:         qMonth ? parseInt(qMonth,10) : null,
     awarded_year:         aYear  ? parseInt(aYear,10)  : null,
@@ -1033,7 +1034,7 @@ async function deletePsDealFromModal() {
 // ── TRACKER INTEGRATION ───────────────────────────────────────────
 // Called by tracker.js openTrackerDetail to surface deals linked to the
 // engagement currently in view. Manager-only; returns empty string for
-// employees so the "Linked PS Deals" header doesn't render.
+// employees so the "Linked Professional Services" header doesn't render.
 function renderLinkedPsDealsForEngagement(engagementId) {
   if (!isManager) return '';
   if (!engagementId) return '';
@@ -1052,7 +1053,7 @@ function renderLinkedPsDealsForEngagement(engagementId) {
     '</div>';
   }).join('');
   return '<div class="ps-linked-block">'+
-    '<div class="ps-linked-head"><i data-lucide="briefcase" style="width:13px;height:13px;vertical-align:-2px"></i> Linked PS Deals <span class="dim">('+linked.length+')</span></div>'+
+    '<div class="ps-linked-head"><i data-lucide="briefcase" style="width:13px;height:13px;vertical-align:-2px"></i> Linked Professional Services <span class="dim">('+linked.length+')</span></div>'+
     rows+
   '</div>';
 }
@@ -1062,7 +1063,7 @@ function downloadPsDealsCsv() {
   if (!isManager) { showError('Manager access only.'); return; }
   var rows = _psFilteredDeals();
   var header = [
-    'S.No','Client','Partner','Region','Mode','Supplier',
+    'S.No','Client','Partner','Region','Mode','Vendor',
     'Quoted Year','Quoted Month','Awarded Year','Man Days',
     'PS Tech USD','PS Sales USD','Final USD',
     'Status','Milestones Done','Total Milestones','Paid USD','Milestones',
@@ -1090,7 +1091,7 @@ function downloadPsDealsCsv() {
     var eng = (ENGAGEMENTS||[]).find(function(e){ return e.id === d.linked_engagement_id; });
     var p = _psDealProgress(d.id);
     lines.push([
-      i+1, d.client_name, d.partner, d.region, d.mode, d.supplier,
+      i+1, d.client_name, d.partner, d.region, d.mode, d.vendor,
       d.quoted_year, d.quoted_month, d.awarded_year, d.man_days,
       d.ps_quoted_tech_usd, d.ps_quoted_sales_usd, d.final_ps_value_usd,
       d.status,
@@ -1105,7 +1106,7 @@ function downloadPsDealsCsv() {
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url;
-  a.download = 'ps-deals-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.download = 'professional-services-' + new Date().toISOString().slice(0,10) + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
