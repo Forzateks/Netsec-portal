@@ -229,24 +229,24 @@ async function initApp(user) {
   }
 
   // Show/hide manager elements
-  // MANAGER section: hide the section label + its standalone-item container
-  // wholesale so employees don't even see a collapsed empty slot. The
-  // per-item `style="display:none"` defaults stay as defense-in-depth.
-  var mgrLabel = document.getElementById('sidebar-manager-label');
-  if (mgrLabel) mgrLabel.style.display = isManager ? '' : 'none';
-  var mgrGroup = document.getElementById('sidebar-manager-group');
-  if (mgrGroup) mgrGroup.style.display = isManager ? '' : 'none';
-  // Per-item gates inside the MANAGER section (kept for defense-in-depth).
-  ['sbi-projects-custmgr','sbi-projects-manage','sbi-projects-vendors','sbi-projects-otmanager','tab-amc'].forEach(function(id){
+  // CUSTOMERS & DEALS group: whole wrap hides for employees so the section
+  // header doesn't render against an empty list.
+  var custDealsWrap = document.getElementById('sidebar-customers-deals-wrap');
+  if (custDealsWrap) custDealsWrap.style.display = isManager ? '' : 'none';
+  // Per-item gates for manager-only items that live inside otherwise
+  // shared groups (Catalog has employee-visible Inventory + Certificates
+  // alongside manager-only Vendors + Skills; Settings has employee-visible
+  // KB + OT Policy alongside manager-only Admin Tools).
+  ['sbi-projects-custmgr','sbi-projects-manage','sbi-projects-vendors','sbi-projects-otmanager','tab-amc','tab-psdeals','tab-skills'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.style.display = isManager ? '' : 'none';
   });
   var sbiCertAll = document.getElementById('sbi-certificates-all');
   if (sbiCertAll) sbiCertAll.style.display = isManager ? '' : 'none';
+  // Approvals sits at the top of the sidebar as a manager-only group
+  // (no section label in the new layout).
   document.getElementById('tab-approvals').style.display  = isManager ? '' : 'none';
   var sbgApprovals = document.getElementById('sbg-approvals');
   if (sbgApprovals) sbgApprovals.style.display = isManager ? '' : 'none';
-  var apprLabel = document.getElementById('sidebar-approvals-label');
-  if (apprLabel) apprLabel.style.display = isManager ? '' : 'none';
   // Leave sub-tab labels depend on role (icons render separately via Lucide)
   var teamLabel = document.getElementById('sbi-leave-team-label');
   if (teamLabel) teamLabel.textContent = isManager ? 'Team Overview' : 'My Leave Overview';

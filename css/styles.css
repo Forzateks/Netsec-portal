@@ -239,6 +239,16 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .sidebar-section-label{font-size:11px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:18px 20px 6px}
 .sidebar-section-label:first-of-type{padding-top:14px}
 
+/* Footer cluster (Settings + user actions). margin-top:auto pushes the
+   block to the bottom of the flex-column sidebar; the divider above
+   visually separates reference/admin items from the day-to-day nav. */
+.sidebar-footer{margin-top:auto;padding-top:8px;border-top:1px solid var(--border)}
+.sidebar-footer .sidebar-section-label-sm{font-size:10px;letter-spacing:.04em;padding:10px 20px 4px}
+.sidebar-footer .sidebar-item-sm{font-size:13px;padding:7px 20px 7px 17px;font-weight:500;color:var(--muted)}
+.sidebar-footer .sidebar-item-sm:hover{color:var(--text)}
+.sidebar-footer .sidebar-item-sm .sidebar-icon{width:14px;height:14px;stroke-width:2}
+.sidebar-footer-actions{margin-top:6px;padding-top:6px;border-top:1px solid #F1F5F9}
+
 /* ── LONG-SESSION GUARDRAIL ────────────────────────────────────── */
 /* Inline duration readout under the time fields in Log Session +
    Edit Session forms. Passive — no border, looks like helper text.

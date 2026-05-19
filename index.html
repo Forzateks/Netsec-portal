@@ -164,10 +164,30 @@
 <aside class="sidebar" id="sidebar">
   <button class="sidebar-close" onclick="toggleSidebar(false)" title="Close menu">×</button>
 
-  <div class="sidebar-section-label">Overview</div>
-  <div class="sidebar-item active" id="tab-dashboard" onclick="showScreen('dashboard');closeSidebarOnMobile()"><i data-lucide="layout-dashboard" class="sidebar-icon"></i>Dashboard</div>
+  <!-- ── TOP: high-frequency items, no section label ── -->
+  <div class="sidebar-item active" id="tab-dashboard" onclick="showScreen('dashboard');closeSidebarOnMobile()"><i data-lucide="home" class="sidebar-icon"></i>Dashboard</div>
 
-  <div class="sidebar-section-label">Time Off</div>
+  <div class="sidebar-group" id="sbg-approvals" style="display:none">
+    <div class="sidebar-item has-children" id="tab-approvals" onclick="showScreen('approvals');closeSidebarOnMobile()">
+      <i data-lucide="bell" class="sidebar-icon"></i>Approvals<span class="notif-badge" id="notif-badge" style="display:none">0</span><span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
+      <div class="sidebar-subitem" id="sbi-approvals-leave" onclick="navigateSub('approvals','leave')"><i data-lucide="calendar-check" class="sidebar-subicon"></i>Time Off Requests</div>
+      <div class="sidebar-subitem" id="sbi-approvals-ot"    onclick="navigateSub('approvals','ot')"><i data-lucide="timer" class="sidebar-subicon"></i>OT Sessions</div>
+    </div>
+  </div>
+
+  <!-- ── WORK: day-to-day operational items ── -->
+  <div class="sidebar-section-label">Work</div>
+  <div class="sidebar-group" id="sbg-sessions">
+    <div class="sidebar-item has-children" id="tab-sessions" onclick="toggleProjectGroup('sessions','uslog');closeSidebarOnMobile()">
+      <i data-lucide="briefcase" class="sidebar-icon"></i>Sessions<span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
+      <div class="sidebar-subitem" id="sbi-projects-uslog"  onclick="navigateSub('projects','uslog')"><i data-lucide="plus-circle" class="sidebar-subicon"></i>Log Session</div>
+      <div class="sidebar-subitem" id="sbi-projects-ussess" onclick="navigateSub('projects','ussess')"><i data-lucide="list" class="sidebar-subicon"></i>My Sessions</div>
+    </div>
+  </div>
   <div class="sidebar-group" id="sbg-leave">
     <div class="sidebar-item has-children" id="tab-leave" onclick="showScreen('leave');closeSidebarOnMobile()">
       <i data-lucide="palmtree" class="sidebar-icon"></i>Leave<span class="sidebar-chevron">›</span>
@@ -178,19 +198,6 @@
       <div class="sidebar-subitem" id="sbi-leave-team"    onclick="navigateSub('leave','team')"><i data-lucide="users" class="sidebar-subicon"></i><span id="sbi-leave-team-label">Team Overview</span></div>
     </div>
   </div>
-
-  <div class="sidebar-section-label">Work</div>
-  <!-- Sessions: action-oriented sub-tabs only (logging + viewing own work). -->
-  <div class="sidebar-group" id="sbg-sessions">
-    <div class="sidebar-item has-children" id="tab-sessions" onclick="toggleProjectGroup('sessions','uslog');closeSidebarOnMobile()">
-      <i data-lucide="briefcase" class="sidebar-icon"></i>Sessions<span class="sidebar-chevron">›</span>
-    </div>
-    <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-projects-uslog"  onclick="navigateSub('projects','uslog')"><i data-lucide="plus-circle" class="sidebar-subicon"></i>Log Session</div>
-      <div class="sidebar-subitem" id="sbi-projects-ussess" onclick="navigateSub('projects','ussess')"><i data-lucide="list" class="sidebar-subicon"></i>My Sessions</div>
-    </div>
-  </div>
-  <!-- Reports: analytics views across the same projects-screen routing. -->
   <div class="sidebar-group" id="sbg-reports">
     <div class="sidebar-item has-children" id="tab-reports" onclick="toggleProjectGroup('reports','otsessions');closeSidebarOnMobile()">
       <i data-lucide="bar-chart-3" class="sidebar-icon"></i>Reports<span class="sidebar-chevron">›</span>
@@ -202,8 +209,6 @@
       <div class="sidebar-subitem" id="sbi-projects-employee"   onclick="navigateSub('projects','employee')"><i data-lucide="users-round" class="sidebar-subicon"></i>Employee Summary</div>
     </div>
   </div>
-
-  <div class="sidebar-section-label">Tracker</div>
   <div class="sidebar-group" id="sbg-tracker">
     <div class="sidebar-item has-children" id="tab-tracker" onclick="showScreen('tracker');closeSidebarOnMobile()">
       <i data-lucide="kanban-square" class="sidebar-icon"></i>Project Tracker<span class="sidebar-chevron">›</span>
@@ -215,21 +220,21 @@
     </div>
   </div>
 
-  <div class="sidebar-section-label" id="sidebar-approvals-label" style="display:none">Approvals</div>
-  <div class="sidebar-group" id="sbg-approvals" style="display:none">
-    <div class="sidebar-item has-children" id="tab-approvals" onclick="showScreen('approvals');closeSidebarOnMobile()">
-      <i data-lucide="bell" class="sidebar-icon"></i>Approvals<span class="notif-badge" id="notif-badge" style="display:none">0</span><span class="sidebar-chevron">›</span>
-    </div>
-    <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-approvals-leave" onclick="navigateSub('approvals','leave')"><i data-lucide="calendar-check" class="sidebar-subicon"></i>Time Off Requests</div>
-      <div class="sidebar-subitem" id="sbi-approvals-ot"    onclick="navigateSub('approvals','ot')"><i data-lucide="timer" class="sidebar-subicon"></i>OT Sessions</div>
-    </div>
+  <!-- ── CUSTOMERS & DEALS (manager-only) — entire group hides for employees ── -->
+  <div id="sidebar-customers-deals-wrap" style="display:none">
+    <div class="sidebar-section-label">Customers &amp; Deals</div>
+    <div class="sidebar-item" id="sbi-projects-custmgr" onclick="navigateSub('projects','custmgr');closeSidebarOnMobile()"><i data-lucide="building" class="sidebar-icon"></i>Customers</div>
+    <div class="sidebar-item" id="sbi-projects-manage"  onclick="navigateSub('projects','manage');closeSidebarOnMobile()"><i data-lucide="handshake" class="sidebar-icon"></i>Engagements</div>
+    <div class="sidebar-item" id="tab-psdeals"          onclick="showScreen('psdeals');closeSidebarOnMobile()"><i data-lucide="briefcase" class="sidebar-icon"></i>Professional Services</div>
+    <div class="sidebar-item" id="tab-amc"              onclick="showScreen('amc');closeSidebarOnMobile()"><i data-lucide="file-text" class="sidebar-icon"></i>AMC Contracts</div>
   </div>
 
-  <div class="sidebar-section-label">Assets</div>
+  <!-- ── CATALOG: reference data + people-skills ── -->
+  <div class="sidebar-section-label">Catalog</div>
+  <div class="sidebar-item" id="sbi-projects-vendors" onclick="navigateSub('projects','vendors');closeSidebarOnMobile()" style="display:none"><i data-lucide="package" class="sidebar-icon"></i>Vendors &amp; Products</div>
   <div class="sidebar-group" id="sbg-inventory">
     <div class="sidebar-item has-children" id="tab-inventory" onclick="showScreen('inventory');closeSidebarOnMobile()">
-      <i data-lucide="package" class="sidebar-icon"></i>Inventory<span class="sidebar-chevron">›</span>
+      <i data-lucide="boxes" class="sidebar-icon"></i>Inventory<span class="sidebar-chevron">›</span>
     </div>
     <div class="sidebar-submenu">
       <div class="sidebar-subitem" id="sbi-inventory-devices" onclick="navigateSub('inventory','devices')"><i data-lucide="monitor" class="sidebar-subicon"></i>Devices</div>
@@ -246,37 +251,19 @@
       <div class="sidebar-subitem" id="sbi-certificates-all"  onclick="navigateSub('certificates','all')" style="display:none"><i data-lucide="users" class="sidebar-subicon"></i>All Certificates</div>
     </div>
   </div>
+  <div class="sidebar-item" id="tab-skills" onclick="showScreen('skills');closeSidebarOnMobile()" style="display:none"><i data-lucide="graduation-cap" class="sidebar-icon"></i>Team Skills</div>
 
-  <!-- MANAGER (manager only) — admin surfaces broken out of Sessions so the
-       day-to-day Sessions menu stays clean for employees. The whole section
-       (label + items) is hidden when isManager is false in auth.js. -->
-  <div class="sidebar-section-label" id="sidebar-manager-label" style="display:none">Manager</div>
-  <div id="sidebar-manager-group" style="display:none">
-    <div class="sidebar-item" id="sbi-projects-custmgr"   onclick="navigateSub('projects','custmgr');closeSidebarOnMobile()"><i data-lucide="building" class="sidebar-icon"></i>Manage Customers</div>
-    <div class="sidebar-item" id="sbi-projects-manage"    onclick="navigateSub('projects','manage');closeSidebarOnMobile()"><i data-lucide="settings-2" class="sidebar-icon"></i>Manage Engagements</div>
-    <div class="sidebar-item" id="sbi-projects-vendors"   onclick="navigateSub('projects','vendors');closeSidebarOnMobile()"><i data-lucide="package" class="sidebar-icon"></i>Vendors &amp; Products</div>
-    <div class="sidebar-item" id="tab-amc"                onclick="showScreen('amc');closeSidebarOnMobile()"><i data-lucide="file-text" class="sidebar-icon"></i>AMC Contracts</div>
-    <div class="sidebar-item" id="tab-psdeals"            onclick="showScreen('psdeals');closeSidebarOnMobile()"><i data-lucide="briefcase" class="sidebar-icon"></i>Professional Services</div>
-    <div class="sidebar-item" id="tab-skills"             onclick="showScreen('skills');closeSidebarOnMobile()"><i data-lucide="users" class="sidebar-icon"></i>Team Skills</div>
-    <div class="sidebar-item" id="sbi-projects-otmanager" onclick="navigateSub('projects','otmanager');closeSidebarOnMobile()"><i data-lucide="shield-check" class="sidebar-icon"></i>Admin Tools</div>
-  </div>
-
-  <div class="sidebar-section-label">System</div>
-  <div class="sidebar-group" id="sbg-kb">
-    <div class="sidebar-item has-children" id="tab-kb" onclick="showScreen('kb');closeSidebarOnMobile()">
-      <i data-lucide="book-open-text" class="sidebar-icon"></i>Knowledge Base<span class="sidebar-chevron">›</span>
-    </div>
-    <div class="sidebar-submenu">
-      <div class="sidebar-subitem" id="sbi-kb-browse" onclick="navigateSub('kb','browse')"><i data-lucide="search" class="sidebar-subicon"></i>Browse</div>
-      <div class="sidebar-subitem" id="sbi-kb-submit" onclick="navigateSub('kb','submit')"><i data-lucide="file-plus-2" class="sidebar-subicon"></i>Submit Article</div>
-      <div class="sidebar-subitem" id="sbi-kb-mine"   onclick="navigateSub('kb','mine')"><i data-lucide="file-text" class="sidebar-subicon"></i>My Articles</div>
+  <!-- ── SETTINGS FOOTER: reference + admin, smaller text, pinned to bottom ── -->
+  <div class="sidebar-footer">
+    <div class="sidebar-section-label sidebar-section-label-sm">Settings</div>
+    <div class="sidebar-item sidebar-item-sm" id="sbi-projects-otmanager" onclick="navigateSub('projects','otmanager');closeSidebarOnMobile()" style="display:none"><i data-lucide="shield-check" class="sidebar-icon"></i>Admin Tools</div>
+    <div class="sidebar-item sidebar-item-sm" id="tab-kb"                 onclick="showScreen('kb');closeSidebarOnMobile()"><i data-lucide="book-open-text" class="sidebar-icon"></i>Knowledge Base</div>
+    <div class="sidebar-item sidebar-item-sm" id="sbi-projects-otpolicy"  onclick="navigateSub('projects','otpolicy');closeSidebarOnMobile()"><i data-lucide="book-open" class="sidebar-icon"></i>OT Policy</div>
+    <div class="sidebar-footer-actions">
+      <div class="sidebar-item sidebar-item-sm" onclick="openChangePasswordModal();closeSidebarOnMobile()"><i data-lucide="key-round" class="sidebar-icon"></i>Change Password</div>
+      <div class="sidebar-item sidebar-item-sm sidebar-item-logout" onclick="doLogout()"><i data-lucide="log-out" class="sidebar-icon"></i>Logout</div>
     </div>
   </div>
-  <!-- OT Policy is a reference doc, not an active tool — lives under System
-       alongside the Knowledge Base. Routes through showProjectTab still. -->
-  <div class="sidebar-item" id="sbi-projects-otpolicy" onclick="navigateSub('projects','otpolicy');closeSidebarOnMobile()"><i data-lucide="book-open" class="sidebar-icon"></i>OT Policy</div>
-  <div class="sidebar-item" onclick="openChangePasswordModal();closeSidebarOnMobile()"><i data-lucide="key-round" class="sidebar-icon"></i>Change Password</div>
-  <div class="sidebar-item sidebar-item-logout" onclick="doLogout()"><i data-lucide="log-out" class="sidebar-icon"></i>Logout</div>
 </aside>
 
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar(false)"></div>
