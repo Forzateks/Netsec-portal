@@ -1256,6 +1256,7 @@ async function renderVendorsManage() {
       '<div class="vendor-row-actions">'+
         '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();renameVendorPrompt('+v.id+')" title="Rename"><i data-lucide="pencil"></i></button>'+
         '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();toggleVendorActive('+v.id+')" title="'+(v.is_active?'Disable':'Re-enable')+'"><i data-lucide="'+(v.is_active?'eye-off':'eye')+'"></i></button>'+
+        '<button class="btn btn-sm btn-danger btn-icon-only" onclick="event.stopPropagation();deleteVendorPrompt('+v.id+')" title="Delete"><i data-lucide="trash-2"></i></button>'+
       '</div>'+
     '</div>';
   }).join('');
@@ -1391,6 +1392,78 @@ async function toggleVendorActive(id) {
   var {error} = await sb.from('vendors').update({ is_active: !v.is_active }).eq('id', id);
   if (error) { showError('Could not toggle: ' + error.message); return; }
   showToast(v.is_active ? 'Vendor disabled ✓' : 'Vendor re-enabled ✓');
+  await loadProjects();
+  renderVendorsManage();
+}
+
+// Hard delete a vendor — only allowed when nothing references it.
+// References checked:
+//   - product_lines under this vendor (excluding the auto-seeded
+//     "Other (specify)" placeholder, which we own and clean up here)
+//   - engagements.vendor text match (no FK column on engagements)
+//   - employee_skills via FK on product_lines.id (defense in depth —
+//     the placeholder itself shouldn't carry skills because the skills
+//     modal hides "Other (specify)" from its dropdown, but guard anyway)
+async function deleteVendorPrompt(id) {
+  var v = (VENDORS||[]).find(function(x){ return x.id === id; });
+  if (!v) return;
+
+  // Local: count real (non-placeholder) product lines under this vendor.
+  var realLines = (PRODUCT_LINES||[]).filter(function(p){
+    return p.vendor_id === id && (p.name||'').toLowerCase() !== 'other (specify)';
+  });
+
+  // Server: engagement snapshots + total skill rows under ANY line owned
+  // by this vendor (so the placeholder doesn't sneak past).
+  var allLineIds = (PRODUCT_LINES||[]).filter(function(p){ return p.vendor_id === id; }).map(function(p){ return p.id; });
+  var engPromise = sb.from('engagements').select('id', { count:'exact', head:true }).eq('vendor', v.name);
+  var skillPromise = allLineIds.length
+    ? sb.from('employee_skills').select('id', { count:'exact', head:true }).in('product_line_id', allLineIds)
+    : Promise.resolve({ count: 0 });
+  var [engRes, skillRes] = await Promise.all([engPromise, skillPromise]);
+  if (engRes && engRes.error)    { showError('Reference check failed: '+engRes.error.message); return; }
+  if (skillRes && skillRes.error){ showError('Reference check failed: '+skillRes.error.message); return; }
+  var lineCount  = realLines.length;
+  var engCount   = engRes && engRes.count   ? engRes.count   : 0;
+  var skillCount = skillRes && skillRes.count ? skillRes.count : 0;
+
+  if (lineCount > 0 || engCount > 0 || skillCount > 0) {
+    var parts = [];
+    if (lineCount > 0)  parts.push(lineCount  + ' product line'  + (lineCount===1?'':'s'));
+    if (engCount > 0)   parts.push(engCount   + ' engagement'    + (engCount===1?'':'s'));
+    if (skillCount > 0) parts.push(skillCount + ' skill record'  + (skillCount===1?'':'s'));
+    await confirmAction({
+      title: 'Can’t delete "'+v.name+'" yet',
+      body:  'This vendor is referenced by '+parts.join(' and ')+'.\n\nRemove or reassign those first, or use Disable to keep the vendor but hide it from new forms.',
+      confirmText: 'OK',
+      danger: false
+    });
+    return;
+  }
+
+  if (!await confirmAction({
+    title: 'Delete vendor "'+v.name+'"?',
+    body:  'No products, engagements, or skill records reference this vendor — safe to remove.\n\nThe "Other (specify)" placeholder line under this vendor will also be removed.\n\nThis cannot be undone.',
+    requireTyping: v.name,
+    confirmText: 'Delete vendor'
+  })) return;
+
+  // Drop the auto-seeded "Other (specify)" placeholder line(s) first so
+  // the FK on product_lines.vendor_id doesn't block the vendor delete.
+  // If the placeholder doesn't exist (legacy vendor, or hand-cleaned),
+  // this is a no-op.
+  var delLines = await sb.from('product_lines').delete().eq('vendor_id', id);
+  if (delLines.error) { showError('Could not remove vendor placeholder line: '+delLines.error.message); return; }
+
+  var {error} = await sb.from('vendors').delete().eq('id', id);
+  if (error) { showError('Delete failed: '+error.message); return; }
+
+  // Reset the active-vendor pointer if it was pointing at the row we
+  // just removed, otherwise the right panel renders empty.
+  if (typeof _vendorActiveId !== 'undefined' && _vendorActiveId === id) {
+    _vendorActiveId = null;
+  }
+  showToast('Vendor deleted ✓');
   await loadProjects();
   renderVendorsManage();
 }
