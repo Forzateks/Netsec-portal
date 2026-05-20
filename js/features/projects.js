@@ -1103,12 +1103,17 @@ const ACTIVITY_TYPES = [
 // Pre-Sales-Task-specific activity list (session_type='presales').
 const PRESALES_ACTIVITY_TYPES = ['PS Calculation','SOW','Tech Proposal'];
 
+// Internal-session activity list (session_type='internal'). Distinct
+// from delivery work — no customer or engagement attached.
+const INTERNAL_ACTIVITY_TYPES = ['Testing for customers','Lab setup','Others'];
+
 const DEVICE_MODELS = ['EC-XS','EC-SP','EC-M','EC-10104','EC-10106'];
 
 // Return the activity-type options that apply for a given session type.
 // Future session types can plug in here without touching the call sites.
 function activityTypesForSession(sessionType) {
   if (sessionType === 'presales') return PRESALES_ACTIVITY_TYPES;
+  if (sessionType === 'internal') return INTERNAL_ACTIVITY_TYPES;
   return ACTIVITY_TYPES;
 }
 

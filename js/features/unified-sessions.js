@@ -187,24 +187,44 @@ function splitSessionHours(dateStr, startStr, endStr, employee) {
 }
 
 // === FORM: type toggle + conditional fields ====================
+// Three modes:
+//   isEng       — Project/POC/AMC/Support/Pre-Sales-Task. Customer +
+//                 engagement + stake holders + activity + mode + team
+//                 all visible.
+//   isInternal  — Internal/Other. NO customer/engagement/stake — work
+//                 isn't tied to an external party. Activity stays
+//                 visible with the dedicated INTERNAL_ACTIVITY_TYPES
+//                 list ("Testing for customers", "Lab setup", "Others").
+//                 Mode + team still visible.
+//   neither     — empty placeholder. Hide everything below Session Type.
 function onUSTypeChange() {
   var type = document.getElementById('us-type').value;
-  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
-  var engRow = document.getElementById('us-engagement-row');
-  if (engRow) engRow.style.display = isEng ? '' : 'none';
-  var actRow = document.getElementById('us-activity-row');
-  if (actRow) actRow.style.display = isEng ? '' : 'none';
-  var stkRow = document.getElementById('us-stake-row');
-  if (stkRow) stkRow.style.display = isEng ? '' : 'none';
-  var modeRow = document.getElementById('us-mode-row');
-  if (modeRow) modeRow.style.display = isEng ? '' : 'none';
-  var teamRow = document.getElementById('us-team-row');
-  if (teamRow) teamRow.style.display = isEng ? '' : 'none';
+  var isEng      = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
+  var isInternal = (type === 'internal');
 
-  // Repopulate the customer dropdown to only customers with at least one
-  // engagement of the chosen type. Drops customer count from ~86 to a
-  // meaningful subset so users don't fish through unrelated names.
-  _usPopulateCustomersByType(type);
+  var custRow = document.getElementById('us-customer-row');
+  var engRow  = document.getElementById('us-engagement-row');
+  var actRow  = document.getElementById('us-activity-row');
+  var stkRow  = document.getElementById('us-stake-row');
+  var modeRow = document.getElementById('us-mode-row');
+  var teamRow = document.getElementById('us-team-row');
+
+  // Customer + engagement + stake: only meaningful for engagement-tied
+  // sessions. Hidden for Internal (no external party) and when no type
+  // is picked yet.
+  if (custRow) custRow.style.display = isEng ? '' : 'none';
+  if (engRow)  engRow.style.display  = isEng ? '' : 'none';
+  if (stkRow)  stkRow.style.display  = isEng ? '' : 'none';
+  // Activity + mode + team: visible for ANY chosen type, just with
+  // different activity lists. Hidden only when type is empty.
+  if (actRow)  actRow.style.display  = (isEng || isInternal) ? '' : 'none';
+  if (modeRow) modeRow.style.display = (isEng || isInternal) ? '' : 'none';
+  if (teamRow) teamRow.style.display = (isEng || isInternal) ? '' : 'none';
+
+  // Repopulate the customer dropdown only when relevant. Internal +
+  // empty types skip this — the row is hidden anyway and the previous
+  // customer pick may not match the new type's customer list.
+  if (isEng) _usPopulateCustomersByType(type);
   // Customer + engagement may no longer be valid — reset both. The user
   // re-picks from the now-filtered lists.
   var custEl = document.getElementById('us-customer');
@@ -212,9 +232,9 @@ function onUSTypeChange() {
   var actEl  = document.getElementById('us-activity-type');
   if (custEl) custEl.value = '';
   if (engEl)  engEl.value  = '';
-  // Activity Type list depends on session type — presales gets its
-  // own short list, everything else gets the delivery list. Reset
-  // value to placeholder on type change (acceptance criterion #7).
+  // Activity Type list depends on session type — presales + internal
+  // each get their own short list, everything else gets the delivery
+  // list. Reset value to placeholder on type change.
   if (actEl) actEl.value = '';
   fillActivitySelect('us-activity-type', type);
 
@@ -570,11 +590,18 @@ async function saveUnifiedSession() {
   if (!type)  return fail('Please pick a session type.');
   if (!date || !start || !end) return fail('Date, start and end times are required.');
 
-  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
+  var isEng      = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
+  var isInternal = (type === 'internal');
   if (isEng) {
-    if (!customer)  return fail('Please pick a customer.');
-    if (!engId)     return fail('Please pick an engagement.');
-    if (!actType)   return fail('Please pick an activity type.');
+    if (!customer)    return fail('Please pick a customer.');
+    if (!engId)       return fail('Please pick an engagement.');
+    if (!actType)     return fail('Please pick an activity type.');
+    if (!teamMembers) return fail('Pick at least one team member.');
+  } else if (isInternal) {
+    // Internal sessions: no customer/engagement/stake-holders, but the
+    // activity (one of Testing for customers / Lab setup / Others) and
+    // a team member are still required so the session is meaningful.
+    if (!actType)     return fail('Please pick an activity type.');
     if (!teamMembers) return fail('Pick at least one team member.');
   }
   if (!info) return fail('Session info is required.');
@@ -607,24 +634,27 @@ async function saveUnifiedSession() {
   var btn = document.getElementById('us-save-btn');
   btn.disabled = true; btn.textContent = '⏳ Saving...';
 
+  // Activity/team/mode persist for both engagement-tied and Internal
+  // sessions. Customer/engagement/stake-holders only persist for
+  // engagement-tied — Internal work isn't bound to an external party.
   var payload = {
-    employee:      currentUser,
-    session_date:  date,
-    start_time:    start,
-    end_time:      end,
-    session_type:  type,
-    engagement_id: isEng && engId ? Number(engId) : null,
-    customer_name: isEng ? (customer || null) : null,
+    employee:        currentUser,
+    session_date:    date,
+    start_time:      start,
+    end_time:        end,
+    session_type:    type,
+    engagement_id:   isEng && engId ? Number(engId) : null,
+    customer_name:   isEng ? (customer || null) : null,
     engagement_name: engagement_name,
-    activity_type: isEng ? (actType || null) : null,
-    session_info:  info,
-    team_members:  isEng ? teamMembers : null,
-    stake_holders: isEng ? (stakeH || null) : null,
-    mode:          isEng ? (mode || null) : null,
-    remarks:       remarks || null,
-    total_hours:   split.total,
-    office_hours:  split.office,
-    ot_hours:      split.ot,
+    activity_type:   (isEng || isInternal) ? (actType || null) : null,
+    session_info:    info,
+    team_members:    (isEng || isInternal) ? (teamMembers || null) : null,
+    stake_holders:   isEng ? (stakeH || null) : null,
+    mode:            (isEng || isInternal) ? (mode || null) : null,
+    remarks:         remarks || null,
+    total_hours:     split.total,
+    office_hours:    split.office,
+    ot_hours:        split.ot,
   };
 
   var res = await sb.from('unified_sessions').insert(payload).select().single();
@@ -883,7 +913,43 @@ async function openEditUS(id) {
 
   document.getElementById('edit-us-error').style.display = 'none';
   _updateEditUSDuration();
+  // Apply Internal-vs-engagement field visibility based on the row's
+  // type — mirrors the Log Session form's onUSTypeChange behaviour.
+  _editUSApplyFieldVisibility();
   document.getElementById('edit-unified-modal').classList.add('show');
+}
+
+// Toggle Customer / Engagement / Stake Holders rows in the edit modal
+// based on session_type. Engagement-tied types keep them visible;
+// Internal hides them entirely (work isn't bound to an external party).
+// Also refreshes the Activity Type list — Internal gets the dedicated
+// short list; the row's existing activity passes in as legacyValue so
+// pre-v77 entries (e.g. an old internal session saved with "Migration")
+// still appear, marked "(legacy)".
+function _editUSApplyFieldVisibility() {
+  var type       = (document.getElementById('edit-us-type')||{}).value || '';
+  var isEng      = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
+  var isInternal = (type === 'internal');
+
+  function rowOf(id) {
+    var el = document.getElementById(id);
+    return el ? el.closest('.form-group') : null;
+  }
+  var custRow = rowOf('edit-us-customer');
+  var engRow  = rowOf('edit-us-engagement');
+  var stkRow  = rowOf('edit-us-stake');
+  if (custRow) custRow.style.display = isEng ? '' : 'none';
+  if (engRow)  engRow.style.display  = isEng ? '' : 'none';
+  if (stkRow)  stkRow.style.display  = isEng ? '' : 'none';
+
+  // Repopulate the activity-type dropdown for the new type, preserving
+  // the current value when it appears in the new list (or as legacy).
+  var actEl = document.getElementById('edit-us-activity-type');
+  var currentAct = actEl ? actEl.value : '';
+  if (typeof fillActivitySelect === 'function') {
+    fillActivitySelect('edit-us-activity-type', type, currentAct);
+    if (actEl && currentAct) actEl.value = currentAct;
+  }
 }
 
 function closeEditUS() {
@@ -931,11 +997,18 @@ async function saveEditUS() {
     }
   }
 
-  var isEng = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
+  var isEng      = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
+  var isInternal = (type === 'internal');
   var engId = null;
   if (isEng && engagement) {
     var engRow = (ENGAGEMENTS||[]).find(function(e){ return e.name === engagement && e.type === type; });
     if (engRow) engId = engRow.id;
+  }
+  // Internal sessions require activity + at least one team member;
+  // engagement-tied validation lives below in the existing payload.
+  if (isInternal) {
+    if (!actType) return fail('Please pick an activity type.');
+    if (!team)    return fail('Pick at least one team member.');
   }
 
   // Read OLD row (need original employee for the unified totals split)
@@ -1011,10 +1084,10 @@ async function saveEditUS() {
     customer_name:   isEng ? (customer || null) : null,
     engagement_name: isEng ? (engagement || null) : null,
     engagement_id:   engId,
-    activity_type:   isEng ? (actType || null) : null,
-    team_members:    isEng ? team : null,
-    stake_holders:   isEng ? stake : null,
-    mode:            isEng ? mode : null,
+    activity_type:   (isEng || isInternal) ? (actType || null) : null,
+    team_members:    (isEng || isInternal) ? (team || null) : null,
+    stake_holders:   isEng ? (stake || null) : null,
+    mode:            (isEng || isInternal) ? (mode || null) : null,
     remarks:         remarks,
     total_hours:     split.total,
     office_hours:    split.office,
