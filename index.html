@@ -1630,6 +1630,16 @@
         <label>Replace File <span class="dim" style="font-weight:400;font-size:11px">(optional — leave blank to keep current)</span></label>
         <input type="file" id="cert-edit-file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg,image/jpg">
       </div>
+      <!-- Manager-only Gulfit-relevance flag. Hidden for employees via
+           the .manager-only-el class that auth.js toggles at login.
+           Renders as a single labeled checkbox styled inline. -->
+      <div class="form-group full manager-only-el" id="cert-edit-gulfit-row">
+        <label class="cert-gulfit-label">
+          <input type="checkbox" id="cert-edit-gulfit" class="cert-gulfit-cb">
+          <span class="cert-gulfit-text">Gulfit Relevant</span>
+        </label>
+        <div class="cert-gulfit-help">Tick if this certification aligns with Gulfit's partner business (Aruba, Juniper, HPE, Fortinet, etc.).</div>
+      </div>
     </div>
     <div class="alert alert-error" id="cert-edit-error" style="display:none"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">

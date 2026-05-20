@@ -6,6 +6,7 @@
 
 var _certData      = [];
 var _certActiveSub = 'mine';   // 'mine' | 'all'
+var _certGulfitFilter = 'all'; // 'all' | 'gulfit' | 'other' — applies on the All Certificates view only
 
 // ── helpers ────────────────────────────────────────────────────────
 
@@ -90,10 +91,12 @@ function renderCertList() {
 
   var rows = _certData.slice();
 
-  // Manager-only employee filter
+  // Manager-only employee filter + Gulfit-relevance chip (All view only).
   if (isAll) {
     var empFilter = ((document.getElementById('cert-all-filter-emp')||{}).value||'').trim();
     if (empFilter) rows = rows.filter(function(c){return c.employee===empFilter;});
+    if (_certGulfitFilter === 'gulfit') rows = rows.filter(function(c){ return !!c.is_gulfit_relevant; });
+    if (_certGulfitFilter === 'other')  rows = rows.filter(function(c){ return !c.is_gulfit_relevant; });
   }
 
   if (!rows.length) {
@@ -130,9 +133,13 @@ function renderCertList() {
     var actionsOwn = (c.employee === currentUser);
     var actionsMgr = isManager;
     var fileLabel = (c.file_name && c.file_name.length > 32) ? (c.file_name.slice(0,30)+'…') : (c.file_name||'—');
+    // Tiny green Gulfit badge — visible to all users, set by manager.
+    var gulfitBadge = c.is_gulfit_relevant
+      ? ' <span class="cert-gulfit-badge" title="Aligned with Gulfit\'s partner business">Gulfit</span>'
+      : '';
     return '<tr>'+
       (isAll ? '<td style="font-weight:600">'+esc2(c.employee)+'</td>' : '')+
-      '<td><button type="button" class="cert-name-btn" onclick="previewCertificate('+c.id+')" title="Click to preview">'+esc2(c.name)+'</button></td>'+
+      '<td><button type="button" class="cert-name-btn" onclick="previewCertificate('+c.id+')" title="Click to preview">'+esc2(c.name)+'</button>'+gulfitBadge+'</td>'+
       '<td class="hide-mobile num">'+fmtDate(c.issue_date)+'</td>'+
       '<td class="num">'+fmtDate(c.expiry_date)+
         (st.key==='soon' ? '<div style="font-size:11px;color:#B45309;margin-top:2px">'+st.days+'d left</div>' : '')+
@@ -143,18 +150,45 @@ function renderCertList() {
       '<td style="white-space:nowrap;text-align:right">'+
         '<button class="btn btn-sm btn-ghost" onclick="previewCertificate('+c.id+')" title="Preview"><i data-lucide="eye" class="btn-icon" style="margin-right:0"></i></button>'+
         '<button class="btn btn-sm btn-ghost" onclick="downloadCertificate('+c.id+')" title="Download"><i data-lucide="download" class="btn-icon" style="margin-right:0"></i></button>'+
-        (actionsOwn ? '<button class="btn btn-sm btn-ghost" onclick="openCertEditModal('+c.id+')" title="Edit"><i data-lucide="pencil-line" class="btn-icon" style="margin-right:0"></i></button>' : '')+
-        ((actionsOwn||actionsMgr) ? '<button class="btn btn-sm btn-danger" onclick="confirmDeleteCertificate('+c.id+')" title="Delete"><i data-lucide="trash-2" class="btn-icon" style="margin-right:0"></i></button>' : '')+
+        ((actionsOwn || actionsMgr) ? '<button class="btn btn-sm btn-ghost" onclick="openCertEditModal('+c.id+')" title="Edit"><i data-lucide="pencil-line" class="btn-icon" style="margin-right:0"></i></button>' : '')+
+        ((actionsOwn || actionsMgr) ? '<button class="btn btn-sm btn-danger" onclick="confirmDeleteCertificate('+c.id+')" title="Delete"><i data-lucide="trash-2" class="btn-icon" style="margin-right:0"></i></button>' : '')+
       '</td>'+
     '</tr>';
   }).join('');
 
+  // 3-state chip row above the table on the All Certificates view —
+  // mirrors the AMC chip pattern. Counts are global (independent of
+  // employee filter) so the manager always sees the corpus totals.
+  var chipBar = '';
+  if (isAll) {
+    var allN     = _certData.length;
+    var gulfitN  = _certData.filter(function(c){return !!c.is_gulfit_relevant;}).length;
+    var otherN   = allN - gulfitN;
+    var chip = function(key, label, count) {
+      var act = (_certGulfitFilter === key);
+      return '<button class="amc-chip cert-gulfit-chip-'+key+(act?' amc-chip-active':'')+'" onclick="setCertGulfitFilter(\''+key+'\')">'+
+        label+' <span class="amc-chip-count">'+fmtCount(count)+'</span></button>';
+    };
+    chipBar =
+      '<div class="amc-chip-row" style="margin-bottom:12px">'+
+        chip('all',    'All',     allN)+
+        chip('gulfit', '🟢 Gulfit Relevant', gulfitN)+
+        chip('other',  '⚪ Other', otherN)+
+      '</div>';
+  }
+
   content.innerHTML =
+    chipBar+
     '<div class="card" style="padding:0;overflow:hidden">'+
       '<div class="table-wrap"><table class="cert-table"><thead>'+th+'</thead><tbody>'+body+'</tbody></table></div>'+
     '</div>'+
     '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Showing '+rows.length+' of '+_certData.length+' certificates</div>';
   if (typeof renderIcons === 'function') renderIcons();
+}
+
+function setCertGulfitFilter(key) {
+  _certGulfitFilter = key;
+  renderCertList();
 }
 
 // ── upload modal ───────────────────────────────────────────────────
@@ -261,7 +295,13 @@ async function uploadCertificate() {
 function openCertEditModal(id) {
   var c = _certData.find(function(x){return x.id===id;});
   if (!c) return;
-  if (c.employee !== currentUser) { showError('You can only edit your own certificates.'); return; }
+  // Employees can only edit their own certs. Managers can open any
+  // cert — they may need to toggle the Gulfit-relevant flag on
+  // someone else's certification. RLS gates the actual write.
+  if (c.employee !== currentUser && !isManager) {
+    showError('You can only edit your own certificates.');
+    return;
+  }
   document.getElementById('cert-edit-id').value     = String(id);
   document.getElementById('cert-edit-name').value   = c.name || '';
   document.getElementById('cert-edit-issue').value  = c.issue_date || '';
@@ -269,6 +309,10 @@ function openCertEditModal(id) {
   document.getElementById('cert-edit-current-file').textContent = c.file_name || '(no filename stored)';
   document.getElementById('cert-edit-file').value   = '';
   document.getElementById('cert-edit-error').style.display = 'none';
+  // Seed the Gulfit-relevant checkbox (manager-only row, hidden for
+  // employees via auth.js' .manager-only-el toggle).
+  var gulfitCb = document.getElementById('cert-edit-gulfit');
+  if (gulfitCb) gulfitCb.checked = !!c.is_gulfit_relevant;
   document.getElementById('cert-edit-modal').classList.add('show');
   if (typeof renderIcons === 'function') renderIcons();
 }
@@ -296,6 +340,14 @@ async function saveCertEdit() {
   btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Saving…';
 
   var patch = { name: name, issue_date: issue, expiry_date: expiry };
+  // Only managers can flip the Gulfit-relevant flag. Employees never
+  // see the checkbox; if they somehow set it (devtools), RLS rejects
+  // the column write because the row isn't theirs to fully manage —
+  // but defense in depth, we only include the field when isManager.
+  if (isManager) {
+    var gulfitCb = document.getElementById('cert-edit-gulfit');
+    if (gulfitCb) patch.is_gulfit_relevant = !!gulfitCb.checked;
+  }
   var oldPath = existing.file_url;
   var newPath = null;
 
