@@ -1242,7 +1242,12 @@ async function renderPjEmployeeSummary() {
     // match each comma-separated name against the EMPLOYEES list (exact
     // or first-name). Fall back to the logger if no name matched.
     var participants = [];
-    if (!r.team_members || r.session_type === 'internal') {
+    // v78: dropped the `|| r.session_type === 'internal'` clause. Pre-v77
+    // the UI hid team_members for Internal sessions so this was harmless
+    // belt-and-braces; after v77 it actively threw away real team-member
+    // data. Internal sessions with no team_members still fall through
+    // the !r.team_members guard and credit only the logger.
+    if (!r.team_members) {
       if (r.employee) participants.push(r.employee);
     } else {
       var names = r.team_members.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
