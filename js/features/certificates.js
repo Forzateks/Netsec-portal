@@ -32,6 +32,11 @@ function _certStatus(expiryISO) {
 
 function showCertTab(tab) {
   _certActiveSub = tab;
+  // Reset the Gulfit chip filter on every tab switch so the user never
+  // lands on a stuck filter across navigations. Defense in depth — the
+  // chip row also stays visible during empty-filter states, but this
+  // means the user doesn't have to think about it at all.
+  _certGulfitFilter = 'all';
   ['mine','all'].forEach(function(t){
     var el = document.getElementById('certtab-'+t);
     if (el) el.style.display = (t===tab ? 'block' : 'none');
@@ -99,21 +104,64 @@ function renderCertList() {
     if (_certGulfitFilter === 'other')  rows = rows.filter(function(c){ return !c.is_gulfit_relevant; });
   }
 
+  // Build the chip row up front so it survives the empty-state branch.
+  // Without this the v74 trap re-appears: filter to zero matches →
+  // entire content area replaced with the empty state → chip row
+  // disappears → user has no way to click "All" to recover.
+  var chipBar = '';
+  if (isAll && _certData.length > 0) {
+    var allN     = _certData.length;
+    var gulfitN  = _certData.filter(function(c){return !!c.is_gulfit_relevant;}).length;
+    var otherN   = allN - gulfitN;
+    var chipFn = function(key, label, count) {
+      var act = (_certGulfitFilter === key);
+      return '<button class="amc-chip cert-gulfit-chip-'+key+(act?' amc-chip-active':'')+'" onclick="setCertGulfitFilter(\''+key+'\')">'+
+        label+' <span class="amc-chip-count">'+fmtCount(count)+'</span></button>';
+    };
+    chipBar =
+      '<div class="amc-chip-row" style="margin-bottom:12px">'+
+        chipFn('all',    'All',     allN)+
+        chipFn('gulfit', '🟢 Gulfit Relevant', gulfitN)+
+        chipFn('other',  '⚪ Other', otherN)+
+      '</div>';
+  }
+
   if (!rows.length) {
-    content.innerHTML = isAll
-      ? renderEmptyState({
-          icon: 'award',
-          heading: 'Team certifications hub',
-          sub: "Once employees upload their certs, you'll see everyone's qualifications and expiry dates here."
-        })
-      : renderEmptyState({
-          icon: 'award',
-          heading: 'No certificates yet',
-          sub: 'Track your professional certs like Aruba ACMA, HPE Sales, or CCNA. Get expiry alerts so you renew on time.',
-          btnText: 'Upload your first certificate',
-          btnIcon: 'upload-cloud',
-          btnOnclick: 'openCertUploadModal()'
-        });
+    // Branch the empty-state copy: there's a real difference between
+    // "no certs uploaded yet" and "filter eliminated every cert", and
+    // showing the same welcome text for both made the user think their
+    // data was gone.
+    var emptyHtml;
+    if (isAll && _certData.length > 0) {
+      // Filter eliminated everything. Chips above already give them
+      // the way out; the message just names the situation.
+      emptyHtml = renderEmptyState({
+        icon: 'filter-x',
+        heading: 'No certificates match this filter',
+        sub: "Click 'All' above to show every certificate, or pick a different filter chip.",
+        btnText: 'Clear filter',
+        btnIcon: 'rotate-ccw',
+        btnOnclick: "setCertGulfitFilter('all')"
+      });
+    } else if (isAll) {
+      // True empty: no certs anywhere in the system yet.
+      emptyHtml = renderEmptyState({
+        icon: 'award',
+        heading: 'Team certifications hub',
+        sub: "Once employees upload their certs, you'll see everyone's qualifications and expiry dates here."
+      });
+    } else {
+      // Mine view, no own certs.
+      emptyHtml = renderEmptyState({
+        icon: 'award',
+        heading: 'No certificates yet',
+        sub: 'Track your professional certs like Aruba ACMA, HPE Sales, or CCNA. Get expiry alerts so you renew on time.',
+        btnText: 'Upload your first certificate',
+        btnIcon: 'upload-cloud',
+        btnOnclick: 'openCertUploadModal()'
+      });
+    }
+    content.innerHTML = chipBar + emptyHtml;
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
@@ -133,13 +181,17 @@ function renderCertList() {
     var actionsOwn = (c.employee === currentUser);
     var actionsMgr = isManager;
     var fileLabel = (c.file_name && c.file_name.length > 32) ? (c.file_name.slice(0,30)+'…') : (c.file_name||'—');
-    // Tiny green Gulfit badge — visible to all users, set by manager.
-    var gulfitBadge = c.is_gulfit_relevant
+    // Inline tag next to the cert name. Green "Gulfit" pill when the
+    // manager has flagged the cert; muted grey "General" pill otherwise.
+    // Showing both states (vs only Gulfit) makes the backfill workflow
+    // legible at a glance and removes the implicit "is this just
+    // unflagged or actually general?" ambiguity.
+    var relBadge = c.is_gulfit_relevant
       ? ' <span class="cert-gulfit-badge" title="Aligned with Gulfit\'s partner business">Gulfit</span>'
-      : '';
+      : ' <span class="cert-general-badge" title="Not flagged as Gulfit-relevant">General</span>';
     return '<tr>'+
       (isAll ? '<td style="font-weight:600">'+esc2(c.employee)+'</td>' : '')+
-      '<td><button type="button" class="cert-name-btn" onclick="previewCertificate('+c.id+')" title="Click to preview">'+esc2(c.name)+'</button>'+gulfitBadge+'</td>'+
+      '<td><button type="button" class="cert-name-btn" onclick="previewCertificate('+c.id+')" title="Click to preview">'+esc2(c.name)+'</button>'+relBadge+'</td>'+
       '<td class="hide-mobile num">'+fmtDate(c.issue_date)+'</td>'+
       '<td class="num">'+fmtDate(c.expiry_date)+
         (st.key==='soon' ? '<div style="font-size:11px;color:#B45309;margin-top:2px">'+st.days+'d left</div>' : '')+
@@ -156,27 +208,7 @@ function renderCertList() {
     '</tr>';
   }).join('');
 
-  // 3-state chip row above the table on the All Certificates view —
-  // mirrors the AMC chip pattern. Counts are global (independent of
-  // employee filter) so the manager always sees the corpus totals.
-  var chipBar = '';
-  if (isAll) {
-    var allN     = _certData.length;
-    var gulfitN  = _certData.filter(function(c){return !!c.is_gulfit_relevant;}).length;
-    var otherN   = allN - gulfitN;
-    var chip = function(key, label, count) {
-      var act = (_certGulfitFilter === key);
-      return '<button class="amc-chip cert-gulfit-chip-'+key+(act?' amc-chip-active':'')+'" onclick="setCertGulfitFilter(\''+key+'\')">'+
-        label+' <span class="amc-chip-count">'+fmtCount(count)+'</span></button>';
-    };
-    chipBar =
-      '<div class="amc-chip-row" style="margin-bottom:12px">'+
-        chip('all',    'All',     allN)+
-        chip('gulfit', '🟢 Gulfit Relevant', gulfitN)+
-        chip('other',  '⚪ Other', otherN)+
-      '</div>';
-  }
-
+  // chipBar was built above so it survives the empty-state branch too.
   content.innerHTML =
     chipBar+
     '<div class="card" style="padding:0;overflow:hidden">'+
