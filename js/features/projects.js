@@ -233,6 +233,7 @@ function _addEngError(msg) {
 }
 
 async function addEngagement() {
+  if (!await requireAuth()) return;
   const customer = document.getElementById('pj-new-customer').value;
   const type     = document.getElementById('pj-new-type').value;
   const name     = (document.getElementById('pj-new-name').value||'').trim().toUpperCase();
@@ -347,6 +348,7 @@ function onEditEngProductLineChange() {
 
 // ── UPDATE PROJECT STATUS ────────────────────────────────────────
 async function updateProjectStatus(idOrName, newStatus) {
+  if (!await requireAuth()) return;
   // Backward-compat: callers may pass either an id (new) or a name (old).
   var query = sb.from('engagements').update({status: newStatus});
   if (typeof idOrName === 'number' || /^\d+$/.test(String(idOrName))) {
@@ -370,6 +372,7 @@ async function updateProjectStatus(idOrName, newStatus) {
 // Without an argument it returns false instead of throwing — the caller
 // decides how to surface the error.
 async function addCustomer(nameArg) {
+  if (!await requireAuth()) return;
   var name = (nameArg !== undefined ? nameArg : '').trim();
   if (!name) return null;
   // Duplicate check (case-insensitive). Caller's validator usually catches
@@ -633,6 +636,7 @@ function closeEditCustomerModal() {
   document.getElementById('edit-customer-modal').classList.remove('show');
 }
 async function saveEditCustomer() {
+  if (!await requireAuth()) return;
   var id = document.getElementById('edit-cust-id').value;
   var name = (document.getElementById('edit-cust-name').value||'').trim();
   var status = document.getElementById('edit-cust-status').value;
@@ -669,6 +673,7 @@ async function saveEditCustomer() {
 }
 
 async function deleteCustomer(id, name) {
+  if (!await requireAuth()) return;
   // Refusal path: delete is BLOCKED when the customer still has engagements.
   // The old chip-wall flow cascade-deleted everything; the new Manage Customers
   // table is intentionally stricter — managers must reassign or remove the
@@ -907,6 +912,7 @@ function closeEditProjectModal() {
 }
 
 async function saveEditProject() {
+  if (!await requireAuth()) return;
   var id = document.getElementById('edit-project-id').value;
   var customer = document.getElementById('edit-project-customer').value;
   var name = (document.getElementById('edit-project-name').value||'').trim();
@@ -990,6 +996,7 @@ async function saveEditProject() {
 // but leaves its sessions/links intact. Existing snapshot text on
 // session tables is unchanged; the engagement row remains for restore.
 async function archiveEngagement(id, name) {
+  if (!await requireAuth()) return;
   if (!await confirmAction({
     title: 'Archive engagement "'+name+'"?',
     body:  'This will move the engagement to the Archived view. It will no longer appear in active lists, dropdowns, or the tracker, but can be restored later.\n\nSessions previously logged against it stay intact.',
@@ -1008,6 +1015,7 @@ async function archiveEngagement(id, name) {
 }
 
 async function restoreEngagement(id) {
+  if (!await requireAuth()) return;
   var e = (ENGAGEMENTS||[]).find(function(x){ return x.id === id; });
   if (!e) return;
   if (!await confirmAction({
@@ -1029,6 +1037,7 @@ async function restoreEngagement(id) {
 }
 
 async function permanentlyDeleteEngagement(id, name) {
+  if (!await requireAuth()) return;
   if (!isManager) { showError('Manager access only.'); return; }
   if (!await confirmAction({
     title: 'Permanently delete engagement "'+name+'"?',
@@ -1593,6 +1602,7 @@ function selectVendor(id) {
 }
 
 async function addVendorPrompt() {
+  if (!await requireAuth()) return;
   var name = await promptInput({
     title: 'Add Vendor',
     label: 'Vendor name',
@@ -1618,6 +1628,7 @@ async function addVendorPrompt() {
 }
 
 async function renameVendorPrompt(id) {
+  if (!await requireAuth()) return;
   var v = (VENDORS||[]).find(function(x){ return x.id === id; });
   if (!v) return;
   var newName = await promptInput({
@@ -1643,6 +1654,7 @@ async function renameVendorPrompt(id) {
 }
 
 async function toggleVendorActive(id) {
+  if (!await requireAuth()) return;
   var v = (VENDORS||[]).find(function(x){ return x.id === id; });
   if (!v) return;
   var {error} = await sb.from('vendors').update({ is_active: !v.is_active }).eq('id', id);
@@ -1661,6 +1673,7 @@ async function toggleVendorActive(id) {
 //     the placeholder itself shouldn't carry skills because the skills
 //     modal hides "Other (specify)" from its dropdown, but guard anyway)
 async function deleteVendorPrompt(id) {
+  if (!await requireAuth()) return;
   var v = (VENDORS||[]).find(function(x){ return x.id === id; });
   if (!v) return;
 
@@ -1725,6 +1738,7 @@ async function deleteVendorPrompt(id) {
 }
 
 async function addProductLinePrompt(vendorId) {
+  if (!await requireAuth()) return;
   var v = (VENDORS||[]).find(function(x){ return x.id === vendorId; });
   var name = await promptInput({
     title: 'Add Product Line',
@@ -1752,6 +1766,7 @@ async function addProductLinePrompt(vendorId) {
 }
 
 async function renameProductLinePrompt(id) {
+  if (!await requireAuth()) return;
   var p = (PRODUCT_LINES||[]).find(function(x){ return x.id === id; });
   if (!p) return;
   var v = (VENDORS||[]).find(function(x){ return x.id === p.vendor_id; });
@@ -1781,6 +1796,7 @@ async function renameProductLinePrompt(id) {
 }
 
 async function toggleProductLineActive(id) {
+  if (!await requireAuth()) return;
   var p = (PRODUCT_LINES||[]).find(function(x){ return x.id === id; });
   if (!p) return;
   var {error} = await sb.from('product_lines').update({ is_active: !p.is_active }).eq('id', id);
@@ -1800,6 +1816,7 @@ async function toggleProductLineActive(id) {
 // Toggle-disable stays available as a safer alternative; this is only
 // for genuinely unused product lines that should disappear.
 async function deleteProductLinePrompt(id) {
+  if (!await requireAuth()) return;
   var p = (PRODUCT_LINES||[]).find(function(x){ return x.id === id; });
   if (!p) return;
   var v = (VENDORS||[]).find(function(x){ return x.id === p.vendor_id; });

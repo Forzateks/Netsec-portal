@@ -124,6 +124,7 @@ function resetKBForm() {
 }
 
 async function submitKBArticle() {
+  if (!await requireAuth()) return;
   var title   = (document.getElementById('kb-title').value||'').trim();
   var category= document.getElementById('kb-category').value;
   var content = (document.getElementById('kb-content').value||'').trim();
@@ -196,6 +197,7 @@ function closeKBEditModal() {
 }
 
 async function saveKBEdit() {
+  if (!await requireAuth()) return;
   var id=parseInt(document.getElementById('kb-edit-id').value);
   var title=(document.getElementById('kb-edit-title').value||'').trim();
   var content=(document.getElementById('kb-edit-content').value||'').trim();
@@ -218,6 +220,7 @@ async function saveKBEdit() {
 }
 
 async function deleteKBArticle(id) {
+  if (!await requireAuth()) return;
   var a=_kbData.find(function(x){return x.id===id;});
   if (!a) return;
   if (a.submitted_by!==currentUser && !isManager){showError('You can only delete your own articles.');return;}

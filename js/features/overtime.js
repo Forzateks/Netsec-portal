@@ -384,6 +384,7 @@ async function renderSessions() {
 }
 
 async function deleteSession(id) {
+  if (!await requireAuth()) return;
   if (!await confirmAction({
     title: 'Delete this OT session?',
     body: 'This will permanently remove the session and any linked CO credit.\n\nThis cannot be undone.',
@@ -461,6 +462,7 @@ function selectSummaryEmp(el,emp) {
 let _recomputeDiff = null;
 
 async function recomputeAllOT(mode) {
+  if (!await requireAuth()) return;
   if (!isManager) { showError('Manager only.'); return; }
   var resultEl = document.getElementById('recompute-result');
   var applyBtn = document.getElementById('recompute-apply-btn');
@@ -650,6 +652,7 @@ async function previewViolations() {
 }
 
 async function applyViolationCleanup() {
+  if (!await requireAuth()) return;
   if (!isManager) return;
   if (!_violationPlan) { showError('Run Preview Violations first.'); return; }
 
@@ -740,6 +743,7 @@ async function previewReevalArchived() {
 }
 
 async function applyReevalArchived() {
+  if (!await requireAuth()) return;
   if (!isManager) return;
   if (!_reevalPlan || !_reevalPlan.length) { showError('Run Preview first.'); return; }
   if (!await confirmAction({
@@ -775,6 +779,7 @@ async function applyReevalArchived() {
 // Purge archived/rejected OT sessions older than 1 year. Manager-only,
 // double-confirm. Hard-delete is irreversible.
 async function purgeOldArchived() {
+  if (!await requireAuth()) return;
   if (!isManager) { showError('Manager only.'); return; }
   var resultEl = document.getElementById('purge-result');
   resultEl.style.display = 'block';

@@ -597,6 +597,7 @@ function _attnRowHtml(it) {
 // snooze via the active-snoozes query.
 async function snoozeAlert(alertType, refId, triggerBtn) {
   if (!currentEmail) { showError('Not signed in.'); return; }
+  if (!await requireAuth()) return;
   var ok = await confirmAction({
     title: 'Snooze for 7 days?',
     body: 'This alert will hide for 7 days. It will reappear automatically if the underlying issue still exists.',

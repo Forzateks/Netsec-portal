@@ -567,6 +567,10 @@ function _buildMemberOTRow(memberName, date, start, end, isEng, customer, engage
 }
 
 async function saveUnifiedSession() {
+  // Pre-flight auth check (v82). Catches the "session died silently" case
+  // where currentUser is still populated but the JWT has lost its email
+  // claim — otherwise the INSERT fails with a misleading 42501 RLS error.
+  if (!await requireAuth()) return;
   var type     = document.getElementById('us-type').value;
   var customer = document.getElementById('us-customer').value;
   var engId    = document.getElementById('us-engagement').value;
@@ -966,6 +970,7 @@ function _updateEditUSDuration() {
 }
 
 async function saveEditUS() {
+  if (!await requireAuth()) return;
   var id    = document.getElementById('edit-us-id').value;
   var type  = document.getElementById('edit-us-type').value;
   var date  = document.getElementById('edit-us-date').value;
@@ -1541,6 +1546,7 @@ async function renderUnifiedTypeSummary(typeKey) {
 }
 
 async function deleteUS(id) {
+  if (!await requireAuth()) return;
   // Read the session row (for employee/audit) + ALL linked OT rows
   // (v53 the link is multi-row via source_session_id, not a single FK).
   var sessRes = await sb.from('unified_sessions').select('employee').eq('id', id).single();

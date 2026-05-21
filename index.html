@@ -2267,6 +2267,26 @@
   </div>
 </div>
 
+<!-- ── SESSION EXPIRED MODAL (v82) ──────────────────────────────────
+     Surfaced by requireAuth() when ensureAuthValid() fails. Non-dismissable
+     except via the "Sign in again" button — there is no Cancel and no
+     overlay-click handler. Catches the "auth session died silently" case
+     where currentUser/isManager are still populated in JS but the JWT has
+     lost its email claim, which would otherwise show up as a misleading
+     42501 RLS error on the next mutation. -->
+<div class="modal-overlay" id="session-expired-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title">⚠️ Session expired</div>
+    <div class="confirm-body" style="font-size:13px;line-height:1.5">
+      Your session has expired or the connection was lost. Please sign in again to continue.
+      <div style="font-size:12px;color:var(--muted);margin-top:10px">Any unsaved data on this form may be lost.</div>
+    </div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button type="button" class="btn btn-primary" onclick="handleSessionExpiredLogout()">Sign in again</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── CONFIRM MODAL — shared across the app for destructive actions ── -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal" style="max-width:480px">

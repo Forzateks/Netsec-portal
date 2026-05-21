@@ -186,6 +186,7 @@ function _refreshHalfDayState(start, end) {
 }
 
 async function submitLeaveRequest() {
+  if (!await requireAuth()) return;
   const ltype  = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual';
   if (isCompOffType(ltype)) { return submitCompOffViaLeaveForm(ltype); }
   const start  = document.getElementById('lv-start').value;
@@ -300,6 +301,7 @@ async function submitLeaveRequest() {
 }
 
 async function submitCompOffViaLeaveForm(ltype) {
+  if (!await requireAuth()) return;
   const date   = document.getElementById('lv-start').value;
   const reason = document.getElementById('lv-reason').value.trim();
   const errEl  = document.getElementById('leave-error');
@@ -801,6 +803,7 @@ function closeEditALModal() {
   document.getElementById('edit-al-modal').classList.remove('show');
 }
 async function saveEditAL() {
+  if (!await requireAuth()) return;
   var id = document.getElementById('edit-al-id').value;
   var emp = document.getElementById('edit-al-emp').value;
   var type = document.getElementById('edit-al-type').value;
@@ -822,6 +825,7 @@ async function saveEditAL() {
   renderLeaveApprovals();
 }
 async function deleteAL(id, employee) {
+  if (!await requireAuth()) return;
   if (!await confirmAction({
     title: 'Delete this approved leave record?',
     body: 'Employee: '+employee+'\n\nThis will permanently remove the leave record. The employee\'s used-days balance will decrease.\n\nThis cannot be undone.',
@@ -855,6 +859,7 @@ function closeEditLeaveModal() {
   document.getElementById('edit-leave-modal').classList.remove('show');
 }
 async function saveEditLeave() {
+  if (!await requireAuth()) return;
   var id = document.getElementById('edit-lv-id').value;
   var emp = document.getElementById('edit-lv-emp').value;
   var type = document.getElementById('edit-lv-type').value;
@@ -1034,6 +1039,7 @@ function _approveSuccessGlow() {
 }
 
 async function deleteRequest(type, id) {
+  if (!await requireAuth()) return;
   // If the request is approved, also clean the corresponding balance row so
   // we don't leave orphan annual_leave / comp_off_register rows behind.
   const table = type==='compoff' ? 'comp_off_requests' : 'leave_requests';
@@ -1073,6 +1079,7 @@ async function deleteRequest(type, id) {
 
 async function processRequest(decision) {
   if (!approveTarget) return;
+  if (!await requireAuth()) return;
   const {type,id,employee}=approveTarget;
   const comment=document.getElementById('approve-comment').value.trim();
 
@@ -1158,6 +1165,7 @@ async function processRequest(decision) {
 // the discussion and resume the normal approval flow later). No comment
 // required; current manager_comment stays as historical context.
 async function resetLeaveToPending(id) {
+  if (!await requireAuth()) return;
   if (!await confirmAction({
     title: 'Move back to Pending?',
     body: 'This will clear the re-review state. The manager comment stays as history; you can review the request again from the Pending list.',
@@ -1178,6 +1186,7 @@ async function resetLeaveToPending(id) {
 // cancel any. Past-only leaves are blocked. Mid-leave cancellations set
 // effective_end_date = yesterday so past days stay counted as used.
 async function cancelLeaveRequest(id) {
+  if (!await requireAuth()) return;
   var res = await sb.from('leave_requests').select('*').eq('id', id).single();
   if (res.error || !res.data) { showError('Could not load request.'); return; }
   var r = res.data;

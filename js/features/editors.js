@@ -35,6 +35,7 @@ function updateEditPreview() {
   document.getElementById('edit-prev-cred').textContent=fmtHours(res.credited);
 }
 async function saveEditOT() {
+  if (!await requireAuth()) return;
   var id=document.getElementById('edit-ot-id').value;
   var customer=document.getElementById('edit-ot-customer').value;
   var project=document.getElementById('edit-ot-project').value;

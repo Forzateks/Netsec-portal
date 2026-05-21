@@ -165,6 +165,7 @@ function resetAddDeviceForm() {
 }
 
 async function saveNewDevice() {
+  if (!await requireAuth()) return;
   var serial = document.getElementById('inv-add-serial').value.trim();
   if (!serial) { showError('Serial number is required.'); return; }
 
@@ -253,6 +254,7 @@ function closeEditDeviceModal() {
 }
 
 async function saveEditDevice() {
+  if (!await requireAuth()) return;
   if (!_invEditId) return;
   var btn = document.getElementById('inv-edit-save-btn');
   btn.disabled = true; btn.textContent = '⏳ Saving...';
@@ -314,6 +316,7 @@ async function saveEditDevice() {
 }
 
 async function deleteDevice(id, serial) {
+  if (!await requireAuth()) return;
   if (!isManager) return;
   if (!await confirmAction({
     title: 'Delete this device?',

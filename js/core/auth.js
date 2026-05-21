@@ -271,6 +271,63 @@ async function initApp(user) {
   if (typeof startNotifPolling === 'function') startNotifPolling();
 }
 
+// == AUTH-STATE VALIDATION (v82) ==================================
+// Defensive pre-flight for mutations. Network blips can kill the Supabase
+// auth session while frontend state (currentUser, isManager) stays populated
+// from initial login. The app *looks* logged in, but the JWT no longer
+// carries an email — so any INSERT/UPDATE/DELETE that depends on RLS via
+// current_employee_name()/is_manager_user() fails with a generic 42501
+// "row-level security policy violation". That error reads as a permission
+// bug; the actual cause is "session died silently."
+//
+// ensureAuthValid() reads the cached session from local storage (no network
+// round trip) and verifies it has a user with an email AND isn't expired.
+// Callers either consume {valid, reason} directly or use requireAuth() —
+// which surfaces the modal and returns a boolean — so a save handler can
+// bail with a clean message instead of a cryptic RLS error.
+async function ensureAuthValid() {
+  try {
+    const { data } = await sb.auth.getSession();
+    const session = data && data.session;
+    if (!session || !session.user || !session.user.email) {
+      return { valid: false, reason: 'no_session' };
+    }
+    if (session.expires_at && session.expires_at * 1000 < Date.now()) {
+      return { valid: false, reason: 'expired' };
+    }
+    return { valid: true };
+  } catch (err) {
+    return { valid: false, reason: 'check_failed', error: err };
+  }
+}
+
+// Convenience wrapper for mutation entry points. Returns true if the caller
+// may proceed; if false, the modal is already shown and the caller bails.
+// Usage:  if (!await requireAuth()) return;
+async function requireAuth() {
+  var res = await ensureAuthValid();
+  if (!res.valid) {
+    showSessionExpiredModal();
+    return false;
+  }
+  return true;
+}
+
+function showSessionExpiredModal() {
+  var modal = document.getElementById('session-expired-modal');
+  if (modal) modal.classList.add('show');
+}
+
+// Non-dismissable recovery path: sign out cleanly (clears stale local
+// session data), clear our app-state mirrors, then full reload so we land
+// on the login screen with no leftover UI state. signOut() itself can fail
+// on a dead connection — we still want to clear local state and reload.
+async function handleSessionExpiredLogout() {
+  try { await sb.auth.signOut(); } catch(e) { /* network already down */ }
+  currentUser = ''; currentEmail = ''; isManager = false;
+  location.reload();
+}
+
 // == CONNECTION CHECK ==============================================
 async function checkConnection() {
   var topbarDot = document.getElementById('db-dot');

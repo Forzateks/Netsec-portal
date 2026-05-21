@@ -339,6 +339,7 @@ function _skShowModalError(msg) {
 
 // ── SAVE / DELETE ─────────────────────────────────────────────────
 async function saveSkill() {
+  if (!await requireAuth()) return;
   var errEl = document.getElementById('sk-modal-error');
   if (errEl) errEl.style.display = 'none';
 
@@ -396,6 +397,7 @@ async function saveSkill() {
 }
 
 async function deleteSkillFromModal() {
+  if (!await requireAuth()) return;
   if (!_skEditing || !_skEditing.id) return;
   var s = _skEditing;
   var pname = _skProductLineName(s.product_line_id) || 'this skill';

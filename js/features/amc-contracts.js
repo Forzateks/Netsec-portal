@@ -457,6 +457,7 @@ function _amcModalError(msg) {
 
 async function saveAMCContract() {
   if (!isManager) { showError('Manager access only.'); return; }
+  if (!await requireAuth()) return;
   var customerName = document.getElementById('amc-cust').value;
   var partner      = (document.getElementById('amc-partner').value||'').trim();
   var region       = document.getElementById('amc-region').value;
@@ -530,6 +531,7 @@ async function saveAMCContract() {
 // but leaves the row + its engagement links intact for restore.
 async function archiveAMCContract(id, name) {
   if (!isManager) { showError('Manager access only.'); return; }
+  if (!await requireAuth()) return;
   var linkCount = (AMC_CONTRACT_LINKS||[]).filter(function(l){ return l.contract_id === id; }).length;
   var body = 'This will move the contract to the Archived view. It will no longer appear in active lists but can be restored later.';
   if (linkCount) body += '\n\nThe ' + linkCount + ' linked engagement'+(linkCount===1?'':'s')+' will stay linked — restoring the contract brings them back together.';
@@ -549,6 +551,7 @@ async function archiveAMCContract(id, name) {
 
 async function restoreAMCContract(id) {
   if (!isManager) { showError('Manager access only.'); return; }
+  if (!await requireAuth()) return;
   var c = (AMC_CONTRACTS||[]).find(function(x){ return x.id === id; });
   if (!c) return;
   if (!await confirmAction({
@@ -570,6 +573,7 @@ async function restoreAMCContract(id) {
 // because it really IS gone — cascade-deletes engagement links.
 async function permanentlyDeleteAMCContract(id, name) {
   if (!isManager) { showError('Manager access only.'); return; }
+  if (!await requireAuth()) return;
   var linkCount = (AMC_CONTRACT_LINKS||[]).filter(function(l){ return l.contract_id === id; }).length;
   var body = '⚠️ This cannot be undone. The contract and all linked data will be permanently removed from the database.';
   if (linkCount) body += '\n\nThe ' + linkCount + ' engagement link'+(linkCount===1?'':'s')+' will be removed; the engagement record'+(linkCount===1?'':'s')+' themselves stay intact.';

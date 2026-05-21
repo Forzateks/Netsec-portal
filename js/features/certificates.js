@@ -267,6 +267,7 @@ function _certValidate(name, issue, expiry, file, requireFile, errEl) {
 }
 
 async function uploadCertificate() {
+  if (!await requireAuth()) return;
   var nameEl   = document.getElementById('cert-up-name');
   var issueEl  = document.getElementById('cert-up-issue');
   var expiryEl = document.getElementById('cert-up-expiry');
@@ -354,6 +355,7 @@ function closeCertEditModal() {
 }
 
 async function saveCertEdit() {
+  if (!await requireAuth()) return;
   var id = parseInt(document.getElementById('cert-edit-id').value, 10);
   if (!id) return;
   var existing = _certData.find(function(x){return x.id===id;});
@@ -468,6 +470,7 @@ async function downloadCertificate(id) {
 // ── delete ─────────────────────────────────────────────────────────
 
 async function confirmDeleteCertificate(id) {
+  if (!await requireAuth()) return;
   var c = _certData.find(function(x){return x.id===id;});
   if (!c) return;
   if (c.employee !== currentUser && !isManager) {

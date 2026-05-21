@@ -70,6 +70,7 @@ function fmtNotifAge(iso) {
 }
 
 async function markNotificationRead(id) {
+  if (!await requireAuth()) return;
   var nowIso = new Date().toISOString();
   await sb.from('notifications').update({ read_at: nowIso }).eq('id', id).is('read_at', null);
   renderNotifications();

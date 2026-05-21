@@ -921,6 +921,7 @@ function _psShowModalError(msg) {
 
 async function savePsDeal() {
   if (!isManager) { showError('Manager access only.'); return; }
+  if (!await requireAuth()) return;
   var errEl = document.getElementById('ps-modal-error');
   if (errEl) errEl.style.display = 'none';
 
@@ -1080,6 +1081,7 @@ function _psResetSaveBtn(btn, orig) {
 
 async function archivePsDealFromModal() {
   if (!_psEditingId) return;
+  if (!await requireAuth()) return;
   var d = (PS_DEALS||[]).find(function(x){ return x.id === _psEditingId; });
   if (!d) return;
   if (!await confirmAction({
@@ -1099,6 +1101,7 @@ async function archivePsDealFromModal() {
 
 async function restorePsDeal(id) {
   if (!isManager) { showError('Manager access only.'); return; }
+  if (!await requireAuth()) return;
   var d = (PS_DEALS||[]).find(function(x){ return x.id === id; });
   if (!d) return;
   if (!await confirmAction({
@@ -1118,6 +1121,7 @@ async function restorePsDeal(id) {
 
 async function permanentlyDeletePsDeal(id) {
   if (!isManager) { showError('Manager access only.'); return; }
+  if (!await requireAuth()) return;
   var d = (PS_DEALS||[]).find(function(x){ return x.id === id; });
   if (!d) return;
   if (!await confirmAction({

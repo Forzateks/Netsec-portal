@@ -9,7 +9,7 @@
 // SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
 // HTTP-cached copy of /sw.js can't be served when this file ships. The
 // version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=81';
+var SW_REGISTRATION_URL = '/sw.js?v=82';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -247,6 +247,27 @@ function initPullToRefresh() {
   });
 }
 
+// Passive auth check on tab refocus. Catches the "came back from coffee"
+// case where the session died while the tab was backgrounded — surfacing
+// the modal proactively before the user clicks anything that would otherwise
+// fail with the cryptic RLS error. Only fires when the app *thinks* a user
+// is signed in (currentUser populated); avoids false positives on the login
+// screen. Throttled to once every 30s so rapid tab-switching doesn't hammer
+// getSession().
+var _lastFocusAuthCheck = 0;
+function initFocusAuthCheck() {
+  window.addEventListener('focus', async function() {
+    if (!currentUser) return;
+    if (Date.now() - _lastFocusAuthCheck < 30000) return;
+    _lastFocusAuthCheck = Date.now();
+    if (typeof ensureAuthValid !== 'function') return;
+    var res = await ensureAuthValid();
+    if (!res.valid && currentUser) {
+      showSessionExpiredModal();
+    }
+  });
+}
+
 // == INIT ==========================================================
 window.onload = async function() {
   initServiceWorker();
@@ -256,6 +277,7 @@ window.onload = async function() {
   initHamburgerTouch();
   initUserMenuOutsideClose();
   initPullToRefresh();
+  initFocusAuthCheck();
   // Supabase puts the link type in the URL hash:
   //   type=recovery            -> forgot-password reset link
   //   type=invite | type=signup -> invitation from manager (first-time login)

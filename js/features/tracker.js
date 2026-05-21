@@ -1009,6 +1009,7 @@ function onTrackerStatusChange() {
 function onTrackerSignOffChange() { _trkRefreshAutoCompleteHint(); }
 
 async function saveTrackerEdit() {
+  if (!await requireAuth()) return;
   // Employees can save their allowed fields; the DB trigger reverts
   // every manager-only column to its OLD value, so the patch built
   // below is safe to send wholesale either way.
@@ -1084,6 +1085,7 @@ async function saveTrackerEdit() {
 
 async function deleteTrackerEngagement() {
   if (!isManager) { showError('Manager access only.'); return; }
+  if (!await requireAuth()) return;
   var id = parseInt(_trkGet('trk-edit-id'), 10);
   if (!id) return;
   var r = _trkData.find(function(x){return x.id===id;});
@@ -1258,6 +1260,7 @@ function resetMilestoneForm() {
 }
 
 async function addMilestone() {
+  if (!await requireAuth()) return;
   if (!isManager) { showError('Manager access only.'); return; }
   var name = (document.getElementById('trk-ms-new-name').value||'').trim();
   if (!name) { showError('Milestone name is required.'); return; }
@@ -1297,6 +1300,7 @@ async function addMilestone() {
 }
 
 async function markMilestoneComplete(id) {
+  if (!await requireAuth()) return;
   if (!isManager) return;
   var today = new Date().toISOString().split('T')[0];
   var { error } = await sb.from('engagement_milestones').update({
@@ -1308,6 +1312,7 @@ async function markMilestoneComplete(id) {
 }
 
 async function reopenMilestone(id) {
+  if (!await requireAuth()) return;
   if (!isManager) return;
   var { error } = await sb.from('engagement_milestones').update({
     status: 'in_progress', completed_date: null, updated_at: new Date().toISOString()
@@ -1318,6 +1323,7 @@ async function reopenMilestone(id) {
 }
 
 async function moveMilestone(id, delta) {
+  if (!await requireAuth()) return;
   if (!isManager) return;
   var idx = _msData.findIndex(function(m){return m.id===id;});
   if (idx < 0) return;
@@ -1339,6 +1345,7 @@ async function moveMilestone(id, delta) {
 }
 
 async function deleteMilestone(id) {
+  if (!await requireAuth()) return;
   if (!isManager) return;
   var m = _msData.find(function(x){return x.id===id;});
   if (!m) return;
@@ -1388,6 +1395,7 @@ function editMilestoneInline(id) {
 }
 
 async function saveMilestoneInline(id) {
+  if (!await requireAuth()) return;
   if (!isManager) return;
   var name = (document.getElementById('trk-ms-edit-name-'+id).value||'').trim();
   if (!name) { showError('Name is required.'); return; }
