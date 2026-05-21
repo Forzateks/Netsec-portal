@@ -352,7 +352,9 @@ function _buildAttentionItems(ctx) {
       subject: (custName ? custName + ' — ' : '') + s.eng.name,
       body: 'no activity in 14+ days (status: Active)',
       severity: s.days,
-      onClick: "openEngagementInTracker(" + s.eng.id + ")"
+      onClick: "openEngagementInTracker(" + s.eng.id + ")",
+      snoozeType: 'stale_engagement',
+      snoozeRefId: s.eng.id
     });
   });
 
@@ -405,7 +407,9 @@ function _buildAttentionItems(ctx) {
       subject: c.name + ' — ' + c.employee,
       body: d <= 0 ? 'expires today' : 'expires in ' + d + ' day' + (d===1?'':'s'),
       severity: -d, // sort ascending by days → most urgent first
-      onClick: "showScreen('certificates')"
+      onClick: "showScreen('certificates')",
+      snoozeType: 'cert_expiring',
+      snoozeRefId: c.id
     });
   });
 
@@ -418,7 +422,9 @@ function _buildAttentionItems(ctx) {
       subject: a.customer_name + ' AMC',
       body: d <= 0 ? 'renews today' : 'renews in ' + d + ' day' + (d===1?'':'s'),
       severity: -d,
-      onClick: "showScreen('amc');setTimeout(function(){openAMCContractDetail(" + a.id + ");},250)"
+      onClick: "showScreen('amc');setTimeout(function(){openAMCContractDetail(" + a.id + ");},250)",
+      snoozeType: 'amc_renewing',
+      snoozeRefId: a.id
     });
   });
 
@@ -523,10 +529,13 @@ function _buildAttentionItems(ctx) {
   return items;
 }
 
-function _renderAttentionCard(items) {
+function _renderAttentionCard(items, snoozedCount) {
+  var snoozedHint = (snoozedCount && snoozedCount > 0)
+    ? ' <span class="attn-snooze-count">('+snoozedCount+' snoozed)</span>'
+    : '';
   var head = '<div class="attn-head">'+
     '<div class="card-title" style="margin-bottom:2px">Needs Your Attention</div>'+
-    '<div class="attn-sub">Items worth a look this week</div>'+
+    '<div class="attn-sub">Items worth a look this week'+snoozedHint+'</div>'+
   '</div>';
   if (!items.length) {
     return '<div class="card attn-card">' + head +
@@ -548,15 +557,71 @@ function _renderAttentionCard(items) {
 
 function _attnRowHtml(it) {
   // onClick is a string of JS (escaping owned by the builder above). Wrap in
-  // a div with role=button so it's tappable as a single touch target.
+  // a div with role=button so it's tappable as a single touch target. Snooze
+  // button is rendered only for alert types that have a refId in the schema;
+  // event.stopPropagation prevents the row's main onclick from also firing.
+  var snoozeBtn = '';
+  if (it.snoozeType && it.snoozeRefId != null) {
+    snoozeBtn =
+      '<button class="attn-snooze-btn" type="button" title="Snooze for 7 days" '+
+      'onclick="event.stopPropagation();snoozeAlert(\''+it.snoozeType+'\','+it.snoozeRefId+',this)">'+
+        '<i data-lucide="bell-off" class="attn-snooze-ico"></i>'+
+      '</button>';
+  }
   return '<div class="attn-row" role="button" tabindex="0" onclick="'+it.onClick+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}">'+
     '<span class="attn-icon">'+it.icon+'</span>'+
     '<div class="attn-text">'+
       '<div class="attn-subject">'+esc2(it.subject)+'</div>'+
       '<div class="attn-body">'+esc2(it.body)+'</div>'+
     '</div>'+
+    snoozeBtn+
     '<i data-lucide="chevron-right" class="attn-chevron"></i>'+
   '</div>';
+}
+
+// Per-user 7-day snooze for "Needs Your Attention" alerts. UPSERT so a
+// re-snooze after expiry updates the existing row instead of conflicting
+// with the UNIQUE(user_email, alert_type, alert_ref_id) constraint.
+// On success, fade the row out and remove it client-side — no full re-render
+// needed for the immediate feedback. Next renderDashboard() picks up the
+// snooze via the active-snoozes query.
+async function snoozeAlert(alertType, refId, triggerBtn) {
+  if (!currentEmail) { showError('Not signed in.'); return; }
+  var ok = await confirmAction({
+    title: 'Snooze for 7 days?',
+    body: 'This alert will hide for 7 days. It will reappear automatically if the underlying issue still exists.',
+    confirmText: 'Snooze',
+    danger: false
+  });
+  if (!ok) return;
+
+  var now = new Date();
+  var until = new Date(now.getTime() + 7*24*60*60*1000);
+  var row = {
+    user_email:    currentEmail,
+    alert_type:    alertType,
+    alert_ref_id:  refId,
+    snoozed_at:    now.toISOString(),
+    snoozed_until: until.toISOString()
+  };
+  var res = await sb.from('dashboard_alert_snoozes')
+    .upsert(row, { onConflict: 'user_email,alert_type,alert_ref_id' });
+  if (res.error) {
+    console.error('Snooze failed:', res.error);
+    showError('Could not snooze — ' + (res.error.message || 'please try again.'));
+    return;
+  }
+  // Fade out the row that contained the snooze button. The button can be in
+  // either the visible list or the hidden "See all" overflow — its parent
+  // .attn-row is the element to dismiss either way.
+  var rowEl = triggerBtn && triggerBtn.closest ? triggerBtn.closest('.attn-row') : null;
+  if (rowEl) {
+    rowEl.style.transition = 'opacity .25s, transform .25s';
+    rowEl.style.opacity = '0';
+    rowEl.style.transform = 'translateX(8px)';
+    setTimeout(function(){ if (rowEl && rowEl.parentNode) rowEl.parentNode.removeChild(rowEl); }, 260);
+  }
+  showToast('Snoozed for 7 days — will reappear if still an issue');
 }
 
 async function renderManagerDashboard() {
@@ -619,7 +684,13 @@ async function renderManagerDashboard() {
       return sb.from('unified_sessions')
         .select('total_hours,engagement_name,customer_name,session_date')
         .gte('session_date', yStart).lte('session_date', yEnd);
-    })
+    }),
+    // Active snoozes for the current user — used to filter the "Needs Your
+    // Attention" feed. Hits the (user_email, snoozed_until) index. RLS
+    // already restricts to own rows, the LOWER(...) eq is belt-and-braces.
+    T(sb.from('dashboard_alert_snoozes')
+        .select('alert_type,alert_ref_id')
+        .gt('snoozed_until', now.toISOString()), 'snoozes active')
   ]);
   var coPending = results[0].count || 0;
   var lvPending = results[1].count || 0;
@@ -646,6 +717,7 @@ async function renderManagerDashboard() {
   var certs30d        = results[12].data || [];
   var amc60d          = results[13].data || [];
   var yearSessions    = (results[14] && results[14].data) || [];
+  var activeSnoozes   = (results[15] && results[15].data) || [];
 
   var shortName = function(emp) {
     return (typeof empShortName === 'function') ? empShortName(emp) : (emp||'').split(' ')[0];
@@ -779,7 +851,19 @@ async function renderManagerDashboard() {
     todayISO:        todayISO,
     viewer:          currentUser
   });
-  html += _renderAttentionCard(attnItems);
+  // Drop alerts the current user has actively snoozed. Build a Set keyed by
+  // "type:refId" for O(1) lookup. Alerts without snooze metadata (idle,
+  // overworked, coverage gap, etc.) pass through unfiltered — those types
+  // aren't snoozable in v1.
+  var snoozedKeys = new Set();
+  activeSnoozes.forEach(function(s){ snoozedKeys.add(s.alert_type + ':' + s.alert_ref_id); });
+  var snoozedCount = 0;
+  attnItems = attnItems.filter(function(it){
+    if (!it.snoozeType || it.snoozeRefId == null) return true;
+    if (snoozedKeys.has(it.snoozeType + ':' + it.snoozeRefId)) { snoozedCount++; return false; }
+    return true;
+  });
+  html += _renderAttentionCard(attnItems, snoozedCount);
 
   document.getElementById('dash-content').innerHTML = html;
   if (typeof renderIcons === 'function') renderIcons();
