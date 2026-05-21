@@ -311,21 +311,6 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
   .attn-subject,.attn-body{white-space:normal}
 }
 
-/* ── POC COMPACT CARD (replaces the full POC Conversion Insights block) ── */
-.poc-compact-card{cursor:pointer;transition:border-color .12s,box-shadow .12s;padding:18px}
-.poc-compact-card:hover, .poc-compact-card:focus{border-color:var(--teal);box-shadow:0 4px 12px rgba(0,160,210,.10);outline:none}
-.poc-compact-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
-.poc-compact-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
-.poc-compact-num{font-family:'DM Mono',monospace;font-size:32px;font-weight:700;color:var(--navy);line-height:1;margin-bottom:6px}
-.poc-compact-sub{font-size:12px;color:var(--muted)}
-.poc-compact-cta{font-size:13px;font-weight:600;color:var(--teal);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-.poc-compact-arrow{width:14px;height:14px}
-/* Dormant-exclusion footnote on the compact POC card. Reads as a quiet
-   caveat — secondary type-size, muted colour, sits just under the sub line. */
-.poc-compact-foot{font-size:11px;color:var(--muted);margin-top:6px;font-style:italic}
-/* Matching footnote inside the POC Conversion Insights modal — same intent. */
-.poc-mini-foot{font-size:11px;color:var(--muted);margin:-6px 0 14px;font-style:italic}
-
 /* ── POC "Converted to project" toggle (Edit Engagement form, v56) ──
    Lives directly under the Status field. Hidden when type != 'poc' and
    visually muted while status == 'active' (still locked by the tooltip). */
@@ -926,9 +911,6 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .dash-empty-sub{font-size:12.5px;color:var(--muted);margin:0 auto 16px;max-width:380px;line-height:1.55}
 
 .dash-backup-row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:6px}
-/* Quick Actions cluster on the dashboard. Desktop: 14px gap so the pills
-   breathe; mobile override stays tighter (8px) at the bottom of this file. */
-.quick-actions-wrap{display:flex;flex-wrap:wrap;gap:14px}
 .dash-backup-details{margin-top:10px;font-size:13px}
 .dash-backup-details summary{cursor:pointer;color:var(--muted);font-weight:600;padding:10px 0 8px;border-top:1px solid var(--border);user-select:none;outline:none;font-size:12.5px;list-style:none;display:flex;align-items:center;gap:6px}
 .dash-backup-details summary::-webkit-details-marker{display:none}
@@ -939,11 +921,20 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .dash-backup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
 .dash-backup-grid .btn{width:100%;justify-content:center}
 
+/* Hours-by-X dashboard cards (v79) — two side-by-side pie cards.
+   Clickable; navigate to Reports → Engagement Summary with year pre-filtered. */
+.dash-hours-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.dash-hours-card{transition:border-color .15s,box-shadow .15s,transform .12s}
+.dash-hours-card[role="button"]:hover{border-color:var(--teal);box-shadow:0 4px 14px rgba(0,160,210,.12)}
+.dash-hours-card[role="button"]:active{transform:translateY(1px)}
+.dash-hours-card:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
 @media(max-width:1100px){
   .dash-stats{grid-template-columns:repeat(3,1fr)}
 }
 @media(max-width:880px){
   .dash-stats{grid-template-columns:1fr 1fr}
+  .dash-hours-row{grid-template-columns:1fr}
 }
 @media(max-width:480px){
   .dash-hero-text h2{font-size:20px}
@@ -1067,9 +1058,6 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
   /* Dashboard stat cards — 2 per row */
   .summary-grid[style*="margin-bottom:20px"]{grid-template-columns:1fr 1fr}
-
-  /* Quick actions — wrap buttons */
-  .quick-actions-wrap{display:flex;flex-wrap:wrap;gap:8px}
 
   /* Preview boxes */
   div[style*="grid-template-columns:repeat(4"]{grid-template-columns:1fr 1fr !important}
@@ -1211,8 +1199,6 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .modal{padding:16px 12px}
   .modal-title{font-size:14px}
   .request-card{padding:10px}
-  /* Quick actions: 2 buttons per row */
-  .quick-actions-wrap .btn{flex:1 1 calc(50% - 4px);font-size:12px;padding:10px 8px;justify-content:center}
 }
 
 /* ── PROJECT / POC TRACKER ─────────────────────────────────────── */
@@ -1733,34 +1719,6 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ms-opt input{margin:0;cursor:pointer;accent-color:var(--teal);width:14px;height:14px;flex-shrink:0}
 .ms-opt span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ms-empty{padding:14px;text-align:center;color:var(--muted);font-size:12px}
-
-/* POC conversion insights (manager dashboard) */
-.poc-insights-card{margin-bottom:16px}
-.poc-mini-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
-.poc-mini{padding:12px 14px;background:#F8FAFC;border:1px solid var(--border);border-radius:8px}
-.poc-mini-rate{background:linear-gradient(135deg,#F0F9FF,#E0F2FE);border-color:#BAE6FD}
-.poc-mini-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
-.poc-mini-value{font-size:22px;font-weight:700;color:var(--navy);font-family:'DM Mono',monospace;line-height:1.1}
-
-.poc-insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.poc-insight-block{background:white;border:1px solid var(--border);border-radius:8px;padding:12px}
-.poc-insight-head{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px;display:flex;align-items:baseline;gap:8px}
-.poc-insight-table{width:100%;border-collapse:collapse}
-.poc-insight-table thead th{background:#F8FAFC;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
-.poc-insight-table tbody td{padding:8px 10px;border-bottom:1px solid #F1F5F9;font-size:12px}
-.poc-insight-table tbody tr:last-child td{border-bottom:none}
-
-@media(max-width:1100px){
-  .poc-mini-stats{grid-template-columns:repeat(3,1fr)}
-}
-@media(max-width:880px){
-  .poc-insight-grid{grid-template-columns:1fr}
-}
-@media(max-width:640px){
-  .poc-mini-stats{grid-template-columns:1fr 1fr;gap:8px}
-  .poc-mini{padding:10px}
-  .poc-mini-value{font-size:18px}
-}
 
 /* License expiry banner (manager dashboard) */
 .lic-banner{border-radius:12px;padding:14px 16px;margin-bottom:16px;border:1px solid;box-shadow:0 1px 3px rgba(15,23,42,.04)}

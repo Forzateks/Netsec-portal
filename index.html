@@ -684,6 +684,30 @@
       <div id="manager-content"></div>
     </div>
 
+    <!-- Reports & Backup — moved from Dashboard in v79 so the Dashboard
+         stays focused on what's happening this week, while the heavy
+         admin actions live alongside Recompute / Archive / Purge here. -->
+    <div class="card dash-backup" style="margin-bottom:16px">
+      <div class="card-title">Reports &amp; Backup</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Download the full database snapshot, the monthly OT report, or a single-table export.</div>
+      <div class="dash-backup-row">
+        <button class="btn btn-primary" onclick="backupExcel('all')"><i data-lucide="download" class="btn-icon"></i>Full Backup (all sheets)</button>
+        <button class="btn btn-ghost" id="monthly-report-btn" onclick="downloadMonthlyReport()"><i data-lucide="file-text" class="btn-icon"></i>Monthly OT Report</button>
+      </div>
+      <details class="dash-backup-details">
+        <summary>Export a specific section</summary>
+        <div class="dash-backup-grid">
+          <button class="btn btn-ghost btn-sm" onclick="backupExcel('ot_sessions')">OT Sessions</button>
+          <button class="btn btn-ghost btn-sm" onclick="backupExcel('project_sessions')">Project Sessions</button>
+          <button class="btn btn-ghost btn-sm" onclick="backupExcel('inventory')">Inventory</button>
+          <button class="btn btn-ghost btn-sm" onclick="backupExcel('leave')">Leaves</button>
+          <button class="btn btn-ghost btn-sm" onclick="backupExcel('comp_off')">Comp Offs</button>
+          <button class="btn btn-ghost btn-sm" onclick="backupExcel('kb_articles')">Knowledge Base</button>
+          <button class="btn btn-ghost btn-sm" onclick="backupExcel('directory')">Customers + Projects</button>
+        </div>
+      </details>
+    </div>
+
     <div class="card" style="margin-bottom:16px;border-left:3px solid var(--gold);background:#FFFBEB">
       <div class="card-title" style="margin-bottom:6px">⚙️ Policy Recompute (one-time)</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
@@ -735,7 +759,7 @@
       <div class="card-title" style="margin-bottom:6px">🗑️ Purge Old Archived/Rejected Sessions (DESTRUCTIVE)</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
         Permanently deletes any archived or rejected OT session older than <strong>1 year</strong>.
-        Use annually to keep the table tidy. Take a <strong>Full Backup first</strong> (Dashboard).
+        Use annually to keep the table tidy. Take a <strong>Full Backup first</strong> (see above).
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-danger-solid" onclick="purgeOldArchived()">🗑 Purge &gt; 1 Year</button>
@@ -2266,21 +2290,6 @@
     <div class="modal-actions">
       <button type="button" class="btn btn-ghost"   id="long-session-cancel">Cancel — let me fix it</button>
       <button type="button" class="btn btn-primary" id="long-session-ok">Yes, the times are correct</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── POC CONVERSION INSIGHTS MODAL ─────────────────────────────────
-     Surfaces the by-partner / by-region win-rate tables that used to sit
-     full-width on the manager dashboard. Triggered from the compact POCs
-     card on the dashboard. -->
-<div class="modal-overlay" id="poc-insights-modal">
-  <div class="modal" style="max-width:760px">
-    <div class="modal-title">POC Conversion Insights</div>
-    <div id="poc-insights-body"></div>
-    <div class="modal-actions" style="margin-top:18px">
-      <button class="btn btn-ghost" onclick="closePocInsightsModal()">Close</button>
-      <button class="btn btn-primary" onclick="closePocInsightsModal();showScreen('tracker');if(typeof showTrackerTab==='function')showTrackerTab('pocs');"><i data-lucide="external-link" class="btn-icon"></i>Open POC List</button>
     </div>
   </div>
 </div>

@@ -58,6 +58,71 @@ function relDate(dateStr) {
   return Math.abs(diff) + ' days ago';
 }
 
+// == HOURS-BY-X DASHBOARD CARDS (v79) =============================
+// Two side-by-side pie cards on Dashboard: Top 8 Engagements and Top 8
+// Customers by hours for the current calendar year. Aggregation matches
+// the Reports → Engagement Summary semantics (session-level total_hours,
+// no per-member fan-out), so the two views never disagree.
+
+var DASH_TOP_N = 8;
+var DASH_PIE_COLORS = ['#0A1F5C','#00A0D2','#C8A832','#3B82F6','#10B981','#8B5CF6','#F59E0B','#EF4444','#6B7280'];
+
+// Group rows by keyField, sum total_hours, return top-N + "Other (rest)"
+// bucket. Rows with empty/null key are skipped (per spec).
+function _dashAggregateTopHours(rows, keyField, n) {
+  var totals = {};
+  (rows||[]).forEach(function(r){
+    var key = (r[keyField] || '').trim();
+    if (!key) return;
+    totals[key] = (totals[key] || 0) + parseFloat(r.total_hours || 0);
+  });
+  var sortedKeys = Object.keys(totals).sort(function(a,b){ return totals[b] - totals[a]; });
+  var top = sortedKeys.slice(0, n);
+  var rest = sortedKeys.slice(n);
+  var result = top.map(function(k){ return { label: k, value: totals[k] }; });
+  if (rest.length) {
+    var otherSum = rest.reduce(function(s,k){ return s + totals[k]; }, 0);
+    if (otherSum > 0) result.push({ label: 'Other ('+rest.length+')', value: otherSum });
+  }
+  return result;
+}
+
+// Build one Hours-by-X card. Empty branch keeps the card visible so users
+// see the layout consistently even before any data exists for the year.
+function _dashBuildHoursCard(title, year, data, navOnClick) {
+  var total = data.reduce(function(s,d){ return s + d.value; }, 0);
+  if (!data.length || total === 0) {
+    return '<div class="card dash-hours-card">'+
+      '<div class="card-title" style="margin-bottom:6px">'+esc2(title)+'</div>'+
+      '<div class="dash-empty" style="padding:24px 12px">'+
+        '<i data-lucide="pie-chart" class="empty-icon-svg"></i>'+
+        '<div class="dash-empty-title">No data yet for '+year+'</div>'+
+        '<div class="dash-empty-sub">Log some sessions and totals will appear here.</div>'+
+      '</div>'+
+    '</div>';
+  }
+  var colored = data.map(function(d,i){
+    return { label: d.label, value: d.value, color: DASH_PIE_COLORS[i%DASH_PIE_COLORS.length] };
+  });
+  return '<div class="card dash-hours-card" role="button" tabindex="0" '+
+         'onclick="'+navOnClick+'" '+
+         'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}" '+
+         'style="cursor:pointer">'+
+    '<div class="card-title" style="margin-bottom:6px">'+esc2(title)+'</div>'+
+    buildPieChart(colored, 'h')+
+  '</div>';
+}
+
+// Navigate Dashboard → Reports (Engagement Summary) with the year filter
+// pre-set. Engagement Summary lazy-populates its year dropdown inside the
+// render, so we stash the desired year on window and the render picks it
+// up before reading the dropdown value.
+function dashOpenEngagementSummary(year) {
+  window._engSumPrefilterYear = String(year);
+  if (typeof showScreen === 'function') showScreen('projects');
+  if (typeof showProjectTab === 'function') showProjectTab('engagement');
+}
+
 // == DASHBOARD ROUTER =============================================
 async function renderDashboard() {
   var host = document.getElementById('dash-content');
@@ -116,9 +181,17 @@ async function renderEmployeeDashboard() {
     sb.from('leave_requests').select('*').eq('employee',currentUser).order('created_at',{ascending:false}),
     sb.from('annual_leave').select('working_days').eq('employee',currentUser).gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
     sb.from('unified_sessions').select('total_hours,team_members,employee,session_date').gte('session_date',prevMonth+'-01').lte('session_date',month+'-31'),
+    // Year-wide aggregate for the Top-8 Engagement / Customer cards.
+    // Paginated via fetchAllRows so totals aren't silently capped at 1000.
+    fetchAllRows(function(){
+      return sb.from('unified_sessions')
+        .select('total_hours,engagement_name,customer_name,session_date')
+        .gte('session_date', year+'-01-01').lte('session_date', year+'-12-31');
+    }),
   ]);
   var sessions=results[0].data, compoffs=results[1].data, coReqs=results[2].data;
   var lvReqs=results[3].data, alData=results[4].data, pjSess=results[5].data;
+  var yearSessions = (results[6] && results[6].data) || [];
 
   var s = calcSummary(sessions||[], compoffs||[], currentUser);
   var leaveUsed = (alData||[]).reduce(function(a,r){return a+parseFloat(r.working_days||0);},0);
@@ -173,13 +246,14 @@ async function renderEmployeeDashboard() {
       '<div class="stat-sub">vs '+fmtHours(pjHrsPrev)+' last month</div></div>'+
     '</div>';
 
-  // === QUICK ACTIONS ===
-  html += '<div class="card"><div class="card-title">Quick Actions</div>'+
-    '<div class="quick-actions-wrap">'+
-    '<button class="btn btn-primary" onclick="showScreen(\'projects\');showProjectTab(\'uslog\')">Log Session</button>'+
-    '<button class="btn btn-ghost" onclick="showScreen(\'leave\');showLeaveTab(\'log\')">Request Leave</button>'+
-    '<button class="btn btn-ghost" onclick="showScreen(\'leave\');showLeaveTab(\'log\');document.getElementById(\'lv-type\').value=\'compoff_full\';onLeaveTypeChange()">Comp Off</button>'+
-    '</div></div>';
+  // === HOURS BY ENGAGEMENT / CUSTOMER (Top 8, current year) ===
+  var engTop = _dashAggregateTopHours(yearSessions, 'engagement_name', DASH_TOP_N);
+  var custTop = _dashAggregateTopHours(yearSessions, 'customer_name', DASH_TOP_N);
+  var navCall = 'dashOpenEngagementSummary('+year+')';
+  html += '<div class="dash-hours-row">'+
+    _dashBuildHoursCard('Hours by Engagement (Top 8 · '+year+')', year, engTop, navCall)+
+    _dashBuildHoursCard('Hours by Customer (Top 8 · '+year+')',  year, custTop, navCall)+
+  '</div>';
 
   // === MY PENDING REQUESTS ===
   if (pendingCO.length || pendingLV.length || pendingOT.length) {
@@ -485,107 +559,6 @@ function _attnRowHtml(it) {
   '</div>';
 }
 
-// POC Conversion Insights — full layout (by-partner + by-region tables)
-// surfaced via modal from the dashboard's compact POCs card. Context is
-// precomputed in renderManagerDashboard and stashed on window so this
-// stays decoupled from the dashboard render scope.
-function openPocInsightsModal() {
-  var modal = document.getElementById('poc-insights-modal');
-  var body  = document.getElementById('poc-insights-body');
-  if (!modal || !body) return;
-  var ctx = window._pocInsightsCtx || { pocsAll:[], pocWon:0, pocLost:0, pocClosedSet:0, pocInProgress:0, pocDormant:0, winRate:null };
-  var pocsAll = ctx.pocsAll;
-  // Outcome classification — matches the dashboard math:
-  //   won  = converted_to_project=true
-  //   lost = status='cancelled'
-  //   ip   = status='active'
-  //   dor  = status='dormant'  (excluded from win rate)
-  // A 'closed' POC that isn't converted falls into neither won nor lost in the
-  // per-row sense, but counts toward the denominator (closed_set) for win rate.
-  var isWon = function(p){ return p.converted_to_project === true; };
-  var isLost = function(p){ return p.status === 'cancelled'; };
-  var isInProg = function(p){ return p.status === 'active'; };
-  var isDormant = function(p){ return p.status === 'dormant'; };
-  function rateColor(r) {
-    if (r === null || r === undefined) return 'var(--muted)';
-    if (r >= 70) return '#059669';
-    if (r >= 40) return '#D97706';
-    return '#DC2626';
-  }
-  function groupPocs(key) {
-    var map = {};
-    pocsAll.forEach(function(p){
-      var raw = (p[key] || '').trim();
-      var display = raw || 'Unknown';
-      var canon = display.toLowerCase();
-      if (!map[canon]) map[canon] = {name:display, total:0, won:0, lost:0, ip:0, dor:0, closedSet:0};
-      var g = map[canon];
-      g.total++;
-      if (isWon(p))      g.won++;
-      if (isLost(p))     g.lost++;
-      if (isInProg(p))   g.ip++;
-      if (isDormant(p))  g.dor++;
-      if (p.status === 'closed' || p.status === 'cancelled') g.closedSet++;
-    });
-    return Object.keys(map).map(function(k){
-      var g = map[k];
-      g.rate = g.closedSet ? Math.round(g.won/g.closedSet*100) : null;
-      return g;
-    }).sort(function(a,b){
-      if (b.total !== a.total) return b.total - a.total;
-      return (b.rate||0) - (a.rate||0);
-    });
-  }
-  function tableHtml(rows, label, max) {
-    if (!rows.length) return '';
-    var top = rows.slice(0, max||5);
-    var bodyRows = top.map(function(g){
-      var rateLbl = g.rate==null ? '<span class="dim">—</span>'
-                                 : '<span style="color:'+rateColor(g.rate)+';font-weight:600">'+g.rate+'%</span>';
-      return '<tr>'+
-        '<td style="font-weight:600;color:var(--navy)">'+esc2(g.name)+'</td>'+
-        '<td class="num">'+g.total+'</td>'+
-        '<td class="num" style="color:#059669">'+g.won+'</td>'+
-        '<td class="num" style="color:#DC2626">'+g.lost+'</td>'+
-        '<td class="num">'+g.ip+'</td>'+
-        '<td class="num">'+rateLbl+'</td>'+
-      '</tr>';
-    }).join('');
-    return '<div class="poc-insight-block">'+
-      '<div class="poc-insight-head">'+label+' <span class="dim" style="font-weight:400;font-size:11px">(top '+top.length+' of '+rows.length+')</span></div>'+
-      '<div class="table-wrap"><table class="poc-insight-table">'+
-        '<thead><tr><th>Name</th><th class="num">POCs</th><th class="num">Won</th><th class="num">Lost</th><th class="num">In&nbsp;Prog</th><th class="num">Rate</th></tr></thead>'+
-        '<tbody>'+bodyRows+'</tbody>'+
-      '</table></div>'+
-    '</div>';
-  }
-  var dormantFoot = ctx.pocDormant
-    ? '<div class="poc-mini-foot">Dormant POCs ('+ctx.pocDormant+') excluded from win rate calculation.</div>'
-    : '';
-  body.innerHTML =
-    '<div class="poc-mini-stats">'+
-      '<div class="poc-mini"><div class="poc-mini-label">Total POCs</div><div class="poc-mini-value num">'+pocsAll.length+'</div></div>'+
-      '<div class="poc-mini"><div class="poc-mini-label">Won</div><div class="poc-mini-value num" style="color:#059669">'+ctx.pocWon+'</div></div>'+
-      '<div class="poc-mini"><div class="poc-mini-label">Lost</div><div class="poc-mini-value num" style="color:#DC2626">'+ctx.pocLost+'</div></div>'+
-      '<div class="poc-mini"><div class="poc-mini-label">In Progress</div><div class="poc-mini-value num">'+ctx.pocInProgress+'</div></div>'+
-      '<div class="poc-mini poc-mini-rate"><div class="poc-mini-label">Win Rate</div>'+
-        '<div class="poc-mini-value num" style="color:'+rateColor(ctx.winRate)+'">'+(ctx.winRate==null?'—':(ctx.winRate+'%'))+'</div>'+
-        '<div class="dim" style="font-size:10px">of '+ctx.pocClosedSet+' closed</div>'+
-      '</div>'+
-    '</div>'+
-    dormantFoot+
-    '<div class="poc-insight-grid">'+
-      tableHtml(groupPocs('partner'), 'By Partner', 6)+
-      tableHtml(groupPocs('country'), 'By Region', 6)+
-    '</div>';
-  modal.classList.add('show');
-  if (typeof renderIcons === 'function') renderIcons();
-}
-function closePocInsightsModal() {
-  var modal = document.getElementById('poc-insights-modal');
-  if (modal) modal.classList.remove('show');
-}
-
 async function renderManagerDashboard() {
   var now = new Date();
   var monthName = now.toLocaleString('default',{month:'long'});
@@ -637,7 +610,16 @@ async function renderManagerDashboard() {
     // Certificates expiring within 30 days (future-only — past expiries handled by their own list).
     T(sb.from('certificates').select('id,name,employee,expiry_date').gte('expiry_date', todayISO).lte('expiry_date', thirtyAhead).order('expiry_date',{ascending:true}), 'certs expiring 30d'),
     // AMC contracts renewing within 60 days (amc_end_date = renewal point).
-    T(sb.from('amc_contracts').select('id,customer_name,amc_end_date,vendor').eq('is_archived', false).gte('amc_end_date', todayISO).lte('amc_end_date', sixtyAhead).order('amc_end_date',{ascending:true}), 'amc renewing 60d')
+    T(sb.from('amc_contracts').select('id,customer_name,amc_end_date,vendor').eq('is_archived', false).gte('amc_end_date', todayISO).lte('amc_end_date', sixtyAhead).order('amc_end_date',{ascending:true}), 'amc renewing 60d'),
+    // Year-wide unified_sessions aggregate for Hours-by-X dashboard cards.
+    // Paginated so totals aren't capped at 1000 rows. Single round trip.
+    fetchAllRows(function(){
+      var yStart = now.getFullYear() + '-01-01';
+      var yEnd   = now.getFullYear() + '-12-31';
+      return sb.from('unified_sessions')
+        .select('total_hours,engagement_name,customer_name,session_date')
+        .gte('session_date', yStart).lte('session_date', yEnd);
+    })
   ]);
   var coPending = results[0].count || 0;
   var lvPending = results[1].count || 0;
@@ -663,6 +645,7 @@ async function renderManagerDashboard() {
   var oldestPendingCO = (results[11].data||[])[0] || null;
   var certs30d        = results[12].data || [];
   var amc60d          = results[13].data || [];
+  var yearSessions    = (results[14] && results[14].data) || [];
 
   var shortName = function(emp) {
     return (typeof empShortName === 'function') ? empShortName(emp) : (emp||'').split(' ')[0];
@@ -767,30 +750,15 @@ async function renderManagerDashboard() {
       '<div class="stat-sub">logged in last 7 days</div></div>'+
     '</div>';
 
-  // === POC CONVERSION DATA (used by compact card + modal detail view) ===
-  // POC outcome is derived from engagements.status + the converted_to_project
-  // boolean — NOT the legacy tracker_status string. Win rate excludes Dormant
-  // POCs from the denominator (they're neither won nor lost — just paused).
-  //   in_progress = status='active'
-  //   closed_set  = status IN ('closed','cancelled')   ← win rate denominator
-  //   dormant     = status='dormant'                   ← excluded from rate
-  //   won         = converted_to_project=true
-  //   lost        = status='cancelled'
-  var pocsAll        = allEngagements.filter(function(e){return e.type==='poc';});
-  var pocInProgress  = pocsAll.filter(function(p){return p.status==='active';}).length;
-  var pocClosedSet   = pocsAll.filter(function(p){return p.status==='closed' || p.status==='cancelled';}).length;
-  var pocDormant     = pocsAll.filter(function(p){return p.status==='dormant';}).length;
-  var pocWon         = pocsAll.filter(function(p){return p.converted_to_project===true;}).length;
-  var pocLost        = pocsAll.filter(function(p){return p.status==='cancelled';}).length;
-  var winRate        = pocClosedSet ? Math.round(pocWon/pocClosedSet*100) : null;
-
-  // Stash for openPocInsightsModal — manager clicks the compact card,
-  // modal pulls from this without re-fetching.
-  window._pocInsightsCtx = {
-    pocsAll:pocsAll, pocWon:pocWon, pocLost:pocLost,
-    pocClosedSet:pocClosedSet, pocInProgress:pocInProgress,
-    pocDormant:pocDormant, winRate:winRate
-  };
+  // === HOURS BY ENGAGEMENT / CUSTOMER (Top 8, current year) ===
+  var _curYear = now.getFullYear();
+  var engTop  = _dashAggregateTopHours(yearSessions, 'engagement_name', DASH_TOP_N);
+  var custTop = _dashAggregateTopHours(yearSessions, 'customer_name',  DASH_TOP_N);
+  var _navCall = 'dashOpenEngagementSummary('+_curYear+')';
+  html += '<div class="dash-hours-row">'+
+    _dashBuildHoursCard('Hours by Engagement (Top 8 · '+_curYear+')', _curYear, engTop,  _navCall)+
+    _dashBuildHoursCard('Hours by Customer (Top 8 · '+_curYear+')',   _curYear, custTop, _navCall)+
+  '</div>';
 
   // === NEEDS YOUR ATTENTION ===
   // Exception-based feed that surfaces only items the manager should look at
@@ -812,55 +780,6 @@ async function renderManagerDashboard() {
     viewer:          currentUser
   });
   html += _renderAttentionCard(attnItems);
-
-  // === POC COMPACT CARD (was POC Conversion Insights — full block moved to modal) ===
-  if (pocsAll.length) {
-    var winRateLbl = (winRate == null) ? 'pending' : (winRate + '%');
-    var dormantNote = pocDormant
-      ? '<div class="poc-compact-foot">Dormant POCs ('+fmtCount(pocDormant)+') excluded from win rate calculation.</div>'
-      : '';
-    html += '<div class="card poc-compact-card" onclick="openPocInsightsModal()" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openPocInsightsModal();}">'+
-      '<div class="poc-compact-head">'+
-        '<div>'+
-          '<div class="poc-compact-title">POCs</div>'+
-          '<div class="poc-compact-num"><span data-counter="'+pocsAll.length+'">'+fmtCount(pocsAll.length)+'</span></div>'+
-          '<div class="poc-compact-sub">'+fmtCount(pocInProgress)+' in progress · '+fmtCount(pocWon)+' won · '+fmtCount(pocLost)+' lost · Win rate: '+winRateLbl+'</div>'+
-          dormantNote+
-        '</div>'+
-        '<div class="poc-compact-cta">View POC details <i data-lucide="arrow-right" class="poc-compact-arrow"></i></div>'+
-      '</div>'+
-    '</div>';
-  }
-
-  // === MANAGER QUICK ACTIONS ===
-  html += '<div class="card"><div class="card-title">Quick Actions</div>'+
-    '<div class="quick-actions-wrap">'+
-    '<button class="btn btn-primary" onclick="showScreen(\'approvals\')">Review Approvals'+(teamPending>0?' <span class="badge badge-pending" style="margin-left:6px">'+teamPending+'</span>':'')+'</button>'+
-    '<button class="btn btn-ghost" onclick="backupExcel(\'all\')"><i data-lucide="download" class="btn-icon"></i>Run Backup</button>'+
-    '<button class="btn btn-ghost" onclick="showScreen(\'projects\');showProjectTab(\'manage\')">Manage Projects</button>'+
-    '</div></div>';
-
-  // === REPORTS & BACKUP (manager-only) ===
-  html += '<div class="card dash-backup">'+
-    '<div class="card-title">Reports &amp; Backup</div>'+
-    '<div style="font-size:13px;color:var(--muted);margin-bottom:14px">Download the full database snapshot, the monthly OT report, or a single-table export.</div>'+
-    '<div class="dash-backup-row">'+
-      '<button class="btn btn-primary" onclick="backupExcel(\'all\')"><i data-lucide="download" class="btn-icon"></i>Full Backup (all sheets)</button>'+
-      '<button class="btn btn-ghost" id="monthly-report-btn" onclick="downloadMonthlyReport()"><i data-lucide="file-text" class="btn-icon"></i>Monthly OT Report</button>'+
-    '</div>'+
-    '<details class="dash-backup-details">'+
-      '<summary>Export a specific section</summary>'+
-      '<div class="dash-backup-grid">'+
-        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'ot_sessions\')">OT Sessions</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'project_sessions\')">Project Sessions</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'inventory\')">Inventory</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'leave\')">Leaves</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'comp_off\')">Comp Offs</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'kb_articles\')">Knowledge Base</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="backupExcel(\'directory\')">Customers + Projects</button>'+
-      '</div>'+
-    '</details>'+
-    '</div>';
 
   document.getElementById('dash-content').innerHTML = html;
   if (typeof renderIcons === 'function') renderIcons();

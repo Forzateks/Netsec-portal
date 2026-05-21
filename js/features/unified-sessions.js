@@ -1197,6 +1197,13 @@ async function renderEngagementSummary() {
       var o = document.createElement('option'); o.value = y; o.textContent = y; yearEl.appendChild(o);
     }
   }
+  // Dashboard "Hours by Engagement/Customer" cards stash a desired year on
+  // window before navigating here. Honour it once, then clear so manual
+  // dropdown changes aren't overridden on subsequent renders.
+  if (yearEl && window._engSumPrefilterYear) {
+    yearEl.value = window._engSumPrefilterYear;
+    delete window._engSumPrefilterYear;
+  }
 
   document.getElementById('pj-eng-loading').style.display = 'flex';
   document.getElementById('pj-eng-content').innerHTML = '';
