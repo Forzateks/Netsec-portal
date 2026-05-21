@@ -179,7 +179,12 @@ async function renderEmployeeDashboard() {
     sb.from('comp_off_register').select('*').eq('employee',currentUser),
     sb.from('comp_off_requests').select('*').eq('employee',currentUser).order('created_at',{ascending:false}),
     sb.from('leave_requests').select('*').eq('employee',currentUser).order('created_at',{ascending:false}),
-    sb.from('annual_leave').select('working_days').eq('employee',currentUser).gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
+    // Switched from annual_leave to leave_requests in v81 — used days are
+    // now computed day-by-day via computeLeaveUsedDays (in leave.js).
+    sb.from('leave_requests')
+      .select('start_date,end_date,working_days,leave_type,status,employee,effective_end_date')
+      .eq('employee',currentUser)
+      .gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
     sb.from('unified_sessions').select('total_hours,team_members,employee,session_date').gte('session_date',prevMonth+'-01').lte('session_date',month+'-31'),
     // Year-wide aggregate for the Top-8 Engagement / Customer cards.
     // Paginated via fetchAllRows so totals aren't silently capped at 1000.
@@ -194,7 +199,12 @@ async function renderEmployeeDashboard() {
   var yearSessions = (results[6] && results[6].data) || [];
 
   var s = calcSummary(sessions||[], compoffs||[], currentUser);
-  var leaveUsed = (alData||[]).reduce(function(a,r){return a+parseFloat(r.working_days||0);},0);
+  // alData rows are now from leave_requests; we apply the day-by-day rule via
+  // computeLeaveUsedDays so future-dated approvals don't pre-spend the balance.
+  var _todayISO = (typeof _leaveTodayISO === 'function') ? _leaveTodayISO() : new Date().toISOString().slice(0,10);
+  var leaveUsed = (alData||[])
+    .filter(function(r){ return (r.leave_type||'annual') === 'annual'; })
+    .reduce(function(a,r){ return a + (typeof computeLeaveUsedDays === 'function' ? computeLeaveUsedDays(r, _todayISO) : parseFloat(r.working_days||0)); }, 0);
   var leaveBalance = LEAVE_ALLOWANCE - leaveUsed;
   var monthApproved = (sessions||[]).filter(function(x){return (x.ot_date||'').startsWith(month) && (x.status==='approved'||!x.status);});
   var prevMonthApproved = (sessions||[]).filter(function(x){return (x.ot_date||'').startsWith(prevMonth) && (x.status==='approved'||!x.status);});
@@ -658,9 +668,15 @@ async function renderManagerDashboard() {
     T(sb.from('leave_requests').select('id', {count:'exact', head:true}).eq('status','pending'), 'leave_requests pending'),
     T(sb.from('ot_sessions').select('id', {count:'exact', head:true}).eq('status','pending'), 'ot_sessions pending'),
     T(sb.from('ot_sessions').select('credited_hours').eq('status','approved').gte('ot_date', monthStart), 'ot_sessions month'),
-    // annual_leave for next 14 days (used for both KPI count and coverage-gap exception).
-    // Window is wider than the 30-day KPI sub-line to cover overlaps that started before today.
-    T(sb.from('annual_leave').select('employee,start_date,end_date,working_days,reason').lte('start_date', thirtyAhead).gte('end_date', todayISO), 'annual_leave window'),
+    // Approved leaves overlapping today→30d ahead (KPI count + coverage gap).
+    // Switched from annual_leave to leave_requests in v81 so cancellations
+    // and re-reviews automatically drop out — we no longer plan around
+    // leave that has been withdrawn.
+    T(sb.from('leave_requests')
+        .select('employee,start_date,end_date,working_days,reason,status,effective_end_date')
+        .eq('status','approved')
+        .lte('start_date', thirtyAhead).gte('end_date', todayISO),
+      'approved leaves window'),
     // tracker_updated_at is the best available proxy for status-change time —
     // no dedicated status_changed_at / updated_at column on engagements.
     T(sb.from('engagements').select('id,name,type,status,tracker_status,partner,country,tracker_updated_at,customer_id,converted_to_project').neq('status','archived').eq('is_archived', false), 'engagements all'),

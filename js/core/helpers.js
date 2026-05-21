@@ -453,7 +453,13 @@ function fmtDateRange(startIso, endIso) {
   return fmtDate(startIso) + ' → ' + fmtDate(endIso);
 }
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
-function statusIcon(s){return s==='approved'?'✅':s==='rejected'?'❌':'🟡';}
+function statusIcon(s){
+  if (s==='approved') return '✅';
+  if (s==='rejected') return '❌';
+  if (s==='cancelled') return '🚫';
+  if (s==='needs_review') return '💬';
+  return '🟡';
+}
 function esc2(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
 // Render the band badge(s) for an OT session row. Stored band is one of the

@@ -12,16 +12,71 @@ function calcWorkingDays(startStr,endStr,employee) {
   return count;
 }
 
-async function getLeaveDaysUsed(employee,year,leaveType) {
-  // leaveType: 'annual' or 'sick'
-  let q = sb.from('annual_leave').select('working_days,leave_type')
-    .eq('employee',employee).gte('start_date',year+'-01-01').lte('start_date',year+'-12-31');
-  const {data} = await q;
-  return (data||[]).filter(function(r){
-    // If leave_type column exists filter by it, otherwise treat all as annual
+// Compute how many working days of a leave request have actually been TAKEN
+// as of `todayISO`. Replaces the old at-approval-time accounting (which moved
+// the full allowance the moment a manager clicked Approve, even for leaves
+// months in the future). The new model counts day-by-day:
+//   - approved + future start  → 0
+//   - approved + in-progress   → working days from start up to min(today,end)
+//   - approved + fully past    → full working_days
+//   - cancelled + effective_end_date set → working days from start up to
+//                                          effective_end_date (past days
+//                                          stay counted)
+//   - any other status         → 0
+// Half-day leaves (working_days===0.5, start===end) → 0.5 once start <= today.
+function computeLeaveUsedDays(leave, todayISO) {
+  if (!leave) return 0;
+  if (leave.status !== 'approved' && leave.status !== 'cancelled') return 0;
+  var start = leave.start_date;
+  if (!start || start > todayISO) return 0;
+  var effEnd = (leave.status === 'cancelled' && leave.effective_end_date)
+    ? leave.effective_end_date
+    : leave.end_date;
+  if (!effEnd || effEnd < start) return 0;
+  var lastDay = effEnd < todayISO ? effEnd : todayISO;
+  if (parseFloat(leave.working_days) === 0.5 && start === effEnd) return 0.5;
+  return calcWorkingDays(start, lastDay, leave.employee);
+}
+
+// Approved working days still in the future — total minus already-taken.
+// Used by Team Leave Overview to show "+N upcoming" under the used cell.
+function computeUpcomingApprovedDays(leave, todayISO) {
+  if (!leave || leave.status !== 'approved') return 0;
+  if (!leave.start_date || !leave.end_date) return 0;
+  if (leave.end_date < todayISO) return 0;
+  var taken = computeLeaveUsedDays(leave, todayISO);
+  var total = parseFloat(leave.working_days || 0);
+  return Math.max(0, total - taken);
+}
+
+// Today / yesterday as YYYY-MM-DD in the browser's local timezone. UAE/KSA
+// users see their local midnight rollover, which is what HR-level day
+// counting cares about. Yesterday is used as effective_end_date when a
+// leave is cancelled mid-leave (cancellation takes effect immediately;
+// employee is back at work today, so today is NOT a taken day).
+function _leaveTodayISO() {
+  var d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function _leaveYesterdayISO() {
+  var d = new Date(); d.setDate(d.getDate()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+async function getLeaveDaysUsed(employee, year, leaveType) {
+  // New model: read from leave_requests and sum computeLeaveUsedDays. The
+  // legacy annual_leave table is no longer the source of truth — its
+  // existing rows stay in place but are not read for computation.
+  var res = await sb.from('leave_requests')
+    .select('start_date,end_date,working_days,leave_type,status,employee,effective_end_date')
+    .eq('employee', employee)
+    .gte('start_date', year+'-01-01').lte('start_date', year+'-12-31');
+  if (res.error) { console.warn('getLeaveDaysUsed:', res.error.message); return 0; }
+  var todayISO = _leaveTodayISO();
+  return (res.data||[]).filter(function(r){
     if (leaveType) return (r.leave_type||'annual') === leaveType;
     return true;
-  }).reduce(function(s,r){return s+parseFloat(r.working_days||0);},0);
+  }).reduce(function(s,r){ return s + computeLeaveUsedDays(r, todayISO); }, 0);
 }
 
 function isCompOffType(t) { return t==='compoff_full' || t==='compoff_half'; }
@@ -151,24 +206,21 @@ async function submitLeaveRequest() {
     showAlert('leave-error'); return;
   }
 
-  // Block self-overlap with any existing pending/approved leave request
-  // OR any already-recorded annual_leave row (the source-of-truth balance table).
-  // Two date ranges overlap when start_a <= end_b AND end_a >= start_b.
-  var conflictRes = await Promise.all([
-    sb.from('leave_requests')
-      .select('id,leave_type,start_date,end_date,status')
-      .eq('employee', currentUser)
-      .neq('status', 'rejected')
-      .lte('start_date', end)
-      .gte('end_date', start),
-    sb.from('annual_leave')
-      .select('id,leave_type,start_date,end_date')
-      .eq('employee', currentUser)
-      .lte('start_date', end)
-      .gte('end_date', start)
-  ]);
-  var conflict = (conflictRes[0].data && conflictRes[0].data[0]) ||
-                 (conflictRes[1].data && conflictRes[1].data[0]);
+  // Block self-overlap with any existing live leave request (pending,
+  // needs_review, or approved). Rejected and cancelled requests don't
+  // represent real absences so they're allowed to overlap. Two ranges
+  // overlap when start_a <= end_b AND end_a >= start_b.
+  // (annual_leave is no longer consulted — leave_requests is the single
+  // source of truth as of v81. Legacy annual_leave rows have matching
+  // leave_requests rows, so we don't lose any overlap signal.)
+  var conflictRes = await sb.from('leave_requests')
+    .select('id,leave_type,start_date,end_date,status')
+    .eq('employee', currentUser)
+    .neq('status', 'rejected')
+    .neq('status', 'cancelled')
+    .lte('start_date', end)
+    .gte('end_date', start);
+  var conflict = (conflictRes.data && conflictRes.data[0]);
   if (conflict) {
     if (errEl) errEl.textContent = '⚠️ You already have a ' + (conflict.leave_type || 'leave') +
       ' record from ' + conflict.start_date + ' to ' + conflict.end_date +
@@ -367,13 +419,53 @@ async function renderLeaveHistory() {
     // shows "(half day)" inline next to the date range to stay compact.
     var isHalf = (parseFloat(r.working_days) === 0.5);
     var halfTag = isHalf ? ' <span style="font-size:11px;color:#8B5CF6;font-weight:600">(half day)</span>' : '';
+
+    // Determine if the employee can still cancel this request. Mirrors the
+    // server-side rule applied by cancelLeaveRequest: pending / needs_review
+    // are cancellable at any time; approved is cancellable while end_date is
+    // today-or-later (past-only leaves are locked).
+    var todayISO = (typeof _leaveTodayISO === 'function') ? _leaveTodayISO() : '';
+    var canCancel = false;
+    if (r.status === 'pending' || r.status === 'needs_review') canCancel = true;
+    else if (r.status === 'approved' && r.end_date && r.end_date >= todayISO) canCancel = true;
+    var cancelBtn = canCancel
+      ? '<button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="cancelLeaveRequest('+r.id+')" title="Cancel this leave">✕ Cancel</button>'
+      : '';
+
+    // Status banner — gives the employee the manager's context at a glance.
+    // needs_review (yellow): "the manager wants to talk before approving"
+    // rejected     (red):    "rejection reason"
+    // cancelled    (grey):   "cancellation details"
+    var banner = '';
+    if (r.status === 'needs_review') {
+      banner = '<div style="background:#FFFBEB;color:#92400E;border-left:3px solid var(--gold);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+        '💬 <strong>Pending discussion with manager:</strong> ' + esc2(r.manager_comment || '(no comment)') +
+        '</div>';
+    } else if (r.status === 'rejected' && r.manager_comment) {
+      banner = '<div style="background:#FEF2F2;color:#991B1B;border-left:3px solid var(--danger);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+        '🚫 <strong>Rejection reason:</strong> ' + esc2(r.manager_comment) +
+        '</div>';
+    } else if (r.status === 'cancelled') {
+      var who = r.cancelled_by ? (r.cancelled_by === r.employee ? 'you' : esc2(r.cancelled_by)) : 'someone';
+      banner = '<div style="background:#F1F5F9;color:#475569;border-left:3px solid #94A3B8;padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+        '🚫 Cancelled ' + (r.cancelled_at ? relativeTime(r.cancelled_at) : '') + ' by ' + who +
+        (r.effective_end_date ? ' · counted through ' + fmtDate(r.effective_end_date) : '') +
+        (r.manager_comment ? ' · ' + esc2(r.manager_comment) : '') +
+        '</div>';
+    }
+
+    var statusLabel = cap((r.status||'').replace('_',' '));
     return '<div class="request-card '+r.status+'">'+
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;flex-wrap:wrap">'+
       '<div><strong>'+r.employee+'</strong> <span style="font-size:11px;font-weight:600;color:'+ltColor+'">'+ltIcon+'</span><br>'+
       '<span style="font-family:DM Mono,monospace;font-size:13px">'+fmtDate(r.start_date)+(r.start_date===r.end_date?'':' to '+fmtDate(r.end_date))+halfTag+'</span><br>'+
       '<span style="font-size:12px;color:var(--muted)">'+r.working_days+' working day'+(parseFloat(r.working_days)===1?'':'s')+(r.reason?' | '+r.reason:'')+'</span></div>'+
-      '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span></div>'+
-      (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:4px">💬 '+r.manager_comment+'</div>':'')+
+      '<div style="display:flex;align-items:center;flex-wrap:wrap"><span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+statusLabel+'</span>'+cancelBtn+'</div></div>'+
+      // Show manager_comment inline only for rejected/needs_review where we
+      // didn't already emit a richer banner. For approved leaves it stays
+      // as the historical-context line.
+      (r.status === 'approved' && r.manager_comment ? '<div style="font-size:12px;color:var(--muted);margin-top:4px">💬 '+esc2(r.manager_comment)+'</div>':'')+
+      banner+
       '</div>';
   }).join('');
 }
@@ -382,19 +474,35 @@ async function renderLeaveTeam() {
   document.getElementById('lv-team-load').style.display='flex';
   document.getElementById('lv-team-content').innerHTML='';
   const year=new Date().getFullYear().toString();
-  const {data}=await sb.from('annual_leave').select('*').gte('start_date',year+'-01-01').lte('start_date',year+'-12-31');
+  // Switched from annual_leave (at-approval-time) to leave_requests so the
+  // day-by-day rule applies. Pull every leave_request that started in the
+  // year — computeLeaveUsedDays decides which days actually count today.
+  const {data}=await sb.from('leave_requests')
+    .select('employee,start_date,end_date,working_days,leave_type,status,effective_end_date')
+    .gte('start_date',year+'-01-01').lte('start_date',year+'-12-31');
   document.getElementById('lv-team-load').style.display='none';
   const records=data||[];
+  const todayISO = _leaveTodayISO();
 
   // Employees only see their own row; manager sees all
   const visibleEmps = isManager ? EMPLOYEES : [currentUser];
 
   const rows=visibleEmps.map(function(emp){
     const empRecs = records.filter(function(r){return r.employee===emp;});
-    const annualUsed = empRecs.filter(function(r){return (r.leave_type||'annual')==='annual';})
-                              .reduce(function(s,r){return s+parseFloat(r.working_days||0);},0);
-    const sickUsed   = empRecs.filter(function(r){return r.leave_type==='sick';})
-                              .reduce(function(s,r){return s+parseFloat(r.working_days||0);},0);
+    function sumUsed(typeKey) {
+      return empRecs
+        .filter(function(r){ return (r.leave_type||'annual')===typeKey; })
+        .reduce(function(s,r){ return s + computeLeaveUsedDays(r, todayISO); }, 0);
+    }
+    function sumUpcoming(typeKey) {
+      return empRecs
+        .filter(function(r){ return (r.leave_type||'annual')===typeKey; })
+        .reduce(function(s,r){ return s + computeUpcomingApprovedDays(r, todayISO); }, 0);
+    }
+    const annualUsed    = sumUsed('annual');
+    const annualUpcoming= sumUpcoming('annual');
+    const sickUsed      = sumUsed('sick');
+    const sickUpcoming  = sumUpcoming('sick');
     const annualRem  = LEAVE_ALLOWANCE - annualUsed;
     const sickRem    = SICK_ALLOWANCE  - sickUsed;
     const aColor = annualRem<=0?'var(--danger)':annualRem<=5?'var(--gold)':'var(--success)';
@@ -402,14 +510,21 @@ async function renderLeaveTeam() {
     const aPct   = Math.min((annualUsed/LEAVE_ALLOWANCE)*100,100);
     const aBadge = annualRem<=0?'<span class="badge badge-rejected">No balance</span>':annualRem<=5?'<span class="badge badge-pending">Low</span>':'<span class="badge badge-approved">OK</span>';
     const sBadge = sickRem<=0?'<span class="badge badge-rejected">No balance</span>':sickRem<=3?'<span class="badge badge-pending">Low</span>':'<span class="badge badge-approved">OK</span>';
+    // "+N upcoming" hint shows approved-but-not-yet-taken days — gives the
+    // manager the full mental model: this is what's been TAKEN; here's what's
+    // APPROVED but still in the future.
+    var aUpcomingHint = annualUpcoming>0
+      ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">+'+fmtNumber(annualUpcoming,1)+' approved upcoming</div>' : '';
+    var sUpcomingHint = sickUpcoming>0
+      ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">+'+fmtNumber(sickUpcoming,1)+' approved upcoming</div>' : '';
     return '<tr>'+
       '<td><strong>'+emp+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(KSA_EMP.includes(emp)?'KSA — Fri/Sat':'UAE — Sat/Sun')+'</span></td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+annualUsed+' / '+LEAVE_ALLOWANCE+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:'+aColor+'">'+annualRem+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+fmtNumber(annualUsed,1)+' / '+LEAVE_ALLOWANCE+aUpcomingHint+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:'+aColor+'">'+fmtNumber(annualRem,1)+'</td>'+
       '<td><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+aPct+'%;background:'+aColor+';border-radius:4px"></div></div><div style="font-size:11px;color:var(--muted);margin-top:3px">'+fmtPct(aPct)+' used</div></td>'+
       '<td>'+aBadge+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+sickUsed+' / '+SICK_ALLOWANCE+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:'+sColor+'">'+sickRem+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+fmtNumber(sickUsed,1)+' / '+SICK_ALLOWANCE+sUpcomingHint+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:'+sColor+'">'+fmtNumber(sickRem,1)+'</td>'+
       '<td>'+sBadge+'</td>'+
       '</tr>';
   }).join('');
@@ -574,11 +689,14 @@ async function renderLeaveApprovals() {
   const coRows    = (cr.data||[]).map(function(r){ return Object.assign({_kind:'compoff'}, r); });
 
   // Overlap detection only meaningful for date-range leave; skip comp-off.
+  // Exclude rejected AND cancelled — neither represents a real future absence,
+  // so they shouldn't generate overlap warnings against a live request.
   leaveRows.forEach(function(r){
     r._overlaps = leaveRows.filter(function(o){
       return o.id !== r.id
           && o.employee !== r.employee
           && o.status !== 'rejected'
+          && o.status !== 'cancelled'
           && o.start_date <= r.end_date
           && o.end_date   >= r.start_date;
     });
@@ -633,8 +751,11 @@ async function buildApprovedLeavesSection() {
       '<div style="color:var(--danger)">Could not load: '+error.message+'</div>';
   }
   var rows = data || [];
-  var html = '<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin:28px 0 8px">📒 Approved Leave Records ('+rows.length+')</h3>'+
-    '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Source of truth for the balance. Editing or deleting here adjusts what the employee has used.</div>';
+  var html = '<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin:28px 0 8px">📒 Approved Leave Records — Legacy ('+rows.length+')</h3>'+
+    '<div style="background:#F1F5F9;color:#475569;border-left:3px solid #94A3B8;padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:10px;line-height:1.5">'+
+      'ℹ️ <strong>Legacy ledger.</strong> As of v81, leave balances are computed day-by-day directly from <code>leave_requests</code>. ' +
+      'These rows are kept for historical reference but no longer drive the balance. Edits here have no effect on what an employee has &quot;used&quot;.'+
+    '</div>';
   if (!rows.length) {
     html += renderEmptyState({
       icon: 'clipboard-x',
@@ -764,7 +885,8 @@ async function saveEditLeave() {
 }
 
 function approvalCard(r,type) {
-  const isPending=r.status==='pending';
+  const isPending = r.status==='pending';
+  const isNeedsReview = r.status==='needs_review';
   let info='';
   if (type==='compoff') info='<strong>'+r.employee+'</strong> — '+r.type+' on '+fmtDate(r.request_date)+(r.related_activity?' ('+r.related_activity+')':'');
   else {
@@ -786,31 +908,103 @@ function approvalCard(r,type) {
       '</div>';
   }
 
+  // For approved leaves, decide which actions are still valid based on whether
+  // the leave is fully past (terminal), in-progress (can cancel with warning,
+  // or rebrand to rejected), or future (can cancel cleanly).
+  var actionsHtml = '';
+  var todayISO = (typeof _leaveTodayISO === 'function') ? _leaveTodayISO() : '';
+  if (type === 'leave') {
+    if (isPending) {
+      actionsHtml += '<button class="btn btn-sm btn-primary" onclick="openApproveModal(\'leave\','+r.id+',\''+r.employee+'\')">Review</button>';
+      actionsHtml += '<button class="btn btn-sm btn-ghost" onclick="cancelLeaveRequest('+r.id+')" title="Cancel this request">✕ Cancel</button>';
+    } else if (isNeedsReview) {
+      actionsHtml += '<button class="btn btn-sm btn-primary" onclick="openApproveModal(\'leave\','+r.id+',\''+r.employee+'\')">Review</button>';
+      actionsHtml += '<button class="btn btn-sm btn-ghost" onclick="resetLeaveToPending('+r.id+')" title="Move back to Pending">↩ Pending</button>';
+    } else if (r.status === 'approved') {
+      var fullyPast = r.end_date && todayISO && r.end_date < todayISO;
+      if (!fullyPast) {
+        // future or in-progress — cancel is allowed (cancelLeaveRequest warns
+        // when mid-leave). Reject path needs the full review modal so manager
+        // can record a required reason; pass fromApproved so the modal locks
+        // the comment requirement.
+        actionsHtml += '<button class="btn btn-sm btn-ghost" onclick="cancelLeaveRequest('+r.id+')" title="Cancel approved leave">✕ Cancel</button>';
+        actionsHtml += '<button class="btn btn-sm btn-ghost" onclick=\'openApproveModal("leave",'+r.id+',"'+(r.employee||'').replace(/"/g,'\\"')+'",{fromApproved:true,leaveRow:'+JSON.stringify({start_date:r.start_date,end_date:r.end_date})+'})\' title="Change to rejected">↺ Reject</button>';
+      }
+      // fullyPast → no actions, terminal display.
+    }
+    // rejected / cancelled → terminal, no action buttons.
+    actionsHtml += '<button class="btn btn-sm btn-ghost" onclick="openEditLeaveModal('+r.id+')" title="Edit request">✏️</button>';
+  } else {
+    // comp-off — original behaviour kept (no cancel/needs_review for v1)
+    if (isPending) {
+      actionsHtml += '<button class="btn btn-sm btn-primary" onclick="openApproveModal(\'compoff\','+r.id+',\''+r.employee+'\')">Review</button>';
+    } else if (isNeedsReview) {
+      actionsHtml += '<button class="btn btn-sm btn-primary" onclick="openApproveModal(\'compoff\','+r.id+',\''+r.employee+'\')">Review</button>';
+      actionsHtml += '<button class="btn btn-sm btn-ghost" onclick="resetLeaveToPending('+r.id+')" title="Move back to Pending">↩ Pending</button>';
+    }
+  }
+  actionsHtml += '<button class="btn btn-sm btn-danger" onclick="deleteRequest(\''+type+'\','+r.id+')" title="Delete request">✕</button>';
+
+  // Cancellation footer — when status is cancelled, show who/when. For
+  // rejected and needs_review the existing manager_comment row below is
+  // already in place to surface the reason / discussion prompt.
+  var cancelFoot = '';
+  if (r.status === 'cancelled' && r.cancelled_at) {
+    cancelFoot = '<div style="font-size:12px;color:var(--muted);margin-top:6px">' +
+      '🚫 Cancelled ' + relativeTime(r.cancelled_at) +
+      (r.cancelled_by ? ' by ' + esc2(r.cancelled_by) : '') +
+      (r.effective_end_date ? ' · Days counted through ' + fmtDate(r.effective_end_date) : '') +
+      '</div>';
+  }
+
   return '<div class="request-card '+r.status+'" style="margin-bottom:10px">'+
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">'+
     '<div style="font-size:13px">'+info+'<br><span style="font-size:11px;color:var(--muted)" title="'+relativeTimeTitle(r.created_at)+'">Submitted '+relativeTime(r.created_at)+'</span></div>'+
-    '<div style="display:flex;align-items:center;gap:8px">'+
-    '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span>'+
-    (isPending?'<button class="btn btn-sm btn-primary" onclick="openApproveModal(\''+type+'\','+r.id+',\''+r.employee+'\')">Review</button>':'')+
-    (type==='leave'?'<button class="btn btn-sm btn-ghost" onclick="openEditLeaveModal('+r.id+')" title="Edit request">✏️</button>':'')+
-    '<button class="btn btn-sm btn-danger" onclick="deleteRequest(\''+type+'\','+r.id+')" title="Delete request">✕</button>'+
+    '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+    '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status.replace('_',' '))+'</span>'+
+    actionsHtml+
     '</div></div>'+
     overlapHtml+
-    (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:8px">💬 '+r.manager_comment+'</div>':'')+
+    (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:8px">💬 '+esc2(r.manager_comment)+'</div>':'')+
+    cancelFoot+
     '</div>';
 }
 
-function openApproveModal(type,id,employee) {
-  approveTarget={type,id,employee};
+function openApproveModal(type,id,employee,opts) {
+  opts = opts || {};
+  approveTarget = {
+    type:type, id:id, employee:employee,
+    // Set when the row was already approved and the manager is changing it
+    // to rejected. Triggers the required-comment guard + the in-progress
+    // effective_end_date logic in processRequest.
+    fromApproved: !!opts.fromApproved,
+    leaveRow: opts.leaveRow || null
+  };
   // Pick a title that matches the source. The same modal is reused by OT
   // sessions, leave requests and comp-off requests, so the title has to
   // adapt or managers see 'Review Leave Request' on an OT session.
   var title = type==='ot'      ? 'Review OT Session'
             : type==='compoff' ? 'Review Comp Off Request'
+            : opts.fromApproved? 'Reject approved leave?'
             :                    'Review Leave Request';
   document.getElementById('approve-modal-title').textContent=title;
   document.getElementById('approve-modal-info').textContent='Employee: '+employee;
   document.getElementById('approve-comment').value='';
+  // Comment label switches between optional/required based on the action.
+  var lbl = document.getElementById('approve-comment-label');
+  if (lbl) {
+    lbl.textContent = opts.fromApproved
+      ? 'Rejection reason (required)'
+      : 'Comment (optional — required for Needs Re-Review)';
+  }
+  // Needs Re-Review button: only for the standard review of a leave or
+  // comp-off request, not for OT and not for the post-approval rejection
+  // flow (where the only outcomes are "go through with rejection" or cancel).
+  var reviewBtn = document.getElementById('approve-review-btn');
+  if (reviewBtn) {
+    var showReview = (type === 'leave' || type === 'compoff') && !opts.fromApproved;
+    reviewBtn.style.display = showReview ? '' : 'none';
+  }
   document.getElementById('approve-modal').classList.add('show');
 }
 
@@ -882,10 +1076,25 @@ async function processRequest(decision) {
   const {type,id,employee}=approveTarget;
   const comment=document.getElementById('approve-comment').value.trim();
 
+  // Comment is REQUIRED for needs_review (the discussion prompt for the
+  // employee) and for rejecting a previously approved leave (the rejection
+  // reason). For plain pending→approved/rejected the field stays optional
+  // — matches the prior behaviour.
+  if (decision === 'needs_review' && !comment) {
+    showError('A comment is required when marking for re-review.');
+    return;
+  }
+  if (decision === 'rejected' && type === 'leave' && approveTarget.fromApproved && !comment) {
+    showError('A rejection reason is required when rejecting an approved leave.');
+    return;
+  }
+
+  var nowISO = new Date().toISOString();
+
   // OT sessions live in their own table — just update status
   if (type==='ot') {
     const {error}=await sb.from('ot_sessions').update({
-      status:decision,manager_comment:comment,reviewed_by:currentUser,reviewed_at:new Date().toISOString()
+      status:decision,manager_comment:comment,reviewed_by:currentUser,reviewed_at:nowISO
     }).eq('id',id);
     if (error){showError('Error: '+error.message);return;}
     if (decision === 'approved') await _approveSuccessGlow();
@@ -895,33 +1104,127 @@ async function processRequest(decision) {
   }
 
   const table=type==='compoff'?'comp_off_requests':'leave_requests';
-  const {error}=await sb.from(table).update({
-    status:decision,manager_comment:comment,reviewed_by:currentUser,reviewed_at:new Date().toISOString()
-  }).eq('id',id);
+
+  // Build the update payload. For leave, also set status_changed_at and (if
+  // we're rejecting a leave that's already in progress) effective_end_date
+  // = yesterday so past days stay counted.
+  var payload = {
+    status: decision,
+    manager_comment: comment || null,
+    reviewed_by: currentUser,
+    reviewed_at: nowISO
+  };
+  if (type === 'leave') {
+    payload.status_changed_at = nowISO;
+    if (decision === 'rejected' && approveTarget.fromApproved) {
+      // Was previously approved and now being rejected. If the leave is
+      // mid-flight, freeze the count at yesterday.
+      var todayISO = _leaveTodayISO();
+      var orig = approveTarget.leaveRow || {};
+      if (orig.start_date && orig.start_date <= todayISO &&
+          orig.end_date   && orig.end_date   >= todayISO) {
+        payload.effective_end_date = _leaveYesterdayISO();
+      }
+    }
+  }
+
+  const {error}=await sb.from(table).update(payload).eq('id',id);
   if (error){showError('Error: '+error.message);return;}
 
-  // If approved, insert into actual records table
-  if (decision==='approved') {
-    if (type==='compoff') {
-      const {data}=await sb.from('comp_off_requests').select('*').eq('id',id).single();
-      if (data) await sb.from('comp_off_register').insert({
-        employee:data.employee,date_taken:data.request_date,type:data.type,
-        days:data.days,approved_by:currentUser,remarks:data.remarks||''
-      });
-    } else {
-      const {data}=await sb.from('leave_requests').select('*').eq('id',id).single();
-      if (data) await sb.from('annual_leave').insert({
-        employee:data.employee,start_date:data.start_date,end_date:data.end_date,
-        working_days:data.working_days,reason:data.reason||'',approved_by:currentUser,leave_type:data.leave_type||'annual'
-      });
-    }
+  // Comp-off approval still mirrors into comp_off_register (its balance
+  // model is unchanged). Leave approval no longer writes to annual_leave —
+  // the day-by-day rule reads leave_requests directly, so the snapshot row
+  // would be dead data.
+  if (decision==='approved' && type==='compoff') {
+    const {data}=await sb.from('comp_off_requests').select('*').eq('id',id).single();
+    if (data) await sb.from('comp_off_register').insert({
+      employee:data.employee,date_taken:data.request_date,type:data.type,
+      days:data.days,approved_by:currentUser,remarks:data.remarks||''
+    });
   }
 
   if (decision === 'approved') await _approveSuccessGlow();
   closeApproveModal();
   updateNotifBadge();
-  showToast(decision === 'approved' ? 'Request approved ✓' : 'Request rejected ✓');
+  var toastMsg = decision === 'approved' ? 'Request approved ✓'
+              : decision === 'rejected'  ? 'Request rejected ✓'
+              : decision === 'needs_review' ? 'Marked for re-review ✓'
+              : 'Updated ✓';
+  showToast(toastMsg);
   renderLeaveApprovals();
+}
+
+// Move a needs_review leave back to pending (per spec — manager can park
+// the discussion and resume the normal approval flow later). No comment
+// required; current manager_comment stays as historical context.
+async function resetLeaveToPending(id) {
+  if (!await confirmAction({
+    title: 'Move back to Pending?',
+    body: 'This will clear the re-review state. The manager comment stays as history; you can review the request again from the Pending list.',
+    confirmText: 'Move to Pending',
+    danger: false
+  })) return;
+  var nowISO = new Date().toISOString();
+  var res = await sb.from('leave_requests').update({
+    status: 'pending', status_changed_at: nowISO
+  }).eq('id', id);
+  if (res.error) { showError('Error: '+res.error.message); return; }
+  showToast('Moved back to Pending ✓');
+  updateNotifBadge();
+  renderLeaveApprovals();
+}
+
+// Cancel a leave request — employee can cancel their own; manager can
+// cancel any. Past-only leaves are blocked. Mid-leave cancellations set
+// effective_end_date = yesterday so past days stay counted as used.
+async function cancelLeaveRequest(id) {
+  var res = await sb.from('leave_requests').select('*').eq('id', id).single();
+  if (res.error || !res.data) { showError('Could not load request.'); return; }
+  var r = res.data;
+  var canManage = isManager || r.employee === currentUser;
+  if (!canManage) { showError('You can only cancel your own leave.'); return; }
+  if (r.status !== 'pending' && r.status !== 'needs_review' && r.status !== 'approved') {
+    showError('Only pending or approved leaves can be cancelled.');
+    return;
+  }
+  var todayISO = _leaveTodayISO();
+  if (r.status === 'approved' && r.end_date < todayISO) {
+    showError('Cannot cancel a leave that has already been taken.');
+    return;
+  }
+  // Confirm modal — copy depends on whether we're mid-leave or not.
+  var midLeave = r.status === 'approved' && r.start_date <= todayISO && r.end_date >= todayISO;
+  var bodyText = midLeave
+    ? 'This leave is currently in progress. Days from ' + r.start_date + ' through yesterday will remain counted as used. Future days will not count.'
+    : (r.status === 'approved'
+        ? 'This approved leave is in the future. Cancelling will un-count all its days.'
+        : 'Cancel this ' + r.status + ' request?');
+  if (!await confirmAction({
+    title: midLeave ? 'Cancel in-progress leave?' : 'Cancel this request?',
+    body: bodyText,
+    confirmText: 'Cancel leave',
+    danger: true
+  })) return;
+
+  var payload = {
+    status: 'cancelled',
+    cancelled_at: new Date().toISOString(),
+    cancelled_by: currentUser,
+    status_changed_at: new Date().toISOString()
+  };
+  if (midLeave) payload.effective_end_date = _leaveYesterdayISO();
+
+  var up = await sb.from('leave_requests').update(payload).eq('id', id);
+  if (up.error) { showError('Error: '+up.error.message); return; }
+  showToast('Leave cancelled ✓');
+  updateNotifBadge();
+  // Re-render whichever list the user is looking at.
+  if (typeof renderLeaveApprovals === 'function' && document.getElementById('lv-approvals-content')) {
+    renderLeaveApprovals();
+  }
+  if (typeof renderLeaveHistory === 'function' && document.getElementById('lv-hist-content')) {
+    renderLeaveHistory();
+  }
 }
 
 // == EXPORT CSV ====================================================

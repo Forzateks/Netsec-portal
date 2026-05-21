@@ -801,7 +801,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .dim{color:#9CA3AF}
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
 /* Status badges keep the pill shape — they read as notifications, not categories. */
-.badge-pending,.badge-approved,.badge-rejected{border-radius:20px;padding:3px 8px}
+.badge-pending,.badge-approved,.badge-rejected,.badge-needs_review,.badge-cancelled{border-radius:20px;padding:3px 8px}
 .badge-Eve{background:#EFF6FF;color:var(--eve)}.badge-Early{background:#ECFDF5;color:var(--early)}
 .badge-Mid{background:#F5F3FF;color:var(--mid)}.badge-Wknd{background:#FFFBEB;color:var(--wknd)}
 .badge-Day{background:#F9FAFB;color:var(--day)}.badge-12{background:#FFFBEB;color:var(--gold)}
@@ -809,6 +809,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .badge-pending{background:#FEF3C7;color:#92400E}
 .badge-approved{background:#D1FAE5;color:#065F46}
 .badge-rejected{background:#FEE2E2;color:#991B1B}
+/* needs_review = "manager wants to discuss" — same yellow family as pending
+   but with the gold accent so it reads as "active discussion required" not
+   "waiting on manager". cancelled = neutral grey, terminal state. */
+.badge-needs_review{background:#FFFBEB;color:#92400E;border:1px dashed var(--gold)}
+.badge-cancelled{background:#F1F5F9;color:#475569}
 .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
 /* Stat card — hero element. Soft top reflection, gradient lift, hover
    floats the card and rings it in cyan. Color stripe sits on ::before
@@ -986,6 +991,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .request-card.pending{border-left:4px solid var(--gold)}
 .request-card.approved{border-left:4px solid var(--success)}
 .request-card.rejected{border-left:4px solid var(--danger)}
+.request-card.needs_review{border-left:4px dashed var(--gold);background:#FFFBEB}
+.request-card.cancelled{border-left:4px solid #94A3B8;background:#F8FAFC;opacity:.85}
 /* ── SIDEBAR mobile collapse (≤900px) ── */
 @media(max-width:900px){
   /* Sidebar becomes a left drawer that slides over the page. Covers the
