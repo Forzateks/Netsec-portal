@@ -2251,40 +2251,70 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .team-cat-bar{width:4px;height:24px;border-radius:2px}
 .team-cat-title{font-size:18px;font-weight:700;color:var(--navy);letter-spacing:-.2px;margin:0}
 
-/* Member card grid — 3-4 across desktop, 2 tablet, 1 mobile. */
-.team-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+/* Member card grid — explicit columns at breakpoints so cards never
+   collapse to 1-per-row on a wide layout. Cards are capped at 320px
+   and justified to the start of each grid cell; auto-fit handles
+   leftover space. */
+.team-card-grid{display:grid;grid-template-columns:1fr;gap:18px;justify-items:start}
+@media(min-width:640px) { .team-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media(min-width:1024px){ .team-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media(min-width:1400px){ .team-card-grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
+
 .team-card{
-  background:white;border:1px solid #E5E7EB;border-radius:8px;padding:24px;
-  display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;
+  width:100%;max-width:320px;
+  background:white;border:1px solid #E5E7EB;border-radius:10px;padding:24px;
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;
   transition:box-shadow .15s,transform .12s,border-color .15s;
 }
 .team-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);border-color:#CBD5E1;transform:translateY(-1px)}
 
-.team-card-photo{margin-bottom:4px}
-.team-photo-wrap{position:relative;border-radius:50%;overflow:hidden;background:#F8FAFC;flex-shrink:0}
-.team-photo{display:block;border-radius:50%;object-fit:cover;background:#F8FAFC}
+.team-card-photo{margin-bottom:10px}
+/* Photo wrap holds the layered initials circle + (optional) img on top.
+   The img is absolutely positioned over the initials so a missing JPG
+   reveals the initials cleanly via onerror -> display:none on the img. */
+.team-photo-wrap{
+  position:relative;border-radius:50%;overflow:hidden;background:#F8FAFC;
+  flex-shrink:0;display:block;
+}
 .team-initials{
-  border-radius:50%;background:var(--teal);color:white;
+  position:absolute;inset:0;border-radius:50%;
+  background:var(--teal);color:white;
   display:flex;align-items:center;justify-content:center;
   font-family:'DM Sans',sans-serif;font-weight:700;letter-spacing:.5px;
-  flex-shrink:0;
+  line-height:1;
+}
+.team-photo{
+  position:absolute;inset:0;width:100%;height:100%;
+  border-radius:50%;object-fit:cover;background:#F8FAFC;
+  display:block;
 }
 
-.team-card-name{font-size:18px;font-weight:700;color:var(--navy);line-height:1.2}
-.team-card-role{font-size:14px;color:var(--muted);line-height:1.3;min-height:1.3em}
-.team-card-meta{display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.team-card-name{font-size:17px;font-weight:700;color:var(--navy);line-height:1.2}
+.team-card-role{font-size:13px;color:var(--muted);line-height:1.3;min-height:1.3em;margin-top:2px}
+
+/* Email + location share a single tight row at the bottom of the card,
+   per the v1 spec. Email left, location badge right; wraps to two rows
+   only if email overflows. */
+.team-card-bottom{
+  margin-top:14px;padding-top:12px;border-top:1px solid #F1F5F9;
+  width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
+}
 .team-loc-badge{
-  font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;
-  text-transform:uppercase;letter-spacing:.4px;
+  font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;
+  text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;
 }
 .team-loc-uae{background:#EFF6FF;color:#1E3A8A}
 .team-loc-ksa{background:#FDF2F8;color:#9D174D}
 
-.team-card-contacts{margin-top:8px;display:flex;flex-direction:column;gap:6px;width:100%}
-.team-contact-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);justify-content:center}
-.team-contact-row a{color:var(--teal);text-decoration:none;font-weight:500}
+.team-contact-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);min-width:0}
+.team-contact-row a{color:var(--teal);text-decoration:none;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .team-contact-row a:hover{text-decoration:underline}
-.team-contact-ico{width:14px;height:14px;color:#94A3B8;flex-shrink:0}
+.team-contact-ico{width:13px;height:13px;color:#94A3B8;flex-shrink:0}
+
+/* Phone is internal-only; rendered as a small chip BELOW the
+   email+location row when present so it doesn't crowd the bottom. */
+.team-card-phone{font-size:12px;color:var(--text);margin-top:4px;display:flex;align-items:center;gap:6px;justify-content:center}
+.team-card-phone a{color:var(--teal);font-weight:500;text-decoration:none}
 
 /* ── Portfolio Mapping ── */
 .team-portfolio-card{align-items:flex-start;text-align:left;padding:18px 20px}
@@ -2388,7 +2418,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .rfp-detail-role{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px}
 .rfp-detail-owners{display:flex;flex-direction:column;gap:8px;margin-top:8px}
 .rfp-detail-owner{display:flex;align-items:center;gap:10px}
-.rfp-detail-owner .team-photo,.rfp-detail-owner .team-initials,.rfp-detail-owner .team-photo-wrap{width:36px!important;height:36px!important;font-size:13px!important}
+/* Wrap size is set inline by teamPhotoHtml(m, 36); the absolute-positioned
+   children fill the wrap automatically. No override needed here. */
 .rfp-detail-owner-name{font-size:13px;color:var(--navy);font-weight:500}
 .rfp-detail-artifacts{list-style:disc;padding-left:20px;margin:0;font-size:13px;color:var(--text);line-height:1.7}
 .rfp-detail-next{list-style:none;padding:0;margin:0;font-size:13px;line-height:1.8}

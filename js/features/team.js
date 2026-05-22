@@ -82,18 +82,21 @@ function teamInitials(name) {
 
 function teamPhotoHtml(member, size) {
   size = size || 120;
-  // The <img> attempts to load the JPG; onerror swaps to the initials
-  // placeholder by replacing the parent's content. Photo files live in
-  // images/team/<id>.jpg; missing files render the fallback cleanly.
-  var initials = teamInitials(member.name);
-  var placeholderHtml = '<div class="team-initials" style="width:'+size+'px;height:'+size+'px;font-size:'+(size*0.36)+'px">'+
-    esc2(initials) + '</div>';
-  if (!member.photo) return placeholderHtml;
-  return '<div class="team-photo-wrap" style="width:'+size+'px;height:'+size+'px">'+
-    '<img src="'+esc2(member.photo)+'" alt="'+esc2(member.name)+'" '+
-      'class="team-photo" style="width:'+size+'px;height:'+size+'px" '+
-      'onerror="this.parentNode.innerHTML=\''+placeholderHtml.replace(/'/g,"\\'")+'\'">'+
-    '</div>';
+  // Layered fallback: the initials circle renders as the base layer
+  // (always present); the <img> sits absolutely on top of it. When the
+  // photo file exists, the img covers the initials. When the file 404s,
+  // onerror hides the img and reveals the initials underneath. No HTML
+  // string-injection / quote-escaping needed — that's what produced the
+  // v83 "full name leaks into the circle" bug.
+  var initials = esc2(teamInitials(member.name));
+  var fontPx = Math.round(size * 0.38);
+  var wrap = '<div class="team-photo-wrap" style="width:'+size+'px;height:'+size+'px">'+
+    '<div class="team-initials" style="font-size:'+fontPx+'px">'+initials+'</div>';
+  if (member.photo) {
+    wrap += '<img src="'+esc2(member.photo)+'" alt="" class="team-photo" onerror="this.style.display=\'none\'">';
+  }
+  wrap += '</div>';
+  return wrap;
 }
 
 function teamGroupByCategory(members) {
@@ -258,22 +261,31 @@ function renderCategorySection(category, innerHtml) {
 }
 
 function renderMemberCard(m) {
+  // Bottom row: email left, location badge right. Email truncates with
+  // ellipsis if too long; location stays at fixed pill size on the right.
+  var emailHtml = m.email
+    ? '<div class="team-contact-row" title="'+esc2(m.email)+'">'+
+        '<i data-lucide="mail" class="team-contact-ico"></i>'+
+        '<a href="mailto:'+esc2(m.email)+'">'+esc2(m.email)+'</a>'+
+      '</div>'
+    : '<div></div>'; // placeholder so location stays right-aligned
   var locBadge = m.location
     ? '<span class="team-loc-badge team-loc-'+esc2(m.location.toLowerCase())+'">'+esc2(m.location)+'</span>'
     : '';
-  var email = m.email
-    ? '<div class="team-contact-row"><i data-lucide="mail" class="team-contact-ico"></i><a href="mailto:'+esc2(m.email)+'">'+esc2(m.email)+'</a></div>'
-    : '';
-  // Phone never rendered in public mode (scrubForPublic stripped it).
-  var phone = (!TEAM_PUBLIC_MODE && m.phone)
-    ? '<div class="team-contact-row"><i data-lucide="phone" class="team-contact-ico"></i><a href="tel:'+esc2(m.phone.replace(/\s+/g,''))+'">'+esc2(m.phone)+'</a></div>'
+  // Phone is internal-only (public scrub blanks it). Rendered as a small
+  // chip below the email+location row so the main row stays clean.
+  var phoneHtml = (!TEAM_PUBLIC_MODE && m.phone)
+    ? '<div class="team-card-phone">'+
+        '<i data-lucide="phone" class="team-contact-ico"></i>'+
+        '<a href="tel:'+esc2(m.phone.replace(/\s+/g,''))+'">'+esc2(m.phone)+'</a>'+
+      '</div>'
     : '';
   return '<article class="team-card">'+
     '<div class="team-card-photo">'+teamPhotoHtml(m, 120)+'</div>'+
     '<div class="team-card-name">'+esc2(m.name)+'</div>'+
     '<div class="team-card-role">'+esc2(m.role || '')+'</div>'+
-    '<div class="team-card-meta">'+locBadge+'</div>'+
-    '<div class="team-card-contacts">'+email+phone+'</div>'+
+    '<div class="team-card-bottom">'+emailHtml+locBadge+'</div>'+
+    phoneHtml+
   '</article>';
 }
 
