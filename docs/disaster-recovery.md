@@ -70,32 +70,18 @@ If the existing project is still up at all, take ONE MORE Full Backup before doi
 
 If the project is already gone, skip to Step 2 with the most recent available backup.
 
-### Step 2 — Get or rebuild `schema.sql`
+### Step 2 — Get `schema.sql`
 
-The schema lives outside the backup. You need it to set up an empty target before applying the data dump. Three ways to get it, in order of preference:
+The schema lives outside the data backup .zip. It's checked into the repo at **`docs/schema.sql`**. That file is the canonical schema — apply it to the new project's SQL Editor in Step 4.
 
-**Option A (recommended): keep a fresh `schema.sql` in the repo.**
+**Keep `docs/schema.sql` fresh.** Any time the live database gets a schema change (new table, new column, new RLS policy, new trigger), regenerate it. Two ways:
 
-If `docs/schema.sql` exists in the repo and is recent, use it. (If you don't have one yet, generate one NOW while the live project is up — see Option B — and commit it.)
+- **Via Supabase CLI:** `supabase db dump --schema-only --project-ref rxxcrlobbtlvjgcqgjjm > docs/schema.sql`
+- **Via catalog queries:** repeat the queries used to build the v89 file (see git history of `docs/schema.sql` for the queries). The Supabase MCP tools (`execute_sql` against `information_schema` and `pg_catalog`) work too.
 
-**Option B: dump from the live Supabase project via CLI.**
+After regenerating, diff against the previous version — the diff should match the migrations applied since.
 
-Requires the Supabase CLI installed (`npm install -g supabase`):
-
-```bash
-supabase login
-supabase db dump --schema-only --linked > schema.sql
-```
-
-Or via project ref:
-
-```bash
-supabase db dump --schema-only --project-ref rxxcrlobbtlvjgcqgjjm > schema.sql
-```
-
-**Option C: rebuild from migrations.**
-
-If the project is dead but the repo has migration history under `docs/security/` and the Supabase migration list, replay every migration in order. This is the slow path — only use it if A and B are both impossible. The migration list is the source of truth (see `mcp__supabase__list_migrations` output or the Supabase Studio → Database → Migrations panel from any working project).
+**If `docs/schema.sql` is stale or missing entirely** (you forgot to refresh after a migration): the slow fallback is to replay every migration in order. The migration list is at Supabase Studio → Database → Migrations. This is genuinely painful — don't let the file get stale.
 
 ### Step 3 — Provision a new (empty) Supabase project
 
