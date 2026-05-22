@@ -1,0 +1,125 @@
+{
+  "_comment": "To add a new tip: append a new object to items. Use a unique id (tip-016, tip-017...). category is 'new' | 'tip' | 'app'. body should be 2-3 sentences max. link is one of the keys in WHATS_NEW_ROUTES inside dashboard.js (currently: customer-summary, engagement-summary, employee-summary, team-skills, team, leave, certificates, knowledge-base, my-sessions, approvals, log-session) — leave null to render no link button. Push the file to deploy; existing users see new items in their next shuffle (the JS detects items added since the last shuffle and reshuffles). Tips older than 3-4 months that were category 'new' should be edited down to 'tip' so the badge accurately reflects 'recently shipped'.",
+  "items": [
+    {
+      "id": "tip-001",
+      "category": "new",
+      "title": "Customer Summary report",
+      "body": "Reports → Customer Summary aggregates hours per customer across all session types, including engagement-less Customer Testing sessions that don't show up in Engagement Summary.",
+      "link": "customer-summary",
+      "link_text": "Open Customer Summary"
+    },
+    {
+      "id": "tip-002",
+      "category": "new",
+      "title": "Gulfit Relevant skills classification",
+      "body": "Team Skills page has a Gulfit Relevant toggle on each product line. Managers can flag core offerings; filter chips at top split the matrix into Gulfit / General / All.",
+      "link": "team-skills",
+      "link_text": "Open Team Skills"
+    },
+    {
+      "id": "tip-003",
+      "category": "new",
+      "title": "Tech Review activity",
+      "body": "When logging a Pre-Sales-Task session, Activity Type now includes Tech Review — for time spent reviewing someone else's proposal, distinct from drafting one.",
+      "link": "log-session",
+      "link_text": "Log a session"
+    },
+    {
+      "id": "tip-004",
+      "category": "new",
+      "title": "Team Portfolio editable",
+      "body": "Managers can hover a member's name on the Team Portfolio page and click the pencil icon to edit it inline. Same for phone numbers — or '+ Add phone' if it's blank.",
+      "link": "team",
+      "link_text": "Open Team Portfolio"
+    },
+    {
+      "id": "tip-005",
+      "category": "app",
+      "title": "Install as a phone app",
+      "body": "Add NetSec Portal to your phone home screen for one-tap access. iPhone: Safari → Share → Add to Home Screen. Android: Chrome → three-dot menu → Install App.",
+      "link": null,
+      "link_text": null
+    },
+    {
+      "id": "tip-006",
+      "category": "tip",
+      "title": "Export reports to CSV",
+      "body": "Engagement Summary, Customer Summary and Employee Summary all have an Export CSV button at the top right. The export reflects whatever filters and sorts are applied.",
+      "link": "customer-summary",
+      "link_text": "Try it on Customer Summary"
+    },
+    {
+      "id": "tip-007",
+      "category": "tip",
+      "title": "Filter reports by year",
+      "body": "Every report has a year dropdown at the top. Pick a year to focus the totals; pick All Years to roll everything up.",
+      "link": null,
+      "link_text": null
+    },
+    {
+      "id": "tip-008",
+      "category": "tip",
+      "title": "Sort any report column",
+      "body": "Customer Summary supports click-to-sort on every column. Click a header to toggle; the arrow indicator shows current sort direction.",
+      "link": null,
+      "link_text": null
+    },
+    {
+      "id": "tip-009",
+      "category": "tip",
+      "title": "Snooze dashboard alerts",
+      "body": "If 'Needs Your Attention' shows something you can't act on right now, click the bell-off icon to hide that alert for 7 days. It reappears automatically if the underlying issue still holds.",
+      "link": null,
+      "link_text": null
+    },
+    {
+      "id": "tip-010",
+      "category": "tip",
+      "title": "Request comp off",
+      "body": "Earned overtime credits? Go to Leave → Log → Request Comp Off to submit a request to your manager. Half-day and full-day supported.",
+      "link": "leave",
+      "link_text": "Open Leave"
+    },
+    {
+      "id": "tip-011",
+      "category": "tip",
+      "title": "Track certifications",
+      "body": "Upload PDFs of your certs to the Certificates page. Expiry dates within 30 days surface on the manager dashboard automatically.",
+      "link": "certificates",
+      "link_text": "Open Certificates"
+    },
+    {
+      "id": "tip-012",
+      "category": "tip",
+      "title": "Submit knowledge base articles",
+      "body": "Share what you've learned. Knowledge Base accepts free-text articles plus optional reference URLs (SharePoint links, vendor docs, etc.).",
+      "link": "knowledge-base",
+      "link_text": "Open Knowledge Base"
+    },
+    {
+      "id": "tip-013",
+      "category": "tip",
+      "title": "Cancel future leave",
+      "body": "Plans changed? You can cancel an approved leave that hasn't started yet. Mid-leave cancellation counts past days; future days are dropped from your used total.",
+      "link": "leave",
+      "link_text": "Open Leave"
+    },
+    {
+      "id": "tip-014",
+      "category": "tip",
+      "title": "Know who to ask",
+      "body": "Team Skills matrix shows everyone's proficiency on each product line — beginner / intermediate / expert / under training. Useful when you hit a wall on a vendor you've never touched.",
+      "link": "team-skills",
+      "link_text": "Open Team Skills"
+    },
+    {
+      "id": "tip-015",
+      "category": "tip",
+      "title": "Search past sessions",
+      "body": "My Sessions has filter chips and a member filter at the top. Combine type + customer + engagement + dates to surface specific sessions fast.",
+      "link": "my-sessions",
+      "link_text": "Open My Sessions"
+    }
+  ]
+}

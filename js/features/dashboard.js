@@ -123,6 +123,200 @@ function dashOpenEngagementSummary(year) {
   if (typeof showProjectTab === 'function') showProjectTab('engagement');
 }
 
+// == WHAT'S NEW CARD (v92) ========================================
+// Curated, JSON-driven rotating tips. Visit-based shuffle persisted
+// in localStorage: refreshing the dashboard shows the SAME tip until
+// the user clicks Next or Got it. Adding a new tip to whats-new.json
+// triggers an automatic reshuffle on every existing user's next load
+// (detected via last_shuffle_size).
+//
+// Storage keys:
+//   whatsnew_shuffle_order     — array of tip IDs in shuffled order
+//   whatsnew_current_index     — int, position in the shuffle
+//   whatsnew_dismissed_ids     — array of tip IDs the user clicked Got it on
+//   whatsnew_last_shuffle_size — int, count of active items at last shuffle
+
+var WHATS_NEW_DATA = null;     // cached after first fetch
+
+// Route dispatcher — JSON tip.link is a route key, not a URL. The hash-
+// based /#team path is reserved for the public Team Portfolio route;
+// every other navigation goes through showScreen()/navigateSub() which
+// don't use hash routing. Keep this list aligned with whats-new.json.
+var WHATS_NEW_ROUTES = {
+  'customer-summary':  function(){ if (typeof navigateSub === 'function') navigateSub('projects','customer'); },
+  'engagement-summary':function(){ if (typeof navigateSub === 'function') navigateSub('projects','engagement'); },
+  'employee-summary':  function(){ if (typeof navigateSub === 'function') navigateSub('projects','employee'); },
+  'team-skills':       function(){ if (typeof showScreen === 'function') showScreen('skills'); },
+  'team':              function(){ if (typeof navigateToTeamRoute === 'function') navigateToTeamRoute('meet'); else if (typeof showScreen === 'function') showScreen('team'); },
+  'leave':             function(){ if (typeof showScreen === 'function') showScreen('leave'); },
+  'certificates':      function(){ if (typeof showScreen === 'function') showScreen('certificates'); },
+  'knowledge-base':    function(){ if (typeof showScreen === 'function') showScreen('kb'); },
+  'my-sessions':       function(){ if (typeof navigateSub === 'function') navigateSub('projects','ussess'); },
+  'approvals':         function(){ if (typeof showScreen === 'function') showScreen('approvals'); },
+  'log-session':       function(){ if (typeof navigateSub === 'function') navigateSub('projects','uslog'); }
+};
+
+var WHATS_NEW_CATEGORY_META = {
+  'new': { label: '🆕 New', cls: 'wn-cat-new' },
+  'tip': { label: '💡 Tip', cls: 'wn-cat-tip' },
+  'app': { label: '📱 App', cls: 'wn-cat-app' }
+};
+
+async function _whatsNewLoad() {
+  if (WHATS_NEW_DATA) return WHATS_NEW_DATA;
+  try {
+    var res = await fetch('data/whats-new.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var json = await res.json();
+    WHATS_NEW_DATA = (json && Array.isArray(json.items)) ? json.items : [];
+  } catch (e) {
+    console.warn('whats-new.json load failed:', e);
+    WHATS_NEW_DATA = [];   // empty → card hides itself
+  }
+  return WHATS_NEW_DATA;
+}
+
+// Defensive localStorage helpers — wraps the get/set so a private-mode
+// SecurityError doesn't break the dashboard. Reads default to '[]' /
+// '0'. Writes silently fail (acceptable degraded mode — shuffle still
+// works, just doesn't persist across refreshes).
+function _wnLsGet(key, dflt) {
+  try { var v = localStorage.getItem(key); return v == null ? dflt : v; }
+  catch (e) { return dflt; }
+}
+function _wnLsSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { /* private mode etc. */ }
+}
+function _wnParseArr(s) { try { var a = JSON.parse(s); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function _wnShuffle(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+// Pick the tip to show on this render. Returns null when:
+//   - JSON failed to load
+//   - items array empty
+//   - user has dismissed every tip
+function _whatsNewPickTip(allItems) {
+  if (!allItems || !allItems.length) return null;
+  var dismissed = _wnParseArr(_wnLsGet('whatsnew_dismissed_ids', '[]'));
+  var dismissedSet = {};
+  dismissed.forEach(function(id){ dismissedSet[id] = 1; });
+
+  var active = allItems.filter(function(it){ return !dismissedSet[it.id]; });
+  if (!active.length) return null;
+
+  var order = _wnParseArr(_wnLsGet('whatsnew_shuffle_order', '[]'));
+  var lastSize = parseInt(_wnLsGet('whatsnew_last_shuffle_size', '0'), 10) || 0;
+  var idx = parseInt(_wnLsGet('whatsnew_current_index', '0'), 10) || 0;
+
+  // Reshuffle conditions: never shuffled, JSON grew (new tip added since
+  // last shuffle — most common reshuffle trigger), or the existing order
+  // contains an id that was just dismissed (would otherwise show a
+  // dismissed tip until end-of-shuffle).
+  var hasStaleDismissed = order.some(function(id){ return dismissedSet[id]; });
+  var needsReshuffle = !order.length || active.length > lastSize || hasStaleDismissed;
+  if (needsReshuffle) {
+    order = _wnShuffle(active.map(function(it){ return it.id; }));
+    idx = 0;
+    _wnLsSet('whatsnew_shuffle_order', JSON.stringify(order));
+    _wnLsSet('whatsnew_last_shuffle_size', String(active.length));
+    _wnLsSet('whatsnew_current_index', '0');
+  }
+  // End-of-cycle: reshuffle for a fresh round.
+  if (idx >= order.length) {
+    order = _wnShuffle(active.map(function(it){ return it.id; }));
+    idx = 0;
+    _wnLsSet('whatsnew_shuffle_order', JSON.stringify(order));
+    _wnLsSet('whatsnew_current_index', '0');
+  }
+
+  var currentId = order[idx];
+  var tip = allItems.find(function(it){ return it.id === currentId; });
+  // If currentId got purged from JSON (rare) fall through to the next index.
+  if (!tip) {
+    _wnLsSet('whatsnew_current_index', String(idx + 1));
+    return _whatsNewPickTip(allItems);
+  }
+  return tip;
+}
+
+function _whatsNewCardHtml(tip) {
+  var meta = WHATS_NEW_CATEGORY_META[tip.category] || WHATS_NEW_CATEGORY_META['tip'];
+  var linkBtn = '';
+  if (tip.link && tip.link_text && WHATS_NEW_ROUTES[tip.link]) {
+    linkBtn = '<button class="btn btn-sm btn-primary wn-link-btn" onclick="whatsNewFollowLink(\''+esc2(tip.link)+'\')">'+esc2(tip.link_text)+' <span class="wn-link-arrow">→</span></button>';
+  }
+  return '<div class="card wn-card">'+
+    '<div class="wn-head">'+
+      '<div class="wn-head-label">💡 What\'s New</div>'+
+      '<span class="wn-cat-badge '+meta.cls+'">'+meta.label+'</span>'+
+    '</div>'+
+    '<div class="wn-title">'+esc2(tip.title)+'</div>'+
+    '<div class="wn-body">'+esc2(tip.body)+'</div>'+
+    '<div class="wn-actions">'+
+      linkBtn+
+      '<div class="wn-actions-right">'+
+        '<button class="btn btn-sm btn-ghost wn-got-it-btn" onclick="whatsNewDismiss(\''+esc2(tip.id)+'\')">Got it</button>'+
+        '<button class="btn btn-sm btn-ghost wn-next-btn" title="Next tip" onclick="whatsNewNext()">→</button>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+
+// Returns the HTML string to inject between greeting and the rest of
+// the dashboard. Empty string when there's no tip to show — caller
+// concatenates so we don't need a separate "hide if empty" branch.
+async function whatsNewRenderHtml() {
+  var items = await _whatsNewLoad();
+  var tip = _whatsNewPickTip(items);
+  if (!tip) {
+    // All-caught-up state: brief inline confirmation that fades. Only
+    // surface when the user has actively dismissed everything (not when
+    // the JSON itself is empty / failed to load — that gets hidden).
+    var dismissed = _wnParseArr(_wnLsGet('whatsnew_dismissed_ids', '[]'));
+    if (items.length && dismissed.length >= items.length) {
+      return '<div class="card wn-card wn-card-empty">'+
+        '<div class="wn-head"><div class="wn-head-label">💡 What\'s New</div></div>'+
+        '<div class="wn-empty">You\'re all caught up 🎉 New tips will appear here as the app evolves.</div>'+
+      '</div>';
+    }
+    return '';
+  }
+  return _whatsNewCardHtml(tip);
+}
+
+// Click handlers — global so onclick="..." can find them.
+function whatsNewNext() {
+  var idx = parseInt(_wnLsGet('whatsnew_current_index', '0'), 10) || 0;
+  _wnLsSet('whatsnew_current_index', String(idx + 1));
+  _whatsNewRerender();
+}
+function whatsNewDismiss(tipId) {
+  var dismissed = _wnParseArr(_wnLsGet('whatsnew_dismissed_ids', '[]'));
+  if (dismissed.indexOf(tipId) === -1) dismissed.push(tipId);
+  _wnLsSet('whatsnew_dismissed_ids', JSON.stringify(dismissed));
+  whatsNewNext();   // advance to next + re-render
+}
+function whatsNewFollowLink(routeKey) {
+  var fn = WHATS_NEW_ROUTES[routeKey];
+  if (typeof fn === 'function') fn();
+}
+
+// Re-render JUST the What's New card in place. Cheap path so Next/Got
+// It don't trigger a full dashboard re-fetch. If the card host element
+// isn't present (e.g. user navigated away mid-click), bail silently.
+async function _whatsNewRerender() {
+  var host = document.getElementById('whats-new-mount');
+  if (!host) return;
+  host.innerHTML = await whatsNewRenderHtml();
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
 // == DASHBOARD ROUTER =============================================
 async function renderDashboard() {
   var host = document.getElementById('dash-content');
@@ -243,6 +437,11 @@ async function renderEmployeeDashboard() {
       '<div class="dash-hero-date">'+today+'</div>'+
     '</div></div>';
 
+  // === WHAT'S NEW (v92) ===
+  // Mount point — content injected after the main fetch resolves so the
+  // stats query isn't blocked on JSON fetch latency. Empty until then.
+  html += '<div id="whats-new-mount"></div>';
+
   // === STATS GRID === (no 160h target progress bar — that was aspirational)
   html += '<div class="dash-stats">'+
     '<div class="stat-card green"><div class="stat-label">CO Balance</div>'+
@@ -309,6 +508,10 @@ async function renderEmployeeDashboard() {
   if (typeof animateCountersIn === 'function') {
     animateCountersIn(document.getElementById('dash-content'));
   }
+  // v92: populate the What's New mount AFTER the main render. Async, but
+  // we don't await — the JSON fetch is cheap and the rest of the
+  // dashboard renders immediately regardless of whether it succeeds.
+  _whatsNewRerender();
 }
 
 // == MANAGER DASHBOARD ============================================
@@ -753,6 +956,9 @@ async function renderManagerDashboard() {
       '<div class="dash-hero-date">'+todayLabel+'</div>'+
     '</div></div>';
 
+  // === WHAT'S NEW (v92) ===
+  html += '<div id="whats-new-mount"></div>';
+
   // === LICENSE EXPIRY BANNER ===
   if (expiringEngagements.length) {
     var nExpired = 0, nSoon = 0;
@@ -896,6 +1102,9 @@ async function renderManagerDashboard() {
   if (typeof animateCountersIn === 'function') {
     animateCountersIn(document.getElementById('dash-content'));
   }
+  // v92: populate the What's New mount AFTER the main render. Same
+  // fire-and-forget pattern as the employee dashboard.
+  _whatsNewRerender();
 }
 
 // Lazy-load the XLSX library from the CDN on demand. Keeps the ~700KB
