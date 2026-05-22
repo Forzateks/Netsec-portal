@@ -909,55 +909,315 @@ function ensureXlsxLoaded() {
   return window._xlsxLoadingPromise;
 }
 
-// == EXCEL BACKUP =================================================
+// Lazy-load JSZip on demand, mirroring ensureXlsxLoaded. Only used by the
+// Full Backup pipeline to bundle the .xlsx + .sql into a single .zip — so
+// the ~95KB library doesn't load on every page. Resolves with the JSZip
+// constructor on window.
+function ensureJszipLoaded() {
+  if (typeof JSZip !== 'undefined') return Promise.resolve();
+  if (window._jszipLoadingPromise) return window._jszipLoadingPromise;
+  window._jszipLoadingPromise = new Promise(function(resolve, reject){
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    s.onload = function(){ resolve(); };
+    s.onerror = function(){ reject(new Error('Failed to load JSZip library')); };
+    document.head.appendChild(s);
+  });
+  return window._jszipLoadingPromise;
+}
+
+// == DISASTER-RECOVERY BACKUP ====================================
+// BACKUP_TABLES is the canonical list of user-data tables in this database,
+// ordered to satisfy foreign-key dependencies when restoring (parents
+// before children). Add new tables to the right slot when extending the
+// schema. The list drives both:
+//   - the multi-sheet Excel export (one sheet per table, in this order)
+//   - the SQL data dump (INSERT statements in this order so an empty
+//     target DB accepts them without FK violations)
+// {table, sheet, idCol} — idCol is set when the table has a generated
+// identity column we need to bump the sequence for after restore.
+var BACKUP_TABLES = [
+  { table:'user_profiles',           sheet:'User Profiles',            idCol:null },
+  { table:'customers',               sheet:'Customers',                idCol:'id' },
+  { table:'vendors',                 sheet:'Vendors',                  idCol:'id' },
+  { table:'product_lines',           sheet:'Product Lines',            idCol:'id' },
+  { table:'engagements',             sheet:'Engagements',              idCol:'id' },
+  { table:'engagement_milestones',   sheet:'Engagement Milestones',    idCol:'id' },
+  { table:'amc_contracts',           sheet:'AMC Contracts',            idCol:'id' },
+  { table:'amc_contract_engagements',sheet:'AMC Contract Links',       idCol:'id' },
+  { table:'ps_deals',                sheet:'PS Deals',                 idCol:'id' },
+  { table:'ps_milestones',           sheet:'PS Milestones',            idCol:'id' },
+  { table:'unified_sessions',        sheet:'Unified Sessions',         idCol:'id' },
+  { table:'ot_sessions',             sheet:'OT Sessions',              idCol:'id' },
+  { table:'annual_leave',            sheet:'Annual Leave',             idCol:'id' },
+  { table:'leave_requests',          sheet:'Leave Requests',           idCol:'id' },
+  { table:'comp_off_register',       sheet:'Comp Off Register',        idCol:'id' },
+  { table:'comp_off_requests',       sheet:'Comp Off Requests',        idCol:'id' },
+  { table:'inventory',               sheet:'Inventory',                idCol:'id' },
+  { table:'inventory_activity_log',  sheet:'Inventory Activity Log',   idCol:'id' },
+  { table:'certificates',            sheet:'Certificates',             idCol:'id' },
+  { table:'employee_skills',         sheet:'Employee Skills',          idCol:'id' },
+  { table:'kb_articles',             sheet:'Knowledge Base',           idCol:'id' },
+  { table:'notifications',           sheet:'Notifications',            idCol:'id' },
+  { table:'dashboard_alert_snoozes', sheet:'Dashboard Alert Snoozes',  idCol:'id' }
+];
+
+// Escape a JS value into a SQL literal safe for an INSERT VALUES clause.
+// Trusts the PostgREST type coercion for the column: text/uuid/date/
+// timestamptz all arrive as strings; numeric/integer as numbers; boolean
+// as booleans; jsonb as plain objects/arrays. Standard SQL single-quoted
+// strings — `'` is doubled. Newlines, backslashes, etc. pass through
+// unchanged (PostgreSQL accepts them in standard strings by default).
+function _sqlEscape(v) {
+  if (v === null || v === undefined) return 'NULL';
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (typeof v === 'number') {
+    if (!isFinite(v)) return 'NULL';
+    return String(v);
+  }
+  if (typeof v === 'object') {
+    // jsonb column — only inventory_activity_log.field_changes in the
+    // current schema. JSON-stringify then escape as text; PG auto-casts
+    // on INSERT into a jsonb column.
+    return "'" + JSON.stringify(v).replace(/'/g, "''") + "'";
+  }
+  return "'" + String(v).replace(/'/g, "''") + "'";
+}
+
+// Build a SQL data-only dump for the entire BACKUP_TABLES set. Wrapped in
+// BEGIN/COMMIT so a syntax error anywhere rolls the whole thing back
+// rather than leaving the target DB in a half-restored state. Uses
+// OVERRIDING SYSTEM VALUE on tables with identity columns so original
+// ids are preserved (FK references need them); after each table, bumps
+// the sequence past max(id) so the next auto-id insert won't collide.
+function _generateSqlDump(dataByTable) {
+  var lines = [];
+  lines.push('-- NetSec Portal — full data dump');
+  lines.push('-- Generated: ' + new Date().toISOString());
+  lines.push('-- Tables: ' + BACKUP_TABLES.length);
+  lines.push('--');
+  lines.push('-- RESTORATION:');
+  lines.push('--   1. Provision an empty Supabase project (or empty schema).');
+  lines.push('--   2. Apply schema.sql first (CREATE TABLEs, RLS, etc.) — see docs/disaster-recovery.md.');
+  lines.push('--   3. Apply THIS file: psql $DATABASE_URL -f backup.sql');
+  lines.push('--      or paste into Supabase Studio → SQL Editor (run as the project owner / service_role).');
+  lines.push('--');
+  lines.push('-- IMPORTANT: this must be run with a role that bypasses RLS (service_role or db owner).');
+  lines.push('--            The anon and authenticated roles will be blocked by RLS policies.');
+  lines.push('');
+  lines.push('BEGIN;');
+  lines.push('');
+
+  BACKUP_TABLES.forEach(function(entry) {
+    var table = entry.table;
+    var rows  = dataByTable[table] || [];
+    lines.push('-- ────────────────────────────────────────────────────────────────');
+    lines.push('-- ' + table + ' — ' + rows.length + ' row' + (rows.length===1?'':'s'));
+    lines.push('-- ────────────────────────────────────────────────────────────────');
+    if (!rows.length) {
+      lines.push('-- (no rows)');
+      lines.push('');
+      return;
+    }
+    // Column set drawn from the first row. PostgREST returns every column
+    // in every row in a consistent order, so the first row's keys are the
+    // authoritative ordered column list.
+    var cols = Object.keys(rows[0]);
+    var quotedCols = cols.map(function(c){ return '"' + c + '"'; }).join(', ');
+    var overriding = (entry.idCol && cols.indexOf(entry.idCol) !== -1) ? ' OVERRIDING SYSTEM VALUE' : '';
+
+    // Chunked multi-row INSERT — 100 rows per statement keeps individual
+    // statements digestible if a human ever has to read or edit the file.
+    var CHUNK = 100;
+    for (var i = 0; i < rows.length; i += CHUNK) {
+      var chunk = rows.slice(i, i + CHUNK);
+      lines.push('INSERT INTO "' + table + '" (' + quotedCols + ')' + overriding + ' VALUES');
+      var valueLines = chunk.map(function(row){
+        return '  (' + cols.map(function(c){ return _sqlEscape(row[c]); }).join(', ') + ')';
+      });
+      lines.push(valueLines.join(',\n') + ';');
+    }
+
+    // Bump the identity sequence past max(id) so subsequent app inserts
+    // don't collide. pg_get_serial_sequence works for both SERIAL and
+    // GENERATED-AS-IDENTITY columns since PG 10. Wrapped in a SELECT so
+    // it doesn't produce extraneous result rows on restore.
+    if (entry.idCol && cols.indexOf(entry.idCol) !== -1) {
+      lines.push("SELECT setval(pg_get_serial_sequence('public.\"" + table + "\"', '" + entry.idCol +
+                 "'), (SELECT COALESCE(MAX(\"" + entry.idCol + "\"), 1) FROM \"" + table + "\"), true);");
+    }
+    lines.push('');
+  });
+
+  lines.push('COMMIT;');
+  lines.push('');
+  lines.push('-- End of dump.');
+  return lines.join('\n');
+}
+
+// Fetch every backup table in parallel and return a {table: rows[]} map.
+// Each fetch is paginated through fetchAllRows so tables larger than the
+// Supabase 1000-row cap (unified_sessions in particular) export in full.
+async function _fetchAllBackupData() {
+  var jobs = BACKUP_TABLES.map(function(entry){
+    return fetchAllRows(function(){ return sb.from(entry.table).select('*'); })
+      .then(function(res){
+        if (res.error) {
+          console.error('Backup fetch failed for ' + entry.table + ':', res.error);
+          return { table: entry.table, rows: [], error: res.error };
+        }
+        return { table: entry.table, rows: res.data || [] };
+      });
+  });
+  var results = await Promise.all(jobs);
+  var byTable = {};
+  var errors = [];
+  results.forEach(function(r){
+    byTable[r.table] = r.rows;
+    if (r.error) errors.push(r.table + ': ' + r.error.message);
+  });
+  return { byTable: byTable, errors: errors };
+}
+
+// == BACKUP — Full disaster-recovery + single-table exports =====
+// scope === 'all'      → full disaster recovery .zip containing:
+//                          netsec-backup-<DATE>.xlsx  (every table as a sheet)
+//                          netsec-backup-<DATE>.sql   (data-only INSERT dump)
+//                          README.txt                 (link to runbook)
+// scope === any table  → just that table as a .xlsx for ad-hoc inspection.
+//                        Kept for the "Export a specific section" UI in
+//                        Admin Tools.
 async function backupExcel(scope) {
   try { await ensureXlsxLoaded(); }
   catch (e) { showError('Could not load the Excel library. Check your connection and try again.'); return; }
   if (typeof XLSX === 'undefined') { showError('Excel library not available.'); return; }
   var stamp = new Date().toISOString().split('T')[0];
+
+  if (scope === 'all') {
+    return _backupFullZip(stamp);
+  }
+  return _backupSingleTable(scope, stamp);
+}
+
+// Single-table .xlsx export. Maps the legacy scope names (e.g. 'leave',
+// 'comp_off', 'directory') to the underlying table set; new code paths
+// can just pass the bare table name directly.
+async function _backupSingleTable(scope, stamp) {
+  var SCOPE_MAP = {
+    'ot_sessions':      [{ table:'ot_sessions',           sheet:'OT Sessions' }],
+    'project_sessions': [{ table:'unified_sessions',      sheet:'Unified Sessions' }],
+    'inventory':        [
+      { table:'inventory',                sheet:'Inventory' },
+      { table:'inventory_activity_log',   sheet:'Inventory Activity Log' }
+    ],
+    'leave':            [
+      { table:'leave_requests',  sheet:'Leave Requests' },
+      { table:'annual_leave',    sheet:'Annual Leave' }
+    ],
+    'comp_off':         [
+      { table:'comp_off_requests', sheet:'Comp Off Requests' },
+      { table:'comp_off_register', sheet:'Comp Off Register' }
+    ],
+    'kb_articles':      [{ table:'kb_articles',           sheet:'Knowledge Base' }],
+    'directory':        [
+      { table:'customers',             sheet:'Customers' },
+      { table:'engagements',           sheet:'Engagements' },
+      { table:'engagement_milestones', sheet:'Engagement Milestones' }
+    ]
+  };
+  var entries = SCOPE_MAP[scope] || [{ table: scope, sheet: scope }];
   var wb = XLSX.utils.book_new();
 
-  async function addSheet(name, table, orderBy) {
-    // Paginate through 1000-row chunks so large tables (unified_sessions,
-    // ot_sessions, project_sessions) export in full.
-    var res = await fetchAllRows(function(){
-      var q = sb.from(table).select('*');
-      if (orderBy) q = q.order(orderBy, {ascending: false});
-      return q;
-    });
-    if (res.error) { console.error('Backup error for '+table+':', res.error); return; }
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i];
+    var res = await fetchAllRows(function(){ return sb.from(e.table).select('*'); });
+    if (res.error) { console.error('Backup error for ' + e.table + ':', res.error); continue; }
     var rows = res.data || [];
-    var ws;
-    if (rows.length) {
-      ws = XLSX.utils.json_to_sheet(rows);
-    } else {
-      ws = XLSX.utils.aoa_to_sheet([['(no rows)']]);
-    }
-    XLSX.utils.book_append_sheet(wb, ws, name.substring(0, 31)); // sheet name max 31 chars
+    var ws = rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([['(no rows)']]);
+    XLSX.utils.book_append_sheet(wb, ws, e.sheet.substring(0, 31));
   }
 
-  var jobs = [];
-  if (scope === 'all' || scope === 'ot_sessions')      jobs.push(addSheet('OT Sessions',      'ot_sessions',      'ot_date'));
-  if (scope === 'all' || scope === 'project_sessions') jobs.push(addSheet('Project Sessions', 'unified_sessions', 'session_date'));
-  if (scope === 'all' || scope === 'project_sessions') jobs.push(addSheet('Project Sessions (legacy)', 'project_sessions', 'session_date'));
-  if (scope === 'all' || scope === 'inventory')        jobs.push(addSheet('Inventory',        'inventory',        'serial_number'));
-  if (scope === 'all' || scope === 'inventory')        jobs.push(addSheet('Inventory Activity Log', 'inventory_activity_log', 'changed_at'));
-  if (scope === 'all' || scope === 'leave')            jobs.push(addSheet('Leave Requests',   'leave_requests',   'created_at'));
-  if (scope === 'all' || scope === 'leave')            jobs.push(addSheet('Annual Leave',     'annual_leave',     'start_date'));
-  if (scope === 'all' || scope === 'comp_off')         jobs.push(addSheet('Comp Off Requests','comp_off_requests','created_at'));
-  if (scope === 'all' || scope === 'comp_off')         jobs.push(addSheet('Comp Off Register','comp_off_register','date_taken'));
-  if (scope === 'all' || scope === 'kb_articles')      jobs.push(addSheet('Knowledge Base',   'kb_articles',      'created_at'));
-  if (scope === 'all' || scope === 'directory')        jobs.push(addSheet('Customers',        'customers',        'name'));
-  if (scope === 'all' || scope === 'directory')        jobs.push(addSheet('Engagements',      'engagements',      'name'));
-  if (scope === 'all' || scope === 'directory')        jobs.push(addSheet('Engagement Milestones', 'engagement_milestones', 'engagement_id'));
-  if (scope === 'all' || scope === 'directory')        jobs.push(addSheet('Projects (legacy)','projects',         'name'));
-  if (scope === 'all')                                 jobs.push(addSheet('User Profiles',    'user_profiles',    'employee_name'));
-
-  await Promise.all(jobs);
-
-  var filename = scope === 'all'
-    ? 'netsec-backup-'+stamp+'.xlsx'
-    : 'netsec-'+scope+'-'+stamp+'.xlsx';
-  XLSX.writeFile(wb, filename);
+  XLSX.writeFile(wb, 'netsec-' + scope + '-' + stamp + '.xlsx');
   showToast('Backup ready — check downloads ✓');
+}
+
+// Full disaster-recovery backup: every table → multi-sheet .xlsx + a
+// SQL data dump, bundled into a single .zip download. The .zip means the
+// user has BOTH files in one place, named together, so a restoration
+// runbook can refer to a single timestamped artifact.
+async function _backupFullZip(stamp) {
+  try { await ensureJszipLoaded(); }
+  catch (e) { showError('Could not load the zip library. Check your connection and try again.'); return; }
+  if (typeof JSZip === 'undefined') { showError('Zip library not available.'); return; }
+
+  showToast('Generating full backup — this may take a moment for large tables…');
+
+  // Fetch every backup table in parallel. Any per-table failures are
+  // collected and surfaced after — the rest of the backup still ships.
+  var fetched = await _fetchAllBackupData();
+  var byTable = fetched.byTable;
+  var errors  = fetched.errors;
+
+  // 1. Build the .xlsx workbook — one sheet per backup table, in
+  //    BACKUP_TABLES order so the file reads top-down in a sensible
+  //    sequence.
+  var wb = XLSX.utils.book_new();
+  BACKUP_TABLES.forEach(function(entry){
+    var rows = byTable[entry.table] || [];
+    var ws = rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([['(no rows)']]);
+    XLSX.utils.book_append_sheet(wb, ws, entry.sheet.substring(0, 31));
+  });
+  var xlsxArrayBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+
+  // 2. Build the SQL data dump.
+  var sqlText = _generateSqlDump(byTable);
+
+  // 3. Build a small README so the recipient knows what these files are
+  //    without having to open them or hunt for the runbook.
+  var totalRows = BACKUP_TABLES.reduce(function(s,e){ return s + (byTable[e.table]||[]).length; }, 0);
+  var readme = [
+    'NetSec Portal — Full Backup',
+    '===========================',
+    '',
+    'Generated: ' + new Date().toISOString(),
+    'Tables:    ' + BACKUP_TABLES.length,
+    'Rows:      ' + totalRows + ' (across all tables)',
+    '',
+    'Files in this archive:',
+    '  netsec-backup-' + stamp + '.xlsx   — every table as a sheet (human-readable)',
+    '  netsec-backup-' + stamp + '.sql    — INSERT-statement data dump (machine-restorable)',
+    '',
+    'To restore from disaster:',
+    '  See docs/disaster-recovery.md in the netsec-portal GitHub repo for the',
+    '  full step-by-step runbook. Short version: provision an empty Supabase',
+    '  project, apply schema.sql (from supabase db dump --schema-only), then',
+    '  apply this .sql file as the project owner / service_role.',
+    '',
+    (errors.length
+      ? 'WARNING: ' + errors.length + ' table(s) failed to fetch during backup:\n  - ' + errors.join('\n  - ')
+      : 'All tables exported cleanly.')
+  ].join('\n');
+
+  // 4. Pack everything into one .zip.
+  var zip = new JSZip();
+  zip.file('netsec-backup-' + stamp + '.xlsx', xlsxArrayBuffer);
+  zip.file('netsec-backup-' + stamp + '.sql',  sqlText);
+  zip.file('README.txt', readme);
+  var blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{ level:6 } });
+
+  // 5. Trigger download.
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'netsec-backup-' + stamp + '.zip';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+
+  if (errors.length) {
+    showError('Backup ready, but ' + errors.length + ' table(s) had errors — see README.txt inside the .zip.');
+  } else {
+    showToast('Full backup ready (' + BACKUP_TABLES.length + ' tables · ' + totalRows + ' rows) ✓');
+  }
 }
