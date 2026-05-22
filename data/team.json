@@ -1,0 +1,270 @@
+{
+  "_comment": "Canonical data for the Team Portfolio module (v83). Single source of truth for Meet the Team / Portfolio Mapping / RFP Process. Edit and commit; no admin UI. Roles, products and RFP stages are v1 placeholders pending Venkat's review.",
+  "team": [
+    {
+      "id": "adil-shaikh",
+      "name": "Mohammed Adil Shaikh",
+      "role": "Business Development Manager",
+      "category": "BDM",
+      "email": "adil@gulfitd.com",
+      "phone": "",
+      "location": "UAE",
+      "photo": "images/team/adil-shaikh.jpg",
+      "publicVisible": true,
+      "displayOrder": 1
+    },
+    {
+      "id": "darays-dodi",
+      "name": "Darays Dodi",
+      "role": "Pre-Sales Consultant",
+      "category": "Presales",
+      "email": "darays@gulfitd.com",
+      "phone": "",
+      "location": "UAE",
+      "photo": "images/team/darays-dodi.jpg",
+      "publicVisible": true,
+      "displayOrder": 1
+    },
+    {
+      "id": "venkatesan",
+      "name": "Venkatesan",
+      "role": "Manager / Team Lead",
+      "category": "Technical",
+      "email": "venkat@gulfitd.com",
+      "phone": "",
+      "location": "UAE",
+      "photo": "images/team/venkatesan.jpg",
+      "publicVisible": true,
+      "displayOrder": 1
+    },
+    {
+      "id": "ahmed-ali",
+      "name": "Ahmed Ali",
+      "role": "Senior Network Engineer",
+      "category": "Technical",
+      "email": "ahmed@gulfitd.com",
+      "phone": "",
+      "location": "UAE",
+      "photo": "images/team/ahmed-ali.jpg",
+      "publicVisible": true,
+      "displayOrder": 2
+    },
+    {
+      "id": "mohammed-nasif",
+      "name": "Mohammed Nasif",
+      "role": "Network Engineer",
+      "category": "Technical",
+      "email": "nasif@gulfitd.com",
+      "phone": "",
+      "location": "UAE",
+      "photo": "images/team/mohammed-nasif.jpg",
+      "publicVisible": true,
+      "displayOrder": 3
+    },
+    {
+      "id": "prasanth",
+      "name": "Prasanth",
+      "role": "Network Engineer",
+      "category": "Technical",
+      "email": "prasanth@gulfitd.com",
+      "phone": "",
+      "location": "UAE",
+      "photo": "images/team/prasanth.jpg",
+      "publicVisible": true,
+      "displayOrder": 4
+    },
+    {
+      "id": "salman-aziz",
+      "name": "Salman Aziz",
+      "role": "Network Engineer",
+      "category": "Technical",
+      "email": "salman@gulfitd.com",
+      "phone": "",
+      "location": "KSA",
+      "photo": "images/team/salman-aziz.jpg",
+      "publicVisible": true,
+      "displayOrder": 5
+    },
+    {
+      "id": "mohammed-afsal",
+      "name": "Mohammed Afsal",
+      "role": "Network Engineer",
+      "category": "Technical",
+      "email": "afsal@gulfitd.com",
+      "phone": "",
+      "location": "KSA",
+      "photo": "images/team/mohammed-afsal.jpg",
+      "publicVisible": true,
+      "displayOrder": 6
+    }
+  ],
+  "products": [
+    {
+      "name": "Aruba SD-WAN / EdgeConnect",
+      "category": "SD-WAN",
+      "owners": ["venkatesan", "ahmed-ali", "mohammed-nasif"],
+      "publicCategory": "SD-WAN & WAN Optimization"
+    },
+    {
+      "name": "Aruba ClearPass",
+      "category": "NAC",
+      "owners": ["venkatesan", "ahmed-ali", "prasanth"],
+      "publicCategory": "Network Access Control (NAC)"
+    },
+    {
+      "name": "Aruba Central",
+      "category": "Cloud Management",
+      "owners": ["venkatesan", "ahmed-ali", "mohammed-nasif", "prasanth"],
+      "publicCategory": "Cloud-Managed Networking"
+    },
+    {
+      "name": "HPE Compute / Storage",
+      "category": "Compute & Storage",
+      "owners": ["venkatesan", "ahmed-ali"],
+      "publicCategory": "Compute & Storage Infrastructure"
+    },
+    {
+      "name": "Juniper Mist",
+      "category": "Wireless",
+      "owners": ["venkatesan", "salman-aziz", "mohammed-afsal"],
+      "publicCategory": "Enterprise Wireless"
+    },
+    {
+      "name": "Juniper SRX",
+      "category": "Security",
+      "owners": ["venkatesan", "salman-aziz", "mohammed-afsal"],
+      "publicCategory": "Next-Generation Firewall"
+    },
+    {
+      "name": "Imperva WAF",
+      "category": "Security",
+      "owners": ["venkatesan", "prasanth"],
+      "publicCategory": "Web Application Firewall"
+    },
+    {
+      "name": "Array Networks ADC",
+      "category": "App Delivery",
+      "owners": ["venkatesan", "ahmed-ali"],
+      "publicCategory": "Application Delivery"
+    },
+    {
+      "name": "Corelight NDR",
+      "category": "Security",
+      "owners": ["venkatesan", "prasanth"],
+      "publicCategory": "Network Detection & Response"
+    },
+    {
+      "name": "Semperis DSP",
+      "category": "Identity Security",
+      "owners": ["venkatesan", "mohammed-nasif"],
+      "publicCategory": "Active Directory Security"
+    },
+    {
+      "name": "Thales HSM",
+      "category": "Crypto & Key Management",
+      "owners": ["venkatesan", "mohammed-nasif"],
+      "publicCategory": "Hardware Security Modules"
+    },
+    {
+      "name": "Netally Analyzers",
+      "category": "Network Tools",
+      "owners": ["ahmed-ali", "mohammed-nasif", "prasanth", "salman-aziz", "mohammed-afsal"],
+      "publicCategory": "Network Test & Analysis Tools"
+    },
+    {
+      "name": "CyberArk PAM",
+      "category": "Identity",
+      "owners": ["venkatesan", "prasanth"],
+      "publicCategory": "Privileged Access Management"
+    },
+    {
+      "name": "Certes Layer-4 Encryption",
+      "category": "Security",
+      "owners": ["venkatesan", "mohammed-nasif"],
+      "publicCategory": "Network Encryption"
+    }
+  ],
+  "rfpStages": [
+    {
+      "id": "received",
+      "label": "RFP Received from BDM",
+      "type": "action",
+      "owner": "BDM",
+      "ownerIds": ["adil-shaikh"],
+      "description": "BDM receives the RFP from the customer and forwards it to the networking team for technical assessment.",
+      "artifacts": [],
+      "nextStages": ["review"]
+    },
+    {
+      "id": "review",
+      "label": "Presales Review & Validation",
+      "type": "action",
+      "owner": "Presales / Sr. Consultant",
+      "ownerIds": ["darays-dodi", "venkatesan"],
+      "description": "Presales reviews the RFP requirements and validates feasibility against Gulfit's networking portfolio.",
+      "artifacts": [],
+      "nextStages": ["match-decision"]
+    },
+    {
+      "id": "match-decision",
+      "label": "RFP Match to Portfolio?",
+      "type": "decision",
+      "owner": "",
+      "ownerIds": [],
+      "description": "Decision point: does the RFP align with Gulfit's networking portfolio capabilities?",
+      "artifacts": [],
+      "branches": [
+        { "label": "Yes — in scope", "to": "prepare-response" },
+        { "label": "No — outside scope", "to": "return-to-bdm" }
+      ],
+      "nextStages": ["prepare-response", "return-to-bdm"]
+    },
+    {
+      "id": "return-to-bdm",
+      "label": "Return RFP to BDM",
+      "type": "terminal",
+      "owner": "Presales",
+      "ownerIds": ["darays-dodi"],
+      "description": "RFP doesn't match — sent back to BDM with a written explanation of the gaps.",
+      "artifacts": ["Gap Analysis Note"],
+      "nextStages": []
+    },
+    {
+      "id": "prepare-response",
+      "label": "Prepare Response Documents",
+      "type": "action",
+      "owner": "Presales / Sr. Consultant",
+      "ownerIds": ["darays-dodi", "venkatesan"],
+      "description": "Build the full RFP response package: technical proposal, architecture, BoM, SoW, and initial implementation tracker.",
+      "artifacts": [
+        "RFP Response Document",
+        "Technical Proposal (Doc & PPT)",
+        "Proposed Architecture Diagram",
+        "Bill of Materials (BoM)",
+        "Statement of Work (SoW)",
+        "Implementation Tracker (initial)"
+      ],
+      "nextStages": ["consultant-review"]
+    },
+    {
+      "id": "consultant-review",
+      "label": "Sr. Consultant Review",
+      "type": "action",
+      "owner": "Sr. Consultant",
+      "ownerIds": ["venkatesan"],
+      "description": "Senior consultant reviews all documents for technical accuracy before submission.",
+      "artifacts": [],
+      "nextStages": ["submit-to-bdm"]
+    },
+    {
+      "id": "submit-to-bdm",
+      "label": "Submit Documents to BDM",
+      "type": "terminal",
+      "owner": "Presales",
+      "ownerIds": ["darays-dodi"],
+      "description": "Final response package submitted back to BDM for customer delivery.",
+      "artifacts": ["Final RFP Response Package"],
+      "nextStages": []
+    }
+  ]
+}

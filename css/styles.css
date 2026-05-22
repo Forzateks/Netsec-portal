@@ -2214,3 +2214,205 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .sk-acc-row-name{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
 .sk-acc-row-name strong{color:var(--navy);font-size:13px}
 .sk-acc-row-pill{flex-shrink:0}
+
+/* ══════════════════════════════════════════════════════════════════
+   TEAM PORTFOLIO MODULE (v83) — Meet the Team / Portfolio Mapping /
+   RFP Process Playbook. Same Gulfit palette as the rest of the app;
+   no glassmorphism, no new design language. Public + internal views
+   share the same CSS; per-tab visibility is JS-driven.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Public-team mode: full-width main area when sidebar is hidden. */
+#app.public-team-mode .main-area{margin-left:0;width:100%}
+#app.public-team-mode .topbar{justify-content:flex-start;padding:14px 24px}
+
+.team-page{padding:24px 0 48px}
+.team-page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px;padding:0 8px}
+.team-page-title{font-size:24px;font-weight:700;color:var(--navy);letter-spacing:-.3px;line-height:1.2}
+.team-page-sub{font-size:13px;color:var(--muted);font-weight:500;margin-top:2px}
+.team-signin-link{font-size:13px;color:var(--teal);font-weight:600;text-decoration:none;padding:8px 14px;border:1px solid var(--teal);border-radius:8px;transition:background .15s,color .15s}
+.team-signin-link:hover{background:var(--teal);color:white}
+
+.team-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:24px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.team-tab-btn{
+  background:transparent;border:none;border-bottom:2px solid transparent;
+  padding:12px 22px;font-size:14px;font-weight:600;color:var(--muted);
+  cursor:pointer;font-family:inherit;white-space:nowrap;transition:color .15s,border-color .15s;
+}
+.team-tab-btn:hover{color:var(--navy)}
+.team-tab-btn.active{color:var(--navy);border-bottom-color:var(--teal)}
+
+.team-tab-body{padding:0 8px}
+.team-empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 20px;background:#F8FAFC;border-radius:8px}
+
+/* Category sections with colored accent bar above the heading. */
+.team-cat-section{margin-bottom:40px}
+.team-cat-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.team-cat-bar{width:4px;height:24px;border-radius:2px}
+.team-cat-title{font-size:18px;font-weight:700;color:var(--navy);letter-spacing:-.2px;margin:0}
+
+/* Member card grid — 3-4 across desktop, 2 tablet, 1 mobile. */
+.team-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+.team-card{
+  background:white;border:1px solid #E5E7EB;border-radius:8px;padding:24px;
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;
+  transition:box-shadow .15s,transform .12s,border-color .15s;
+}
+.team-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);border-color:#CBD5E1;transform:translateY(-1px)}
+
+.team-card-photo{margin-bottom:4px}
+.team-photo-wrap{position:relative;border-radius:50%;overflow:hidden;background:#F8FAFC;flex-shrink:0}
+.team-photo{display:block;border-radius:50%;object-fit:cover;background:#F8FAFC}
+.team-initials{
+  border-radius:50%;background:var(--teal);color:white;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Sans',sans-serif;font-weight:700;letter-spacing:.5px;
+  flex-shrink:0;
+}
+
+.team-card-name{font-size:18px;font-weight:700;color:var(--navy);line-height:1.2}
+.team-card-role{font-size:14px;color:var(--muted);line-height:1.3;min-height:1.3em}
+.team-card-meta{display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.team-loc-badge{
+  font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;
+  text-transform:uppercase;letter-spacing:.4px;
+}
+.team-loc-uae{background:#EFF6FF;color:#1E3A8A}
+.team-loc-ksa{background:#FDF2F8;color:#9D174D}
+
+.team-card-contacts{margin-top:8px;display:flex;flex-direction:column;gap:6px;width:100%}
+.team-contact-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);justify-content:center}
+.team-contact-row a{color:var(--teal);text-decoration:none;font-weight:500}
+.team-contact-row a:hover{text-decoration:underline}
+.team-contact-ico{width:14px;height:14px;color:#94A3B8;flex-shrink:0}
+
+/* ── Portfolio Mapping ── */
+.team-portfolio-card{align-items:flex-start;text-align:left;padding:18px 20px}
+.team-portfolio-head{display:flex;gap:14px;align-items:flex-start;width:100%;margin-bottom:12px}
+.team-portfolio-headtext{flex:1;min-width:0;text-align:left}
+.team-portfolio-handles{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;width:100%}
+.team-portfolio-list{list-style:none;padding:0;margin:0;width:100%;display:flex;flex-direction:column;gap:6px}
+.team-portfolio-list li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;background:#F8FAFC;border-radius:6px;font-size:13px}
+.team-portfolio-prod{color:var(--navy);font-weight:600}
+.team-portfolio-cat{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.3px}
+.team-portfolio-empty{font-size:13px;color:var(--muted);padding:8px 10px}
+
+/* ── RFP Process Playbook ── */
+.rfp-layout{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+.rfp-flow{background:#F8FAFC;border:1px solid var(--border);border-radius:12px;padding:24px}
+.rfp-flow-inner{display:flex;flex-direction:column;gap:18px;align-items:center}
+
+/* Stage card variants — type drives shape + colour. */
+.rfp-stage{
+  position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;
+  min-width:240px;max-width:320px;padding:14px 18px;cursor:pointer;
+  background:white;border:2px solid var(--border);border-radius:10px;
+  font-family:inherit;text-align:center;transition:transform .12s,box-shadow .12s,border-color .12s;
+}
+.rfp-stage:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.rfp-stage.selected{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,160,210,.15)}
+
+.rfp-stage-idx{
+  position:absolute;top:-10px;left:-10px;
+  width:24px;height:24px;border-radius:50%;background:var(--navy);color:white;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+  font-family:'DM Mono',monospace;
+}
+.rfp-stage-label{font-size:14px;font-weight:600;color:var(--navy);line-height:1.3}
+.rfp-stage-owner{font-size:11.5px;color:var(--muted);font-weight:500}
+.rfp-stage-branches{font-size:11px;color:#94A3B8;margin-top:4px;display:flex;gap:6px;align-items:center}
+.rfp-stage-branch{font-style:italic}
+.rfp-stage-branch-sep{opacity:.5}
+
+/* Action = clean rectangle (default) */
+.rfp-stage.rfp-stage-action{border-color:var(--teal)}
+.rfp-stage.rfp-stage-action .rfp-stage-idx{background:var(--teal)}
+
+/* Decision = diamond. CSS-transform a square so the content stays
+   readable. The wrapper holds the rotated background while the
+   content stays upright. */
+.rfp-stage.rfp-stage-decision{
+  border-color:var(--gold);background:#FFFBEB;
+  border-radius:10px;
+  /* Soft visual cue without a literal diamond rotation (rotated text
+     hurts legibility). The amber tint + dashed border reads as
+     "decision" without breaking the click target. */
+  border-style:dashed;
+}
+.rfp-stage.rfp-stage-decision .rfp-stage-idx{background:var(--gold)}
+.rfp-stage.rfp-stage-decision .rfp-stage-label{color:#92400E}
+
+/* Terminal = colored variant — green for "submit", grey for "return" */
+.rfp-stage.rfp-stage-terminal{
+  background:#F1F5F9;border-color:#94A3B8;
+}
+.rfp-stage.rfp-stage-terminal .rfp-stage-idx{background:#475569}
+.rfp-stage.rfp-stage-terminal .rfp-stage-label{color:#334155}
+
+/* Down-arrow connector between consecutive stages. CSS pseudo-element
+   on the next stage card draws a thin vertical line + arrowhead from
+   above. The first card skips this via :first-child. */
+.rfp-stage::before{
+  content:'';display:none;
+  /* Made visible per stage below */
+}
+.rfp-flow-inner .rfp-stage:not(:first-child)::before{
+  display:block;
+  position:absolute;top:-22px;left:50%;transform:translateX(-50%);
+  width:2px;height:18px;background:#CBD5E1;
+}
+.rfp-flow-inner .rfp-stage:not(:first-child)::after{
+  content:'';display:block;
+  position:absolute;top:-8px;left:50%;transform:translateX(-50%) rotate(45deg);
+  width:8px;height:8px;border-right:2px solid #CBD5E1;border-bottom:2px solid #CBD5E1;
+}
+
+/* ── RFP detail panel (right side on desktop, below flow on mobile) ── */
+.rfp-detail{
+  background:white;border:1px solid var(--border);border-radius:12px;padding:20px;
+  position:sticky;top:80px;max-height:calc(100vh - 100px);overflow-y:auto;
+}
+.rfp-detail-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.rfp-detail-typebadge{
+  font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.rfp-detail-typebadge-action{background:#E0F2FE;color:#075985}
+.rfp-detail-typebadge-decision{background:#FEF3C7;color:#92400E}
+.rfp-detail-typebadge-terminal{background:#F1F5F9;color:#334155}
+.rfp-detail-title{font-size:16px;font-weight:700;color:var(--navy);line-height:1.3;margin:0}
+.rfp-detail-desc{font-size:13px;color:var(--text);line-height:1.5;margin:8px 0 16px}
+.rfp-detail-section{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #F1F5F9}
+.rfp-detail-section:last-child{border-bottom:0;padding-bottom:0;margin-bottom:0}
+.rfp-detail-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.rfp-detail-role{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px}
+.rfp-detail-owners{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.rfp-detail-owner{display:flex;align-items:center;gap:10px}
+.rfp-detail-owner .team-photo,.rfp-detail-owner .team-initials,.rfp-detail-owner .team-photo-wrap{width:36px!important;height:36px!important;font-size:13px!important}
+.rfp-detail-owner-name{font-size:13px;color:var(--navy);font-weight:500}
+.rfp-detail-artifacts{list-style:disc;padding-left:20px;margin:0;font-size:13px;color:var(--text);line-height:1.7}
+.rfp-detail-next{list-style:none;padding:0;margin:0;font-size:13px;line-height:1.8}
+.rfp-detail-next a{color:var(--teal);font-weight:600;text-decoration:none}
+.rfp-detail-next a:hover{text-decoration:underline}
+.rfp-branch-label{font-style:italic;color:var(--muted);font-weight:500}
+.rfp-detail-terminal{font-size:13px;color:var(--muted);font-style:italic}
+
+/* ── Mobile: convert flowchart to vertical stepper + stack detail below ── */
+@media(max-width:880px){
+  .rfp-layout{grid-template-columns:1fr}
+  .rfp-detail{position:static;max-height:none}
+  .rfp-flow{padding:18px 12px}
+  .rfp-stage{min-width:0;max-width:100%;width:100%}
+}
+@media(max-width:640px){
+  .team-page{padding:18px 0 32px}
+  .team-page-head{flex-direction:column;align-items:flex-start;gap:8px}
+  .team-page-title{font-size:20px}
+  .team-tab-btn{padding:10px 14px;font-size:13px}
+  .team-card-grid{grid-template-columns:1fr;gap:14px}
+  .team-card{padding:20px}
+  /* Smaller stage cards + tighter arrow on mobile */
+  .rfp-stage{padding:12px 14px}
+  .rfp-stage-label{font-size:13px}
+  .rfp-flow-inner .rfp-stage:not(:first-child)::before{height:14px;top:-18px}
+}

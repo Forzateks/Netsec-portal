@@ -9,7 +9,7 @@
 // SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
 // HTTP-cached copy of /sw.js can't be served when this file ships. The
 // version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=82';
+var SW_REGISTRATION_URL = '/sw.js?v=83';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -308,10 +308,70 @@ window.onload = async function() {
     return;
   }
 
+  // Hash-routed Team Portfolio (v83). /#team is the one app route that
+  // works without authentication. We special-case it here so a public
+  // visitor lands directly on the team module instead of being bounced
+  // to the login screen. The hashchange listener below handles tab
+  // navigation within the team module once the page is open.
+  const isTeamRoute = hash.startsWith('#/team');
+
   if (data && data.session && data.session.user) {
     await initAppFromUser(data.session.user);
+    if (isTeamRoute && typeof renderTeamScreen === 'function') {
+      // Authenticated user deep-linked into /#team — render in internal mode.
+      if (typeof TEAM_PUBLIC_MODE !== 'undefined') TEAM_PUBLIC_MODE = false;
+      renderTeamScreen();
+    }
     return;
   }
-  // No active session — show sign-in form
+  // No active session. If the visitor is here for the public team page,
+  // skip the login screen and render the team module in public mode.
+  if (isTeamRoute && typeof renderTeamScreen === 'function') {
+    showPublicTeamMode();
+    return;
+  }
+  // Default: show sign-in form
   showSigninForm();
 };
+
+// Listen for hash changes WITHIN the team route so tab clicks (and direct
+// hash edits) re-render without a full reload. Other hash changes are
+// ignored — the rest of the app uses showScreen() not URL hashes.
+window.addEventListener('hashchange', function() {
+  var h = window.location.hash || '';
+  if (!h.startsWith('#/team')) return;
+  if (typeof renderTeamScreen === 'function') renderTeamScreen();
+});
+
+// Public-mode layout for /#team. The app shell, sidebar and login screen
+// all stay hidden; only the team screen is shown, full-width. Used by
+// unauthenticated visitors who landed on the route directly. The "Sign
+// in" link inside the team header lets them switch into the normal
+// login flow when they want internal access.
+function showPublicTeamMode() {
+  if (typeof TEAM_PUBLIC_MODE !== 'undefined') TEAM_PUBLIC_MODE = true;
+  document.getElementById('login-screen').style.display = 'none';
+  var app = document.getElementById('app');
+  if (app) {
+    app.style.display = 'block';
+    app.classList.add('public-team-mode');
+  }
+  // Hide the sidebar in public mode — there's nothing else to navigate to.
+  var sidebar = document.getElementById('sidebar');
+  if (sidebar) sidebar.style.display = 'none';
+  var hamb = document.querySelector('.hamburger');
+  if (hamb) hamb.style.display = 'none';
+  // Show only the team screen. Other screens stay display:none from their
+  // default (only screen-dashboard has .active and that's still hidden via
+  // the parent app's special class).
+  Array.prototype.forEach.call(document.querySelectorAll('.screen'), function(s){
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  var teamScreen = document.getElementById('screen-team');
+  if (teamScreen) {
+    teamScreen.classList.add('active');
+    teamScreen.style.display = 'block';
+  }
+  if (typeof renderTeamScreen === 'function') renderTeamScreen();
+}

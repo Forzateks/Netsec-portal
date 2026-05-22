@@ -253,6 +253,10 @@
   </div>
   <div class="sidebar-item" id="tab-skills" onclick="showScreen('skills');closeSidebarOnMobile()" style="display:none"><i data-lucide="graduation-cap" class="sidebar-icon"></i>Team Skills</div>
 
+  <!-- ── TEAM: external-facing showcase + internal portfolio + RFP playbook ── -->
+  <div class="sidebar-section-label">Team</div>
+  <div class="sidebar-item" id="tab-team" onclick="navigateToTeamRoute('meet');closeSidebarOnMobile()"><i data-lucide="users-round" class="sidebar-icon"></i>Team Portfolio</div>
+
   <!-- ── SETTINGS FOOTER: reference + admin, smaller text, pinned to bottom ── -->
   <div class="sidebar-footer">
     <div class="sidebar-section-label sidebar-section-label-sm">Settings</div>
@@ -1760,6 +1764,17 @@
 
 </div><!-- /screen-kb -->
 
+<!-- ══ TEAM PORTFOLIO SCREEN (v83) ══
+     Meet the Team / Portfolio Mapping / RFP Process Playbook. Driven entirely
+     by data/team.json. Routed via hash (#/team[?tab=portfolio|rfp]). Public
+     visitors land here without authentication and see a scrubbed view
+     (publicVisible members only, phones hidden, generic product categories).
+     Tab buttons + content rendered by js/features/team.js — this is just the
+     mount point. -->
+<div class="screen" id="screen-team">
+  <div id="team-content"></div>
+</div>
+
 </div><!-- /main -->
 </div><!-- /main-area -->
 </div><!-- /app-shell -->
@@ -2484,6 +2499,7 @@
 <script src="js/features/amc-contracts.js"></script>
 <script src="js/features/ps-deals.js"></script>
 <script src="js/features/team-skills.js"></script>
+<script src="js/features/team.js"></script>
 <script src="js/core/init.js"></script>
 </body>
 </html>
