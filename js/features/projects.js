@@ -1101,8 +1101,10 @@ function onPjFilterCustomerChange() {
 }
 
 // Delivery-side activity list — applies to Project / POC / AMC / Support
-// sessions. Pre-Sales-Task sessions get their own short list below; the
-// generic engagement-style activities don't apply to pre-sales work.
+// sessions. Pre-Sales-Task and Customer Testing sessions get their own
+// short lists below; their work isn't delivery-style. Project / POC also
+// pick up "Design Discussion" via the project-only branch in
+// activityTypesForSession (AMC + Support don't get it).
 const ACTIVITY_TYPES = [
   'HLD Discussion','HLD Documentation','LLD Discussion','LLD Documentation',
   'Pilot Sites Rollout','As-Built Documentation','KT / Training','Migration',
@@ -1110,19 +1112,33 @@ const ACTIVITY_TYPES = [
 ];
 
 // Pre-Sales-Task-specific activity list (session_type='presales').
-const PRESALES_ACTIVITY_TYPES = ['PS Calculation','SOW','Tech Proposal'];
+// Includes "Design Discussion" as of v86 — design conversations during
+// pre-sales scoping are a real activity worth tracking.
+const PRESALES_ACTIVITY_TYPES = ['PS Calculation','SOW','Tech Proposal','Design Discussion'];
 
 // Internal-session activity list (session_type='internal'). Distinct
 // from delivery work — no customer or engagement attached.
 const INTERNAL_ACTIVITY_TYPES = ['Testing for customers','Lab setup','Others'];
+
+// Customer Testing activity list (session_type='customer_testing'). Lab
+// validations and customer demos against a named customer — no formal
+// engagement record. Short list; "Others" covers anything bespoke.
+const CUSTOMER_TESTING_ACTIVITY_TYPES = ['Lab Validation','Customer Demo','Others'];
 
 const DEVICE_MODELS = ['EC-XS','EC-SP','EC-M','EC-10104','EC-10106'];
 
 // Return the activity-type options that apply for a given session type.
 // Future session types can plug in here without touching the call sites.
 function activityTypesForSession(sessionType) {
-  if (sessionType === 'presales') return PRESALES_ACTIVITY_TYPES;
-  if (sessionType === 'internal') return INTERNAL_ACTIVITY_TYPES;
+  if (sessionType === 'presales')         return PRESALES_ACTIVITY_TYPES;
+  if (sessionType === 'internal')         return INTERNAL_ACTIVITY_TYPES;
+  if (sessionType === 'customer_testing') return CUSTOMER_TESTING_ACTIVITY_TYPES;
+  // Project + POC additionally get "Design Discussion" (v86) — design
+  // conversations are a real activity here. AMC + Support stick to the
+  // delivery list as-is (maintenance/firefighting flows don't need it).
+  if (sessionType === 'project' || sessionType === 'poc') {
+    return ACTIVITY_TYPES.concat(['Design Discussion']);
+  }
   return ACTIVITY_TYPES;
 }
 
@@ -1241,7 +1257,7 @@ async function renderPjEmployeeSummary() {
 
   const empData = {};
   EMPLOYEES.forEach(function(e){
-    empData[e] = { total:0, sessions:0, project:0, poc:0, amc:0, support:0, presales:0, internal:0, engagements:{} };
+    empData[e] = { total:0, sessions:0, project:0, poc:0, amc:0, support:0, presales:0, customer_testing:0, internal:0, engagements:{} };
   });
 
   rows.forEach(function(r) {
@@ -1298,6 +1314,7 @@ async function renderPjEmployeeSummary() {
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.amc)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.support)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.presales)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.customer_testing)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.internal)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+fmtDays(d.total/8)+'</td>'+
       '<td style="font-size:11px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(topEngs)+'">'+(topEngs||'-')+'</td>'+
@@ -1321,12 +1338,13 @@ async function renderPjEmployeeSummary() {
       '<th><span class="pj-th-ico"><i data-lucide="wrench"></i>AMC</span></th>'+
       '<th><span class="pj-th-ico"><i data-lucide="life-buoy"></i>Support</span></th>'+
       '<th><span class="pj-th-ico"><i data-lucide="briefcase"></i>Pre-Sales</span></th>'+
+      '<th><span class="pj-th-ico"><i data-lucide="flask-conical"></i>Cust Test</span></th>'+
       '<th><span class="pj-th-ico"><i data-lucide="cog"></i>Internal</span></th>'+
       '<th>Working Days</th><th>Top Engagements</th></tr></thead>'+
     '<tbody>'+tableRows+
     '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>-</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+fmtHours(totalHours)+'</td>'+
-    '<td colspan="6">-</td>'+
+    '<td colspan="7">-</td>'+
     '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+fmtDays(totalHours/8)+'</td><td>-</td></tr>'+
     '</tbody></table></div>'+
     '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours / 8 | Hours are credited to every team member on a session (so a 4h session with 3 members shows 4h on each row, summing to 12h in TOTAL).</div>';

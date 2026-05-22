@@ -122,12 +122,13 @@ function confirmLongSession(dateStr, startStr, endStr) {
 // Support = reactive one-off troubleshooting (life-buoy)
 // Visually distinct so summaries can tell them apart at a glance.
 const SESSION_TYPE_BADGES = {
-  project:  { bg: '#EFF6FF', color: '#2563EB', label: '📁 Project' },
-  poc:      { bg: '#F5F3FF', color: '#7C3AED', label: '🎯 POC' },
-  amc:      { bg: '#FFFBEB', color: '#B45309', label: '🛠️ AMC' },
-  support:  { bg: '#FFF1F2', color: '#9F1239', label: '🚨 Support' },
-  presales: { bg: '#FDF2F8', color: '#BE185D', label: '💼 Pre-Sales-Task' },
-  internal: { bg: '#F3F4F6', color: '#6B7280', label: '🔧 Internal' },
+  project:          { bg: '#EFF6FF', color: '#2563EB', label: '📁 Project' },
+  poc:              { bg: '#F5F3FF', color: '#7C3AED', label: '🎯 POC' },
+  amc:              { bg: '#FFFBEB', color: '#B45309', label: '🛠️ AMC' },
+  support:          { bg: '#FFF1F2', color: '#9F1239', label: '🚨 Support' },
+  presales:         { bg: '#FDF2F8', color: '#BE185D', label: '💼 Pre-Sales-Task' },
+  customer_testing: { bg: '#ECFEFF', color: '#0E7490', label: '🧪 Customer Testing' },
+  internal:         { bg: '#F3F4F6', color: '#6B7280', label: '🔧 Internal' },
 };
 
 // Split a session's raw duration into office_hours vs ot_hours using the
@@ -201,6 +202,13 @@ function onUSTypeChange() {
   var type = document.getElementById('us-type').value;
   var isEng      = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
   var isInternal = (type === 'internal');
+  // Customer Testing parallels Pre-Sales-Task on activity (own short list)
+  // but parallels Internal on engagement (no engagement record). Customer
+  // and Stake-Holders ARE relevant — lab validations / demos always run
+  // for a named customer, often with named stakeholders. Treated as its
+  // own type so the form/save logic doesn't accidentally require an
+  // engagement_id.
+  var isCustomerTest = (type === 'customer_testing');
 
   var custRow = document.getElementById('us-customer-row');
   var engRow  = document.getElementById('us-engagement-row');
@@ -209,22 +217,23 @@ function onUSTypeChange() {
   var modeRow = document.getElementById('us-mode-row');
   var teamRow = document.getElementById('us-team-row');
 
-  // Customer + engagement + stake: only meaningful for engagement-tied
-  // sessions. Hidden for Internal (no external party) and when no type
-  // is picked yet.
-  if (custRow) custRow.style.display = isEng ? '' : 'none';
+  // Customer + stake: shown for engagement-tied AND Customer Testing.
+  // Engagement: engagement-tied only (CT has none).
+  if (custRow) custRow.style.display = (isEng || isCustomerTest) ? '' : 'none';
   if (engRow)  engRow.style.display  = isEng ? '' : 'none';
-  if (stkRow)  stkRow.style.display  = isEng ? '' : 'none';
+  if (stkRow)  stkRow.style.display  = (isEng || isCustomerTest) ? '' : 'none';
   // Activity + mode + team: visible for ANY chosen type, just with
   // different activity lists. Hidden only when type is empty.
-  if (actRow)  actRow.style.display  = (isEng || isInternal) ? '' : 'none';
-  if (modeRow) modeRow.style.display = (isEng || isInternal) ? '' : 'none';
-  if (teamRow) teamRow.style.display = (isEng || isInternal) ? '' : 'none';
+  if (actRow)  actRow.style.display  = (isEng || isInternal || isCustomerTest) ? '' : 'none';
+  if (modeRow) modeRow.style.display = (isEng || isInternal || isCustomerTest) ? '' : 'none';
+  if (teamRow) teamRow.style.display = (isEng || isInternal || isCustomerTest) ? '' : 'none';
 
   // Repopulate the customer dropdown only when relevant. Internal +
   // empty types skip this — the row is hidden anyway and the previous
-  // customer pick may not match the new type's customer list.
+  // customer pick may not match the new type's customer list. Customer
+  // Testing gets ALL customers (no engagement filter applies).
   if (isEng) _usPopulateCustomersByType(type);
+  else if (isCustomerTest) fillCustomerSelect('us-customer', false);
   // Customer + engagement may no longer be valid — reset both. The user
   // re-picks from the now-filtered lists.
   var custEl = document.getElementById('us-customer');
@@ -596,9 +605,17 @@ async function saveUnifiedSession() {
 
   var isEng      = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
   var isInternal = (type === 'internal');
+  var isCustomerTest = (type === 'customer_testing');
   if (isEng) {
     if (!customer)    return fail('Please pick a customer.');
     if (!engId)       return fail('Please pick an engagement.');
+    if (!actType)     return fail('Please pick an activity type.');
+    if (!teamMembers) return fail('Pick at least one team member.');
+  } else if (isCustomerTest) {
+    // Customer Testing: customer + activity + team required; engagement
+    // is intentionally absent (no formal engagement record for lab
+    // validations / demos). Stake-holders is optional.
+    if (!customer)    return fail('Please pick a customer.');
     if (!actType)     return fail('Please pick an activity type.');
     if (!teamMembers) return fail('Pick at least one team member.');
   } else if (isInternal) {
@@ -648,13 +665,13 @@ async function saveUnifiedSession() {
     end_time:        end,
     session_type:    type,
     engagement_id:   isEng && engId ? Number(engId) : null,
-    customer_name:   isEng ? (customer || null) : null,
+    customer_name:   (isEng || isCustomerTest) ? (customer || null) : null,
     engagement_name: engagement_name,
-    activity_type:   (isEng || isInternal) ? (actType || null) : null,
+    activity_type:   (isEng || isInternal || isCustomerTest) ? (actType || null) : null,
     session_info:    info,
-    team_members:    (isEng || isInternal) ? (teamMembers || null) : null,
-    stake_holders:   isEng ? (stakeH || null) : null,
-    mode:            (isEng || isInternal) ? (mode || null) : null,
+    team_members:    (isEng || isInternal || isCustomerTest) ? (teamMembers || null) : null,
+    stake_holders:   (isEng || isCustomerTest) ? (stakeH || null) : null,
+    mode:            (isEng || isInternal || isCustomerTest) ? (mode || null) : null,
     remarks:         remarks || null,
     total_hours:     split.total,
     office_hours:    split.office,
@@ -671,14 +688,17 @@ async function saveUnifiedSession() {
   // Per-member OT generation. The logger is auto-added by _buildTeamList
   // so they always get their own region-correct OT (matches v52 behaviour
   // for solo sessions and adds the new fan-out for team sessions).
+  // Customer Testing follows the same pattern as engagement-tied sessions
+  // (per-member OT for each team member), just with null engagement_name
+  // since CT has no formal engagement record.
   var otSummary = '';
   var unknownMembers = [];
-  if (isEng) {
+  if (isEng || isCustomerTest) {
     var team = _buildTeamList(currentUser, teamMembers);
     var rowsToInsert = [];
     var createdParts = [];
     team.forEach(function(name){
-      var row = _buildMemberOTRow(name, date, start, end, isEng, customer, engagement_name, actType, info);
+      var row = _buildMemberOTRow(name, date, start, end, isEng || isCustomerTest, customer, engagement_name, actType, info);
       if (row && row.unknown) { unknownMembers.push(row.name); return; }
       if (!row) return; // member's region yielded zero credit
       var calc = row._calc; delete row._calc;
@@ -934,6 +954,7 @@ function _editUSApplyFieldVisibility() {
   var type       = (document.getElementById('edit-us-type')||{}).value || '';
   var isEng      = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
   var isInternal = (type === 'internal');
+  var isCustomerTest = (type === 'customer_testing');
 
   function rowOf(id) {
     var el = document.getElementById(id);
@@ -942,9 +963,11 @@ function _editUSApplyFieldVisibility() {
   var custRow = rowOf('edit-us-customer');
   var engRow  = rowOf('edit-us-engagement');
   var stkRow  = rowOf('edit-us-stake');
-  if (custRow) custRow.style.display = isEng ? '' : 'none';
+  // Customer + stake shown for engagement-tied AND Customer Testing.
+  // Engagement shown only for engagement-tied (CT has none).
+  if (custRow) custRow.style.display = (isEng || isCustomerTest) ? '' : 'none';
   if (engRow)  engRow.style.display  = isEng ? '' : 'none';
-  if (stkRow)  stkRow.style.display  = isEng ? '' : 'none';
+  if (stkRow)  stkRow.style.display  = (isEng || isCustomerTest) ? '' : 'none';
 
   // Repopulate the activity-type dropdown for the new type, preserving
   // the current value when it appears in the new list (or as legacy).
@@ -1004,16 +1027,22 @@ async function saveEditUS() {
 
   var isEng      = (type === 'project' || type === 'poc' || type === 'amc' || type === 'support' || type === 'presales');
   var isInternal = (type === 'internal');
+  var isCustomerTest = (type === 'customer_testing');
   var engId = null;
   if (isEng && engagement) {
     var engRow = (ENGAGEMENTS||[]).find(function(e){ return e.name === engagement && e.type === type; });
     if (engRow) engId = engRow.id;
   }
-  // Internal sessions require activity + at least one team member;
-  // engagement-tied validation lives below in the existing payload.
+  // Internal + Customer Testing each require activity + at least one
+  // team member. Engagement-tied validation lives below in the existing
+  // payload-build path.
   if (isInternal) {
     if (!actType) return fail('Please pick an activity type.');
     if (!team)    return fail('Pick at least one team member.');
+  } else if (isCustomerTest) {
+    if (!customer) return fail('Please pick a customer.');
+    if (!actType)  return fail('Please pick an activity type.');
+    if (!team)     return fail('Pick at least one team member.');
   }
 
   // Read OLD row (need original employee for the unified totals split)
@@ -1032,11 +1061,13 @@ async function saveEditUS() {
 
   // Build NEW team list (logger included, dedup'd) and pre-compute the
   // OT row for each member so we can compare against the OLD rows.
-  var newTeam = isEng ? _buildTeamList(sessionEmployee, team) : [sessionEmployee];
+  // Customer Testing follows the team-fan-out path same as engagement-tied
+  // edits — every team member listed on a CT session gets their own OT row.
+  var newTeam = (isEng || isCustomerTest) ? _buildTeamList(sessionEmployee, team) : [sessionEmployee];
   var unknownMembers = [];
   var newOtByEmp = {};
   newTeam.forEach(function(name){
-    var row = _buildMemberOTRow(name, date, start, end, isEng, customer, engagement, actType, info);
+    var row = _buildMemberOTRow(name, date, start, end, isEng || isCustomerTest, customer, engagement, actType, info);
     if (row && row.unknown) { unknownMembers.push(row.name); return; }
     if (!row) return; // their region yields no OT
     delete row._calc;
@@ -1086,13 +1117,13 @@ async function saveEditUS() {
     start_time:      start,
     end_time:        end,
     session_info:    info,
-    customer_name:   isEng ? (customer || null) : null,
+    customer_name:   (isEng || isCustomerTest) ? (customer || null) : null,
     engagement_name: isEng ? (engagement || null) : null,
     engagement_id:   engId,
-    activity_type:   (isEng || isInternal) ? (actType || null) : null,
-    team_members:    (isEng || isInternal) ? (team || null) : null,
-    stake_holders:   isEng ? (stake || null) : null,
-    mode:            (isEng || isInternal) ? (mode || null) : null,
+    activity_type:   (isEng || isInternal || isCustomerTest) ? (actType || null) : null,
+    team_members:    (isEng || isInternal || isCustomerTest) ? (team || null) : null,
+    stake_holders:   (isEng || isCustomerTest) ? (stake || null) : null,
+    mode:            (isEng || isInternal || isCustomerTest) ? (mode || null) : null,
     remarks:         remarks,
     total_hours:     split.total,
     office_hours:    split.office,
@@ -1237,7 +1268,7 @@ async function renderEngagementSummary() {
   document.getElementById('pj-eng-loading').style.display = 'none';
   var rows = res.data || [];
 
-  var TYPE_LABELS = { project:'Project', poc:'POC', amc:'AMC', support:'Support', presales:'Pre-Sales-Task' };
+  var TYPE_LABELS = { project:'Project', poc:'POC', amc:'AMC', support:'Support', presales:'Pre-Sales-Task', customer_testing:'Customer Testing' };
   var typeLabel   = typeKey==='all' ? 'Engagement' : TYPE_LABELS[typeKey] || typeKey;
 
   if (!rows.length) {
