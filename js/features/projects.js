@@ -1113,8 +1113,10 @@ const ACTIVITY_TYPES = [
 
 // Pre-Sales-Task-specific activity list (session_type='presales').
 // Includes "Design Discussion" as of v86 — design conversations during
-// pre-sales scoping are a real activity worth tracking.
-const PRESALES_ACTIVITY_TYPES = ['PS Calculation','SOW','Tech Proposal','Design Discussion'];
+// pre-sales scoping are a real activity worth tracking. "Tech Review"
+// added in v89 — separate from Tech Proposal since reviewing someone
+// else's proposal is a distinct activity from drafting one.
+const PRESALES_ACTIVITY_TYPES = ['PS Calculation','SOW','Tech Proposal','Design Discussion','Tech Review'];
 
 // Internal-session activity list (session_type='internal'). Distinct
 // from delivery work — no customer or engagement attached.
@@ -1203,7 +1205,7 @@ function initProjectTab() {
 
   // Populate year selectors
   const currentYear = new Date().getFullYear();
-  ['pj-eng-year','pj-emp-year'].forEach(function(id) {
+  ['pj-eng-year','pj-cust-year','pj-emp-year'].forEach(function(id) {
     const el = document.getElementById(id);
     if (!el || el.options.length) return;
     // Add "All Years" as first option (default)
@@ -1351,6 +1353,252 @@ async function renderPjEmployeeSummary() {
   if (typeof renderIcons === 'function') renderIcons();
 }
 
+// ── CUSTOMER SUMMARY (v89) ───────────────────────────────────────
+// Aggregates session hours by customer_name across ALL session types,
+// including engagement-less Customer Testing. Sister report to Engagement
+// Summary (which groups by engagement_name and misses engagement-less
+// sessions) and Employee Summary (which fans out to every team member).
+//
+// Hours counted ONCE per session, attributed to one customer. Wall-clock
+// effort, not multiplied by team size — that's what Employee Summary
+// does. The spec is explicit about this distinction.
+//
+// Sortable: state lives in window._pjCustSort (column + direction). Click
+// any sortable th to toggle. Initial sort is Total descending so the
+// biggest-spend customers surface first.
+window._pjCustSort = { col: 'total', dir: 'desc' };
+// Cache of last-rendered aggregated rows so the CSV export reflects the
+// current view without re-querying.
+window._pjCustRowsCache = [];
+
+async function renderPjCustomerSummary() {
+  document.getElementById('pj-customer-loading').style.display = 'flex';
+  document.getElementById('pj-customer-content').innerHTML = '';
+  const year = (document.getElementById('pj-cust-year')||{}).value || 'all';
+
+  // Paginated so unified_sessions > 1000 rows isn't silently truncated.
+  const res = await fetchAllRows(function(){
+    let q = sb.from('unified_sessions').select('*');
+    if (year !== 'all') q = q.gte('session_date', year+'-01-01').lte('session_date', year+'-12-31');
+    return q;
+  });
+  document.getElementById('pj-customer-loading').style.display = 'none';
+  const rows = res.data || [];
+
+  // Aggregate by customer_name. Rows with null/empty customer_name are
+  // skipped entirely — these are Internal sessions that don't belong in
+  // a customer-keyed report. They still appear in Employee Summary.
+  const byCust = {};
+  rows.forEach(function(r){
+    const cust = (r.customer_name || '').trim();
+    if (!cust) return;
+    if (!byCust[cust]) {
+      byCust[cust] = {
+        customer:         cust,
+        sessions:         0,
+        total:            0,
+        engagementIds:    {},   // distinct engagement_id (skipping nulls)
+        project:          0,
+        poc:              0,
+        amc:              0,
+        support:          0,
+        presales:         0,
+        customer_testing: 0,
+        internal:         0,
+        engagementHours:  {}    // engagement_name → total hours (for Top Engagement)
+      };
+    }
+    const c = byCust[cust];
+    const hrs = parseFloat(r.total_hours || 0);
+    c.sessions += 1;
+    c.total    += hrs;
+    if (r.engagement_id) c.engagementIds[r.engagement_id] = 1;
+    if (c[r.session_type] !== undefined) c[r.session_type] += hrs;
+    if (r.engagement_name && r.engagement_name.trim()) {
+      const e = r.engagement_name.trim();
+      c.engagementHours[e] = (c.engagementHours[e] || 0) + hrs;
+    }
+  });
+
+  // Drop zero-hour customers (none of their sessions ended up matching
+  // the year filter). Compute per-row derived fields.
+  let aggRows = Object.keys(byCust).map(function(k){
+    const c = byCust[k];
+    let topEng = '—';
+    const engNames = Object.keys(c.engagementHours);
+    if (engNames.length) {
+      topEng = engNames.reduce(function(best, n){
+        return (c.engagementHours[n] > c.engagementHours[best]) ? n : best;
+      }, engNames[0]);
+    }
+    return {
+      customer:    c.customer,
+      sessions:    c.sessions,
+      total:       c.total,
+      engagements: Object.keys(c.engagementIds).length,
+      project:     c.project,
+      poc:         c.poc,
+      amc:         c.amc,
+      support:     c.support,
+      presales:    c.presales,
+      customer_testing: c.customer_testing,
+      internal:    c.internal,
+      top_engagement: topEng
+    };
+  }).filter(function(r){ return r.total > 0; });
+
+  // Empty state
+  if (!aggRows.length) {
+    document.getElementById('pj-customer-content').innerHTML = renderEmptyState({
+      icon: 'building-2',
+      heading: 'No customer activity for '+(year==='all'?'all years':year),
+      sub: 'Try a different year or check back once sessions are logged against customers.'
+    });
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
+
+  // Sort by current state
+  aggRows = _pjCustApplySort(aggRows);
+  window._pjCustRowsCache = aggRows;
+
+  const tableRows = aggRows.map(function(r){
+    return '<tr>'+
+      '<td><strong>'+esc2(r.customer)+'</strong></td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:13px">'+fmtCount(r.sessions)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:16px">'+fmtHours(r.total)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:13px">'+fmtCount(r.engagements)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.project)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.poc)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.amc)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.support)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.presales)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.customer_testing)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.internal)+'</td>'+
+      '<td style="font-size:12px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(r.top_engagement)+'">'+esc2(r.top_engagement)+'</td>'+
+    '</tr>';
+  }).join('');
+
+  // Totals across all displayed customers
+  const totals = aggRows.reduce(function(t, r){
+    t.sessions += r.sessions;
+    t.total    += r.total;
+    t.engagements += r.engagements;
+    ['project','poc','amc','support','presales','customer_testing','internal'].forEach(function(k){ t[k] += r[k]; });
+    return t;
+  }, { sessions:0, total:0, engagements:0, project:0, poc:0, amc:0, support:0, presales:0, customer_testing:0, internal:0 });
+
+  function thSort(col, label) {
+    const s = window._pjCustSort;
+    const arrow = (s.col === col) ? (s.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    return '<th class="pj-cust-sort-th" style="cursor:pointer;user-select:none;white-space:nowrap" onclick="pjCustToggleSort(\''+col+'\')">'+label+arrow+'</th>';
+  }
+
+  document.getElementById('pj-customer-content').innerHTML =
+    '<div class="table-wrap"><table>'+
+    '<thead><tr>'+
+      thSort('customer',         'Customer')+
+      thSort('sessions',         'Sessions')+
+      thSort('total',            'Total')+
+      thSort('engagements',      '# Engagements')+
+      thSort('project',          '<span class="pj-th-ico"><i data-lucide="folder"></i>Project</span>')+
+      thSort('poc',              '<span class="pj-th-ico"><i data-lucide="target"></i>POC</span>')+
+      thSort('amc',              '<span class="pj-th-ico"><i data-lucide="wrench"></i>AMC</span>')+
+      thSort('support',          '<span class="pj-th-ico"><i data-lucide="life-buoy"></i>Support</span>')+
+      thSort('presales',         '<span class="pj-th-ico"><i data-lucide="briefcase"></i>Pre-Sales</span>')+
+      thSort('customer_testing', '<span class="pj-th-ico"><i data-lucide="flask-conical"></i>Cust Test</span>')+
+      thSort('internal',         '<span class="pj-th-ico"><i data-lucide="cog"></i>Internal</span>')+
+      '<th>Top Engagement</th>'+
+    '</tr></thead>'+
+    '<tbody>'+tableRows+
+      '<tr style="background:#f8fafc;font-weight:600">'+
+        '<td>TOTAL ('+aggRows.length+' customer'+(aggRows.length===1?'':'s')+')</td>'+
+        '<td style="font-family:DM Mono,monospace">'+fmtCount(totals.sessions)+'</td>'+
+        '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+fmtHours(totals.total)+'</td>'+
+        '<td style="font-family:DM Mono,monospace">'+fmtCount(totals.engagements)+'</td>'+
+        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.project)+'</td>'+
+        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.poc)+'</td>'+
+        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.amc)+'</td>'+
+        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.support)+'</td>'+
+        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.presales)+'</td>'+
+        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.customer_testing)+'</td>'+
+        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.internal)+'</td>'+
+        '<td>-</td>'+
+      '</tr>'+
+    '</tbody></table></div>'+
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">'+
+      'Year: '+(year==='all'?'All Years':year)+
+      ' | # Engagements counts distinct engagement_id per customer (engagement-less sessions like Customer Testing don\'t add to this number).'+
+      ' | Each session credits its customer ONCE — team size doesn\'t multiply hours here. For per-employee credit, see Employee Summary.'+
+    '</div>';
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+// Sort the in-memory aggregated rows by the current _pjCustSort state.
+// Customer + top_engagement are strings (locale-aware compare); everything
+// else is numeric.
+function _pjCustApplySort(rows) {
+  const s = window._pjCustSort;
+  const col = s.col, dir = s.dir;
+  const isStr = (col === 'customer' || col === 'top_engagement');
+  const arr = rows.slice();
+  arr.sort(function(a, b){
+    const av = a[col], bv = b[col];
+    let cmp;
+    if (isStr) cmp = String(av||'').localeCompare(String(bv||''));
+    else       cmp = (Number(av)||0) - (Number(bv)||0);
+    return dir === 'asc' ? cmp : -cmp;
+  });
+  return arr;
+}
+
+// Click handler for the th — toggle direction if clicking the active
+// column, otherwise switch column with the type's natural default
+// (descending for numeric, ascending for text — matches the rest of
+// the codebase's table conventions).
+function pjCustToggleSort(col) {
+  const s = window._pjCustSort;
+  if (s.col === col) {
+    s.dir = (s.dir === 'asc') ? 'desc' : 'asc';
+  } else {
+    s.col = col;
+    s.dir = (col === 'customer' || col === 'top_engagement') ? 'asc' : 'desc';
+  }
+  renderPjCustomerSummary();
+}
+
+// CSV export of the current view (post-filter, post-sort). File name
+// includes today's date so multiple exports in one session are
+// distinguishable by mtime + name.
+function exportCustomerSummaryCsv() {
+  const rows = window._pjCustRowsCache || [];
+  if (!rows.length) { showToast('Nothing to export.'); return; }
+  const headers = ['Customer','Sessions','Total Hours','Engagements','Project Hours','POC Hours','AMC Hours','Support Hours','Pre-Sales Hours','Cust Test Hours','Internal Hours','Top Engagement'];
+  function csvCell(v) {
+    const s = (v == null) ? '' : String(v);
+    // Quote only when needed (contains , " or newline); double inner quotes.
+    if (/[,"\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  const lines = [headers.map(csvCell).join(',')];
+  rows.forEach(function(r){
+    lines.push([
+      r.customer, r.sessions, r.total, r.engagements,
+      r.project, r.poc, r.amc, r.support, r.presales,
+      r.customer_testing, r.internal, r.top_engagement
+    ].map(csvCell).join(','));
+  });
+  const csv = '﻿' + lines.join('\n');  // BOM so Excel opens it as UTF-8
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'customer-summary-' + new Date().toISOString().split('T')[0] + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  showToast('Customer Summary exported ✓');
+}
+
 // ── PIE CHART HELPERS ────────────────────────────────────────────
 // Short label for an employee. Returns "Ahmed" / "Salman" when the first
 // name is unique across EMPLOYEES, and "Mohammed A." / "Mohammed N." when
@@ -1445,7 +1693,7 @@ function showProjectTab(tab) {
   if (tab==='project' || tab==='poc' || tab==='amc' || tab==='support' || tab==='presales') {
     typePreset = tab; tab = 'engagement';
   }
-  ['uslog','ussess','otsessions','otsummary','engagement','employee','otpolicy','otmanager','custmgr','manage','vendors'].forEach(function(t) {
+  ['uslog','ussess','otsessions','otsummary','engagement','customer','employee','otpolicy','otmanager','custmgr','manage','vendors'].forEach(function(t) {
     const el  = document.getElementById('pjtab-'+t);
     const sub = document.getElementById('pjsub-'+t);
     if (!el) return;
@@ -1472,6 +1720,7 @@ function showProjectTab(tab) {
     }
     renderEngagementSummary();
   }
+  if (tab==='customer')   { initProjectTab(); renderPjCustomerSummary(); }
   if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
   if (tab==='otmanager')  { renderManager(); }
   if (tab==='custmgr')    { populateProjectDropdowns(); renderCustomersTable(); }

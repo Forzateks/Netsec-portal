@@ -206,6 +206,7 @@
       <div class="sidebar-subitem" id="sbi-projects-otsessions" onclick="navigateSub('projects','otsessions')"><i data-lucide="timer" class="sidebar-subicon"></i>OT Sessions</div>
       <div class="sidebar-subitem" id="sbi-projects-otsummary"  onclick="navigateSub('projects','otsummary')"><i data-lucide="bar-chart-2" class="sidebar-subicon"></i>OT Summary</div>
       <div class="sidebar-subitem" id="sbi-projects-engagement" onclick="navigateSub('projects','engagement')"><i data-lucide="bar-chart-3" class="sidebar-subicon"></i>Engagement Summary</div>
+      <div class="sidebar-subitem" id="sbi-projects-customer"   onclick="navigateSub('projects','customer')"><i data-lucide="building-2" class="sidebar-subicon"></i>Customer Summary</div>
       <div class="sidebar-subitem" id="sbi-projects-employee"   onclick="navigateSub('projects','employee')"><i data-lucide="users-round" class="sidebar-subicon"></i>Employee Summary</div>
     </div>
   </div>
@@ -534,6 +535,27 @@
       </div>
       <div id="pj-eng-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="pj-eng-content"></div>
+    </div>
+  </div>
+
+  <!-- CUSTOMER SUMMARY (v89) — aggregates session hours by customer_name
+       across ALL session types, including engagement-less Customer Testing
+       sessions. Each session counted ONCE per customer (wall-clock effort),
+       not multiplied by team size — that's the Employee Summary's job. -->
+  <div id="pjtab-customer" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div>
+          <div class="card-title" style="margin-bottom:2px">🏢 Customer Summary</div>
+          <div style="font-size:12px;color:var(--muted)">Hours per customer — each session counted once (wall-clock effort), not multiplied by team size.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="pj-cust-year" onchange="renderPjCustomerSummary()" style="width:auto;padding:7px 12px"></select>
+          <button class="btn btn-sm btn-ghost" onclick="exportCustomerSummaryCsv()" title="Export current view to CSV"><i data-lucide="download" class="btn-icon"></i>Export CSV</button>
+        </div>
+      </div>
+      <div id="pj-customer-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div id="pj-customer-content"></div>
     </div>
   </div>
 

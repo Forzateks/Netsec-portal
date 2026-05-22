@@ -53,6 +53,7 @@ var PROJECT_TAB_GROUPS = {
   otsessions: 'reports',
   otsummary:  'reports',
   engagement: 'reports',
+  customer:   'reports',
   employee:   'reports'
   // otpolicy, manage, vendors, otmanager → standalone items
 };
