@@ -10,7 +10,7 @@
 // Bump CACHE_VERSION whenever the shell changes meaningfully so old clients
 // drop stale assets on activate.
 
-var CACHE_VERSION = 'netsec-v84';
+var CACHE_VERSION = 'netsec-v85';
 // Critical bootstrap files only — pre-caching the full shell on install
 // fires 25 parallel fetches that saturate mobile bandwidth and starve
 // the Supabase queries that follow. Everything else now caches on demand
@@ -58,6 +58,13 @@ self.addEventListener('fetch', function(e) {
   if (url.hostname.indexOf('supabase.co') !== -1) return;
 
   var sameOrigin = (url.origin === self.location.origin);
+
+  // Content files under /data/ change between deploys without code changes
+  // (team.json roster edits, role corrections, product list updates). Stale-
+  // while-revalidate would serve last-deploy's JSON for one cycle after an
+  // edit, which is jarring for a content-driven module. Skip the SW for
+  // these so the browser always hits the network for the latest copy.
+  if (sameOrigin && url.pathname.indexOf('/data/') === 0) return;
 
   // ── Navigations (HTML documents): NETWORK-FIRST ──
   // Every online PWA launch pulls a fresh /index.html so the user sees new

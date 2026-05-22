@@ -14,14 +14,14 @@
       "displayOrder": 1
     },
     {
-      "id": "darays-dodi",
-      "name": "Darays Dodi",
+      "id": "darayus-dodi",
+      "name": "Darayus Dodi",
       "role": "Pre-Sales Consultant",
       "category": "Presales",
-      "email": "darays@gulfitd.com",
+      "email": "darayus@gulfitd.com",
       "phone": "",
       "location": "UAE",
-      "photo": "images/team/darays-dodi.jpg",
+      "photo": "images/team/darayus-dodi.jpg",
       "publicVisible": true,
       "displayOrder": 1
     },
@@ -64,7 +64,7 @@
     {
       "id": "prasanth",
       "name": "Prasanth",
-      "role": "Network Engineer",
+      "role": "Senior Network Engineer",
       "category": "Technical",
       "email": "prasanth@gulfitd.com",
       "phone": "",
@@ -76,7 +76,7 @@
     {
       "id": "salman-aziz",
       "name": "Salman Aziz",
-      "role": "Network Engineer",
+      "role": "Senior Network Engineer",
       "category": "Technical",
       "email": "salman@gulfitd.com",
       "phone": "",
@@ -200,7 +200,7 @@
       "label": "Presales Review & Validation",
       "type": "action",
       "owner": "Presales / Sr. Consultant",
-      "ownerIds": ["darays-dodi", "venkatesan"],
+      "ownerIds": ["darayus-dodi", "venkatesan"],
       "description": "Presales reviews the RFP requirements and validates feasibility against Gulfit's networking portfolio.",
       "artifacts": [],
       "nextStages": ["match-decision"]
@@ -224,7 +224,7 @@
       "label": "Return RFP to BDM",
       "type": "terminal",
       "owner": "Presales",
-      "ownerIds": ["darays-dodi"],
+      "ownerIds": ["darayus-dodi"],
       "description": "RFP doesn't match — sent back to BDM with a written explanation of the gaps.",
       "artifacts": ["Gap Analysis Note"],
       "nextStages": []
@@ -234,7 +234,7 @@
       "label": "Prepare Response Documents",
       "type": "action",
       "owner": "Presales / Sr. Consultant",
-      "ownerIds": ["darays-dodi", "venkatesan"],
+      "ownerIds": ["darayus-dodi", "venkatesan"],
       "description": "Build the full RFP response package: technical proposal, architecture, BoM, SoW, and initial implementation tracker.",
       "artifacts": [
         "RFP Response Document",
@@ -261,7 +261,7 @@
       "label": "Submit Documents to BDM",
       "type": "terminal",
       "owner": "Presales",
-      "ownerIds": ["darays-dodi"],
+      "ownerIds": ["darayus-dodi"],
       "description": "Final response package submitted back to BDM for customer delivery.",
       "artifacts": ["Final RFP Response Package"],
       "nextStages": []
