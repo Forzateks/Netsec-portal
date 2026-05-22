@@ -57,7 +57,7 @@ async function loadProjects() {
     sb.from('customers').select('id,name,status').order('name'),
     sb.from('engagements').select('id,customer_id,name,type,status,vendor,product_line,created_by,created_at').order('name'),
     sb.from('vendors').select('id,name,display_order,is_active').order('display_order').order('name'),
-    sb.from('product_lines').select('id,vendor_id,name,display_order,is_active').order('display_order').order('name')
+    sb.from('product_lines').select('id,vendor_id,name,display_order,is_active,is_gulfit_relevant').order('display_order').order('name')
   ]);
   if (cRes.error || eRes.error) return; // keep cached data on error
   // Vendor catalog errors are non-fatal — the dropdowns will just be empty
@@ -1752,7 +1752,7 @@ async function renderVendorsManage() {
   // edits made in this session until loadProjects() fires again.
   var [vRes, plRes] = await Promise.all([
     sb.from('vendors').select('id,name,display_order,is_active').order('display_order').order('name'),
-    sb.from('product_lines').select('id,vendor_id,name,display_order,is_active').order('display_order').order('name')
+    sb.from('product_lines').select('id,vendor_id,name,display_order,is_active,is_gulfit_relevant').order('display_order').order('name')
   ]);
   if (vRes.error)  { showError('Could not load vendors: ' + vRes.error.message); return; }
   if (plRes.error) { showError('Could not load product lines: ' + plRes.error.message); return; }

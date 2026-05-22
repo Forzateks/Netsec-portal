@@ -1,7 +1,10 @@
 -- ═══════════════════════════════════════════════════════════════════
 -- NetSec Portal — full database schema
--- Generated from project rxxcrlobbtlvjgcqgjjm on 2026-05-22 by querying
+-- Last refreshed: 2026-05-22 for v90 (product_lines.is_gulfit_relevant).
+-- Originally generated from project rxxcrlobbtlvjgcqgjjm by querying
 -- the Postgres catalog (see docs/disaster-recovery.md).
+-- DISCIPLINE: refresh this file in the SAME commit as any DDL-changing
+-- migration. See memory/schema_sql_sync_discipline.md.
 --
 -- TARGET: a fresh Supabase project (NOT vanilla Postgres). This file
 -- references the auth.users table that Supabase ships by default; on
@@ -141,7 +144,8 @@ CREATE TABLE public.product_lines (
   name text NOT NULL,
   display_order integer DEFAULT 100,
   is_active boolean DEFAULT true,
-  created_at timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now(),
+  is_gulfit_relevant boolean DEFAULT false NOT NULL
 );
 
 CREATE TABLE public.engagements (

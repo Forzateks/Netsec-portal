@@ -229,7 +229,10 @@ async function renderEmployeeDashboard() {
   var balColor  = s.balance>0?'var(--success)':s.balance<0?'var(--danger)':'var(--navy)';
   var lvColor   = leaveBalance<=5?'var(--danger)':leaveBalance<=10?'var(--gold)':'var(--success)';
   var hr = new Date().getHours();
-  var greet = hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
+  // v90: static "Good day" — replaced the time-aware morning/afternoon/
+  // evening ternary at Venkat's request. Less noise; ambiguous time
+  // windows (e.g. 11:59 → "morning", 12:01 → "afternoon") felt fiddly.
+  var greet = 'Good day';
   var today = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   var firstName = (currentUser||'').split(' ')[0] || '';
 
@@ -644,7 +647,10 @@ async function renderManagerDashboard() {
   var thirtyAhead= new Date(now.getTime() + 30*86400000).toISOString().slice(0,10);
 
   var hr = now.getHours();
-  var greet = hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
+  // v90: static "Good day" — replaced the time-aware morning/afternoon/
+  // evening ternary at Venkat's request. Less noise; ambiguous time
+  // windows (e.g. 11:59 → "morning", 12:01 → "afternoon") felt fiddly.
+  var greet = 'Good day';
   var todayLabel = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   var firstName = (currentUser||'').split(' ')[0] || '';
 

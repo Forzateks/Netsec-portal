@@ -2156,6 +2156,20 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .sk-matrix thead th.sk-rowhead,.sk-matrix thead th.sk-vendorhead{text-align:left}
 .sk-matrix tbody td{padding:8px 10px;border-bottom:1px solid #F1F5F9;vertical-align:middle;text-align:center}
 .sk-matrix tbody td.sk-rowhead,.sk-matrix tbody td.sk-vendorhead{text-align:left}
+/* v90: Gulfit Relevant column. Narrow, click-to-toggle; the badge is
+   a 🟢/⚪ glyph rather than a real <input> so we don't fight browser
+   focus styles inside the table cells. */
+.sk-matrix thead th.sk-gulfithead{width:32px;text-align:center}
+.sk-matrix tbody td.sk-gulfitcell{cursor:pointer;user-select:none;width:32px;font-size:15px;line-height:1;transition:background .12s}
+.sk-matrix tbody td.sk-gulfitcell:hover{background:#FFFBEB}
+.sk-matrix tbody td.sk-gulfitcell-readonly{cursor:default}
+.sk-matrix tbody td.sk-gulfitcell-readonly:hover{background:transparent}
+.sk-gulfit-badge{display:inline-block;line-height:1}
+.sk-gulfit-badge-off{opacity:.45}
+/* Small inline "Gulfit" tag next to a product-line name when the
+   flag is on. Matches the cert .gulfit-pill tone — teal text on a
+   pale teal background. */
+.sk-gulfit-tag{display:inline-block;font-size:10px;font-weight:700;color:#0E7490;background:#ECFEFF;padding:2px 6px;border-radius:999px;text-transform:uppercase;letter-spacing:.4px;margin-left:6px;vertical-align:1px}
 .sk-matrix tbody td.sk-rowhead strong{color:var(--navy)}
 .sk-matrix tbody td.sk-vendorhead{color:var(--muted);font-size:12px}
 .sk-cell{cursor:default;transition:background .12s}

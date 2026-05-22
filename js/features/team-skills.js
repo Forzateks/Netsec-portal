@@ -15,6 +15,10 @@
 
 var SKILLS = [];              // [{id, employee_name, product_line_id, level, ...}]
 var _skEditing = null;        // null = add, {id, ...} = edit
+// v90: Gulfit Relevant filter chip state — mirrors _certGulfitFilter
+// from certificates.js. 'all' shows everything; 'gulfit' filters to
+// product_lines.is_gulfit_relevant=true; 'general' to the inverse.
+var _skGulfitFilter = 'all';
 
 var SKILL_LEVEL_META = {
   beginner:       { label:'Beginner',       shortLabel:'B',   cls:'sk-pill-beginner' },
@@ -81,6 +85,16 @@ function _skPopulateVendorFilter() {
 function clearSkillFilters() {
   ['sk-search','sk-filter-vendor'].forEach(function(id){ var el=document.getElementById(id); if (el) el.value=''; });
   var empty = document.getElementById('sk-show-empty'); if (empty) empty.checked = false;
+  _skGulfitFilter = 'all';
+  renderSkillsMatrix();
+}
+
+// v90: chip-bar setter for Gulfit Relevant filter. Mirrors
+// setCertGulfitFilter from certificates.js — store the new key, re-
+// render. Matrix order/sort is preserved because we don't reset any
+// other filter state here.
+function setSkGulfitFilter(key) {
+  _skGulfitFilter = key;
   renderSkillsMatrix();
 }
 
@@ -123,6 +137,11 @@ function _skFilteredLines() {
     .filter(function(p){ return p.is_active; });
   if (vendor) lines = lines.filter(function(p){ return String(p.vendor_id) === String(vendor); });
   if (search) lines = lines.filter(function(p){ return p.name.toLowerCase().indexOf(search) !== -1; });
+  // v90: Gulfit Relevant chip filter. Null is treated as false (the
+  // ALTER TABLE defaults all existing rows to false, so this is just
+  // defensive for any pre-default reads).
+  if (_skGulfitFilter === 'gulfit')  lines = lines.filter(function(p){ return !!p.is_gulfit_relevant; });
+  if (_skGulfitFilter === 'general') lines = lines.filter(function(p){ return !p.is_gulfit_relevant; });
 
   // Hide lines with zero skill entries unless the toggle is on.
   if (!showEmpty) {
@@ -179,7 +198,29 @@ function renderSkillsMatrix() {
   }
 
   var isMobile = window.innerWidth < 720;
-  content.innerHTML = (isMobile ? _skRenderAccordion(lines, emps) : _skRenderMatrix(lines, emps)) +
+  // v90: Gulfit Relevant chip bar. Counts are computed off the FULL
+  // PRODUCT_LINES set (excluding "Other (specify)" and inactive lines —
+  // same baseline as _skFilteredLines) so the totals don't shift as the
+  // user filters; the chip with the current active state is highlighted.
+  var allLines = (PRODUCT_LINES||[])
+    .filter(function(p){ return p.name && p.name.toLowerCase() !== 'other (specify)'; })
+    .filter(function(p){ return p.is_active; });
+  var allN     = allLines.length;
+  var gulfitN  = allLines.filter(function(p){ return !!p.is_gulfit_relevant; }).length;
+  var generalN = allN - gulfitN;
+  function _skChip(key, label, count) {
+    var act = (_skGulfitFilter === key);
+    return '<button class="amc-chip'+(act?' amc-chip-active':'')+'" onclick="setSkGulfitFilter(\''+key+'\')">'+
+      label+' <span class="amc-chip-count">'+fmtCount(count)+'</span></button>';
+  }
+  var chipBar =
+    '<div class="amc-chip-row" style="margin-bottom:12px">'+
+      _skChip('all',     'All',                 allN)+
+      _skChip('gulfit',  '🟢 Gulfit Relevant',  gulfitN)+
+      _skChip('general', '⚪ General',          generalN)+
+    '</div>';
+  content.innerHTML = chipBar +
+    (isMobile ? _skRenderAccordion(lines, emps) : _skRenderMatrix(lines, emps)) +
     '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Showing '+lines.length+' product line'+(lines.length===1?'':'s')+' · '+SKILLS.length+' skill record'+(SKILLS.length===1?'':'s')+' total</div>';
   if (typeof renderIcons === 'function') renderIcons();
 }
@@ -190,6 +231,7 @@ function _skRenderMatrix(lines, emps) {
   SKILLS.forEach(function(s){ byKey[s.employee_name + '|' + s.product_line_id] = s; });
 
   var head = '<tr>'+
+    '<th class="sk-gulfithead" title="Gulfit Relevant — managers can toggle">G</th>'+
     '<th class="sk-rowhead">Product Line</th>'+
     '<th class="sk-vendorhead hide-mobile">Vendor</th>'+
     emps.map(function(e){ return '<th class="sk-emphead">'+esc2(_skFirstName(e))+'</th>'; }).join('')+
@@ -197,8 +239,21 @@ function _skRenderMatrix(lines, emps) {
 
   var body = lines.map(function(p){
     var v = _skVendorFor(p);
+    // Gulfit Relevant toggle. Managers get an active checkbox; non-
+    // managers see the same icon but with disabled cursor — defense in
+    // depth since the screen is manager-gated anyway, but matches the
+    // certificates UI pattern.
+    var checked = !!p.is_gulfit_relevant;
+    var canEdit = !!isManager;
+    var badge = checked
+      ? '<span class="sk-gulfit-badge" title="Gulfit Relevant">🟢</span>'
+      : '<span class="sk-gulfit-badge sk-gulfit-badge-off" title="Not Gulfit Relevant">⚪</span>';
+    var gulfitCell = canEdit
+      ? '<td class="sk-gulfitcell" onclick="toggleProductLineGulfit('+p.id+', '+checked+', this)" title="Toggle Gulfit Relevant">'+badge+'</td>'
+      : '<td class="sk-gulfitcell sk-gulfitcell-readonly" title="Gulfit Relevant — manager-only">'+badge+'</td>';
     return '<tr>'+
-      '<td class="sk-rowhead"><strong>'+esc2(p.name)+'</strong></td>'+
+      gulfitCell+
+      '<td class="sk-rowhead"><strong>'+esc2(p.name)+'</strong>'+(checked?' <span class="sk-gulfit-tag">Gulfit</span>':'')+'</td>'+
       '<td class="sk-vendorhead hide-mobile">'+esc2(v?v.name:'—')+'</td>'+
       emps.map(function(e){
         var sk = byKey[e+'|'+p.id];
@@ -227,11 +282,12 @@ function _skRenderAccordion(lines, emps) {
       var sk = byKey[e+'|'+p.id];
       var v = _skVendorFor(p);
       var pill = sk ? _skPillHtml(sk, true) : '<span class="sk-pill sk-pill-empty">—</span>';
+      var gulfitTag = p.is_gulfit_relevant ? ' <span class="sk-gulfit-tag">Gulfit</span>' : '';
       var onclick = sk
         ? 'openSkillModal('+sk.id+')'
         : 'openSkillModal(null, '+JSON.stringify(e).replace(/"/g,'&quot;')+', '+p.id+')';
       return '<div class="sk-acc-row" onclick="'+onclick+'">'+
-        '<div class="sk-acc-row-name"><strong>'+esc2(p.name)+'</strong><span class="dim" style="font-size:11px">'+esc2(v?v.name:'—')+'</span></div>'+
+        '<div class="sk-acc-row-name"><strong>'+esc2(p.name)+'</strong>'+gulfitTag+'<span class="dim" style="font-size:11px">'+esc2(v?v.name:'—')+'</span></div>'+
         '<div class="sk-acc-row-pill">'+pill+'</div>'+
       '</div>';
     }).join('');
@@ -335,6 +391,48 @@ function _skShowModalError(msg) {
   if (!el) return;
   el.textContent = msg;
   el.style.display = '';
+}
+
+// ── GULFIT RELEVANT TOGGLE (v90) ─────────────────────────────────
+// Manager-only toggle of product_lines.is_gulfit_relevant from the
+// Skills Matrix. Optimistic UI: flip the cell immediately so the
+// user gets instant feedback, then UPDATE in the background. If the
+// UPDATE returns zero rows (the v74 silent-RLS-fail class), revert
+// the in-memory PRODUCT_LINES entry and re-render — the cell snaps
+// back, a toast explains why. Re-query pattern from the v76 fix.
+async function toggleProductLineGulfit(productLineId, currentValue, cellEl) {
+  if (!await requireAuth()) return;
+  if (!isManager) { showError('Manager access only.'); return; }
+  var newValue = !currentValue;
+
+  // Optimistic local update — flip in-memory state + re-render so the
+  // chip-bar counts + matrix cell update without a full re-fetch.
+  var p = (PRODUCT_LINES||[]).find(function(x){ return x.id === productLineId; });
+  if (!p) { showError('Product line not found in cache. Refresh and try again.'); return; }
+  var originalValue = !!p.is_gulfit_relevant;
+  p.is_gulfit_relevant = newValue;
+  renderSkillsMatrix();
+
+  // Background save + smoke-test re-query. The .select() forces PostgREST
+  // to return the updated row; zero rows back means RLS blocked the
+  // write (this is the v74/v76 silent-fail case). Without the .select()
+  // a denied update returns 204 + empty body and looks identical to a
+  // successful one — we'd celebrate without anything having changed.
+  var upd = await sb.from('product_lines')
+    .update({ is_gulfit_relevant: newValue })
+    .eq('id', productLineId)
+    .select('id, is_gulfit_relevant');
+
+  var saved = upd && upd.data && upd.data[0];
+  if (upd.error || !saved || saved.is_gulfit_relevant !== newValue) {
+    // Revert
+    p.is_gulfit_relevant = originalValue;
+    renderSkillsMatrix();
+    var msg = (upd && upd.error) ? upd.error.message : 'Server rejected the change (manager-only).';
+    showError('Could not update Gulfit Relevant — ' + msg);
+    return;
+  }
+  showToast((newValue ? 'Marked as Gulfit Relevant ✓' : 'Cleared Gulfit Relevant ✓'));
 }
 
 // ── SAVE / DELETE ─────────────────────────────────────────────────
