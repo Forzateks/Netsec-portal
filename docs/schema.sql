@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════
 -- NetSec Portal — full database schema
--- Last refreshed: 2026-05-22 for v90 (product_lines.is_gulfit_relevant).
+-- Last refreshed: 2026-05-22 for v91 (team_members table + trigger).
 -- Originally generated from project rxxcrlobbtlvjgcqgjjm by querying
 -- the Postgres catalog (see docs/disaster-recovery.md).
 -- DISCIPLINE: refresh this file in the SAME commit as any DDL-changing
@@ -63,6 +63,15 @@ $$;
 
 -- Stamp employee_skills.updated_at on every UPDATE.
 CREATE OR REPLACE FUNCTION public._employee_skills_touch_updated_at()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
+-- v91: stamp team_members.updated_at on every UPDATE.
+CREATE OR REPLACE FUNCTION public._team_members_touch_updated_at()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   NEW.updated_at := now();
@@ -450,6 +459,23 @@ CREATE TABLE public.dashboard_alert_snoozes (
   created_at timestamptz DEFAULT now() NOT NULL
 );
 
+-- v91: team members migrated from data/team.json. JSON file kept as
+-- offline fallback in js/features/team.js (DB-first, JSON-fallback).
+CREATE TABLE public.team_members (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  full_name text NOT NULL,
+  role text NOT NULL,
+  section text NOT NULL,
+  email text,
+  phone text,
+  country text NOT NULL,
+  photo_url text,
+  sort_order integer NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- ── 5. PRIMARY KEYS / UNIQUE / CHECK ───────────────────────────────
 
 ALTER TABLE public.user_profiles            ADD CONSTRAINT user_profiles_pkey            PRIMARY KEY (email);
@@ -532,6 +558,12 @@ ALTER TABLE public.dashboard_alert_snoozes  ADD CONSTRAINT dashboard_alert_snooz
 ALTER TABLE public.dashboard_alert_snoozes  ADD CONSTRAINT dashboard_alert_snoozes_user_email_alert_type_alert_ref_id_key
   UNIQUE (user_email, alert_type, alert_ref_id);
 
+ALTER TABLE public.team_members             ADD CONSTRAINT team_members_pkey             PRIMARY KEY (id);
+ALTER TABLE public.team_members             ADD CONSTRAINT team_members_section_check
+  CHECK (section IN ('sales', 'presales', 'post_sales_technical'));
+ALTER TABLE public.team_members             ADD CONSTRAINT team_members_country_check
+  CHECK (country IN ('UAE', 'KSA'));
+
 -- ── 6. FOREIGN KEYS ────────────────────────────────────────────────
 
 ALTER TABLE public.user_profiles
@@ -599,6 +631,9 @@ CREATE INDEX notifications_recipient_unread           ON public.notifications   
 
 CREATE INDEX idx_dashboard_alert_snoozes_user_until   ON public.dashboard_alert_snoozes USING btree (user_email, snoozed_until);
 
+-- v91: partial index — only rows the app actually queries (is_active=true).
+CREATE INDEX idx_team_members_section_sort            ON public.team_members           USING btree (section, sort_order) WHERE (is_active = true);
+
 -- ── 8. ROW-LEVEL SECURITY ──────────────────────────────────────────
 -- Every table has RLS enabled. Policies fall into three patterns:
 --   (a) "_authed"   — auth.role() = 'authenticated' (Step 1 RLS, broad).
@@ -631,6 +666,7 @@ ALTER TABLE public.employee_skills         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kb_articles             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dashboard_alert_snoozes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.team_members            ENABLE ROW LEVEL SECURITY;
 
 -- user_profiles
 CREATE POLICY user_profiles_authed ON public.user_profiles FOR ALL
@@ -724,6 +760,12 @@ CREATE POLICY dashboard_alert_snoozes_insert_own ON public.dashboard_alert_snooz
 CREATE POLICY dashboard_alert_snoozes_update_own ON public.dashboard_alert_snoozes FOR UPDATE TO authenticated USING (lower(user_email) = lower(auth.jwt() ->> 'email')) WITH CHECK (lower(user_email) = lower(auth.jwt() ->> 'email'));
 CREATE POLICY dashboard_alert_snoozes_delete_own ON public.dashboard_alert_snoozes FOR DELETE TO authenticated USING (lower(user_email) = lower(auth.jwt() ->> 'email'));
 
+-- team_members — broad authenticated read, manager-only write (v91).
+CREATE POLICY team_members_select_authenticated ON public.team_members FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
+CREATE POLICY team_members_insert_manager       ON public.team_members FOR INSERT TO authenticated WITH CHECK (is_manager_user());
+CREATE POLICY team_members_update_manager       ON public.team_members FOR UPDATE TO authenticated USING (is_manager_user()) WITH CHECK (is_manager_user());
+CREATE POLICY team_members_delete_manager       ON public.team_members FOR DELETE TO authenticated USING (is_manager_user());
+
 -- ── 9. TRIGGERS ────────────────────────────────────────────────────
 
 CREATE TRIGGER trg_employee_skills_touch
@@ -733,6 +775,11 @@ CREATE TRIGGER trg_employee_skills_touch
 CREATE TRIGGER engagement_employee_edit_perms
   BEFORE UPDATE ON public.engagements
   FOR EACH ROW EXECUTE FUNCTION public.enforce_engagement_employee_edit_perms();
+
+-- v91
+CREATE TRIGGER trg_team_members_touch
+  BEFORE UPDATE ON public.team_members
+  FOR EACH ROW EXECUTE FUNCTION public._team_members_touch_updated_at();
 
 COMMIT;
 

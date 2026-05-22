@@ -1,101 +1,113 @@
 {
-  "_comment": "Canonical data for the Team Portfolio module (v83). Single source of truth for Meet the Team / Portfolio Mapping / RFP Process. Edit and commit; no admin UI. Roles, products and RFP stages are v1 placeholders pending Venkat's review.",
+  "_comment": "FALLBACK ONLY (v91). Team members now live in the team_members Supabase table — js/features/team.js loads from DB first and falls back to this file only when the DB is unreachable (e.g. public-route reads blocked by RLS, or offline). Manually re-sync this file when the canonical DB diverges meaningfully (roster changes, role updates, etc.). Products + rfpStages are still authoritative here — they did not migrate to DB in v91.",
   "team": [
     {
-      "id": "adil-shaikh",
+      "id": "mohammed-adil-shaikh",
       "name": "Mohammed Adil Shaikh",
-      "role": "Business Development Manager",
-      "category": "BDM",
+      "role": "Regional Business Unit Manager – Network Security",
+      "category": "sales",
       "email": "adil@gulfitd.com",
       "phone": "",
       "location": "UAE",
       "photo": "images/team/adil-shaikh.jpg",
       "publicVisible": true,
-      "displayOrder": 1
+      "displayOrder": 10
+    },
+    {
+      "id": "ansil-nazar",
+      "name": "Ansil Nazar",
+      "role": "Business Development Manager",
+      "category": "sales",
+      "email": "",
+      "phone": "",
+      "location": "UAE",
+      "photo": "images/team/ansil-nazar.jpg",
+      "publicVisible": true,
+      "displayOrder": 20
     },
     {
       "id": "darayus-dodi",
       "name": "Darayus Dodi",
       "role": "Pre-Sales Consultant",
-      "category": "Presales",
+      "category": "presales",
       "email": "darayus@gulfitd.com",
       "phone": "",
       "location": "UAE",
       "photo": "images/team/darayus-dodi.jpg",
       "publicVisible": true,
-      "displayOrder": 1
+      "displayOrder": 10
     },
     {
       "id": "venkatesan",
       "name": "Venkatesan",
       "role": "Manager / Team Lead",
-      "category": "Technical",
+      "category": "post_sales_technical",
       "email": "venkat@gulfitd.com",
       "phone": "",
       "location": "UAE",
       "photo": "images/team/venkatesan.jpg",
       "publicVisible": true,
-      "displayOrder": 1
+      "displayOrder": 10
     },
     {
       "id": "ahmed-ali",
       "name": "Ahmed Ali",
       "role": "Senior Network Engineer",
-      "category": "Technical",
+      "category": "post_sales_technical",
       "email": "ahmed@gulfitd.com",
       "phone": "",
       "location": "UAE",
       "photo": "images/team/ahmed-ali.jpg",
       "publicVisible": true,
-      "displayOrder": 2
+      "displayOrder": 20
     },
     {
       "id": "mohammed-nasif",
       "name": "Mohammed Nasif",
       "role": "Network Engineer",
-      "category": "Technical",
+      "category": "post_sales_technical",
       "email": "nasif@gulfitd.com",
       "phone": "",
       "location": "UAE",
       "photo": "images/team/mohammed-nasif.jpg",
       "publicVisible": true,
-      "displayOrder": 3
+      "displayOrder": 30
     },
     {
       "id": "prasanth",
       "name": "Prasanth",
       "role": "Senior Network Engineer",
-      "category": "Technical",
-      "email": "prasanth@gulfitd.com",
+      "category": "post_sales_technical",
+      "email": "prasanth.p@gulfitd.com",
       "phone": "",
       "location": "UAE",
       "photo": "images/team/prasanth.jpg",
       "publicVisible": true,
-      "displayOrder": 4
+      "displayOrder": 40
     },
     {
       "id": "salman-aziz",
       "name": "Salman Aziz",
       "role": "Senior Network Engineer",
-      "category": "Technical",
+      "category": "post_sales_technical",
       "email": "salman@gulfitd.com",
       "phone": "",
       "location": "KSA",
       "photo": "images/team/salman-aziz.jpg",
       "publicVisible": true,
-      "displayOrder": 5
+      "displayOrder": 50
     },
     {
       "id": "mohammed-afsal",
       "name": "Mohammed Afsal",
       "role": "Network Engineer",
-      "category": "Technical",
+      "category": "post_sales_technical",
       "email": "afsal@gulfitd.com",
       "phone": "",
       "location": "KSA",
       "photo": "images/team/mohammed-afsal.jpg",
       "publicVisible": true,
-      "displayOrder": 6
+      "displayOrder": 60
     }
   ],
   "products": [
@@ -190,7 +202,7 @@
       "label": "RFP Received from BDM",
       "type": "action",
       "owner": "BDM",
-      "ownerIds": ["adil-shaikh"],
+      "ownerIds": ["mohammed-adil-shaikh"],
       "description": "BDM receives the RFP from the customer and forwards it to the networking team for technical assessment.",
       "artifacts": [],
       "nextStages": ["review"]

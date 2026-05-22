@@ -2327,6 +2327,58 @@
   </div>
 </div>
 
+<!-- ── ADD TEAM MEMBER MODAL (v91) ───────────────────────────────────
+     Triggered by openAddTeamMemberModal(section) from the per-section
+     "+ Add Member" button. Required fields match the DB NOT NULL +
+     CHECK constraints; INSERT happens via saveAddTeamMember() which
+     wraps requireAuth() + RLS-aware insert(). Section pre-selects to
+     whichever section the button lives under. -->
+<div class="modal-overlay" id="add-team-member-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">Add Team Member</div>
+    <div id="atm-error" class="alert alert-error" style="display:none;margin-bottom:12px"></div>
+    <div class="form-group">
+      <label>Full Name *</label>
+      <input type="text" id="atm-name" placeholder="e.g. Anna Example">
+    </div>
+    <div class="form-group">
+      <label>Role / Designation *</label>
+      <input type="text" id="atm-role" placeholder="e.g. Network Engineer">
+    </div>
+    <div class="form-group">
+      <label>Section *</label>
+      <select id="atm-section">
+        <option value="sales">Sales</option>
+        <option value="presales">Presales</option>
+        <option value="post_sales_technical">Post Sales (Technical)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Country *</label>
+      <select id="atm-country">
+        <option value="UAE">UAE</option>
+        <option value="KSA">KSA</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Email (optional)</label>
+      <input type="email" id="atm-email" placeholder="name@gulfitd.com">
+    </div>
+    <div class="form-group">
+      <label>Phone (optional)</label>
+      <input type="text" id="atm-phone" placeholder="+971 50 123 4567">
+    </div>
+    <div class="form-group">
+      <label>Photo URL (optional)</label>
+      <input type="text" id="atm-photo" placeholder="images/team/jane-doe.jpg or https://...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAddTeamMemberModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAddTeamMember()"><i data-lucide="user-plus" class="btn-icon"></i>Save Member</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── CONFIRM MODAL — shared across the app for destructive actions ── -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal" style="max-width:480px">

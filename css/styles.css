@@ -2259,11 +2259,36 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .team-tab-body{padding:0 8px}
 .team-empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 20px;background:#F8FAFC;border-radius:8px}
 
-/* Category sections with colored accent bar above the heading. */
+/* v91: Regional BUs info box — static informational card at the top of
+   Meet the Team. Subtle teal/navy tint to read as "info, not action". */
+.team-regional-bu{
+  display:flex;align-items:center;gap:14px;
+  background:linear-gradient(135deg,#F0F9FF,#E0F2FE);
+  border:1px solid #BAE6FD;
+  border-radius:10px;
+  padding:14px 18px;margin-bottom:28px;
+  max-width:520px;
+}
+.team-regional-bu-ico{width:26px;height:26px;color:var(--navy);flex-shrink:0}
+.team-regional-bu-title{font-size:14px;font-weight:700;color:var(--navy);line-height:1.2}
+.team-regional-bu-sub{font-size:13px;color:#0E7490;margin-top:2px}
+
+/* Category sections with colored accent bar above the heading. v91:
+   header is flex so the "+ Add Member" button can sit on the right. */
 .team-cat-section{margin-bottom:40px}
 .team-cat-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
 .team-cat-bar{width:4px;height:24px;border-radius:2px}
-.team-cat-title{font-size:18px;font-weight:700;color:var(--navy);letter-spacing:-.2px;margin:0}
+.team-cat-title{font-size:18px;font-weight:700;color:var(--navy);letter-spacing:-.2px;margin:0;flex:1}
+/* "+ Add Member" button — manager-only, hidden on public route via JS. */
+.team-add-member-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:13px;font-weight:600;color:var(--teal);
+  background:transparent;border:1px solid var(--teal);
+  border-radius:8px;padding:6px 12px;cursor:pointer;
+  font-family:inherit;transition:background .12s,color .12s;
+}
+.team-add-member-btn:hover{background:var(--teal);color:white}
+.team-add-member-ico{width:14px;height:14px}
 
 /* Member card grid — explicit columns at breakpoints so cards never
    collapse to 1-per-row on a wide layout. Cards are capped at 320px
@@ -2305,6 +2330,42 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 .team-card-name{font-size:17px;font-weight:700;color:var(--navy);line-height:1.2}
 .team-card-role{font-size:13px;color:var(--muted);line-height:1.3;min-height:1.3em;margin-top:2px}
+
+/* v91: inline-edit pencil affordance. Hidden by default; appears on
+   hover of the card. Click to start the inline-input flow. Sized to
+   not push the surrounding content around — keeps card height stable. */
+.team-card-name-wrap{display:inline-flex;align-items:center;gap:6px;justify-content:center;position:relative}
+.team-card-edit-pencil{
+  background:transparent;border:1px solid transparent;border-radius:6px;
+  padding:2px 4px;cursor:pointer;opacity:0;
+  transition:opacity .12s,background .12s,border-color .12s;
+  display:inline-flex;align-items:center;line-height:1;
+}
+.team-card-edit-pencil i{width:13px;height:13px;color:var(--muted)}
+.team-card-edit-pencil:hover{background:#F1F5F9;border-color:#E2E8F0}
+.team-card-edit-pencil:hover i{color:var(--teal)}
+.team-card:hover .team-card-edit-pencil{opacity:1}
+.team-card-edit-pencil-inline{padding:1px 4px}
+/* The inline <input> rendered while editing — replaces the span so the
+   user types into the same visual slot. */
+.team-card-edit-input{
+  font:inherit;font-size:16px;font-weight:600;color:var(--navy);
+  text-align:center;padding:4px 8px;
+  border:1px solid var(--teal);border-radius:6px;outline:none;
+  background:white;width:auto;min-width:160px;max-width:90%;
+}
+.team-card-edit-input:focus{box-shadow:0 0 0 3px rgba(0,160,210,.15)}
+/* "+ Add phone" button — small, manager-only, replaces the absent
+   phone line. Visible always (no hover gate) since the row is empty
+   without it. */
+.team-card-phone-empty{justify-content:center}
+.team-card-add-phone{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:12px;color:var(--teal);font-weight:600;
+  background:transparent;border:1px dashed #CBD5E1;border-radius:6px;
+  padding:4px 10px;cursor:pointer;font-family:inherit;
+}
+.team-card-add-phone:hover{border-color:var(--teal);background:#F0F9FF}
 
 /* Email + location share a single tight row at the bottom of the card,
    per the v1 spec. Email left, location badge right; wraps to two rows
