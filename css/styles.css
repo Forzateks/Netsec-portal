@@ -2559,3 +2559,62 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .rfp-stage-label{font-size:13px}
   .rfp-flow-inner .rfp-stage:not(:first-child)::before{height:14px;top:-18px}
 }
+
+/* ──────────────────── TASKS (v93) ──────────────────── */
+.tasks-page-header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.tasks-page-title{display:flex;align-items:center;gap:10px;font-size:24px;font-weight:700;color:var(--navy)}
+.tasks-page-title-ico{width:24px;height:24px;color:var(--teal)}
+.tasks-page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+
+.tasks-table{width:100%;border-collapse:collapse;font-size:13px}
+.tasks-table thead th{background:#F8FAFC;color:var(--navy);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.tasks-table tbody td{padding:12px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+.tasks-table tbody tr:hover{background:#F8FAFC}
+.tasks-table tbody tr:last-child td{border-bottom:0}
+
+.task-row-archived{opacity:.55;background:#FAFBFC}
+.task-row-archived:hover{opacity:.85}
+
+/* Priority badges — keep colour cues consistent with severity */
+.badge.task-pri-low{background:#F1F5F9;color:#475569}
+.badge.task-pri-medium{background:#EFF6FF;color:#1E40AF}
+.badge.task-pri-high{background:#FFF7ED;color:#9A3412}
+.badge.task-pri-urgent{background:#FEE2E2;color:#991B1B}
+
+/* Status badges (used when the row is read-only / archived) */
+.badge.task-st-yts{background:#F1F5F9;color:#475569}
+.badge.task-st-ong{background:#FEF3C7;color:#92400E}
+.badge.task-st-done{background:#D1FAE5;color:#065F46}
+.badge.task-st-cnc{background:#F1F5F9;color:#94A3B8;text-decoration:line-through}
+
+/* Inline status dropdown — picks up the same colour family as the
+   matching badge so the cell still reads as a status at a glance. */
+.task-status-select{padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-size:11.5px;font-weight:600;cursor:pointer;background:#FFFFFF;color:var(--navy);min-width:120px}
+.task-status-select.task-st-yts{background:#F1F5F9;color:#475569}
+.task-status-select.task-st-ong{background:#FEF3C7;color:#92400E;border-color:#FDE68A}
+.task-status-select.task-st-done{background:#D1FAE5;color:#065F46;border-color:#A7F3D0}
+.task-status-select.task-st-cnc{background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0}
+.task-status-select:focus{outline:2px solid var(--teal);outline-offset:1px}
+
+/* Assignee picker — checkbox grid in create/edit modal */
+.task-assignees-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;padding:10px;background:#F8FAFC;border:1px solid var(--border);border-radius:8px}
+.task-assignee-chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--navy);cursor:pointer;padding:6px 8px;border-radius:6px;background:#FFFFFF;border:1px solid transparent;transition:border-color .15s}
+.task-assignee-chk:hover{border-color:var(--teal)}
+.task-assignee-chk input[type=checkbox]{cursor:pointer;accent-color:var(--teal)}
+.task-assignee-chk input[type=checkbox]:disabled{cursor:not-allowed}
+
+/* Field-level lockdown for non-managers in edit modal. Visually mutes
+   the control so the editing user understands they can't change it. */
+.task-modal-readonly{background:#F1F5F9!important;color:#64748B!important;cursor:not-allowed!important;border-color:#E2E8F0!important;opacity:.75}
+#task-modal-assignees.task-modal-readonly{background:#F1F5F9!important}
+#task-modal-assignees.task-modal-readonly .task-assignee-chk{cursor:not-allowed;opacity:.7}
+#task-modal-assignees.task-modal-readonly .task-assignee-chk:hover{border-color:transparent}
+
+/* Mobile: title bar stacks, table stays scrollable via .table-wrap */
+@media(max-width:640px){
+  .tasks-page-header{flex-direction:column;align-items:flex-start;gap:10px}
+  .tasks-page-title{font-size:20px}
+  .tasks-table thead th,.tasks-table tbody td{padding:9px 10px;font-size:12px}
+  .task-status-select{min-width:104px;font-size:11px}
+  .task-assignees-grid{grid-template-columns:1fr 1fr}
+}

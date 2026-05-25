@@ -220,6 +220,11 @@
       <div class="sidebar-subitem" id="sbi-tracker-pocs"     onclick="navigateSub('tracker','pocs')"><i data-lucide="target" class="sidebar-subicon"></i>POCs</div>
     </div>
   </div>
+  <!-- v93: Tasks. Badge counts open tasks (manager = all open; employee = own open). -->
+  <div class="sidebar-item" id="tab-tasks" onclick="showScreen('tasks');closeSidebarOnMobile()">
+    <i data-lucide="check-square" class="sidebar-icon"></i>Tasks
+    <span class="notif-badge" id="tasks-badge" style="display:none">0</span>
+  </div>
 
   <!-- ── CUSTOMERS & DEALS (manager-only) — entire group hides for employees ── -->
   <div id="sidebar-customers-deals-wrap" style="display:none">
@@ -1799,6 +1804,43 @@
   <div id="team-content"></div>
 </div>
 
+<!-- ══ TASKS SCREEN (v93) ══
+     Team task list with multi-owner support. Read-all-authed, write
+     gated by RLS — manager can do everything, assignees can update
+     fields on their tasks (column-level restrictions enforced in
+     the frontend). Render driven by js/features/tasks.js. -->
+<div class="screen" id="screen-tasks">
+  <div class="tasks-page-header">
+    <div class="tasks-page-title-wrap">
+      <div class="tasks-page-title"><i data-lucide="check-square" class="tasks-page-title-ico"></i>Tasks</div>
+      <div class="tasks-page-sub">Manage team task assignments</div>
+    </div>
+    <button class="btn btn-primary manager-only-el" id="tasks-new-btn" onclick="openCreateTaskModal()"><i data-lucide="plus" class="btn-icon"></i>New Task</button>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      <input id="tasks-search" oninput="renderTasksList()" placeholder="Search task or description..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:200px;flex:1">
+      <label style="font-size:12px;color:var(--muted);font-weight:600">Owner:</label>
+      <select id="tasks-flt-owner" onchange="renderTasksList()" style="width:auto;padding:7px 10px;font-size:13px">
+        <option value="">All Owners</option>
+        <option value="__unassigned__">Unassigned</option>
+      </select>
+      <label style="font-size:12px;color:var(--muted);font-weight:600">Status:</label>
+      <select id="tasks-flt-status" onchange="renderTasksList()" style="width:auto;padding:7px 10px;font-size:13px">
+        <option value="">All Statuses</option>
+        <option value="yet_to_start">Yet to start</option>
+        <option value="ongoing">Ongoing</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      <label class="sk-toggle" style="margin-left:6px"><input type="checkbox" id="tasks-flt-archived" onchange="renderTasksList()"> Show archived</label>
+      <button class="btn btn-sm btn-ghost" onclick="clearTasksFilters()">✕ Clear</button>
+    </div>
+  </div>
+  <div id="tasks-load" class="loading"><div class="spinner"></div>Loading tasks...</div>
+  <div id="tasks-content"></div>
+</div>
+
 </div><!-- /main -->
 </div><!-- /main-area -->
 </div><!-- /app-shell -->
@@ -2379,6 +2421,74 @@
   </div>
 </div>
 
+<!-- ── TASK MODAL (v93) — Create + Edit reuse the same shell ──────
+     openCreateTaskModal()       → blank form, save calls insert
+     openEditTaskModal(taskId)   → pre-populated, save calls update
+     For employee assignees opening an Edit on their own task, the
+     manager-only fields are disabled via task-modal-readonly class
+     in tasks.js. -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title" id="task-modal-title">New Task</div>
+    <div id="task-modal-error" class="alert alert-error" style="display:none;margin-bottom:12px"></div>
+    <input type="hidden" id="task-modal-id" value="">
+    <div class="form-group">
+      <label>Title *</label>
+      <input type="text" id="task-modal-title-input" data-mgr-only="1" maxlength="240" placeholder="e.g. Update AMC contract spreadsheet">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="task-modal-description" data-mgr-only="1" rows="3" placeholder="Optional context for the assignee(s)..."></textarea>
+    </div>
+    <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>Priority *</label>
+        <select id="task-modal-priority" data-mgr-only="1">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status *</label>
+        <select id="task-modal-status">
+          <option value="yet_to_start" selected>Yet to start</option>
+          <option value="ongoing">Ongoing</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" id="task-modal-start" data-mgr-only="1">
+      </div>
+      <div class="form-group">
+        <label>ETA</label>
+        <input type="date" id="task-modal-eta" data-mgr-only="1">
+      </div>
+      <div class="form-group">
+        <label>End Date</label>
+        <input type="date" id="task-modal-end" data-mgr-only="1">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Assign To * <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">at least one</span></label>
+      <div id="task-modal-assignees" data-mgr-only="1" class="task-assignees-grid"></div>
+    </div>
+    <div class="form-group">
+      <label>Remarks</label>
+      <textarea id="task-modal-remarks" rows="2" placeholder="Anyone assigned can edit remarks..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeTaskModal()">Cancel</button>
+      <button class="btn btn-primary" id="task-modal-save-btn" onclick="saveTaskModal()"><i data-lucide="save" class="btn-icon"></i>Create Task</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── CONFIRM MODAL — shared across the app for destructive actions ── -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal" style="max-width:480px">
@@ -2577,6 +2687,7 @@
 <script src="js/features/ps-deals.js"></script>
 <script src="js/features/team-skills.js"></script>
 <script src="js/features/team.js"></script>
+<script src="js/features/tasks.js"></script>
 <script src="js/core/init.js"></script>
 </body>
 </html>

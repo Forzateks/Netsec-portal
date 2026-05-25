@@ -85,11 +85,20 @@ function toggleNotifDropdown() {
 }
 
 function startNotifPolling() {
-  // Initial render + 60s polling + focus refresh
+  // Initial render + 60s polling + focus refresh. Tasks badge piggybacks
+  // on the same timer so we don't run two parallel intervals — both refresh
+  // counters that the sidebar shows side-by-side.
   renderNotifications();
+  if (typeof updateTasksBadge === 'function') updateTasksBadge();
   if (_notifPollTimer) clearInterval(_notifPollTimer);
-  _notifPollTimer = setInterval(renderNotifications, 60000);
-  window.addEventListener('focus', renderNotifications);
+  _notifPollTimer = setInterval(function(){
+    renderNotifications();
+    if (typeof updateTasksBadge === 'function') updateTasksBadge();
+  }, 60000);
+  window.addEventListener('focus', function(){
+    renderNotifications();
+    if (typeof updateTasksBadge === 'function') updateTasksBadge();
+  });
 }
 
 // Helper used by unified-sessions.js when an approved OT session is

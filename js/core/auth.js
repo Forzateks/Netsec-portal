@@ -269,6 +269,7 @@ async function initApp(user) {
   });
   if (isManager) updateNotifBadge();
   if (typeof startNotifPolling === 'function') startNotifPolling();
+  if (typeof updateTasksBadge === 'function') updateTasksBadge();
 }
 
 // == AUTH-STATE VALIDATION (v82) ==================================

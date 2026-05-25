@@ -115,6 +115,7 @@ function showScreen(name) {
   if (name==='amc') { if (typeof loadAMCContracts === 'function') loadAMCContracts(); }
   if (name==='psdeals') { if (typeof loadPsDeals === 'function') loadPsDeals(); }
   if (name==='skills')  { if (typeof loadSkills === 'function')  loadSkills(); }
+  if (name==='tasks')   { if (typeof loadTasks === 'function')   loadTasks(); }
 }
 
 // Parent-click handler for the projects accordions (Sessions / Reports).
