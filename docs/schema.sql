@@ -138,6 +138,9 @@ CREATE TABLE public.user_profiles (
   user_id uuid,
   employee_name text NOT NULL,
   is_manager boolean DEFAULT false,
+  -- v95: drives the dashboard backup-staleness banner. Only Venkat +
+  -- Nasif default to true; backup_log INSERT is gated on this flag.
+  is_backup_responsible boolean NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now()
 );
 
@@ -542,6 +545,20 @@ ALTER TABLE public.tasks
   ADD COLUMN IF NOT EXISTS frequency text NOT NULL DEFAULT 'general'::text,
   ADD COLUMN IF NOT EXISTS period_key text;
 
+-- v95: append-only audit log of every Full Backup .zip download.
+-- Used by the dashboard staleness banner + Admin Tools "Last backup"
+-- pill. No DELETE/UPDATE policies — log is intentionally immutable.
+CREATE TABLE public.backup_log (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  taken_by text NOT NULL,
+  taken_by_email text NOT NULL,
+  taken_at timestamptz NOT NULL DEFAULT now(),
+  file_size_bytes bigint,
+  table_count integer,
+  row_count integer,
+  notes text
+);
+
 -- ── 5. PRIMARY KEYS / UNIQUE / CHECK ───────────────────────────────
 
 ALTER TABLE public.user_profiles            ADD CONSTRAINT user_profiles_pkey            PRIMARY KEY (email);
@@ -652,6 +669,8 @@ ALTER TABLE public.task_templates           ADD CONSTRAINT task_templates_freque
 ALTER TABLE public.task_template_assignees  ADD CONSTRAINT task_template_assignees_pkey PRIMARY KEY (id);
 ALTER TABLE public.task_template_assignees  ADD CONSTRAINT task_template_assignees_template_id_assigned_to_key UNIQUE (template_id, assigned_to);
 
+ALTER TABLE public.backup_log               ADD CONSTRAINT backup_log_pkey             PRIMARY KEY (id);
+
 -- ── 6. FOREIGN KEYS ────────────────────────────────────────────────
 
 ALTER TABLE public.user_profiles
@@ -746,6 +765,9 @@ CREATE INDEX idx_template_assignees_template          ON public.task_template_as
 -- Dedup guard for generated instances: at most one per template per period.
 CREATE UNIQUE INDEX idx_tasks_template_period         ON public.tasks                  USING btree (template_id, period_key) WHERE (template_id IS NOT NULL);
 
+-- v95: ordered scan for "most recent backup" + the dashboard banner query.
+CREATE INDEX idx_backup_log_taken_at                  ON public.backup_log             USING btree (taken_at DESC);
+
 -- ── 8. ROW-LEVEL SECURITY ──────────────────────────────────────────
 -- Every table has RLS enabled. Policies fall into three patterns:
 --   (a) "_authed"   — auth.role() = 'authenticated' (Step 1 RLS, broad).
@@ -783,6 +805,7 @@ ALTER TABLE public.tasks                   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_assignments        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_templates          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_template_assignees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.backup_log              ENABLE ROW LEVEL SECURITY;
 
 -- user_profiles
 CREATE POLICY user_profiles_authed ON public.user_profiles FOR ALL
@@ -909,6 +932,18 @@ CREATE POLICY task_templates_delete_manager       ON public.task_templates FOR D
 CREATE POLICY template_assignees_select_authenticated ON public.task_template_assignees FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
 CREATE POLICY template_assignees_insert_manager       ON public.task_template_assignees FOR INSERT TO authenticated WITH CHECK (is_manager_user());
 CREATE POLICY template_assignees_delete_manager       ON public.task_template_assignees FOR DELETE TO authenticated USING (is_manager_user());
+
+-- backup_log (v95) — broad authenticated read (Admin Tools pill is
+-- informational for everyone); INSERT gated on user_profiles.is_backup_responsible
+-- so only Venkat + Nasif can append rows. Log is intentionally append-only:
+-- no UPDATE or DELETE policies.
+CREATE POLICY backup_log_select_authenticated         ON public.backup_log FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
+CREATE POLICY backup_log_insert_backup_responsible    ON public.backup_log FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.user_profiles
+    WHERE LOWER(email) = LOWER(auth.jwt() ->> 'email')
+      AND is_backup_responsible = true
+  ));
 
 -- ── 9. TRIGGERS ────────────────────────────────────────────────────
 

@@ -725,6 +725,7 @@
       <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Download the full database snapshot, the monthly OT report, or a single-table export.</div>
       <div class="dash-backup-row">
         <button class="btn btn-primary" onclick="backupExcel('all')"><i data-lucide="download" class="btn-icon"></i>Full Backup (Excel + SQL .zip)</button>
+        <div class="last-backup-pill" id="last-backup-pill"></div>
         <button class="btn btn-ghost" id="monthly-report-btn" onclick="downloadMonthlyReport()"><i data-lucide="file-text" class="btn-icon"></i>Monthly OT Report</button>
       </div>
       <details class="dash-backup-details">

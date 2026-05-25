@@ -136,7 +136,7 @@ async function doLogout() {
   try {
     await sb.auth.signOut();
   } finally {
-    currentUser = ''; currentEmail = ''; isManager = false;
+    currentUser = ''; currentEmail = ''; isManager = false; isBackupResponsible = false;
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('login-email').value = '';
@@ -178,7 +178,7 @@ async function doChangePassword() {
 // Look up the user_profiles row for the signed-in user
 async function fetchUserProfile(authUser) {
   const {data, error} = await sb.from('user_profiles')
-    .select('user_id,email,employee_name,is_manager')
+    .select('user_id,email,employee_name,is_manager,is_backup_responsible')
     .or('user_id.eq.'+authUser.id+',email.eq.'+authUser.email).limit(1);
   if (error || !data || !data.length) return null;
   return data[0];
@@ -208,6 +208,7 @@ async function initAppFromUser(authUser) {
   currentUser  = profile.employee_name;
   currentEmail = profile.email || authUser.email;
   isManager    = !!profile.is_manager;
+  isBackupResponsible = !!profile.is_backup_responsible;
   await initApp(currentUser);
 }
 

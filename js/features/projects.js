@@ -1722,7 +1722,7 @@ function showProjectTab(tab) {
   }
   if (tab==='customer')   { initProjectTab(); renderPjCustomerSummary(); }
   if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
-  if (tab==='otmanager')  { renderManager(); }
+  if (tab==='otmanager')  { renderManager(); if (typeof renderLastBackupPill === 'function') renderLastBackupPill(); }
   if (tab==='custmgr')    { populateProjectDropdowns(); renderCustomersTable(); }
   if (tab==='manage')     { populateProjectDropdowns(); renderManageProjects(); }
   if (tab==='vendors')    { renderVendorsManage(); }

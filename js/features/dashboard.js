@@ -342,6 +342,9 @@ async function renderDashboard() {
     if (isManager) await renderManagerDashboard();
     else            await renderEmployeeDashboard();
     host.dataset.rendered = 'true';
+    // v95: prepend the backup-staleness banner after the dashboard
+    // body has rendered. No-op for users without is_backup_responsible.
+    renderBackupReminderBanner();
   } catch (err) {
     console.error('Dashboard render failed:', err);
     host.innerHTML =
@@ -1435,4 +1438,180 @@ async function _backupFullZip(stamp) {
   } else {
     showToast('Full backup ready (' + BACKUP_TABLES.length + ' tables · ' + totalRows + ' rows) ✓');
   }
+
+  // v95: append to backup_log so the dashboard staleness banner can
+  // clear + the Admin Tools "Last backup" pill refreshes. Best-effort:
+  // a failed INSERT (e.g. user isn't backup-responsible) only logs a
+  // warning — the .zip has already downloaded by this point.
+  try {
+    await logBackup(blob ? blob.size : 0, BACKUP_TABLES.length, totalRows,
+      errors.length ? ('Errors on ' + errors.length + ' table(s): ' + errors.join(', ')) : null);
+  } catch (e) {
+    console.warn('logBackup failed:', e);
+  }
+}
+
+// == BACKUP LOG (v95) =============================================
+// Append-only audit row written after a successful Full Backup .zip
+// build. RLS gates INSERT to is_backup_responsible profiles, so a
+// non-flagged user attempting this gets a polite warning + nothing
+// lands. SELECT is broad-authenticated — Admin Tools shows the pill
+// to everyone for awareness.
+async function logBackup(fileSize, tableCount, rowCount, notes) {
+  var payload = {
+    taken_by:        currentUser || 'Unknown',
+    taken_by_email:  currentEmail || 'unknown',
+    file_size_bytes: fileSize || null,
+    table_count:     tableCount || null,
+    row_count:       rowCount  || null,
+    notes:           notes     || null
+  };
+  var res = await sb.from('backup_log').insert(payload).select('id,taken_at').single();
+  if (res.error) {
+    console.warn('backup_log insert failed:', res.error.message);
+    return null;
+  }
+  // Refresh the dashboard banner + Admin Tools pill in-place so the
+  // user sees their backup register immediately.
+  if (typeof renderBackupReminderBanner === 'function') renderBackupReminderBanner();
+  if (typeof renderLastBackupPill === 'function') renderLastBackupPill();
+  return res.data;
+}
+
+// Fetch the most recent backup_log row. Returns null on miss, the row
+// otherwise. Shared by the dashboard banner + Admin Tools pill so we
+// only ever issue one query per dashboard render (the second call hits
+// the in-flight cache via _lastBackupPromise).
+var _lastBackupCache = { row: null, fetchedAt: 0 };
+var _lastBackupPromise = null;
+async function _fetchLastBackup() {
+  // 30-second client cache — enough to avoid double-querying when both
+  // the banner and the Admin Tools pill render on the same dashboard
+  // load. Cleared on logBackup() success so a fresh backup invalidates.
+  if (_lastBackupCache.row !== null && (Date.now() - _lastBackupCache.fetchedAt) < 30000) {
+    return _lastBackupCache.row;
+  }
+  if (_lastBackupPromise) return _lastBackupPromise;
+  _lastBackupPromise = (async function(){
+    var res = await sb.from('backup_log')
+      .select('id,taken_by,taken_by_email,taken_at,file_size_bytes,table_count,row_count')
+      .order('taken_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    _lastBackupCache = { row: (res.error ? null : (res.data || null)), fetchedAt: Date.now() };
+    _lastBackupPromise = null;
+    return _lastBackupCache.row;
+  })();
+  return _lastBackupPromise;
+}
+function _invalidateLastBackupCache() {
+  _lastBackupCache = { row: null, fetchedAt: 0 };
+  _lastBackupPromise = null;
+}
+
+// == BACKUP REMINDER BANNER (v95) ================================
+// Gated on isBackupResponsible. Reads latest backup_log row and
+// renders an amber (3-7 days) or red (>7 days OR never) card at
+// the top of the dashboard. Idempotent: removes any previous banner
+// before deciding whether to draw a new one.
+async function renderBackupReminderBanner() {
+  // Wipe existing banner first so re-renders don't stack.
+  var existing = document.getElementById('backup-reminder-banner');
+  if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+  if (!isBackupResponsible) return;
+
+  var host = document.getElementById('dash-content');
+  if (!host) return;
+
+  _invalidateLastBackupCache(); // banner is always authoritative
+  var last = await _fetchLastBackup();
+
+  var daysSince = null;
+  if (last && last.taken_at) {
+    var ms = Date.now() - new Date(last.taken_at).getTime();
+    daysSince = Math.floor(ms / 86400000);
+    if (daysSince < 3) return; // fresh enough, no banner
+  }
+
+  var tone, icon, title, sub;
+  if (!last) {
+    tone  = 'danger';
+    icon  = '🚨';
+    title = 'No backups recorded yet.';
+    sub   = 'Take your first full backup now to start the disaster-recovery clock.';
+  } else if (daysSince > 7) {
+    tone  = 'danger';
+    icon  = '🚨';
+    title = 'Last backup: ' + daysSince + ' days ago — overdue.';
+    sub   = 'Data loss risk is climbing. Take a fresh backup now.';
+  } else {
+    tone  = 'warn';
+    icon  = '⚠️';
+    title = 'Last backup: ' + daysSince + ' days ago' + (last.taken_by ? ' (taken by ' + esc2(last.taken_by) + ')' : '') + '.';
+    sub   = 'Time to take a fresh one.';
+  }
+
+  var banner = document.createElement('div');
+  banner.id = 'backup-reminder-banner';
+  banner.className = 'backup-banner backup-banner-' + tone;
+  banner.innerHTML =
+    '<div class="backup-banner-ico">'+icon+'</div>'+
+    '<div class="backup-banner-body">'+
+      '<div class="backup-banner-title">'+esc2(title)+'</div>'+
+      '<div class="backup-banner-sub">'+esc2(sub)+'</div>'+
+    '</div>'+
+    '<button class="btn btn-primary backup-banner-cta" onclick="goToFullBackup()"><i data-lucide="download" class="btn-icon"></i>Take Backup</button>';
+  host.insertBefore(banner, host.firstChild);
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+// Navigate the user to the Full Backup button. Managers land on the
+// Admin Tools tab (where the button lives). Non-managers theoretically
+// can't see the button — but we navigate anyway so a backup-responsible
+// employee gets a clear destination instead of a dead-end click.
+function goToFullBackup() {
+  if (typeof navigateSub === 'function') {
+    navigateSub('projects', 'otmanager');
+  } else if (typeof showScreen === 'function') {
+    showScreen('projects');
+    if (typeof showProjectTab === 'function') showProjectTab('otmanager');
+  }
+  // Scroll the Reports & Backup card into view after the screen swap.
+  setTimeout(function(){
+    var card = document.querySelector('.dash-backup');
+    if (card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 200);
+}
+
+// == ADMIN TOOLS "LAST BACKUP" PILL (v95) =========================
+// Renders into #last-backup-pill (placed beside the Full Backup button
+// in the Admin Tools card). Visible to ALL authenticated users —
+// informational; not gated on backup-responsibility.
+async function renderLastBackupPill() {
+  var host = document.getElementById('last-backup-pill');
+  if (!host) return;
+  var last = await _fetchLastBackup();
+  if (!last) {
+    host.innerHTML = '<span class="last-backup-pill-empty">No backups recorded yet.</span>';
+    return;
+  }
+  var ms = Date.now() - new Date(last.taken_at).getTime();
+  var days = Math.floor(ms / 86400000);
+  var hoursOnly = days === 0;
+  var label;
+  if (hoursOnly) {
+    var hrs = Math.floor(ms / 3600000);
+    if (hrs < 1) label = 'minutes ago';
+    else         label = hrs + ' hr ago';
+  } else if (days === 1) {
+    label = '1 day ago';
+  } else {
+    label = days + ' days ago';
+  }
+  var sizeMb = last.file_size_bytes ? (last.file_size_bytes / (1024*1024)).toFixed(1) + ' MB · ' : '';
+  var meta = sizeMb + (last.table_count||0) + ' tables · ' + (last.row_count||0).toLocaleString() + ' rows';
+  host.innerHTML =
+    '<div class="last-backup-pill-head">Last backup: ' + esc2(label) +
+      (last.taken_by ? ' by ' + esc2(last.taken_by) : '') + '</div>'+
+    '<div class="last-backup-pill-meta">' + esc2(meta) + '</div>';
 }

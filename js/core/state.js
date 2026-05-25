@@ -13,6 +13,9 @@ const SICK_ALLOWANCE  = 12;
 let currentUser = '';
 let currentEmail = '';
 let isManager   = false;
+// v95: drives the dashboard backup-staleness banner. Set from user_profiles
+// at login; only Venkat + Nasif are flagged by default.
+let isBackupResponsible = false;
 let approveTarget = null;
 let USER_PROFILES = []; // [{user_id, email, employee_name, is_manager}]
 
