@@ -1,0 +1,30 @@
+Tasks to insert:     155
+Templates to insert: 10
+
+By source sheet:
+  General Tasks: 44
+  Completed: 102
+  Not Completed: 9
+  Daily: 3
+  Weekly: 4
+  Monthly: 2
+  Quarterly: 1
+
+Tasks with zero assignees: 16
+Tasks with multi-assignee: 11
+
+Within-sheet duplicate titles: 0
+
+⚠️  Templates with ZERO assignees (5):
+  - POC Device Retrieval
+  - FAB Tunnel down troubleshootinhg
+  - PROJECT DETAILS
+  - OT Sheet
+  - Bckup of sheets
+  → Edit in UI before next generateMissingInstances run, or empty-owner instances will recur every period.
+
+Dirty dates dropped to NULL: 1
+  - Completed/IPSEC tunnel check between Cis/start: '12th Oct'
+
+Issues (1):
+  - [Completed] row skipped - no title

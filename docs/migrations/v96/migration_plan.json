@@ -1,0 +1,2402 @@
+{
+  "tasks": [
+    {
+      "source_sheet": "General Tasks",
+      "title": "AMC Details",
+      "description": "All AMC support details to be gathered",
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2024-06-11",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Niagara networks guide",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2024-08-01",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Certification's Validation",
+      "description": "For Disti Rebates",
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2024-08-21",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "DNS Proxy Lab - Need to prepare a internal guide",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2024-10-09",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Salman Aziz"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Air gap license",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2024-11-04",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "EC-XS devices power cable to be retrieved and assign labels",
+      "description": null,
+      "priority": "high",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2024-12-20",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "LMG LLD Document preparation for territory(HO) wise",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-05-14",
+      "eta_date": "2026-01-08",
+      "end_date": null,
+      "remarks": "[MIG-v96] All territory HO doucments are in progress fine tunning remaining (19th feb)",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Demo arrya lab to host a webserver",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-10-25",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "EC-L Device which came from Aruba needs to be shipped back to Aruba",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-09-01",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] To identify the serial number from inventory",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Device to be arranged for easy tracking",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-09-10",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] to check with adarsh",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Lmg Non-UAE/KSA region secondary hub location to be discussed.",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-09-10",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] To be discussed with LMG team. (19th feb)",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "IPS/IDS events to sent to splunk",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-09-10",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "to check for Syslog server to implement on our setup",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-09-10",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Link bandwidth to be verified on LMG",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-09-10",
+      "eta_date": "2026-01-04",
+      "end_date": null,
+      "remarks": "[MIG-v96] Need to check on the bandwidth configured on devices and utlization on the stats, need to verify on BOQ also",
+      "assignees": [
+        "Ahmed Ali",
+        "Mohammed Afsal",
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "NetAlly Training",
+      "description": "Need to connect with NetAlly team for LAB",
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2025-09-11",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Need to connect with Darayus for training videos, need to prepeare an session on 9th Jan",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "LMG Migration Details to be regularly updated on the GULFIT tracker",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-09-19",
+      "eta_date": "2026-01-04",
+      "end_date": null,
+      "remarks": "[MIG-v96] After ramadan change freeze migrations will resume",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "ISP Names to be Mapped on all migrated LMG Sites",
+      "description": "For existing and old sites",
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-09-19",
+      "eta_date": "2026-01-10",
+      "end_date": null,
+      "remarks": "[MIG-v96] Need to fill for Existing and old sites, On SOP document this thing should be added, Shared excel sheet to sakib to fill the ISP names. sent mail to sakib on feb 19th",
+      "assignees": [
+        "Ahmed Ali",
+        "Mohammed Afsal",
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "To check with adarsh for space to keep the EC devices safely",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "OT Calculation sheet to be prepeared",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2025-12-10",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "NFR EC-XS RMA Issue",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-12-15",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Need to follow up with shijeesh, cal",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Naivas project  phase -2 update/ HO LLD Validation (VRRP, physical connectivity between EC and switch, addition of new ISP on the WAN, Spoke to spoke communication block.",
+      "description": "Prepeared and kept ready",
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-12-15",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Call has been scheduled on 23rd feb",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Leave planning sheet",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-12-16",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Alibaba cloud",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2025-12-16",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif",
+        "Mohammed Afsal"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Aruba devices to be shipped back from sechpoint",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-12-17",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Nasif visited sechpoint and confirmed 2 devices are in sechpoint. awaiting aruba customer to ship the devices. (19th feb 26)",
+      "assignees": []
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "LMG HLD and LLD modifications for UAE DC",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2025-12-23",
+      "eta_date": "2026-01-08",
+      "end_date": null,
+      "remarks": "[MIG-v96] Venkat to advise for Bwan1 interface on deployment page for both EC1 and EC2",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Naivas HLD for phase 2 to get validated from NAIVAS team",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-24",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Shared to customer and waiting for response",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Naivas phase 1 sign off document",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-12-24",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Burjeel POC devices to follow up-every tuesday and friday",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Branch/DR collected currently in GULFIT office, DC device waiting for confirmation, last mail sent on 4th feb",
+      "assignees": []
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Backhaul setup for LMG KSA if internet link goes down",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-12-28",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Venkat to advise on the backhaul design",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "DR setup for LMG between kuwait,qatar and Riyadh",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] LMG to configure similar routes setup as compare to Riyadh heaf office. Nagraj to discuss and confirm the timeframe to do the changes",
+      "assignees": [
+        "Salman Aziz"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Device shipment back to aruba need to send remainder mail on 10th March, every two weeks needs to send reminder",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Email sent on last 24th feb",
+      "assignees": []
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "FAB Gift city device, nasif to follow up with vishnu on daily basis",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Last followed up on 24th feb",
+      "assignees": []
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "DH NON CORP La mer south Migration",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Need to check with venkat on feb 23rd",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "To check and change the gateways of netsec ESXI servers.",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2026-02-19",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "To do the Labeling on the cables",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2026-02-19",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "NetAlly demo session on thursday 26th feb 11-12  by nasif to venkat meeting invite to be shared",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2026-02-19",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] First session completed about auto testing need to do a documentation about it.",
+      "assignees": []
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Sempris DSP Course to be completed march 10th for afsal",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2026-02-19",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Completed by nasif",
+      "assignees": []
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "LMG LLD Five sites from each region to be prepeared",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2026-02-19",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Need to check with venkat if it has to be done for all the sites or five each , Nasif completed Dammam 5 sites,",
+      "assignees": [
+        "Mohammed Nasif",
+        "Mohammed Afsal"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Aruba SDWAN Pre-Config / YAML Testing",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2026-02-24",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Test completed by ahmed document need to prepeare by nasif",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Pre configure appliance in aruba documentation",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2026-02-25",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif",
+        "Mohammed Afsal"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Moving Axis connector to different VM",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2026-02-27",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] New VM deployed in VM.109 and old one is disabled in axis.",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Excel sheet to be prepeared to get the LAN and Device IP details for LMG",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2026-02-27",
+      "eta_date": null,
+      "end_date": "2026-03-10",
+      "remarks": "[MIG-v96] Completed and shared to Ahmed/venkat",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "Project time tracker sheet Weekly total hours update",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2026-03-05",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Has setup automation and will automatically update",
+      "assignees": [
+        "Mohammed Nasif",
+        "Mohammed Afsal"
+      ]
+    },
+    {
+      "source_sheet": "General Tasks",
+      "title": "ADAA need to follow up with Muatez for payment",
+      "description": null,
+      "priority": "medium",
+      "status": "yet_to_start",
+      "frequency": "general",
+      "start_date": "2026-03-16",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Need to trouble shoot LD8",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Need to check for IBGP\nNeed to check BGP timer                                                             Need to check the VRRP",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "IPSEC tunnel check between Cisco router and Silverpeak",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Form IPSEC IKEV1 tunnel between silverpeak and cisco router, Phase 1 tunnel came up, phase 2 is down since no data is transferring over phase 2 tunnel-- Need to generate traffic between PCs and check",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Prepare LLD Document Template",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2023-10-18",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Salman Aziz"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Need to deploy 3rd Orchestrator",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2023-12-11",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Need to check VRRP in lab for CBUAE",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2023-12-11",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Activity completed and report submitted",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-05-24",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "ADAFSA modified Visio diagram",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-05-31",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Customer is able to do winscp to EC",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-05-31",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Shared",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-07",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Switches mounted",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "30th june getting expire",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-05",
+      "eta_date": null,
+      "end_date": "2024-06-05",
+      "remarks": "[MIG-v96] License extended till 30th dec 2024",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Awaiting for SE confirmation",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-05",
+      "eta_date": null,
+      "end_date": "2024-06-19",
+      "remarks": "[MIG-v96] Orch 9.2.10 & ECOS 9.1.4.4 ( for time being untill all ecos is above 8.3.20)",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "TS oci tunnel",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-05",
+      "eta_date": null,
+      "end_date": "2024-06-06",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Ahmed to perform this activity scheduled on June 9th 2.30 pm",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-06",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali",
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Prepare the diagram for Mowasalat PoC",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-06",
+      "eta_date": null,
+      "end_date": "2024-06-07",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Send mail to mowaslat",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-11",
+      "eta_date": null,
+      "end_date": "2024-06-12",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Orch upgraded to 9.3.3",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-06",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Arrange the power adapter",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-19",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] device powering on",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Work on the existing tech/Sow document",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-19",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "OCI Test",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2023-10-26",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Need to test the ENBD OCI setup",
+      "assignees": [
+        "Salman Aziz"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Aruba PS + AMC Support Details Sheet to be created",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-05",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Dhofar bank report",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-03",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "ENBD CIFS Case",
+      "description": "TAC requested call with customer",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-05",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] customer not responded after the last session",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "bridge works document preperation",
+      "description": "need to validate",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-26",
+      "eta_date": null,
+      "end_date": "2024-09-01",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Mednet devices need to follow up",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-09",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] aruba team will follow up",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Aruba SSE Certification",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-08-26",
+      "eta_date": null,
+      "end_date": "2024-09-09",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DFM Technical Proposal",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-09",
+      "eta_date": null,
+      "end_date": "2024-07-11",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Deploying new SSE connector in lab",
+      "description": "lab",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-09-09",
+      "eta_date": null,
+      "end_date": "2024-09-10",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Prepeare document to avoid misconfiguration for DH",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-09-17",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "SSE Azure AD deployment guide",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-09-20",
+      "eta_date": null,
+      "end_date": "2024-09-23",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DH Sites BW Sheet",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-08-29",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "PORTrockIT testing",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": "2024-08-26",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Build new hardware with vmware for additonal capacity",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-09-06",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Task Sheet for FAB",
+      "description": "All information re",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "FAB OS Version Validation",
+      "description": "Hiub 8.3.6.2 & Spoke sites 9.2 tested but as per SE he informed to go with 9.3 for EC appliances; awaiting for his confirmation",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "FAB Tunnel Down - Follow up FAB team",
+      "description": "Need to check with Dinesh, awaiting dinesh availablity",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-05",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "ADAFSA Shipment",
+      "description": "Device to be shipped post confirmation",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-04",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] As per venkat we are not shipping waiting for confirmation",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "FAB Orchestrator upgrade doc",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-12",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Aruba HLD Standard Format",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-01",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Dedicated Aruba lab full use cases",
+      "description": "DEMO lab migrated to .150 orchestrator",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-04",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "FAB Case Tracker for AMC",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-09",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Venkatesan",
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "CATO-Internal KT session",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-11",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Prepare the appliance backup as a reference document and upload to gulfit online",
+      "description": "TAC provided certain infos. related to FAB case",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-08-20",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Prepare Naivas Tech document",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-08-20",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "NEDC Tech Document",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-09-12",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "SoW - Master Copy - Validation",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-10-09",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "AMC contract document master copy need to prepeare",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-10-21",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Validate with Omni Jimmy for As built document",
+      "description": "every two weeks follow up",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-06-11",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] waiting for confirmation from D.H team",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Follow up for TVH PoC devices with Philip charles and retrieve to gulfit office",
+      "description": "Devices are in Qatar office with Philip",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-08-19",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] connected with pramod and fctory reset done on two devices",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "HLD master Document fine tuning",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-11-07",
+      "eta_date": null,
+      "end_date": "2024-11-13",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Orchestrator Hard Disk Expansion Doc.",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-12-13",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DFM Tracker sheet to prepeare",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-11-15",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Migrate remote users to axis security from cato",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-12-27",
+      "eta_date": null,
+      "end_date": "2024-12-27",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Migrate Gulf IT lab from cato to edgeconnect on gulfit cloud orchestrator",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-12-27",
+      "eta_date": null,
+      "end_date": "2024-12-27",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "UAT document for DFM",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-12-24",
+      "eta_date": null,
+      "end_date": "2024-12-27",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "KUWAIT DEVICE RETRIEVAL FROM RANA",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-01-02",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Splunk integration with orchestrator and edgeconnct document",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-06-03",
+      "eta_date": null,
+      "end_date": "2025-06-04",
+      "remarks": "[MIG-v96] document sent to venkat and uploaded in share drive",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Aruba LLD Standard Format",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-01",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Aruba Customer list",
+      "description": "list prepeared need to sort according to region",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-04",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Review Aruba HLD prepared by ahmed",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-05",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Review SoW doc prepared by third party team",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-05",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Mashreq Technical workshop details",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-25",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Prasanth"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Mashreq Technical workshop Questionnaire",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-25",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Prasanth"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "0rchestrator HA",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-11-11",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "LMG Cloud Device Follow Up",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-11-15",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] LMG Went with their native cloud connectivity with vodafone",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "AZURE EC DEPLOYMENT",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-01-06",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Devices in Qatar to be shipped back to Saudi",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-02",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Device from SRC used for AMEX POC so not required to ship from Qatar.",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Kemri SDWAN device upgradation",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-10",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Kemri Diagram Preperation",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-22",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "3 - EC-XS devices to be ready for shipping to nigeria",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-30",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Devices to be shipped to nigeria",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DH Non corp Migration Date Inventory sheet",
+      "description": "To keep track of devices and details",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-08",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Completed and uploaded in sharedrive under Non corp folder",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "LMG Orch spec validation with Aruba",
+      "description": "Case Number 20250924-440299",
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-23",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] TAC Response: This cloud orch deployed with large deployment size which can hold from 200 - 1000 appliances in total.",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "QDSBG Sysdumps to be uploaded for the appliances",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-17",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DH-NC Dec18th 3:00 AM - 5:00 AM there will be power outage Need to support in case needed",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Activity completed",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Naivas LLD to be prepeared",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-09",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] To be copied from skeleton docs",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DH Devices validation",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-16",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Validated",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DH NC Diagrams to be sent to suheb",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-24",
+      "eta_date": null,
+      "end_date": "2025-12-24",
+      "remarks": "[MIG-v96] Document shared to suheb dh via mail",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DH Last exit dubai initial configuration",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-15",
+      "eta_date": null,
+      "end_date": "2025-12-26",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "To prepeare an Excel sheet for links to different internal documents in one place",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-16",
+      "eta_date": "2026-01-07",
+      "end_date": null,
+      "remarks": "[MIG-v96] Shared to venkat",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Production device to be swapped with demo setup device",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-10",
+      "eta_date": "2025-01-02",
+      "end_date": null,
+      "remarks": "[MIG-v96] Need to confirm and fill in the inventory",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "LMG LLD UAE Branches and Pilot sites",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-01",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Submitted to LMG",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "LMG HLD including all territory",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-05-14",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Submitted to LMG",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "LMG LLD Document preparation including jordan, bahrain, warehouses and pilot sites",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-10-30",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Submitted to LMG",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "LMG HLD for UAE KSA  Document preparation",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2024-07-03",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Submitted to LMG",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DH Non Corp Devices visibility in orchestrator as shaded",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2026-01-02",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] When we opened the orchestrator to check the issue it was not greyed out because someone has changed the security policy on Nov-27-25 which allowed the traffic to reach silerpeak and orchestrator.Collected logs and prepeared document with the screenshots of the flows, to monitor until 12th",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "LMG Kuwait salmiya and Qatar rayan mall, bahrain marina mall boost license to be reconfigured",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-30",
+      "eta_date": "2026-01-02",
+      "end_date": null,
+      "remarks": "[MIG-v96] Confgured and completed",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "La mer south initial Config",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Completed need to plan for migration",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "MOH technical proposal document",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-01-08",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Prepeared and uploaded in share drive",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Qassim Universitytechnical proposal document",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Prepeared and uploaded in share drive",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DH hatta roxy cinema not visible in the orchestrator",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Site has been abondoned",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "VM Cleanup and Demo setup standardizing",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2026-01-23",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Naivas Orchestrator Slowness.",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "LMG Rollout Aruba SOP to be updated and discussed with Venkat",
+      "description": null,
+      "priority": "high",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-17",
+      "eta_date": "2026-01-03",
+      "end_date": null,
+      "remarks": "[MIG-v96] Venkat to review and connect if any further modifications needed",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Case with Aruba for LMG on BGP configs not getting saved",
+      "description": null,
+      "priority": "high",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-23",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] in cognoto mode configurations are getting saved seems to be a browser issue.",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Peer priority to be configured on LMG UAE/KSA Sites",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-10",
+      "eta_date": "2025-12-29",
+      "end_date": null,
+      "remarks": "[MIG-v96] KSA and UAE is completed",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "Naivas - spoke to spoke communication block",
+      "description": "Need to check with ahmed",
+      "priority": "high",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-29",
+      "eta_date": "2026-01-02",
+      "end_date": null,
+      "remarks": "[MIG-v96] Post call with shijeesh, We need to restrict the policies on device level and check the behaviour, Inter store communication blocking showcased to naivas team, now they need to implement it during non-prod hours.",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "LMG Solarwinds device showing down on BAH/JOR Dec 10th",
+      "description": null,
+      "priority": "high",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-12-17",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "To setup the Darayus demo Lab",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2026-02-19",
+      "eta_date": "2026-02-24",
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "KWT Devices onboarding and upgradation",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] 8 Sites completed need to connect for the remaining devices, need to follow up with sakib",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "To setup the customer Lab",
+      "description": null,
+      "priority": "medium",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2026-02-19",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Completed",
+      "title": "DH-NON CORP LLD DOCUMENT",
+      "description": null,
+      "priority": "high",
+      "status": "completed",
+      "frequency": "general",
+      "start_date": "2025-09-01",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Not Completed",
+      "title": "ClearPass Test",
+      "description": "Integration of ClearPass and SDWAN solutions",
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Not Completed",
+      "title": "FAB KZD/TCN INTL EC Replacement",
+      "description": "Discuss with FAB team for replacement",
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2023-12-19",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "Not Completed",
+      "title": "DH LLD Doc.",
+      "description": "Prepare the LLD",
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali",
+        "Salman Aziz"
+      ]
+    },
+    {
+      "source_sheet": "Not Completed",
+      "title": "DH As Built",
+      "description": "As Built document has to be prepared for migrated sites",
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Salman to send mail to jimmy for validating previous shared as built document",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Not Completed",
+      "title": "DH Application List Validation",
+      "description": "Verify the Application list created for DH",
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali",
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Not Completed",
+      "title": "DH Address Group Validation",
+      "description": "Duplicate entries to be validated in address group for DH",
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": null,
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali",
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Not Completed",
+      "title": "Upload DH files to Aruba Account",
+      "description": null,
+      "priority": "medium",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2024-06-01",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    },
+    {
+      "source_sheet": "Not Completed",
+      "title": "DH-NC-Citywalk slowness in accessing devices",
+      "description": null,
+      "priority": "high",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-12-16",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] Need to connect with them and check",
+      "assignees": [
+        "Venkatesan"
+      ]
+    },
+    {
+      "source_sheet": "Not Completed",
+      "title": "QDSBG - File share access across the network is slow",
+      "description": null,
+      "priority": "high",
+      "status": "ongoing",
+      "frequency": "general",
+      "start_date": "2025-12-17",
+      "eta_date": null,
+      "end_date": null,
+      "remarks": "[MIG-v96] BIO has to be fine tuned, Need to put optimzable traffic in the Critical apps and enable boost only for that and remove from default and realtime. Requested Client's availability on Tuesday 13th jan.",
+      "assignees": [
+        "Mohammed Nasif"
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "source_sheet": "Daily",
+      "title": "POC Sheet update",
+      "description": "Follow Up",
+      "frequency": "daily",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Daily",
+      "title": "POC Project Update",
+      "description": "Follow Up",
+      "frequency": "daily",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Daily",
+      "title": "FAB Cases",
+      "description": "Follow Up",
+      "frequency": "daily",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Weekly",
+      "title": "Inventory (SP/CATO/CL/NN/ARRAY)",
+      "description": "Need to update Weekly",
+      "frequency": "weekly",
+      "remarks": "[MIG-v96]",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    },
+    {
+      "source_sheet": "Weekly",
+      "title": "POC Device Retrieval",
+      "description": "Follow Up",
+      "frequency": "weekly",
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Weekly",
+      "title": "FAB Tunnel down troubleshootinhg",
+      "description": "Need to check with Dinesh for availablity",
+      "frequency": "weekly",
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Weekly",
+      "title": "PROJECT DETAILS",
+      "description": "Need to update sheet weekly",
+      "frequency": "weekly",
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Monthly",
+      "title": "OT Sheet",
+      "description": "All Engineers to submit the OT sheet by 3rd of every month",
+      "frequency": "monthly",
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Monthly",
+      "title": "Bckup of sheets",
+      "description": null,
+      "frequency": "monthly",
+      "remarks": "[MIG-v96]",
+      "assignees": []
+    },
+    {
+      "source_sheet": "Quarterly",
+      "title": "FAB  Quarter Health Check",
+      "description": "Need to perform health check every quarter",
+      "frequency": "quarterly",
+      "remarks": "[MIG-v96] Currently NO AMC",
+      "assignees": [
+        "Ahmed Ali"
+      ]
+    }
+  ]
+}
