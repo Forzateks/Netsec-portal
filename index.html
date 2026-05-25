@@ -1815,8 +1815,23 @@
       <div class="tasks-page-title"><i data-lucide="check-square" class="tasks-page-title-ico"></i>Tasks</div>
       <div class="tasks-page-sub">Manage team task assignments</div>
     </div>
-    <button class="btn btn-primary manager-only-el" id="tasks-new-btn" onclick="openCreateTaskModal()"><i data-lucide="plus" class="btn-icon"></i>New Task</button>
+    <div class="tasks-header-actions">
+      <button class="btn btn-ghost btn-sm manager-only-el" id="tasks-manage-templates-btn" onclick="openManageTemplatesModal()"><i data-lucide="repeat" class="btn-icon"></i>Manage Templates</button>
+      <div class="tasks-new-btn-wrap manager-only-el" id="tasks-new-btn-wrap">
+        <button class="btn btn-primary tasks-new-btn-split" id="tasks-new-btn" onclick="toggleNewTaskMenu(event)"><i data-lucide="plus" class="btn-icon"></i>New Task<i data-lucide="chevron-down" class="btn-icon-trail"></i></button>
+        <div class="tasks-new-menu" id="tasks-new-menu">
+          <button class="tasks-new-menu-item" onclick="closeNewTaskMenu();openCreateTaskModal()"><i data-lucide="square"></i><span>One-time Task</span></button>
+          <div class="tasks-new-menu-divider"></div>
+          <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('daily')"><i data-lucide="sun"></i><span>Daily Recurring</span></button>
+          <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('weekly')"><i data-lucide="calendar-days"></i><span>Weekly Recurring</span></button>
+          <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('monthly')"><i data-lucide="calendar"></i><span>Monthly Recurring</span></button>
+          <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('quarterly')"><i data-lucide="calendar-range"></i><span>Quarterly Recurring</span></button>
+        </div>
+      </div>
+    </div>
   </div>
+  <!-- v94 frequency tabs. Rendered by _tasksRenderTabBar(). -->
+  <div class="tasks-tab-bar" id="tasks-tab-bar"></div>
   <div class="card" style="margin-bottom:14px">
     <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
       <input id="tasks-search" oninput="renderTasksList()" placeholder="Search task or description..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:200px;flex:1">
@@ -2486,6 +2501,68 @@
       <button class="btn btn-ghost" onclick="closeTaskModal()">Cancel</button>
       <button class="btn btn-primary" id="task-modal-save-btn" onclick="saveTaskModal()"><i data-lucide="save" class="btn-icon"></i>Create Task</button>
     </div>
+  </div>
+</div>
+
+<!-- ── TASK TEMPLATE MODAL (v94) — create/edit recurring task templates.
+     openCreateRecurringTemplateModal(frequency) → blank form, freq locked
+     openEditTemplateModal(templateId)           → pre-populated -->
+<div class="modal-overlay" id="task-template-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title" id="task-template-modal-title">New Recurring Task</div>
+    <div id="task-template-modal-error" class="alert alert-error" style="display:none;margin-bottom:12px"></div>
+    <input type="hidden" id="task-template-modal-freq" value="">
+    <div class="task-template-freq-badge">
+      <span class="dim" style="font-size:12px;font-weight:600">Frequency:</span>
+      <span class="task-template-freq-pill" id="task-template-modal-freq-label">Daily</span>
+      <span class="dim" style="font-size:11.5px">— instances auto-generate each period</span>
+    </div>
+    <div class="form-group">
+      <label>Title *</label>
+      <input type="text" id="task-template-modal-title-input" maxlength="240" placeholder="e.g. Daily lab check">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="task-template-modal-description" rows="3" placeholder="What should the assignee(s) do each period?"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Priority *</label>
+      <select id="task-template-modal-priority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="urgent">Urgent</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Default Assignees * <span style="font-weight:400;font-size:11px;color:var(--muted);margin-left:6px">copied onto each new instance</span></label>
+      <div id="task-template-modal-assignees" class="task-assignees-grid"></div>
+    </div>
+    <div class="form-group">
+      <label>Remarks</label>
+      <textarea id="task-template-modal-remarks" rows="2" placeholder="Optional notes — applied to every instance..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="sk-toggle"><input type="checkbox" id="task-template-modal-active" checked> Active (uncheck to stop future generation)</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeTaskTemplateModal()">Cancel</button>
+      <button class="btn btn-primary" id="task-template-modal-save-btn" onclick="saveTaskTemplateModal()"><i data-lucide="plus" class="btn-icon"></i>Create Recurring Template</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MANAGE TEMPLATES MODAL (v94) — manager-only list of templates ── -->
+<div class="modal-overlay" id="manage-templates-modal">
+  <div class="modal" style="max-width:780px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px">
+      <div>
+        <div class="modal-title" style="margin-bottom:4px">Recurring Task Templates</div>
+        <div class="dim" style="font-size:12.5px">Edit, deactivate, or review existing recurring task definitions. Past instances remain even after a template is deactivated.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeManageTemplatesModal()">✕ Close</button>
+    </div>
+    <div id="manage-templates-list"></div>
   </div>
 </div>
 

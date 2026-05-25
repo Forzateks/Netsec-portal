@@ -1,22 +1,44 @@
-// == TASKS MODULE (v93, Phase 1) =====================================
-// General task list + multi-owner assignment + status updates. Recurring
-// tasks (daily / weekly / etc.) come in Phase 2 (v94); Excel import in
-// Phase 3 (v95). The Excel sheet keeps being authoritative until v95;
-// no dual-write yet.
+// == TASKS MODULE (v93 + v94, Phases 1 + 2) ==========================
+// Phase 1 (v93): general one-off tasks + multi-owner + status updates.
+// Phase 2 (v94): recurring task templates that auto-generate instances
+//                on a daily/weekly/monthly/quarterly cadence.
+// Phase 3 (v95): Excel import — not yet built.
 //
-// Permission model (matches the RLS in the tasks_and_assignments
-// migration):
-//   - Read: any authenticated user sees all tasks.
-//   - Insert/Delete (= archive): manager only.
-//   - Update: manager OR any assignee. The RLS allows the UPDATE
-//     statement itself; the UI restricts which FIELDS an assignee can
-//     change (status + remarks only). Manager-only fields carry a
-//     data-mgr-only="1" attribute and tasks.js disables them when the
-//     editing user isn't the manager.
+// Data model (v94):
+//   task_templates              — manager-managed recurring definitions
+//   task_template_assignees     — default assignees for a template
+//   tasks                       — instances (and one-off general tasks).
+//                                  frequency='general' → one-off;
+//                                  frequency in (daily/weekly/monthly/quarterly)
+//                                    AND template_id IS NOT NULL → generated.
+//                                  period_key disambiguates per-template
+//                                  instances (UNIQUE INDEX enforces dedup).
+//   task_assignments            — per-instance assignees (cloned from
+//                                  task_template_assignees on generation).
+//
+// Permission model (RLS):
+//   - Read: any authenticated user sees all tasks + all templates.
+//   - tasks INSERT/DELETE, templates INSERT/UPDATE/DELETE, assignments
+//     INSERT/DELETE: manager only.
+//   - tasks UPDATE: manager OR any assignee (frontend restricts to
+//     status + remarks for non-managers via data-mgr-only="1").
+//   - Instance generation: runs only inside the manager's session. The
+//     tasks_insert_manager RLS would block a non-manager generator, so
+//     generateMissingInstances() short-circuits if !isManager. Trade-off
+//     accepted in the spec: if an employee opens Tasks before the
+//     manager has on a new day, they see the previous period's instance
+//     until the manager loads the page. A Cloudflare Worker cron is the
+//     Phase 3+ fix for this.
 
-var TASKS_DATA        = [];   // cached task rows (current filter excluded)
+var TASKS_DATA        = [];   // cached task rows (filtered after fetch)
 var TASKS_ASSIGNMENTS = [];   // cached assignments { task_id, assigned_to }
+var TASK_TEMPLATES    = [];   // cached template rows (manager-only writes)
+var TASK_TEMPLATE_ASSIGNEES = []; // cached { template_id, assigned_to }
 var _tasksLoading     = false;
+var _tasksActiveTab   = (function(){
+  try { return localStorage.getItem('tasksActiveTab') || 'general'; }
+  catch(_) { return 'general'; }
+})();
 
 var TASK_PRIORITY_META = {
   low:    { label:'Low',    cls:'task-pri-low' },
@@ -30,6 +52,14 @@ var TASK_STATUS_META = {
   completed:    { label:'Completed',    cls:'task-st-done' },
   cancelled:    { label:'Cancelled',    cls:'task-st-cnc' }
 };
+var TASK_FREQUENCY_META = {
+  general:   { label:'General',   short:'One-off'   },
+  daily:     { label:'Daily',     short:'Daily'     },
+  weekly:    { label:'Weekly',    short:'Weekly'    },
+  monthly:   { label:'Monthly',   short:'Monthly'   },
+  quarterly: { label:'Quarterly', short:'Quarterly' }
+};
+var TASK_FREQUENCY_TABS = ['general','daily','weekly','monthly','quarterly'];
 
 // == LOAD ========================================================
 async function loadTasks() {
@@ -40,13 +70,24 @@ async function loadTasks() {
   if (loadEl) loadEl.style.display = 'flex';
   if (contentEl) contentEl.innerHTML = '';
 
-  // Two parallel fetches — tasks + their assignments. We don't use a
-  // PostgREST embed (.select('*,task_assignments(*)')) because it can
-  // get prickly with RLS on the junction table; explicit join in JS is
-  // simpler to reason about and gives us a single client-side cache.
+  // v94: BEFORE the main fetch, give the recurring-task generator a turn.
+  // It's a no-op for non-managers (RLS would block their INSERTs anyway)
+  // and for managers it mints any missing daily/weekly/monthly/quarterly
+  // instances for the current period. The function logs but never throws,
+  // so the page still loads even if generation fails for one template.
+  if (isManager) {
+    try { await generateMissingInstances(); }
+    catch (e) { console.warn('generateMissingInstances failed:', e); }
+  }
+
+  // Parallel fetches: tasks + assignments + templates + template assignees.
+  // We don't use a PostgREST embed (.select('*,task_assignments(*)')) —
+  // RLS on junction tables is prickly. Explicit join in JS keeps it boring.
   var res = await Promise.all([
     sb.from('tasks').select('*').order('created_at', { ascending: false }),
-    sb.from('task_assignments').select('task_id,assigned_to')
+    sb.from('task_assignments').select('task_id,assigned_to'),
+    sb.from('task_templates').select('*').order('frequency').order('title'),
+    sb.from('task_template_assignees').select('template_id,assigned_to')
   ]);
   _tasksLoading = false;
   if (loadEl) loadEl.style.display = 'none';
@@ -54,22 +95,33 @@ async function loadTasks() {
     if (contentEl) contentEl.innerHTML = '<div class="alert alert-error show">Error loading tasks: ' + esc2(res[0].error.message) + '</div>';
     return;
   }
-  TASKS_DATA        = res[0].data || [];
-  TASKS_ASSIGNMENTS = (res[1].error ? [] : (res[1].data || []));
+  TASKS_DATA               = res[0].data || [];
+  TASKS_ASSIGNMENTS        = (res[1].error ? [] : (res[1].data || []));
+  TASK_TEMPLATES           = (res[2].error ? [] : (res[2].data || []));
+  TASK_TEMPLATE_ASSIGNEES  = (res[3].error ? [] : (res[3].data || []));
 
-  // Populate the Owner filter dropdown once data is here. EMPLOYEES is
-  // the canonical team list; we add an "Unassigned" sentinel for tasks
-  // with no assignees (edge case but possible if RLS killed an insert).
+  // Populate Owner filter once data is here. EMPLOYEES is the canonical
+  // team list; "Unassigned" sentinel handles tasks with no assignees.
   _tasksPopulateOwnerFilter();
 
-  // Surface the "New Task" button only for managers — matches the RLS
-  // INSERT policy so non-managers don't see an affordance they can't use.
-  var newBtn = document.getElementById('tasks-new-btn');
-  if (newBtn) newBtn.style.display = isManager ? '' : 'none';
+  // Render the tab bar reflecting current selection + visibility of the
+  // manager-only template controls (New ▾ dropdown + Manage Templates btn).
+  _tasksRenderTabBar();
+  _tasksApplyManagerVisibility();
 
   renderTasksList();
-  // Refresh the sidebar badge — counts may have changed since last poll.
+  // Refresh sidebar badge — counts may have changed since last poll.
   if (typeof updateTasksBadge === 'function') updateTasksBadge();
+}
+
+// Toggle visibility for the manager-only UI bits on the tasks page. The
+// New ▾ split button and Manage Templates button both surface mutations
+// the RLS would refuse for non-managers, so we hide rather than disable.
+function _tasksApplyManagerVisibility() {
+  ['tasks-new-btn-wrap','tasks-manage-templates-btn'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = isManager ? '' : 'none';
+  });
 }
 
 function _tasksPopulateOwnerFilter() {
@@ -109,8 +161,12 @@ function _tasksFiltered() {
   var status = ((document.getElementById('tasks-flt-status')||{}).value)||'';
   var showArchived = !!(document.getElementById('tasks-flt-archived')||{}).checked;
   var assignByTask = _tasksAssigneesByTaskId();
+  var activeTab = _tasksActiveTab || 'general';
 
-  return (TASKS_DATA||[]).filter(function(t){
+  var rows = (TASKS_DATA||[]).filter(function(t){
+    // Tab filter — match by frequency column (default 'general' for legacy
+    // pre-v94 rows + new one-off tasks).
+    if ((t.frequency || 'general') !== activeTab) return false;
     if (!showArchived && t.is_archived) return false;
     if (showArchived  && !t.is_archived) return false;
     if (status && t.status !== status) return false;
@@ -125,6 +181,18 @@ function _tasksFiltered() {
     }
     return true;
   });
+
+  // Recurring tabs: sort by period_key DESC so the newest period sits on top.
+  // General tab keeps the created_at-desc order from the initial SELECT.
+  if (activeTab !== 'general') {
+    rows.sort(function(a,b){
+      var ak = a.period_key || '';
+      var bk = b.period_key || '';
+      if (ak === bk) return (b.created_at||'').localeCompare(a.created_at||'');
+      return bk.localeCompare(ak);
+    });
+  }
+  return rows;
 }
 
 // == RENDER LIST =================================================
@@ -133,20 +201,35 @@ function renderTasksList() {
   if (!host) return;
   var rows = _tasksFiltered();
   var assignByTask = _tasksAssigneesByTaskId();
+  var activeTab = _tasksActiveTab || 'general';
+  var isRecurringTab = (activeTab !== 'general');
 
   if (!rows.length) {
     var emptyHtml;
-    if (!TASKS_DATA.length) {
-      // Genuine empty state — no tasks ever created.
+    // Distinguish three empty states: (a) no tasks of this frequency ever
+    // existed, (b) zero rows globally, (c) filter excludes everything.
+    var anyInTab = (TASKS_DATA||[]).some(function(t){ return (t.frequency||'general') === activeTab; });
+    if (!TASKS_DATA.length || !anyInTab) {
+      var freqLbl = (TASK_FREQUENCY_META[activeTab] || {}).label || 'tasks';
+      var heading, sub, btnText, btnOnclick;
+      if (isRecurringTab) {
+        heading   = 'No ' + freqLbl.toLowerCase() + ' recurring tasks yet';
+        sub       = isManager
+          ? 'Create a recurring template — instances will auto-generate each period.'
+          : 'Your manager has not set up any ' + freqLbl.toLowerCase() + ' recurring tasks.';
+        btnText   = isManager ? 'New ' + freqLbl + ' Recurring' : null;
+        btnOnclick= isManager ? "openCreateRecurringTemplateModal('" + activeTab + "')" : null;
+      } else {
+        heading   = 'No general tasks yet';
+        sub       = isManager
+          ? 'Click + New Task above to create the first one.'
+          : 'Your manager has not created any tasks yet.';
+        btnText   = isManager ? 'Create the first task' : null;
+        btnOnclick= isManager ? 'openCreateTaskModal()' : null;
+      }
       emptyHtml = (typeof renderEmptyState === 'function')
-        ? renderEmptyState({
-            icon:'check-square',
-            heading:'No tasks yet',
-            sub: isManager ? 'Click + New Task above to create the first one.' : 'Your manager hasn\'t created any tasks yet.',
-            btnText: isManager ? 'Create the first task' : null,
-            btnOnclick: isManager ? 'openCreateTaskModal()' : null
-          })
-        : '<div class="team-empty">No tasks yet.</div>';
+        ? renderEmptyState({ icon:'check-square', heading:heading, sub:sub, btnText:btnText, btnOnclick:btnOnclick })
+        : '<div class="team-empty">'+esc2(heading)+'</div>';
     } else {
       emptyHtml = (typeof renderEmptyState === 'function')
         ? renderEmptyState({ icon:'filter-x', heading:'No tasks match the current filters', sub:'Adjust the filters above or click Clear.', btnText:'Clear filters', btnOnclick:'clearTasksFilters()' })
@@ -200,6 +283,15 @@ function renderTasksList() {
       .map(function(d){ return d ? fmtDate(d) : '—'; })
       .join(' / ');
 
+    // Recurring tabs swap the date triplet column for a single period
+    // label (e.g. "Today" / "Week 22" / "May 2026" / "Q2 2026").
+    var periodOrDatesCell;
+    if (isRecurringTab) {
+      var lbl = formatPeriodLabel(t.period_key, activeTab);
+      periodOrDatesCell = '<td><span class="task-period-pill">'+esc2(lbl)+'</span></td>';
+    } else {
+      periodOrDatesCell = '<td style="font-family:DM Mono,monospace;font-size:11.5px;color:var(--muted);white-space:nowrap">'+datesText+'</td>';
+    }
     return '<tr class="'+(t.is_archived?'task-row-archived':'')+'">'+
       '<td class="dim" style="font-size:12px">'+(idx+1)+'</td>'+
       '<td><strong>'+esc2(t.title)+'</strong>'+
@@ -208,11 +300,12 @@ function renderTasksList() {
       '<td style="font-size:12.5px">'+ownerText+'</td>'+
       '<td><span class="badge '+priMeta.cls+'">'+esc2(priMeta.label)+'</span></td>'+
       '<td>'+statusCell+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:11.5px;color:var(--muted);white-space:nowrap">'+datesText+'</td>'+
+      periodOrDatesCell+
       '<td style="white-space:nowrap">'+actions+'</td>'+
     '</tr>';
   }).join('');
 
+  var dateColHeader = isRecurringTab ? 'Period' : 'Start / ETA / End';
   host.innerHTML =
     '<div class="card" style="padding:0;overflow:hidden">'+
       '<div class="table-wrap"><table class="tasks-table">'+
@@ -222,7 +315,7 @@ function renderTasksList() {
           '<th>Owner(s)</th>'+
           '<th>Priority</th>'+
           '<th>Status</th>'+
-          '<th>Start / ETA / End</th>'+
+          '<th>'+dateColHeader+'</th>'+
           '<th style="width:90px">Actions</th>'+
         '</tr></thead>'+
         '<tbody>'+tbody+'</tbody>'+
@@ -602,4 +695,478 @@ function _tasksRenderBadge(n) {
   } else {
     badge.style.display = 'none';
   }
+}
+
+// ============================================================
+// v94 — RECURRING TASK TEMPLATES (Phase 2)
+// ============================================================
+
+// == PERIOD HELPERS =============================================
+// All date math uses the user's local clock. UAE/KSA timezones differ
+// only by 1h and there is no DST, so a 6-person team will be on the
+// same calendar date for the bulk of the day. The UNIQUE index
+// idx_tasks_template_period prevents data corruption if two browsers
+// disagree about the period for a few minutes near midnight.
+
+function computePeriodKey(date, frequency) {
+  var d = (date instanceof Date) ? date : new Date(date);
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  switch (frequency) {
+    case 'daily':     return y + '-' + m + '-' + day;
+    case 'weekly':    return y + '-W' + getISOWeek(d);
+    case 'monthly':   return y + '-' + m;
+    case 'quarterly': return y + '-Q' + (Math.floor(d.getMonth() / 3) + 1);
+  }
+  return null;
+}
+
+function computePeriodStartDate(date, frequency) {
+  var d = new Date(date);
+  switch (frequency) {
+    case 'daily':
+      return _isoDate(d);
+    case 'weekly': {
+      // Monday is start of week. JS Sunday=0 → treat as 7 so subtraction works.
+      var day = d.getDay() || 7;
+      d.setDate(d.getDate() - day + 1);
+      return _isoDate(d);
+    }
+    case 'monthly':
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-01';
+    case 'quarterly': {
+      var qMonth = Math.floor(d.getMonth()/3) * 3;
+      return d.getFullYear() + '-' + String(qMonth+1).padStart(2,'0') + '-01';
+    }
+  }
+  return null;
+}
+
+function _isoDate(d) {
+  // toISOString() bakes in UTC, which can drift the date when the user's
+  // local clock is near midnight. Use local components instead.
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// ISO 8601 week number (week starts Monday, week 1 contains first
+// Thursday). Standard recipe; matches the period_key format 'YYYY-Www'.
+function getISOWeek(d) {
+  var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  var yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  var weekNum = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return String(weekNum).padStart(2, '0');
+}
+
+// Friendly label shown in the table for recurring instances.
+// Today's daily key → "Today"; current week's weekly key → "This Week", etc.
+function formatPeriodLabel(periodKey, frequency) {
+  if (!periodKey) return '—';
+  var now = new Date();
+  var nowKey = computePeriodKey(now, frequency);
+
+  if (frequency === 'daily') {
+    if (periodKey === nowKey) return 'Today';
+    // Yesterday convenience
+    var yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+    if (periodKey === computePeriodKey(yesterday, 'daily')) return 'Yesterday';
+    // Fallback: full date
+    try { return fmtDate(periodKey); }
+    catch(_) { return periodKey; }
+  }
+  if (frequency === 'weekly') {
+    var w = (periodKey.split('-W')[1] || '').replace(/^0+/, '');
+    return 'Week ' + w + ' · ' + (periodKey.split('-W')[0]);
+  }
+  if (frequency === 'monthly') {
+    var parts = periodKey.split('-');
+    var mNum = parseInt(parts[1], 10);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return (months[mNum-1] || parts[1]) + ' ' + parts[0];
+  }
+  if (frequency === 'quarterly') {
+    return periodKey.replace('-', ' '); // "2026-Q2" → "2026 Q2"
+  }
+  return periodKey;
+}
+
+// == TAB BAR =====================================================
+function _tasksRenderTabBar() {
+  var bar = document.getElementById('tasks-tab-bar');
+  if (!bar) return;
+  bar.innerHTML = TASK_FREQUENCY_TABS.map(function(k){
+    var meta = TASK_FREQUENCY_META[k];
+    var active = (k === _tasksActiveTab) ? ' active' : '';
+    return '<button class="tasks-tab-btn'+active+'" data-tab="'+k+'" onclick="setTasksActiveTab(\''+k+'\')">'+
+      esc2(meta.label) +
+    '</button>';
+  }).join('');
+}
+
+function setTasksActiveTab(tab) {
+  if (TASK_FREQUENCY_TABS.indexOf(tab) === -1) return;
+  if (tab === _tasksActiveTab) return;
+  _tasksActiveTab = tab;
+  try { localStorage.setItem('tasksActiveTab', tab); } catch(_) {}
+  // Clear filters on tab switch — each tab has its own working context.
+  ['tasks-search','tasks-flt-owner','tasks-flt-status'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var arc = document.getElementById('tasks-flt-archived'); if (arc) arc.checked = false;
+  _tasksRenderTabBar();
+  renderTasksList();
+}
+
+// == SPLIT-BUTTON DROPDOWN (+ New Task ▾) =========================
+function toggleNewTaskMenu(e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  var menu = document.getElementById('tasks-new-menu');
+  if (menu) menu.classList.toggle('show');
+}
+function closeNewTaskMenu() {
+  var menu = document.getElementById('tasks-new-menu');
+  if (menu) menu.classList.remove('show');
+}
+// Outside-click close — bound once in init.js or here lazily.
+document.addEventListener('click', function(e){
+  var menu = document.getElementById('tasks-new-menu');
+  var btn  = document.getElementById('tasks-new-btn-wrap');
+  if (!menu || !btn) return;
+  if (!menu.classList.contains('show')) return;
+  if (btn.contains(e.target)) return;
+  menu.classList.remove('show');
+});
+
+// == GENERATE MISSING INSTANCES ==================================
+// Called from loadTasks() inside the manager's session only. For each
+// active template, computes the current period_key + checks if an
+// instance exists; if not, mints one + copies assignees. The UNIQUE
+// index idx_tasks_template_period is the final guard against a race
+// where two manager tabs open at the same time on a fresh period.
+async function generateMissingInstances() {
+  // Pull templates with their default assignee list in one round-trip.
+  var tplRes = await sb.from('task_templates')
+    .select('id, title, description, priority, remarks, frequency, created_by, last_generated_for, task_template_assignees(assigned_to)')
+    .eq('is_active', true);
+  if (tplRes.error) { console.warn('templates fetch failed:', tplRes.error); return; }
+  var templates = tplRes.data || [];
+  if (!templates.length) return;
+
+  var now = new Date();
+  var created = 0;
+
+  for (var i = 0; i < templates.length; i++) {
+    var tpl = templates[i];
+    var periodKey = computePeriodKey(now, tpl.frequency);
+    if (!periodKey) continue;
+
+    // Skip if instance for this period already exists — cheap pre-check
+    // saves a round-trip when the unique constraint would catch it anyway.
+    var dup = await sb.from('tasks')
+      .select('id', { head:true, count:'exact' })
+      .eq('template_id', tpl.id)
+      .eq('period_key', periodKey);
+    if (!dup.error && (dup.count || 0) > 0) continue;
+
+    var periodStart = computePeriodStartDate(now, tpl.frequency);
+    var insRes = await sb.from('tasks').insert({
+      title:       tpl.title,
+      description: tpl.description,
+      priority:    tpl.priority,
+      remarks:     tpl.remarks,
+      status:      'yet_to_start',
+      template_id: tpl.id,
+      frequency:   tpl.frequency,
+      period_key:  periodKey,
+      start_date:  periodStart,
+      created_by:  tpl.created_by || 'System'
+    }).select().single();
+
+    if (insRes.error) {
+      // Most likely a race: another tab beat us to it and tripped the
+      // UNIQUE index. Continue silently — second tab will see the row
+      // the first one minted on its own refresh.
+      if ((insRes.error.code || '') !== '23505') {
+        console.warn('instance insert failed for template', tpl.id, insRes.error);
+      }
+      continue;
+    }
+
+    var instanceId = insRes.data.id;
+    var defaults = (tpl.task_template_assignees || []).map(function(a){
+      return { task_id: instanceId, assigned_to: a.assigned_to };
+    });
+    if (defaults.length) {
+      var asRes = await sb.from('task_assignments').insert(defaults);
+      if (asRes.error) {
+        // Couldn't copy assignees — best to remove the orphan instance
+        // so we don't end up with an unassigned recurring task.
+        console.warn('assignments insert failed for instance', instanceId, asRes.error);
+        await sb.from('tasks').delete().eq('id', instanceId);
+        continue;
+      }
+    }
+
+    // Stamp template.last_generated_for so we can see at a glance when
+    // generation last fired. Not used for dedup (that's period_key on
+    // the tasks table) — just diagnostic.
+    await sb.from('task_templates')
+      .update({ last_generated_for: periodKey })
+      .eq('id', tpl.id);
+
+    created++;
+  }
+
+  if (created) {
+    console.log('Generated ' + created + ' recurring task instance(s).');
+  }
+}
+
+// == CREATE / EDIT TEMPLATE MODAL ================================
+// Reuses #task-template-modal. Mode swaps between 'create' / 'edit'.
+var _tplModalMode = null;
+var _tplModalEditingId = null;
+
+function openCreateRecurringTemplateModal(frequency) {
+  if (!isManager) { showError('Only managers can create recurring tasks.'); return; }
+  if (TASK_FREQUENCY_TABS.indexOf(frequency) === -1 || frequency === 'general') {
+    showError('Invalid frequency.'); return;
+  }
+  closeNewTaskMenu();
+  _tplModalMode = 'create';
+  _tplModalEditingId = null;
+  _resetTplModal();
+  document.getElementById('task-template-modal-title').textContent = 'New ' + (TASK_FREQUENCY_META[frequency].label) + ' Recurring Task';
+  document.getElementById('task-template-modal-save-btn').innerHTML = '<i data-lucide="plus" class="btn-icon"></i>Create Recurring Template';
+  document.getElementById('task-template-modal-freq').value = frequency;
+  document.getElementById('task-template-modal-freq-label').textContent = TASK_FREQUENCY_META[frequency].label;
+  document.getElementById('task-template-modal-active').checked = true;
+  _tplPopulateAssigneeCheckboxes([]);
+  document.getElementById('task-template-modal').classList.add('show');
+  if (typeof renderIcons === 'function') renderIcons();
+  setTimeout(function(){ var el = document.getElementById('task-template-modal-title-input'); if (el) el.focus(); }, 50);
+}
+
+function openEditTemplateModal(templateId) {
+  if (!isManager) { showError('Manager access only.'); return; }
+  var tpl = (TASK_TEMPLATES||[]).find(function(x){ return x.id === templateId; });
+  if (!tpl) { showError('Template not found.'); return; }
+  _tplModalMode = 'edit';
+  _tplModalEditingId = templateId;
+  _resetTplModal();
+  document.getElementById('task-template-modal-title').textContent = 'Edit ' + (TASK_FREQUENCY_META[tpl.frequency].label) + ' Recurring Task';
+  document.getElementById('task-template-modal-save-btn').innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Changes';
+  document.getElementById('task-template-modal-freq').value = tpl.frequency;
+  document.getElementById('task-template-modal-freq-label').textContent = TASK_FREQUENCY_META[tpl.frequency].label;
+  document.getElementById('task-template-modal-title-input').value = tpl.title || '';
+  document.getElementById('task-template-modal-description').value = tpl.description || '';
+  document.getElementById('task-template-modal-priority').value    = tpl.priority || 'medium';
+  document.getElementById('task-template-modal-remarks').value     = tpl.remarks || '';
+  document.getElementById('task-template-modal-active').checked    = !!tpl.is_active;
+  var currentAssignees = (TASK_TEMPLATE_ASSIGNEES||[]).filter(function(a){ return a.template_id === templateId; }).map(function(a){ return a.assigned_to; });
+  _tplPopulateAssigneeCheckboxes(currentAssignees);
+  document.getElementById('task-template-modal').classList.add('show');
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+function closeTaskTemplateModal() {
+  document.getElementById('task-template-modal').classList.remove('show');
+  _tplModalMode = null;
+  _tplModalEditingId = null;
+}
+
+function _resetTplModal() {
+  var errEl = document.getElementById('task-template-modal-error');
+  if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+  document.getElementById('task-template-modal-title-input').value = '';
+  document.getElementById('task-template-modal-description').value = '';
+  document.getElementById('task-template-modal-priority').value    = 'medium';
+  document.getElementById('task-template-modal-remarks').value     = '';
+  document.getElementById('task-template-modal-active').checked    = true;
+}
+
+function _tplPopulateAssigneeCheckboxes(checkedNames) {
+  var host = document.getElementById('task-template-modal-assignees');
+  if (!host) return;
+  var checkedSet = {};
+  (checkedNames||[]).forEach(function(n){ checkedSet[n] = 1; });
+  host.innerHTML = (EMPLOYEES||[]).map(function(emp){
+    var c = checkedSet[emp] ? ' checked' : '';
+    return '<label class="task-assignee-chk">'+
+      '<input type="checkbox" data-tpl-assignee="'+esc2(emp)+'" value="'+esc2(emp)+'"'+c+'> '+esc2(emp)+
+    '</label>';
+  }).join('');
+}
+
+async function saveTaskTemplateModal() {
+  if (!await requireAuth()) return;
+  if (!isManager) { showError('Manager access only.'); return; }
+  var errEl = document.getElementById('task-template-modal-error');
+  function fail(m) { errEl.textContent = '⚠️ ' + m; errEl.style.display = 'block'; }
+  errEl.style.display = 'none';
+
+  var frequency   = document.getElementById('task-template-modal-freq').value;
+  var title       = (document.getElementById('task-template-modal-title-input').value || '').trim();
+  var description = (document.getElementById('task-template-modal-description').value || '').trim();
+  var priority    = document.getElementById('task-template-modal-priority').value;
+  var remarks     = (document.getElementById('task-template-modal-remarks').value || '').trim();
+  var isActive    = !!document.getElementById('task-template-modal-active').checked;
+
+  var assignees = Array.prototype.slice.call(
+    document.querySelectorAll('#task-template-modal-assignees input[type=checkbox]:checked')
+  ).map(function(i){ return i.value; });
+
+  if (!title)         return fail('Title is required.');
+  if (!frequency)     return fail('Frequency is missing.');
+  if (!assignees.length) return fail('Pick at least one default assignee.');
+
+  if (_tplModalMode === 'create') {
+    var insRes = await sb.from('task_templates').insert({
+      title: title,
+      description: description || null,
+      priority: priority,
+      frequency: frequency,
+      remarks: remarks || null,
+      is_active: isActive,
+      created_by: currentUser || 'unknown'
+    }).select().single();
+    if (insRes.error || !insRes.data) { fail('Save failed: ' + (insRes.error ? insRes.error.message : 'unknown')); return; }
+    var tplId = insRes.data.id;
+    var asRows = assignees.map(function(emp){ return { template_id: tplId, assigned_to: emp }; });
+    var asRes = await sb.from('task_template_assignees').insert(asRows);
+    if (asRes.error) {
+      await sb.from('task_templates').delete().eq('id', tplId);
+      fail('Default assignees failed: ' + asRes.error.message + ' — template was not created.');
+      return;
+    }
+    // Immediately mint the first instance for the current period if active.
+    if (isActive) {
+      try { await generateMissingInstances(); }
+      catch (e) { console.warn('first-instance generation after create failed:', e); }
+    }
+    closeTaskTemplateModal();
+    showToast('Recurring template created · ' + TASK_FREQUENCY_META[frequency].label.toLowerCase());
+    // Switch to that frequency tab so user sees their new instance.
+    setTasksActiveTab(frequency);
+    await loadTasks();
+  } else {
+    var upd = await sb.from('task_templates').update({
+      title: title,
+      description: description || null,
+      priority: priority,
+      remarks: remarks || null,
+      is_active: isActive
+    }).eq('id', _tplModalEditingId).select().single();
+    if (upd.error || !upd.data) { fail('Save failed: ' + (upd.error ? upd.error.message : 'unknown')); return; }
+
+    // Diff assignee set (delete absent + insert new).
+    var currentNames = (TASK_TEMPLATE_ASSIGNEES||[]).filter(function(a){ return a.template_id === _tplModalEditingId; }).map(function(a){ return a.assigned_to; });
+    var nextSet = {}, currentSet = {};
+    assignees.forEach(function(n){ nextSet[n] = 1; });
+    currentNames.forEach(function(n){ currentSet[n] = 1; });
+    var toRemove = currentNames.filter(function(n){ return !nextSet[n]; });
+    var toAdd    = assignees.filter(function(n){ return !currentSet[n]; });
+    if (toRemove.length) {
+      var delRes = await sb.from('task_template_assignees').delete().eq('template_id', _tplModalEditingId).in('assigned_to', toRemove);
+      if (delRes.error) { fail('Could not update default assignees: ' + delRes.error.message); return; }
+    }
+    if (toAdd.length) {
+      var addRes = await sb.from('task_template_assignees').insert(toAdd.map(function(emp){ return { template_id: _tplModalEditingId, assigned_to: emp }; }));
+      if (addRes.error) { fail('Could not update default assignees: ' + addRes.error.message); return; }
+    }
+    closeTaskTemplateModal();
+    showToast('Template updated ✓');
+    if (typeof openManageTemplatesModal === 'function') {
+      // Refresh the list view if it's open underneath.
+      var mt = document.getElementById('manage-templates-modal');
+      if (mt && mt.classList.contains('show')) renderManageTemplatesList();
+    }
+    await loadTasks();
+  }
+}
+
+// == MANAGE TEMPLATES MODAL ======================================
+function openManageTemplatesModal() {
+  if (!isManager) { showError('Manager access only.'); return; }
+  document.getElementById('manage-templates-modal').classList.add('show');
+  renderManageTemplatesList();
+  if (typeof renderIcons === 'function') renderIcons();
+}
+function closeManageTemplatesModal() {
+  document.getElementById('manage-templates-modal').classList.remove('show');
+}
+
+function renderManageTemplatesList() {
+  var host = document.getElementById('manage-templates-list');
+  if (!host) return;
+  if (!TASK_TEMPLATES.length) {
+    host.innerHTML = '<div class="team-empty">No recurring templates yet. Use the New ▾ button to create one.</div>';
+    return;
+  }
+  var asByTpl = {};
+  (TASK_TEMPLATE_ASSIGNEES||[]).forEach(function(a){
+    if (!asByTpl[a.template_id]) asByTpl[a.template_id] = [];
+    asByTpl[a.template_id].push(a.assigned_to);
+  });
+  var rows = TASK_TEMPLATES.map(function(tpl, idx){
+    var freq = TASK_FREQUENCY_META[tpl.frequency] || { label: tpl.frequency };
+    var asg  = (asByTpl[tpl.id] || []).map(function(n){ return esc2(_tasksShortName(n)); }).join(', ') || '<span class="dim">—</span>';
+    var statusBadge = tpl.is_active
+      ? '<span class="badge task-pri-low" style="background:#D1FAE5;color:#065F46">Active</span>'
+      : '<span class="badge task-pri-low" style="background:#F1F5F9;color:#94A3B8">Inactive</span>';
+    return '<tr>'+
+      '<td class="dim" style="font-size:12px">'+(idx+1)+'</td>'+
+      '<td><strong>'+esc2(tpl.title)+'</strong>'+
+        (tpl.description?'<div class="dim" style="font-size:11.5px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc2(tpl.description)+'</div>':'')+
+      '</td>'+
+      '<td>'+esc2(freq.label)+'</td>'+
+      '<td style="font-size:12.5px">'+asg+'</td>'+
+      '<td>'+statusBadge+'</td>'+
+      '<td style="white-space:nowrap">'+
+        '<button class="btn btn-sm btn-ghost btn-icon-only" title="Edit" onclick="openEditTemplateModal('+tpl.id+')"><i data-lucide="pencil"></i></button>'+
+        '<button class="btn btn-sm btn-danger btn-icon-only" title="Deactivate" onclick="softDeleteTemplate('+tpl.id+')"><i data-lucide="trash-2"></i></button>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+  host.innerHTML =
+    '<div class="table-wrap"><table class="tasks-table">'+
+      '<thead><tr>'+
+        '<th style="width:32px">#</th>'+
+        '<th>Template</th>'+
+        '<th>Frequency</th>'+
+        '<th>Default assignees</th>'+
+        '<th>Status</th>'+
+        '<th style="width:90px">Actions</th>'+
+      '</tr></thead>'+
+      '<tbody>'+rows+'</tbody>'+
+    '</table></div>';
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+// Soft-delete = set is_active=false. We deliberately don't DELETE the row
+// because existing instances FK-reference it and we want the join to keep
+// working for history. To fully remove, the manager would need a separate
+// "Purge inactive templates" admin tool — not built in Phase 2.
+async function softDeleteTemplate(templateId) {
+  if (!await requireAuth()) return;
+  if (!isManager) { showError('Manager access only.'); return; }
+  var tpl = TASK_TEMPLATES.find(function(x){ return x.id === templateId; });
+  if (!tpl) return;
+  if (!await confirmAction({
+    title: 'Deactivate "' + tpl.title + '"?',
+    body:  'Future instances will stop being generated. Existing instances (past + current period) stay in place. You can reactivate later by editing the template.',
+    confirmText: 'Deactivate',
+    danger: true
+  })) return;
+  var upd = await sb.from('task_templates')
+    .update({ is_active: false })
+    .eq('id', templateId).select('id,is_active').single();
+  if (upd.error || !upd.data || upd.data.is_active !== false) {
+    showError('Deactivate failed: ' + (upd.error ? upd.error.message : 'permission denied'));
+    return;
+  }
+  showToast('Template deactivated ✓');
+  await loadTasks();
+  renderManageTemplatesList();
 }

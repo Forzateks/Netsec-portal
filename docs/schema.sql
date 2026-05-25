@@ -511,6 +511,37 @@ CREATE TABLE public.task_assignments (
   assigned_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- v94: Recurring task templates. Templates produce instances in the
+-- public.tasks table; the link is tasks.template_id (added below as
+-- ALTER) + tasks.frequency + tasks.period_key. last_generated_for is
+-- diagnostic only — the authoritative dedup is the unique partial index
+-- idx_tasks_template_period in section 7.
+CREATE TABLE public.task_templates (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  title text NOT NULL,
+  description text,
+  priority text NOT NULL DEFAULT 'medium'::text,
+  frequency text NOT NULL,
+  remarks text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_by text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  last_generated_for text
+);
+
+CREATE TABLE public.task_template_assignees (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  template_id bigint NOT NULL,
+  assigned_to text NOT NULL
+);
+
+-- v94: extend tasks with provenance for generated instances.
+ALTER TABLE public.tasks
+  ADD COLUMN IF NOT EXISTS template_id bigint,
+  ADD COLUMN IF NOT EXISTS frequency text NOT NULL DEFAULT 'general'::text,
+  ADD COLUMN IF NOT EXISTS period_key text;
+
 -- ── 5. PRIMARY KEYS / UNIQUE / CHECK ───────────────────────────────
 
 ALTER TABLE public.user_profiles            ADD CONSTRAINT user_profiles_pkey            PRIMARY KEY (email);
@@ -608,6 +639,19 @@ ALTER TABLE public.tasks                    ADD CONSTRAINT tasks_status_check
 ALTER TABLE public.task_assignments         ADD CONSTRAINT task_assignments_pkey       PRIMARY KEY (id);
 ALTER TABLE public.task_assignments         ADD CONSTRAINT task_assignments_task_id_assigned_to_key UNIQUE (task_id, assigned_to);
 
+-- v94: tasks.frequency check (extends section-5 tasks block).
+ALTER TABLE public.tasks                    ADD CONSTRAINT tasks_frequency_check
+  CHECK (frequency IN ('general','daily','weekly','monthly','quarterly'));
+
+ALTER TABLE public.task_templates           ADD CONSTRAINT task_templates_pkey         PRIMARY KEY (id);
+ALTER TABLE public.task_templates           ADD CONSTRAINT task_templates_priority_check
+  CHECK (priority IN ('low', 'medium', 'high', 'urgent'));
+ALTER TABLE public.task_templates           ADD CONSTRAINT task_templates_frequency_check
+  CHECK (frequency IN ('daily', 'weekly', 'monthly', 'quarterly'));
+
+ALTER TABLE public.task_template_assignees  ADD CONSTRAINT task_template_assignees_pkey PRIMARY KEY (id);
+ALTER TABLE public.task_template_assignees  ADD CONSTRAINT task_template_assignees_template_id_assigned_to_key UNIQUE (template_id, assigned_to);
+
 -- ── 6. FOREIGN KEYS ────────────────────────────────────────────────
 
 ALTER TABLE public.user_profiles
@@ -644,6 +688,14 @@ ALTER TABLE public.employee_skills
 
 ALTER TABLE public.task_assignments
   ADD CONSTRAINT task_assignments_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON DELETE CASCADE;
+
+-- v94: link instance → template. SET NULL preserves history if a
+-- template is hard-deleted (Phase 2 only soft-deletes via is_active).
+ALTER TABLE public.tasks
+  ADD CONSTRAINT tasks_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.task_templates(id) ON DELETE SET NULL;
+
+ALTER TABLE public.task_template_assignees
+  ADD CONSTRAINT task_template_assignees_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.task_templates(id) ON DELETE CASCADE;
 
 -- ── 7. INDEXES ─────────────────────────────────────────────────────
 
@@ -688,6 +740,12 @@ CREATE INDEX idx_tasks_status                         ON public.tasks           
 CREATE INDEX idx_task_assignments_task_id             ON public.task_assignments       USING btree (task_id);
 CREATE INDEX idx_task_assignments_assigned_to         ON public.task_assignments       USING btree (assigned_to);
 
+-- v94: filter by frequency + active when generating instances.
+CREATE INDEX idx_task_templates_active                ON public.task_templates         USING btree (frequency, is_active) WHERE (is_active = true);
+CREATE INDEX idx_template_assignees_template          ON public.task_template_assignees USING btree (template_id);
+-- Dedup guard for generated instances: at most one per template per period.
+CREATE UNIQUE INDEX idx_tasks_template_period         ON public.tasks                  USING btree (template_id, period_key) WHERE (template_id IS NOT NULL);
+
 -- ── 8. ROW-LEVEL SECURITY ──────────────────────────────────────────
 -- Every table has RLS enabled. Policies fall into three patterns:
 --   (a) "_authed"   — auth.role() = 'authenticated' (Step 1 RLS, broad).
@@ -723,6 +781,8 @@ ALTER TABLE public.dashboard_alert_snoozes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.team_members            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tasks                   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_assignments        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_templates          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_template_assignees ENABLE ROW LEVEL SECURITY;
 
 -- user_profiles
 CREATE POLICY user_profiles_authed ON public.user_profiles FOR ALL
@@ -837,6 +897,19 @@ CREATE POLICY task_assignments_select_authenticated ON public.task_assignments F
 CREATE POLICY task_assignments_insert_manager       ON public.task_assignments FOR INSERT TO authenticated WITH CHECK (is_manager_user());
 CREATE POLICY task_assignments_delete_manager       ON public.task_assignments FOR DELETE TO authenticated USING (is_manager_user());
 
+-- task_templates (v94) — authenticated read, manager-only write.
+CREATE POLICY task_templates_select_authenticated ON public.task_templates FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
+CREATE POLICY task_templates_insert_manager       ON public.task_templates FOR INSERT TO authenticated WITH CHECK (is_manager_user());
+CREATE POLICY task_templates_update_manager       ON public.task_templates FOR UPDATE TO authenticated USING (is_manager_user()) WITH CHECK (is_manager_user());
+CREATE POLICY task_templates_delete_manager       ON public.task_templates FOR DELETE TO authenticated USING (is_manager_user());
+
+-- task_template_assignees (v94) — authenticated read (needed for embed
+-- when generating instances), manager-only insert/delete. No UPDATE
+-- policy — assignment edits happen via delete + re-insert.
+CREATE POLICY template_assignees_select_authenticated ON public.task_template_assignees FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
+CREATE POLICY template_assignees_insert_manager       ON public.task_template_assignees FOR INSERT TO authenticated WITH CHECK (is_manager_user());
+CREATE POLICY template_assignees_delete_manager       ON public.task_template_assignees FOR DELETE TO authenticated USING (is_manager_user());
+
 -- ── 9. TRIGGERS ────────────────────────────────────────────────────
 
 CREATE TRIGGER trg_employee_skills_touch
@@ -855,6 +928,12 @@ CREATE TRIGGER trg_team_members_touch
 -- v93
 CREATE TRIGGER trg_tasks_touch
   BEFORE UPDATE ON public.tasks
+  FOR EACH ROW EXECUTE FUNCTION public._tasks_touch_updated_at();
+
+-- v94: same touch function reused for task_templates (both tables just
+-- need an updated_at stamp on every UPDATE).
+CREATE TRIGGER trg_task_templates_touch
+  BEFORE UPDATE ON public.task_templates
   FOR EACH ROW EXECUTE FUNCTION public._tasks_touch_updated_at();
 
 COMMIT;

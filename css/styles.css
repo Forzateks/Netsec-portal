@@ -2618,3 +2618,36 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .task-status-select{min-width:104px;font-size:11px}
   .task-assignees-grid{grid-template-columns:1fr 1fr}
 }
+
+/* ──────────────────── TASKS v94 — RECURRING ──────────────────── */
+.tasks-header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* Frequency tab bar (General / Daily / Weekly / Monthly / Quarterly) */
+.tasks-tab-bar{display:flex;gap:2px;margin-bottom:14px;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tasks-tab-btn{background:transparent;border:0;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.tasks-tab-btn:hover{color:var(--navy)}
+.tasks-tab-btn.active{color:var(--navy);border-bottom-color:var(--teal)}
+
+/* Split button: + New Task ▾ + dropdown menu */
+.tasks-new-btn-wrap{position:relative}
+.tasks-new-btn-split{display:inline-flex;align-items:center;gap:6px}
+.tasks-new-btn-split .btn-icon-trail{margin-left:4px;width:14px;height:14px;opacity:.85}
+.tasks-new-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:220px;background:#FFFFFF;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(10,31,92,.12);padding:6px;z-index:5000;display:none}
+.tasks-new-menu.show{display:block}
+.tasks-new-menu-item{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:0;padding:8px 12px;font-size:13px;color:var(--navy);text-align:left;cursor:pointer;border-radius:6px}
+.tasks-new-menu-item:hover{background:#F1F5F9}
+.tasks-new-menu-item i{width:16px;height:16px;color:var(--teal)}
+.tasks-new-menu-divider{height:1px;background:var(--border);margin:4px 0}
+
+/* Period pill — used on recurring tabs in the date-column slot */
+.task-period-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:12px;font-size:11.5px;font-weight:600;background:#EFF6FF;color:#1E40AF;white-space:nowrap}
+
+/* Template modal — frequency badge shown read-only at top */
+.task-template-freq-badge{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#F8FAFC;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;flex-wrap:wrap}
+.task-template-freq-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;background:var(--teal);color:#FFFFFF;letter-spacing:.3px}
+
+@media(max-width:640px){
+  .tasks-header-actions{width:100%;justify-content:flex-start}
+  .tasks-new-menu{right:auto;left:0}
+  .tasks-tab-btn{padding:9px 12px;font-size:12.5px}
+}
