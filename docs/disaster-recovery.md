@@ -187,7 +187,7 @@ Edit the Supabase URL and anon key in the app:
   - `https://rxxcrlobbtlvjgcqgjjm.supabase.co` → the new project URL
   - The anon key string → the new project's anon key
 - Commit + push.
-- Netlify auto-deploys in ~10s.
+- Cloudflare Pages auto-deploys in ~30s.
 
 Hard-refresh the live site. Log in. Spot-check a few flows:
 - Dashboard renders without errors
