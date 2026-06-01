@@ -137,6 +137,7 @@ async function doLogout() {
     await sb.auth.signOut();
   } finally {
     currentUser = ''; currentEmail = ''; isManager = false; isBackupResponsible = false;
+    if (typeof Sentry !== 'undefined') { try { Sentry.setUser(null); } catch (e) {} }
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('login-email').value = '';
@@ -209,6 +210,17 @@ async function initAppFromUser(authUser) {
   currentEmail = profile.email || authUser.email;
   isManager    = !!profile.is_manager;
   isBackupResponsible = !!profile.is_backup_responsible;
+  // v97: attribute Sentry errors to the logged-in employee. Username +
+  // email only — never any token. Region is derived from KSA_EMP since
+  // it's not a column on the profile.
+  if (typeof Sentry !== 'undefined') {
+    try {
+      var region = (typeof KSA_EMP !== 'undefined' && KSA_EMP.indexOf(currentUser) !== -1) ? 'KSA' : 'UAE';
+      Sentry.setUser({ username: currentUser, id: currentEmail });
+      Sentry.setTag('region', region);
+      Sentry.setTag('role', isManager ? 'manager' : 'employee');
+    } catch (e) { /* never block login on Sentry */ }
+  }
   await initApp(currentUser);
 }
 

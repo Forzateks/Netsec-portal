@@ -156,6 +156,25 @@ function showError(message) {
   return showToast(message || 'Something went wrong — please try again', { type:'error' });
 }
 
+// ── Sentry capture helper (v97) ──────────────────────────────────
+// Centralised message-capture for v74-class silent failures. Callers
+// that already detect "UPDATE/INSERT returned without writing what we
+// sent" wrap the call here so the Sentry dashboard groups them under
+// a stable label (tags.type='rls_silent_fail').
+//
+// Falls through silently if Sentry isn't loaded — no-op on localhost
+// or if the CDN is blocked. Never throws; the calling branch is
+// already in an error path.
+function reportSilentFail(table, context) {
+  try {
+    if (typeof Sentry === 'undefined') return;
+    Sentry.captureMessage(
+      'Silent fail on ' + table + (context && context.op ? ' (' + context.op + ')' : ''),
+      { level: 'warning', tags: { type: 'rls_silent_fail', table: table }, extra: context || {} }
+    );
+  } catch (e) { /* swallow */ }
+}
+
 // ── Relative time ────────────────────────────────────────────────
 // "just now" / "5 minutes ago" / "yesterday" / "3 days ago" /
 // "last week" — falls back to fmtDate after 14 days. For "when did

@@ -1469,6 +1469,9 @@ async function logBackup(fileSize, tableCount, rowCount, notes) {
   var res = await sb.from('backup_log').insert(payload).select('id,taken_at').single();
   if (res.error) {
     console.warn('backup_log insert failed:', res.error.message);
+    if (typeof reportSilentFail === 'function') {
+      reportSilentFail('backup_log', { op: 'insert_after_backup', error: res.error.message });
+    }
     return null;
   }
   // Refresh the dashboard banner + Admin Tools pill in-place so the

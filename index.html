@@ -17,6 +17,84 @@
 <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
+<!-- Sentry error tracking (v97). Loaded BEFORE any other script so init runs
+     before app code can throw. Skipped on localhost so dev-time errors don't
+     burn production quota. SRI hash verified against the loader-docs page. -->
+<script
+  src="https://browser.sentry-cdn.com/10.55.0/bundle.tracing.min.js"
+  integrity="sha384-OOuf8wt3oLHkTcCOwsp+I4iAkJa3qBMRtUfavn+MisNU8cm5f7Bq3zY8qOWCftzx"
+  crossorigin="anonymous"
+></script>
+<script>
+(function(){
+  var host = window.location.hostname;
+  // Dev-host guard. file:// gives hostname='' so we catch that too.
+  if (host === 'localhost' || host === '127.0.0.1' || host === '' || host === '0.0.0.0') return;
+  if (typeof Sentry === 'undefined') return; // CDN blocked or SRI mismatch — fail silently
+
+  // Token + password scrubbing. Runs over event body, request URL, and
+  // every breadcrumb (Sentry auto-captures fetch URLs as breadcrumbs,
+  // and Supabase recovery redirects put tokens in #fragments — without
+  // breadcrumb scrubbing the body scrub is decorative).
+  var SENSITIVE_KEYS  = /"(password|access_token|refresh_token|apikey|authorization)"\s*:\s*"[^"]*"/gi;
+  var SENSITIVE_QUERY = /([?&#])(password|access_token|refresh_token)=[^&]*/gi;
+  function scrubUrl(s)   { return typeof s === 'string' ? s.replace(SENSITIVE_QUERY, '$1$2=[REDACTED]') : s; }
+  function scrubBody(s)  { return typeof s === 'string' ? s.replace(SENSITIVE_KEYS,   '"$1":"[REDACTED]"') : s; }
+
+  Sentry.init({
+    dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
+    environment: host === 'gulfit-tracker.netlify.app' ? 'production' : 'development',
+    release: 'netsec-portal@v97',
+
+    // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
+    tracesSampleRate: 0.1,
+    // Session Replay disabled — privacy + free-tier quota.
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 0,
+
+    // Suppress chatty defaults: xhr (we only use fetch via Supabase) and
+    // console (every debug log would otherwise land in the payload).
+    integrations: [
+      Sentry.breadcrumbsIntegration({ fetch: true, xhr: false, console: false, dom: true, history: true })
+    ],
+
+    // Don't capture noisy browser-extension and third-party errors.
+    ignoreErrors: [
+      'ResizeObserver loop limit exceeded',
+      'ResizeObserver loop completed with undelivered notifications',
+      'Non-Error promise rejection captured',
+      /^chrome-extension:/,
+      /^moz-extension:/
+    ],
+
+    beforeSend: function(event) {
+      try {
+        // Scrub request body
+        if (event.request && event.request.data) {
+          var json = (typeof event.request.data === 'string')
+            ? event.request.data
+            : JSON.stringify(event.request.data);
+          event.request.data = scrubBody(json);
+        }
+        // Scrub URLs (both ?query and #fragment paths)
+        if (event.request && event.request.url) {
+          event.request.url = scrubUrl(event.request.url);
+        }
+        // Scrub breadcrumbs — the actual leak vector for fetch URLs
+        if (event.breadcrumbs && event.breadcrumbs.length) {
+          event.breadcrumbs = event.breadcrumbs.map(function(b){
+            if (b && b.data && b.data.url) b.data.url = scrubUrl(b.data.url);
+            if (b && typeof b.message === 'string') b.message = scrubBody(b.message);
+            return b;
+          });
+        }
+      } catch (e) { /* never block error reporting on scrubber failure */ }
+      return event;
+    }
+  });
+})();
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <!-- XLSX (~700KB) is lazy-loaded on-demand via ensureXlsxLoaded() when

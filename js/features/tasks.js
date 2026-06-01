@@ -351,6 +351,7 @@ async function changeTaskStatus(taskId, newStatus) {
   if (res.error || !res.data || res.data.status !== newStatus) {
     t.status = old;
     renderTasksList();
+    reportSilentFail('tasks', { op: 'status_change', task_id: taskId, expected: newStatus, got: res.data && res.data.status, error: res.error && res.error.message });
     showError('Could not update status: ' + (res.error ? res.error.message : 'permission denied'));
     return;
   }
@@ -585,6 +586,7 @@ async function _saveEditTask(p) {
     return String(upd.data[k] == null ? '' : upd.data[k]) !== String(payload[k] == null ? '' : payload[k]);
   });
   if (mismatch) {
+    reportSilentFail('tasks', { op: 'edit_task', task_id: p.taskId, payload: payload, returned: upd.data });
     p.fail('Server returned a different value — your changes may have been silently rejected. Reload.');
     return;
   }
@@ -629,6 +631,7 @@ async function archiveTask(taskId) {
     .update({ is_archived: true, archived_at: new Date().toISOString() })
     .eq('id', taskId).select('id,is_archived').single();
   if (upd.error || !upd.data || !upd.data.is_archived) {
+    reportSilentFail('tasks', { op: 'archive', task_id: taskId, error: upd.error && upd.error.message });
     showError('Archive failed: ' + (upd.error ? upd.error.message : 'permission denied'));
     return;
   }
@@ -643,6 +646,7 @@ async function restoreTask(taskId) {
     .update({ is_archived: false, archived_at: null })
     .eq('id', taskId).select('id,is_archived').single();
   if (upd.error || !upd.data || upd.data.is_archived) {
+    reportSilentFail('tasks', { op: 'restore', task_id: taskId, error: upd.error && upd.error.message });
     showError('Restore failed: ' + (upd.error ? upd.error.message : 'permission denied'));
     return;
   }
@@ -1163,6 +1167,7 @@ async function softDeleteTemplate(templateId) {
     .update({ is_active: false })
     .eq('id', templateId).select('id,is_active').single();
   if (upd.error || !upd.data || upd.data.is_active !== false) {
+    reportSilentFail('task_templates', { op: 'soft_delete', template_id: templateId, error: upd.error && upd.error.message });
     showError('Deactivate failed: ' + (upd.error ? upd.error.message : 'permission denied'));
     return;
   }
