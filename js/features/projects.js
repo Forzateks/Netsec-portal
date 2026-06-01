@@ -1725,7 +1725,10 @@ function showProjectTab(tab) {
   }
   if (tab==='customer')   { initProjectTab(); renderPjCustomerSummary(); }
   if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
-  if (tab==='otmanager')  { renderManager(); if (typeof renderLastBackupPill === 'function') renderLastBackupPill(); }
+  // v102: OT summary moved to Leave → Team Overview. otmanager tab now
+  // only carries Reports & Backup + admin tools (Recompute/Archive/Purge),
+  // so no per-render data fetch is needed — just refresh the backup pill.
+  if (tab==='otmanager')  { if (typeof renderLastBackupPill === 'function') renderLastBackupPill(); }
   if (tab==='custmgr')    { populateProjectDropdowns(); renderCustomersTable(); }
   if (tab==='manage')     { populateProjectDropdowns(); renderManageProjects(); }
   if (tab==='vendors')    { renderVendorsManage(); }

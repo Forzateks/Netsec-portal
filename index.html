@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v101',
+    release: 'netsec-portal@v102',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -439,10 +439,21 @@
     </div>
   </div>
 
-  <!-- TEAM OVERVIEW (manager only) -->
+  <!-- TEAM OVERVIEW (manager only)
+       v102: OT/Comp Off summary moved here from Projects → Manager. The
+       team-ot-section wrapper is shown/hidden by renderLeaveTeam() based
+       on isManager — employees see only their leave row above, no OT
+       table at all. -->
   <div id="ltab-team" style="display:none">
     <div id="lv-team-load" class="loading"><div class="spinner"></div>Loading...</div>
     <div id="lv-team-content"></div>
+    <div id="team-ot-section" style="display:none;margin-top:20px">
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title">All Employees — OT &amp; Comp Off Summary</div>
+        <div id="team-ot-loading" class="loading"><div class="spinner"></div>Loading...</div>
+        <div id="team-ot-content"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -788,13 +799,11 @@
   </div>
 
   <!-- MANAGER VIEW -->
+  <!-- v102: "All Employees — OT & Comp Off Summary" card moved to Leave
+       → Team Overview (its semantic home, alongside leave balances).
+       Reports & Backup + Policy Recompute / Archive / Purge admin tools
+       stay here. -->
   <div id="pjtab-otmanager" style="display:none">
-    <div class="card" style="margin-bottom:20px">
-      <div class="card-title">All Employees — OT &amp; Comp Off Summary</div>
-      <div id="manager-loading" class="loading"><div class="spinner"></div>Loading...</div>
-      <div id="manager-content"></div>
-    </div>
-
     <!-- Reports & Backup — moved from Dashboard in v79 so the Dashboard
          stays focused on what's happening this week, while the heavy
          admin actions live alongside Recompute / Archive / Purge here. -->

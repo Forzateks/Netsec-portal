@@ -540,17 +540,28 @@ async function renderLeaveTeam() {
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Annual: '+fmtDays(LEAVE_ALLOWANCE)+'/yr &nbsp;|&nbsp; Sick: '+fmtDays(SICK_ALLOWANCE)+'/yr</div>'+
     '</div>';
+
+  // v102: manager-only OT/Comp Off summary card sits alongside the leave
+  // table. The team-ot-section wrapper stays hidden for employees, so
+  // "My Leave Overview" remains leave-only.
+  var otSection = document.getElementById('team-ot-section');
+  if (otSection) otSection.style.display = isManager ? '' : 'none';
+  if (isManager && typeof renderTeamOTSummary === 'function') {
+    renderTeamOTSummary();
+  }
 }
 
-// == MANAGER VIEW =================================================
-async function renderManager() {
-  document.getElementById('manager-loading').style.display='flex';
-  document.getElementById('manager-content').innerHTML='';
+// == TEAM OT/COMP-OFF SUMMARY (v102) ==============================
+// v102: relocated from Projects → Manager to Leave → Team Overview.
+// Called by renderLeaveTeam() when isManager.
+async function renderTeamOTSummary() {
+  document.getElementById('team-ot-loading').style.display='flex';
+  document.getElementById('team-ot-content').innerHTML='';
   const [{data:sessions},{data:compoffs}]=await Promise.all([
     sb.from('ot_sessions').select('*'),
     sb.from('comp_off_register').select('*')
   ]);
-  document.getElementById('manager-loading').style.display='none';
+  document.getElementById('team-ot-loading').style.display='none';
   const rows=EMPLOYEES.map(function(emp){
     const s=calcSummary(sessions||[],compoffs||[],emp);
     const bc=s.balance>0?'var(--success)':s.balance<0?'var(--danger)':'var(--navy)';
@@ -569,7 +580,7 @@ async function renderManager() {
       '<td style="font-family:\'DM Mono\',monospace">'+s.used+'</td>'+
       '<td><strong style="font-family:\'DM Mono\',monospace;color:'+bc+'">'+s.balance+'</strong></td></tr>';
   }).join('');
-  document.getElementById('manager-content').innerHTML=
+  document.getElementById('team-ot-content').innerHTML=
     '<div class="table-wrap"><table><thead><tr>'+
       '<th>Employee</th>'+
       '<th>Sessions</th>'+
