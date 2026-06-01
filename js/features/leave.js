@@ -81,22 +81,40 @@ async function getLeaveDaysUsed(employee, year, leaveType) {
 
 function isCompOffType(t) { return t==='compoff_full' || t==='compoff_half'; }
 
+// v104: Parses dropdown ltype into (DB category, isHalfDay). Annual/Sick
+// now use _full/_half variants for UI; the underlying DB leave_type column
+// still stores just the category ('annual'/'sick'). Comp Off ltypes unchanged.
+function parseLtype(ltype) {
+  if (ltype === 'annual_half' || ltype === 'annual_full') {
+    return { category: 'annual', isHalfDay: ltype === 'annual_half' };
+  }
+  if (ltype === 'sick_half' || ltype === 'sick_full') {
+    return { category: 'sick', isHalfDay: ltype === 'sick_half' };
+  }
+  if (ltype === 'compoff_half' || ltype === 'compoff_full') {
+    return { category: 'compoff', isHalfDay: ltype === 'compoff_half' };
+  }
+  return { category: ltype, isHalfDay: false };
+}
+
 function onLeaveTypeChange() {
   const ltype = document.getElementById('lv-type').value;
-  const compoff = isCompOffType(ltype);
+  // v104: half-day variants (any category) and comp-off all use single-date layout.
+  const parsed = parseLtype(ltype);
+  const singleDay = parsed.isHalfDay || parsed.category === 'compoff';
   const endWrap = document.getElementById('lv-end-wrap');
   const startLabel = document.getElementById('lv-start-label');
   const startWrap = document.getElementById('lv-start-wrap');
-  if (endWrap)   endWrap.style.display   = compoff ? 'none' : '';
-  if (startLabel) startLabel.textContent = compoff ? 'Date *' : 'Start Date *';
-  if (startWrap) startWrap.classList.toggle('full', compoff);
+  if (endWrap)   endWrap.style.display   = singleDay ? 'none' : '';
+  if (startLabel) startLabel.textContent = singleDay ? 'Date *' : 'Start Date *';
+  if (startWrap) startWrap.classList.toggle('full', singleDay);
   updateLeavePreview();
 }
 
 async function updateLeavePreview() {
   const start = document.getElementById('lv-start').value;
   const end   = document.getElementById('lv-end').value;
-  const ltype = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual';
+  const ltype = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual_full';
 
   if (isCompOffType(ltype)) {
     const reqDays = ltype==='compoff_full' ? 1 : 0.5;
@@ -120,16 +138,12 @@ async function updateLeavePreview() {
     return;
   }
 
-  const isSick = ltype === 'sick';
+  // v104: category and half-day derived from new dropdown variants.
+  const parsed = parseLtype(ltype);
+  const isSick = parsed.category === 'sick';
   const allowance = isSick ? SICK_ALLOWANCE : LEAVE_ALLOWANCE;
   document.getElementById('lv-prev-type').textContent = isSick ? 'Sick' : 'Annual';
-
-  // Half-day checkbox: only valid when start=end and the date is a working
-  // day for this employee. Anything else (multi-day range, weekend, empty
-  // date) disables the checkbox and force-unchecks it.
-  _refreshHalfDayState(start, end);
-  var halfBox = document.getElementById('lv-halfday');
-  var isHalfDay = !!(halfBox && halfBox.checked && !halfBox.disabled);
+  var isHalfDay = parsed.isHalfDay;
 
   if (!start||!end) {
     document.getElementById('lv-prev-days').textContent = '—';
@@ -147,55 +161,16 @@ async function updateLeavePreview() {
   document.getElementById('lv-prev-bal').style.color  = balAfter<0?'var(--danger)':balAfter<=3?'var(--gold)':'var(--success)';
 }
 
-// Enable / disable the half-day checkbox based on the current date inputs.
-// Half-day is only meaningful when start === end and that single date is a
-// working day for the current employee. Sets a helpful message under the
-// checkbox explaining WHY it's disabled.
-function _refreshHalfDayState(start, end) {
-  var box  = document.getElementById('lv-halfday');
-  var help = document.getElementById('lv-halfday-help');
-  var wrap = document.getElementById('lv-halfday-wrap');
-  if (!box || !wrap) return;
-  // Comp-off types use their own half-day pathway (compoff_half) — hide
-  // this checkbox entirely so we don't have two ways to mean the same thing.
-  var ltype = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual';
-  if (isCompOffType(ltype)) {
-    wrap.style.display = 'none';
-    box.checked = false;
-    return;
-  }
-  wrap.style.display = '';
-
-  var reason = '';
-  if (!start || !end) {
-    reason = '';
-  } else if (start !== end) {
-    reason = 'Half-day only available for single-day requests.';
-  } else {
-    // Same date — check weekend for this employee's region
-    var d = new Date(start + 'T00:00:00');
-    if (isWeekend(d.getDay(), currentUser)) {
-      reason = 'Selected date is a weekend for your region.';
-    }
-  }
-  var disabled = !!reason;
-  if (disabled && box.checked) box.checked = false;
-  box.disabled = disabled;
-  if (help) help.textContent = reason;
-  wrap.classList.toggle('is-disabled', disabled);
-}
-
 async function submitLeaveRequest() {
   if (!await requireAuth()) return;
-  const ltype  = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual';
+  const ltype  = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual_full';
   if (isCompOffType(ltype)) { return submitCompOffViaLeaveForm(ltype); }
   const start  = document.getElementById('lv-start').value;
   const end    = document.getElementById('lv-end').value;
   const reason = document.getElementById('lv-reason').value.trim();
   const errEl  = document.getElementById('leave-error');
   if (!start||!end){showAlert('leave-error');return;}
-  var halfBox = document.getElementById('lv-halfday');
-  var isHalfDay = !!(halfBox && halfBox.checked && !halfBox.disabled);
+  var isHalfDay = parseLtype(ltype).isHalfDay;
   // Half-day → 0.5 working day. Otherwise the standard working-day count
   // (excludes weekends per region).
   var days = isHalfDay ? 0.5 : calcWorkingDays(start,end,currentUser);
@@ -239,7 +214,7 @@ async function submitLeaveRequest() {
   btn.disabled=true; btn.textContent='⏳ Submitting...';
   const {error}=await sb.from('leave_requests').insert({
     employee:currentUser,start_date:start,end_date:end,working_days:days,
-    reason,status:'pending',leave_type:ltype
+    reason,status:'pending',leave_type:parseLtype(ltype).category
   });
   btn.disabled=false; btn.innerHTML='<i data-lucide="send" class="btn-icon"></i>Submit Request'; if (typeof renderIcons === 'function') renderIcons();
   if (error){
@@ -293,8 +268,6 @@ async function submitLeaveRequest() {
   showAlert('leave-success');
 
   ['lv-start','lv-end','lv-reason'].forEach(function(id){document.getElementById(id).value='';});
-  var hb = document.getElementById('lv-halfday'); if (hb) hb.checked = false;
-  if (typeof _refreshHalfDayState === 'function') _refreshHalfDayState('', '');
   document.getElementById('lv-prev-days').textContent='—';
   document.getElementById('lv-prev-used').textContent='—';
   document.getElementById('lv-prev-bal').textContent='—';
