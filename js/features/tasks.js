@@ -183,13 +183,23 @@ function _tasksFiltered() {
   });
 
   // Recurring tabs: sort by period_key DESC so the newest period sits on top.
-  // General tab keeps the created_at-desc order from the initial SELECT.
+  // General tab (v103): completed tasks sink to the bottom; everything else
+  // (yet_to_start, ongoing, cancelled) stays on top. created_at-desc is the
+  // tie-breaker within each group, preserving newest-first within both
+  // sections.
   if (activeTab !== 'general') {
     rows.sort(function(a,b){
       var ak = a.period_key || '';
       var bk = b.period_key || '';
       if (ak === bk) return (b.created_at||'').localeCompare(a.created_at||'');
       return bk.localeCompare(ak);
+    });
+  } else {
+    rows.sort(function(a,b){
+      var ad = (a.status === 'completed') ? 1 : 0;
+      var bd = (b.status === 'completed') ? 1 : 0;
+      if (ad !== bd) return ad - bd;
+      return (b.created_at||'').localeCompare(a.created_at||'');
     });
   }
   return rows;
