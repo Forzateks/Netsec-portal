@@ -371,6 +371,15 @@ async function renderEmployeeDashboard() {
   var prevDate = new Date(); prevDate.setDate(1); prevDate.setMonth(prevDate.getMonth()-1);
   var prevMonth = prevDate.toISOString().slice(0,7);
 
+  // Last day of the current month. "Day 0 of next month" gives 28/29/30/31
+  // correctly across calendars. Computed in UTC to stay aligned with `month`
+  // (derived from toISOString); mixing UTC + local on a month boundary near
+  // midnight would land prevMonth and monthEnd in different months entirely.
+  // v100: replaced hardcoded "-31" suffix which 400'd in Feb/Apr/Jun/Sep/Nov.
+  var _mParts  = month.split('-');
+  var _lastDay = new Date(Date.UTC(parseInt(_mParts[0], 10), parseInt(_mParts[1], 10), 0)).getUTCDate();
+  var monthEnd = month + '-' + String(_lastDay).padStart(2, '0');
+
   var results = await Promise.all([
     sb.from('ot_sessions').select('*').eq('employee',currentUser),
     sb.from('comp_off_register').select('*').eq('employee',currentUser),
@@ -382,7 +391,7 @@ async function renderEmployeeDashboard() {
       .select('start_date,end_date,working_days,leave_type,status,employee,effective_end_date')
       .eq('employee',currentUser)
       .gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
-    sb.from('unified_sessions').select('total_hours,team_members,employee,session_date').gte('session_date',prevMonth+'-01').lte('session_date',month+'-31'),
+    sb.from('unified_sessions').select('total_hours,team_members,employee,session_date').gte('session_date',prevMonth+'-01').lte('session_date',monthEnd),
     // Year-wide aggregate for the Top-8 Engagement / Customer cards.
     // Paginated via fetchAllRows so totals aren't silently capped at 1000.
     fetchAllRows(function(){
