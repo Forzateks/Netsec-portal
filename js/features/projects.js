@@ -1671,13 +1671,16 @@ function buildPieChart(data, unit) {
 
   html += '</svg>';
 
-  // Legend
-  html += '<div style="display:flex;flex-direction:column;gap:8px">';
+  // Legend. v101: each row gets min-width:0 so the flex child's min-content
+  // can be smaller than its (potentially unbreakable) label. word-break:
+  // break-word ensures hyphenated names like "MASHREQ - DC/DR - UAE BRANCHES"
+  // wrap on narrow screens instead of pushing the card past viewport.
+  html += '<div style="display:flex;flex-direction:column;gap:8px;min-width:0">';
   data.forEach(function(d) {
     var pct = Math.round(d.value/total*100);
-    html += '<div style="display:flex;align-items:center;gap:8px">'+
+    html += '<div style="display:flex;align-items:center;gap:8px;min-width:0">'+
       '<div style="width:12px;height:12px;border-radius:3px;background:'+d.color+';flex-shrink:0"></div>'+
-      '<div style="font-size:12px"><span style="font-weight:600">'+d.label+'</span> '+
+      '<div style="font-size:12px;min-width:0;word-break:break-word"><span style="font-weight:600">'+d.label+'</span> '+
       '<span style="color:var(--muted)">'+(unit==='h' ? fmtHours(d.value) : (fmtNumber(d.value,1)+(unit||'')))+' ('+pct+'%)</span></div>'+
       '</div>';
   });
