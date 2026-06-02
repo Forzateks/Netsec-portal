@@ -831,6 +831,31 @@ async function renderUSSessions() {
     var actType  = r.activity_type || '-';
     var info     = r.session_info || '';
     var emp      = r.employee || '-';
+    // v106: show team members alongside the logger in the LOGGED BY cell.
+    // Others = team_members minus the logger (avoid double-listing).
+    // B-highlight: if the active member filter (fMem) matches one of the
+    // "others", show that name explicitly instead of hiding it in "+N",
+    // so a filtered result is self-explanatory.
+    var __logger = r.employee || '';
+    var __team = (r.team_members || '').split(',')
+      .map(function(s){ return s.trim(); })
+      .filter(Boolean);
+    var __others = __team.filter(function(n){ return n !== __logger; });
+    var empCell = esc2(__logger || '-');
+    if (__others.length) {
+      var __fMemTrim = (fMem || '').trim();
+      // If filtering by a specific member who is in the others list,
+      // surface their name; the rest collapse into "+N".
+      if (__fMemTrim && __others.indexOf(__fMemTrim) !== -1) {
+        var __rest = __others.filter(function(n){ return n !== __fMemTrim; });
+        empCell += ', ' + esc2(__fMemTrim);
+        if (__rest.length) {
+          empCell += ' <span class="team-plus" title="' + esc2(__rest.join(', ')) + '">+' + __rest.length + '</span>';
+        }
+      } else {
+        empCell += ' <span class="team-plus" title="' + esc2(__others.join(', ')) + '">+' + __others.length + '</span>';
+      }
+    }
     // Region tag next to the time so it's obvious whether a session is logged
     // in KSA or UAE local time — eyeballing the times alone is ambiguous
     // (e.g. an 09:00-12:00 KSA session reads the same as a UAE one).
@@ -846,7 +871,7 @@ async function renderUSSessions() {
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+fmtHours(r.total_hours)+'</td>'+
       '<td><span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+esc2(actType)+'</span></td>'+
       '<td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(info)+'">'+esc2(info||'-')+'</td>'+
-      '<td style="font-size:12px;color:var(--muted)">'+esc2(emp)+'</td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+empCell+'</td>'+
       '<td style="white-space:nowrap">'+actions+'</td>'+
       '</tr>';
     cardsHtml += '<div class="us-card">'+
@@ -863,7 +888,7 @@ async function renderUSSessions() {
       '</div>'+
       '<div class="us-card-row">'+
         '<span class="badge" style="background:#f0f4ff;color:var(--navy);font-size:11px">'+esc2(actType)+'</span>'+
-        '<span class="us-card-emp">'+esc2(emp)+'</span>'+
+        '<span class="us-card-emp">'+empCell+'</span>'+
       '</div>'+
       (info?'<div class="us-card-info" title="'+esc2(info)+'">'+esc2(info)+'</div>':'')+
       (canEdit?'<div class="us-card-actions">'+actions+'</div>':'')+
