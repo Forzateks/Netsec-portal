@@ -577,12 +577,20 @@ ALTER TABLE public.engagements              ADD CONSTRAINT engagements_pkey     
 ALTER TABLE public.engagements              ADD CONSTRAINT engagements_customer_id_name_type_key UNIQUE (customer_id, name, type);
 ALTER TABLE public.engagements              ADD CONSTRAINT engagements_type_check
   CHECK (type = ANY (ARRAY['project'::text, 'poc'::text, 'amc'::text, 'support'::text, 'presales'::text]));
+-- v108: expanded to include POC-specific phases. The union covers both
+-- project waterfall (13 stages) and POC-specific cycle (10 stages, some
+-- shared with project list like 'Yet to start', 'Troubleshooting',
+-- 'On demand request'). UI type-branches via tracker.js _trkPhasesFor;
+-- DB allows both lists in the same column so the union is 20 distinct
+-- values (3 are shared between the two lists).
 ALTER TABLE public.engagements              ADD CONSTRAINT engagements_tracker_status_check
   CHECK ((tracker_status IS NULL) OR (tracker_status = ANY (ARRAY[
     'Yet to start'::text, 'Kick-off'::text, 'HLD Discussion'::text, 'HLD Documentation'::text,
     'LLD Discussion'::text, 'LLD Documentation'::text, 'Initial Configuration'::text,
     'Pilot Sites Rollout'::text, 'Migration'::text, 'KT / Training'::text,
-    'As-Built Documentation'::text, 'Troubleshooting'::text, 'On demand request'::text])));
+    'As-Built Documentation'::text, 'Troubleshooting'::text, 'On demand request'::text,
+    'Hardware Delivery'::text, 'PoC License Document'::text, 'Design Discussion'::text,
+    'Initial Config'::text, 'PoC Branch Migration'::text, 'PoC Report'::text, 'Commercial Process'::text])));
 
 ALTER TABLE public.engagement_milestones    ADD CONSTRAINT engagement_milestones_pkey   PRIMARY KEY (id);
 ALTER TABLE public.engagement_milestones    ADD CONSTRAINT engagement_milestones_status_check

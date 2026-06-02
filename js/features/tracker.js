@@ -14,8 +14,9 @@ var _trkActiveTab = 'all';   // 'all' | 'projects' | 'pocs' | 'amc' | 'support'
 // Completed / Cancelled / Dormant / Sign-off live exclusively on
 // engagement.status (the top-level Status field). The 13 phase values
 // here are enforced by the CHECK constraint on engagements.tracker_status.
-var TRK_PHASES = [
+var TRK_PHASES_PROJECT = [
   'Yet to start',
+  'Hardware Delivery',
   'Kick-off',
   'HLD Discussion',
   'HLD Documentation',
@@ -29,14 +30,33 @@ var TRK_PHASES = [
   'Troubleshooting',
   'On demand request'
 ];
+// v108: POC-specific workflow phases. Distinct from project waterfall
+// (POCs are short cycles: hardware → license → config → migration →
+// report → commercial close). The engagements_tracker_status_check
+// constraint allows the union of both lists; _trkPhasesFor branches
+// on engagement.type to show the right one in the edit dropdown.
+var TRK_PHASES_POC = [
+  'Hardware Delivery',
+  'PoC License Document',
+  'Yet to start',
+  'Design Discussion',
+  'Initial Config',
+  'PoC Branch Migration',
+  'On demand request',
+  'Troubleshooting',
+  'PoC Report',
+  'Commercial Process'
+];
+function _trkPhasesFor(type) { return (type === 'poc') ? TRK_PHASES_POC : TRK_PHASES_PROJECT; }
 // Phase dropdown is only enabled when the top-level status is exactly
 // 'active'. Every other status (sign-off, completed, on-hold, dormant,
 // cancelled) means the project isn't currently in a workflow phase, so
 // the Phase select is disabled and force-cleared.
 var TRK_PHASE_ALLOWED_STATUSES = ['active'];
 
-// Legacy compat — Phase list is now the same regardless of type.
-function trkStatusesFor(/*type*/) { return TRK_PHASES.slice(); }
+// v108: type-aware phase list. Projects/AMC/Support/Presales share
+// the 13-stage waterfall; POCs get their own 10-phase list.
+function trkStatusesFor(type) { return _trkPhasesFor(type).slice(); }
 
 function showTrackerTab(tab) {
   _trkActiveTab = tab;
@@ -794,19 +814,67 @@ function _trkTextOrNull(v) { var t = (v||'').trim(); return t || null; }
 function _trkPopulateStatusOptions(type, currentValue) {
   var sel = document.getElementById('trk-edit-tracker-status');
   if (!sel) return;
+  // v108: pick the phase list for this engagement's type. POC engagements
+  // get the POC-specific 10-phase list; everything else gets the 13-stage
+  // project waterfall. Legacy values not in the chosen list still surface
+  // as "(legacy)" so a manager can re-select correctly.
+  var phaseList = _trkPhasesFor(type);
   var preserve = (typeof currentValue === 'string' && currentValue) ? currentValue : sel.value;
   var html = '<option value="">— None —</option>';
   // Defensive legacy preservation — should be rare after the v20 cleanup
   // migration but if any row slips through with an out-of-list value,
   // surface it as "(legacy)" so the manager can re-select correctly.
-  if (preserve && TRK_PHASES.indexOf(preserve) === -1) {
+  if (preserve && phaseList.indexOf(preserve) === -1) {
     html += '<option value="'+esc2(preserve)+'" selected>'+esc2(preserve)+' (legacy)</option>';
   }
-  TRK_PHASES.forEach(function(v){
+  phaseList.forEach(function(v){
     html += '<option>'+esc2(v)+'</option>';
   });
   sel.innerHTML = html;
-  if (preserve && TRK_PHASES.indexOf(preserve) !== -1) sel.value = preserve;
+  if (preserve && phaseList.indexOf(preserve) !== -1) sel.value = preserve;
+}
+
+// v108: top-level status is now type-aware. POCs drop sign-off/payment-pending
+// (project-payment concepts) and gain 'completed'; all other types keep the
+// existing 7. Mirrors the phase populator pattern. The status column has
+// no CHECK constraint, so any value saves freely — only the dropdown
+// vocabulary differs by type.
+var TRK_STATUS_PROJECT = [
+  {v:'active',          l:'🟢 Active'},
+  {v:'sign-off',        l:'✍️ Sign-off'},
+  {v:'payment-pending', l:'💰 Payment Pending'},
+  {v:'closed',          l:'✅ Closed'},
+  {v:'on-hold',         l:'⏸️ On Hold'},
+  {v:'dormant',         l:'💤 Dormant'},
+  {v:'cancelled',       l:'❌ Cancelled'}
+];
+var TRK_STATUS_POC = [
+  {v:'active',    l:'🟢 Active'},
+  {v:'closed',    l:'✅ Closed'},
+  {v:'on-hold',   l:'⏸️ On Hold'},
+  {v:'dormant',   l:'💤 Dormant'},
+  {v:'cancelled', l:'❌ Cancelled'},
+  {v:'completed', l:'🏁 Completed'}
+];
+function _trkStatusListFor(type) { return (type === 'poc') ? TRK_STATUS_POC : TRK_STATUS_PROJECT; }
+
+function _trkPopulateTopStatusOptions(type, currentValue) {
+  var sel = document.getElementById('trk-edit-status');
+  if (!sel) return;
+  var list = _trkStatusListFor(type);
+  var preserve = (typeof currentValue === 'string' && currentValue) ? currentValue : sel.value;
+  var html = '';
+  // Legacy preservation: if the row's status isn't in this type's list
+  // (e.g. a POC tagged 'sign-off' from before v108), surface it as (legacy)
+  // so the manager sees it instead of it silently vanishing on form load.
+  if (preserve && !list.some(function(o){ return o.v === preserve; })) {
+    html += '<option value="'+esc2(preserve)+'" selected>'+esc2(preserve)+' (legacy)</option>';
+  }
+  list.forEach(function(o){
+    html += '<option value="'+o.v+'">'+o.l+'</option>';
+  });
+  sel.innerHTML = html;
+  if (preserve && list.some(function(o){ return o.v === preserve; })) sel.value = preserve;
 }
 
 // When the user picks a terminal/paused top-level status (completed,
@@ -870,6 +938,10 @@ function openTrackerEditModal(id) {
     setModalArchivedBanner(modalBox, r.is_archived ? 'engagement' : null);
   }
   _trkPopulateOwnerOptions();
+  // v108: top-level status dropdown is now JS-populated and type-aware.
+  // Must run BEFORE _trkSet('trk-edit-status', ...) below or the options
+  // won't exist yet for the value to select.
+  _trkPopulateTopStatusOptions(r.type, _trkTopStatusKey(r.status));
   _trkPopulateStatusOptions(r.type, r.tracker_status);
 
   document.getElementById('trk-edit-title').textContent    = r.name || 'Edit Engagement';
