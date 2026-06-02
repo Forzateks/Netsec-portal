@@ -1108,7 +1108,7 @@ function onPjFilterCustomerChange() {
 const ACTIVITY_TYPES = [
   'HLD Discussion','HLD Documentation','LLD Discussion','LLD Documentation',
   'Pilot Sites Rollout','As-Built Documentation','KT / Training','Migration',
-  'Troubleshooting','Initial Configuration'
+  'Troubleshooting','Initial Configuration','Others'
 ];
 
 // Pre-Sales-Task-specific activity list (session_type='presales').
@@ -1139,7 +1139,7 @@ function activityTypesForSession(sessionType) {
   // conversations are a real activity here. AMC + Support stick to the
   // delivery list as-is (maintenance/firefighting flows don't need it).
   if (sessionType === 'project' || sessionType === 'poc') {
-    return ACTIVITY_TYPES.concat(['Design Discussion']);
+    return ACTIVITY_TYPES.concat(['Design Discussion','Daily Sync Call']);
   }
   return ACTIVITY_TYPES;
 }
@@ -1688,6 +1688,101 @@ function buildPieChart(data, unit) {
   return html;
 }
 
+// == ACTIVITY MATRIX (v109b) ======================================
+// Manager-only Reports sub-tab. Hours per employee per activity_type
+// with a date-range filter. Built on v109a-cleaned canonical data
+// (16 activity_types). Model A crediting: every participant (logger +
+// each name in team_members) gets the full session hours, deduped so
+// the logger isn't double-counted when they also appear in team_members.
+// Layout B: per-employee expandable rows; expanding shows the activity
+// breakdown as scaled bars (longest activity = 100% of row width).
+async function renderActivityMatrix() {
+  if (!isManager) {
+    document.getElementById('matrix-body').innerHTML =
+      '<div style="color:var(--muted);font-size:13px">Manager access required.</div>';
+    return;
+  }
+  var range = (document.getElementById('matrix-range')||{}).value || 'all';
+  var loading = document.getElementById('matrix-loading');
+  var body = document.getElementById('matrix-body');
+  if (loading) loading.style.display = 'block';
+  if (body) body.innerHTML = '';
+
+  // Date bound for the chosen range. UTC math to stay consistent with
+  // other dashboard date-window calcs (avoids month-boundary drift).
+  var now = new Date(), fromISO = null;
+  if (range === 'month')   fromISO = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0,10);
+  if (range === 'quarter') { var q = Math.floor(now.getUTCMonth()/3)*3; fromISO = new Date(Date.UTC(now.getUTCFullYear(), q, 1)).toISOString().slice(0,10); }
+  if (range === 'year')    fromISO = new Date(Date.UTC(now.getUTCFullYear(), 0, 1)).toISOString().slice(0,10);
+
+  var res = await fetchAllRows(function() {
+    var q = sb.from('unified_sessions').select('employee,team_members,activity_type,total_hours,session_date');
+    if (fromISO) q = q.gte('session_date', fromISO);
+    return q;
+  });
+  var rows = (res && res.data) || [];
+
+  // Model A fan-out: credit full hours to logger + each team member, deduped.
+  // matrix[emp][activity] = hours ; totals per emp ; activity column set.
+  var matrix = {}, empTotal = {}, actTotals = {};
+  rows.forEach(function(r){
+    var hrs = parseFloat(r.total_hours || 0);
+    if (!hrs) return;
+    var act = r.activity_type || 'Others';
+    var people = (r.team_members || '').split(',').map(function(s){return s.trim();}).filter(Boolean);
+    if (r.employee && people.indexOf(r.employee) === -1) people.push(r.employee);
+    if (!people.length && r.employee) people = [r.employee];
+    people.forEach(function(p){
+      matrix[p] = matrix[p] || {};
+      matrix[p][act] = (matrix[p][act] || 0) + hrs;
+      empTotal[p] = (empTotal[p] || 0) + hrs;
+      actTotals[act] = (actTotals[act] || 0) + hrs;
+    });
+  });
+
+  if (loading) loading.style.display = 'none';
+
+  // Employees to show: the canonical EMPLOYEES list (live), plus any name
+  // that appears in data but isn't in EMPLOYEES (so nothing is hidden).
+  var emps = (typeof EMPLOYEES !== 'undefined' && EMPLOYEES.length) ? EMPLOYEES.slice() : Object.keys(matrix);
+  Object.keys(matrix).forEach(function(p){ if (emps.indexOf(p) === -1) emps.push(p); });
+  // Sort employees by total hours desc; drop zero-hour rows.
+  emps = emps.filter(function(e){ return empTotal[e]; }).sort(function(a,b){ return (empTotal[b]||0)-(empTotal[a]||0); });
+
+  if (!emps.length) { body.innerHTML = '<div style="color:var(--muted);font-size:13px">No sessions in this range.</div>'; return; }
+
+  // Layout B: per-employee expandable rows. Each row = name + total hours +
+  // a chevron; expanding shows that employee's activity breakdown (desc).
+  var html = '';
+  emps.forEach(function(e, idx){
+    var label = (typeof empShortName === 'function') ? empShortName(e) : e;
+    var acts = matrix[e] || {};
+    var sorted = Object.keys(acts).sort(function(a,b){ return acts[b]-acts[a]; });
+    var rowId = 'matrix-emp-'+idx;
+    html += '<div class="matrix-emp-row" onclick="var x=document.getElementById(\''+rowId+'\');x.style.display=x.style.display===\'none\'?\'block\':\'none\'" '+
+      'style="cursor:pointer;padding:12px 14px;border:1px solid var(--border,#E5E7EB);border-radius:8px;margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<strong>'+esc2(label)+'</strong>'+
+        '<span style="font-family:DM Mono,monospace;color:var(--teal);font-weight:700">'+(empTotal[e]||0).toFixed(1)+'h</span>'+
+      '</div>'+
+      '<div id="'+rowId+'" style="display:none;margin-top:10px">';
+    // Bars, scaled to the employee's own max
+    var max = sorted.length ? acts[sorted[0]] : 1;
+    sorted.forEach(function(a){
+      var pct = Math.round((acts[a]/max)*100);
+      html += '<div style="display:flex;align-items:center;gap:10px;margin:4px 0">'+
+        '<span style="flex:0 0 180px;font-size:12px">'+esc2(a)+'</span>'+
+        '<span style="flex:1;background:#f0f4ff;border-radius:4px;height:14px;position:relative">'+
+          '<span style="position:absolute;left:0;top:0;bottom:0;width:'+pct+'%;background:var(--teal);border-radius:4px"></span>'+
+        '</span>'+
+        '<span style="flex:0 0 56px;text-align:right;font-family:DM Mono,monospace;font-size:12px">'+acts[a].toFixed(1)+'h</span>'+
+      '</div>';
+    });
+    html += '</div></div>';
+  });
+  body.innerHTML = html;
+}
+
 
 function showProjectTab(tab) {
   // Backward-compat: redirect the old per-type summaries to the unified
@@ -1696,7 +1791,7 @@ function showProjectTab(tab) {
   if (tab==='project' || tab==='poc' || tab==='amc' || tab==='support' || tab==='presales') {
     typePreset = tab; tab = 'engagement';
   }
-  ['uslog','ussess','otsessions','otsummary','engagement','customer','employee','otpolicy','otmanager','custmgr','manage','vendors'].forEach(function(t) {
+  ['uslog','ussess','otsessions','otsummary','engagement','customer','employee','matrix','otpolicy','otmanager','custmgr','manage','vendors'].forEach(function(t) {
     const el  = document.getElementById('pjtab-'+t);
     const sub = document.getElementById('pjsub-'+t);
     if (!el) return;
@@ -1725,6 +1820,7 @@ function showProjectTab(tab) {
   }
   if (tab==='customer')   { initProjectTab(); renderPjCustomerSummary(); }
   if (tab==='employee')   { initProjectTab(); renderPjEmployeeSummary(); }
+  if (tab==='matrix')     { renderActivityMatrix(); }
   // v102: OT summary moved to Leave → Team Overview. otmanager tab now
   // only carries Reports & Backup + admin tools (Recompute/Archive/Purge),
   // so no per-render data fetch is needed — just refresh the backup pill.

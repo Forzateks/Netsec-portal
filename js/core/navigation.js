@@ -54,7 +54,8 @@ var PROJECT_TAB_GROUPS = {
   otsummary:  'reports',
   engagement: 'reports',
   customer:   'reports',
-  employee:   'reports'
+  employee:   'reports',
+  matrix:     'reports'   // v109b: Activity Matrix
   // otpolicy, manage, vendors, otmanager → standalone items
 };
 
