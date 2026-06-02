@@ -789,8 +789,17 @@ async function renderUSSessions() {
   var rows = res.data || [];
 
   if (fMem) {
-    var firstName = fMem.split(' ')[0].toLowerCase();
-    rows = rows.filter(function(r){ return (r.team_members||r.employee||'').toLowerCase().includes(firstName); });
+    // v105: exact full-name match against trimmed team_members CSV tokens
+    // plus the logger. Replaces firstName-substring includes() which
+    // collided the two Mohammeds (Nasif and Afsal both reduced to
+    // "mohammed"). Whitespace-tolerant via trim on each token.
+    var target = fMem.trim().toLowerCase();
+    rows = rows.filter(function(r){
+      if (r.employee && r.employee.toLowerCase() === target) return true;
+      if (!r.team_members) return false;
+      var members = r.team_members.split(',').map(function(s){ return s.trim().toLowerCase(); });
+      return members.indexOf(target) !== -1;
+    });
   }
   if (!rows.length) {
     document.getElementById('us-sess-empty').style.display = 'block';
