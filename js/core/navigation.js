@@ -65,6 +65,19 @@ function _projectGroupForTab(subTab) {
 }
 
 function showScreen(name) {
+  // v107: clear sticky #/team hash when switching to a non-team screen.
+  // Without this, once a user visited Team Portfolio the URL kept #/team
+  // permanently — every later showScreen() updated the visible screen
+  // but the URL still said #/team, so the next hard refresh resurrected
+  // Team Portfolio via init.js's hash-route check. replaceState is silent
+  // (no hashchange, no history entry, no reload). Wrapped in try/catch
+  // for private-mode / about:blank edge cases where history is restricted.
+  if (name !== 'team' && window.location.hash && window.location.hash.indexOf('#/team') === 0) {
+    try {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    } catch (e) { /* ignore */ }
+  }
+
   // For the projects screen, the active sub-tab decides which accordion to
   // open. showScreen called bare (no sub-tab) defaults to Sessions.
   var grpId = (name === 'projects') ? 'sbg-sessions' : 'sbg-'+name;
