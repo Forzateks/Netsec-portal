@@ -289,9 +289,20 @@ function renderTasksList() {
     var ownerText = assignees.length
       ? assignees.map(function(n){ return esc2(_tasksShortName(n)); }).join(', ')
       : '<span class="dim">—</span>';
-    var datesText = [t.start_date, t.eta_date, t.end_date]
-      .map(function(d){ return d ? fmtDate(d) : '—'; })
-      .join(' / ');
+    // v110: show only present date slots, each labelled (Start/ETA/End)
+    // so a lone date is unambiguous. Drops the "/ — / —" noise that
+    // appeared when rows had only one or two of the three dates set.
+    var _dParts = [t.start_date, t.eta_date, t.end_date];
+    var _dFilled = _dParts.filter(Boolean);
+    var datesText;
+    if (!_dFilled.length) {
+      datesText = '<span class="dim">—</span>';
+    } else {
+      var _dLabels = ['Start','ETA','End'];
+      datesText = _dParts.map(function(d,i){
+        return d ? '<span class="task-date-seg"><span class="task-date-tag">'+_dLabels[i]+'</span> '+fmtDate(d)+'</span>' : '';
+      }).filter(Boolean).join('<span class="task-date-div"> · </span>');
+    }
 
     // Recurring tabs swap the date triplet column for a single period
     // label (e.g. "Today" / "Week 22" / "May 2026" / "Q2 2026").
@@ -302,13 +313,16 @@ function renderTasksList() {
     } else {
       periodOrDatesCell = '<td style="font-family:DM Mono,monospace;font-size:11.5px;color:var(--muted);white-space:nowrap">'+datesText+'</td>';
     }
-    return '<tr class="'+(t.is_archived?'task-row-archived':'')+'">'+
+    var rowCls = 'task-pri-'+(t.priority||'medium');
+    if (t.is_archived) rowCls += ' task-row-archived';
+    if (t.status === 'completed' || t.status === 'cancelled') rowCls += ' task-row-done';
+    return '<tr class="'+rowCls+'">'+
       '<td class="dim" style="font-size:12px">'+(idx+1)+'</td>'+
       '<td><strong>'+esc2(t.title)+'</strong>'+
         (t.description?'<div class="dim" style="font-size:11.5px;margin-top:2px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(t.description)+'">'+esc2(t.description)+'</div>':'')+
       '</td>'+
       '<td style="font-size:12.5px">'+ownerText+'</td>'+
-      '<td><span class="badge '+priMeta.cls+'">'+esc2(priMeta.label)+'</span></td>'+
+      '<td><span class="task-pri-dot task-pri-dot-'+(t.priority||'medium')+'"></span><span class="task-pri-lbl">'+esc2(priMeta.label)+'</span></td>'+
       '<td>'+statusCell+'</td>'+
       periodOrDatesCell+
       '<td style="white-space:nowrap">'+actions+'</td>'+
