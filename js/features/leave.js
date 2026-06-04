@@ -571,23 +571,28 @@ async function renderTeamOTSummary() {
 
 // == APPROVALS (MANAGER) ==========================================
 async function updateNotifBadge() {
-  const [coRes,lvRes,otRes]=await Promise.all([
+  // v113: tasks query added — counts rows in the new 'pending_approval'
+  // state introduced in v112. Excludes archived rows so completed-and-
+  // archived noise doesn't inflate the badge.
+  const [coRes,lvRes,otRes,tsRes]=await Promise.all([
     sb.from('comp_off_requests').select('id').eq('status','pending'),
     sb.from('leave_requests').select('id').eq('status','pending'),
-    sb.from('ot_sessions').select('id').eq('status','pending')
+    sb.from('ot_sessions').select('id').eq('status','pending'),
+    sb.from('tasks').select('id').eq('status','pending_approval').eq('is_archived', false)
   ]);
-  // If any of the three count queries errored (network blip, RLS hiccup),
+  // If any of the four count queries errored (network blip, RLS hiccup),
   // bail out silently — better to leave the badge in its previous state
   // than to display a misleading total. Console-warn for diagnostics.
-  if (coRes.error || lvRes.error || otRes.error) {
+  if (coRes.error || lvRes.error || otRes.error || tsRes.error) {
     console.warn('updateNotifBadge: fetch error, skipping update', {
       co: coRes.error && coRes.error.message,
       lv: lvRes.error && lvRes.error.message,
-      ot: otRes.error && otRes.error.message
+      ot: otRes.error && otRes.error.message,
+      ts: tsRes.error && tsRes.error.message
     });
     return;
   }
-  const total=(coRes.data||[]).length+(lvRes.data||[]).length+(otRes.data||[]).length;
+  const total=(coRes.data||[]).length+(lvRes.data||[]).length+(otRes.data||[]).length+(tsRes.data||[]).length;
   const badge=document.getElementById('notif-badge');
   if (!badge) return;
   if (total>0) {

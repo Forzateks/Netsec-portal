@@ -304,10 +304,22 @@ function renderTasksList() {
     // v112: pending_approval rows also get manager-only Approve / Reject
     // buttons prepended — Approve → completed, Reject → ongoing. Trigger
     // lets manager UPDATEs pass through untouched.
+    // v113: small inline remark input precedes the buttons. The remark is
+    // optional; if filled, it writes to tasks.remarks on the same UPDATE
+    // (single round-trip). DOM-id is per-row so the click handler reads
+    // the right input.
     var actions = '';
     if (isManager && t.status === 'pending_approval' && !t.is_archived) {
-      actions += '<button class="btn btn-sm btn-success btn-icon-only" title="Approve completion" onclick="approveTaskCompletion('+t.id+')" style="margin-right:4px"><i data-lucide="check"></i></button>';
-      actions += '<button class="btn btn-sm btn-danger btn-icon-only" title="Reject — send back to Ongoing" onclick="rejectTaskCompletion('+t.id+')" style="margin-right:4px"><i data-lucide="x"></i></button>';
+      actions += '<input type="text" class="task-approve-remark" id="tar-'+t.id+'" '+
+                   'placeholder="Remark (optional)" '+
+                   'style="width:120px;font-size:11px;padding:3px 6px;margin-right:4px;'+
+                   'border:1px solid var(--border,#D1D5DB);border-radius:4px">';
+      actions += '<button class="btn btn-sm btn-success btn-icon-only" title="Approve completion" '+
+                   'onclick="approveTaskCompletion('+t.id+', document.getElementById(\'tar-'+t.id+'\').value)" '+
+                   'style="margin-right:4px"><i data-lucide="check"></i></button>';
+      actions += '<button class="btn btn-sm btn-danger btn-icon-only" title="Reject — send back to Ongoing" '+
+                   'onclick="rejectTaskCompletion('+t.id+', document.getElementById(\'tar-'+t.id+'\').value)" '+
+                   'style="margin-right:4px"><i data-lucide="x"></i></button>';
     }
     if (canEdit) {
       actions += '<button class="btn btn-sm btn-ghost btn-icon-only" title="Edit task" onclick="openEditTaskModal('+t.id+')"><i data-lucide="pencil"></i></button>';
@@ -364,7 +376,41 @@ function renderTasksList() {
   }).join('');
 
   var dateColHeader = isRecurringTab ? 'Period' : 'Start / ETA / End';
-  host.innerHTML =
+
+  // v113: pending-approval awareness strip above the table card.
+  // Manager: total pending count + deep-link into Approvals → Task
+  // Completions. Employee: only counts THEIR OWN submissions still
+  // awaiting (uses assignByTask, already computed at the top of the
+  // function). Strip is suppressed when the count is zero so it doesn't
+  // become wallpaper.
+  var stripHtml = '';
+  var pendingRows = (TASKS_DATA||[]).filter(function(x){
+    return x.status === 'pending_approval' && !x.is_archived;
+  });
+  if (pendingRows.length) {
+    if (isManager) {
+      stripHtml = '<div class="pending-strip" onclick="navigateSub(\'approvals\',\'tasks\')" '+
+        'style="cursor:pointer;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;'+
+        'padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:13px;color:#92400E"><strong>'+pendingRows.length+'</strong> task'+
+        (pendingRows.length===1?'':'s')+' awaiting your approval</span>'+
+        '<span style="font-size:12px;color:#92400E;font-weight:600">Review in Approvals →</span></div>';
+    } else if (currentUser) {
+      var mine = pendingRows.filter(function(x){
+        var as = assignByTask[x.id] || [];
+        return as.indexOf(currentUser) !== -1;
+      });
+      if (mine.length) {
+        stripHtml = '<div class="pending-strip" '+
+          'style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;'+
+          'padding:10px 14px;margin-bottom:12px;font-size:13px;color:#92400E">'+
+          '<strong>'+mine.length+'</strong> of your task'+(mine.length===1?'':'s')+
+          ' '+(mine.length===1?'is':'are')+' awaiting manager approval.</div>';
+      }
+    }
+  }
+
+  host.innerHTML = stripHtml +
     '<div class="card" style="padding:0;overflow:hidden">'+
       '<div class="table-wrap"><table class="tasks-table">'+
         '<thead><tr>'+
@@ -429,52 +475,140 @@ async function changeTaskStatus(taskId, newStatus) {
   if (typeof updateTasksBadge === 'function') updateTasksBadge();
 }
 
-// == APPROVAL ACTIONS (v112, manager-only) =======================
+// == APPROVAL ACTIONS (v112 → v113, manager-only) ================
 // Approve → pending_approval → completed (final).
 // Reject  → pending_approval → ongoing   (back to assignee).
+// v113 extensions:
+//   * optional `remark` param writes to tasks.remarks on the same UPDATE
+//     (single round-trip — keeps approve/reject a one-motion gesture);
+//   * Approvals-view tolerant — the row may not be in TASKS_DATA (the
+//     Approvals tab uses its own fetch), so the local optimistic flip
+//     and the rollback are guarded behind `if (t)`;
+//   * smart refresh — if the Task Completions sub-tab is open, re-render
+//     that list; otherwise refresh the tasks list.
 // Manager UPDATEs pass the tasks_enforce_approval_flow trigger untouched
 // since is_manager_user()=true. UI gate (isManager check) is defense in
 // depth; the trigger and the v74 .select() smoke-test are the real backstops.
-async function approveTaskCompletion(taskId) {
+function _isTaskApprovalsViewOpen() {
+  var el = document.getElementById('apptab-tasks');
+  return !!(el && el.style.display !== 'none');
+}
+function _refreshAfterTaskApproval() {
+  if (_isTaskApprovalsViewOpen() && typeof renderTaskApprovals === 'function') {
+    renderTaskApprovals();
+  } else if (typeof renderTasksList === 'function') {
+    renderTasksList();
+  }
+  if (typeof updateNotifBadge === 'function') updateNotifBadge();
+  if (typeof updateTasksBadge === 'function') updateTasksBadge();
+}
+
+async function approveTaskCompletion(taskId, remark) {
   if (!await requireAuth()) return;
   if (!isManager) return;
   var t = (TASKS_DATA||[]).find(function(x){ return x.id === taskId; });
-  if (!t || t.status !== 'pending_approval') return;
-  var old = t.status;
-  t.status = 'completed';
-  renderTasksList();
-  var res = await sb.from('tasks').update({ status: 'completed' })
+  // If t is found locally, do an optimistic flip for instant UX. If t is
+  // absent (Approvals view fetched separately), skip optimism — the server
+  // round-trip + re-render below covers it.
+  var old = t ? t.status : null;
+  if (t) { t.status = 'completed'; renderTasksList(); }
+  var patch = { status: 'completed' };
+  if (remark && remark.trim()) patch.remarks = remark.trim();
+  var res = await sb.from('tasks').update(patch)
     .eq('id', taskId).select('id,status').single();
   if (res.error || !res.data || res.data.status !== 'completed') {
-    t.status = old;
-    renderTasksList();
+    if (t) { t.status = old; renderTasksList(); }
     reportSilentFail('tasks', { op: 'approve_completion', task_id: taskId, error: res.error && res.error.message });
     showError('Could not approve: ' + (res.error ? res.error.message : 'permission denied'));
     return;
   }
   showToast('Approved — task completed');
-  if (typeof updateTasksBadge === 'function') updateTasksBadge();
+  _refreshAfterTaskApproval();
 }
 
-async function rejectTaskCompletion(taskId) {
+async function rejectTaskCompletion(taskId, remark) {
   if (!await requireAuth()) return;
   if (!isManager) return;
   var t = (TASKS_DATA||[]).find(function(x){ return x.id === taskId; });
-  if (!t || t.status !== 'pending_approval') return;
-  var old = t.status;
-  t.status = 'ongoing';
-  renderTasksList();
-  var res = await sb.from('tasks').update({ status: 'ongoing' })
+  var old = t ? t.status : null;
+  if (t) { t.status = 'ongoing'; renderTasksList(); }
+  var patch = { status: 'ongoing' };
+  if (remark && remark.trim()) patch.remarks = remark.trim();
+  var res = await sb.from('tasks').update(patch)
     .eq('id', taskId).select('id,status').single();
   if (res.error || !res.data || res.data.status !== 'ongoing') {
-    t.status = old;
-    renderTasksList();
+    if (t) { t.status = old; renderTasksList(); }
     reportSilentFail('tasks', { op: 'reject_completion', task_id: taskId, error: res.error && res.error.message });
     showError('Could not reject: ' + (res.error ? res.error.message : 'permission denied'));
     return;
   }
   showToast('Rejected — sent back to Ongoing');
-  if (typeof updateTasksBadge === 'function') updateTasksBadge();
+  _refreshAfterTaskApproval();
+}
+
+// == APPROVALS VIEW: TASK COMPLETIONS (v113, manager-only) ========
+// Mirrors the OT/Leave Approvals pattern: separate fetch (not cached
+// TASKS_DATA), oldest-first ordering so the longest-waiting submission
+// is at the top, inline remark input + Approve/Reject buttons reusing
+// the same handlers as the tasks list. Approve/Reject already refresh
+// this list and the notif badge via _refreshAfterTaskApproval().
+async function renderTaskApprovals() {
+  var host = document.getElementById('ts-approvals-content');
+  var load = document.getElementById('ts-approvals-load');
+  if (!host) return;
+  if (!isManager) {
+    host.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px">Manager access required.</div>';
+    return;
+  }
+  if (load) load.style.display = 'flex';
+  host.innerHTML = '';
+
+  var tRes = await sb.from('tasks')
+    .select('id,title,description,priority,updated_at,created_by,is_archived,status')
+    .eq('status','pending_approval').eq('is_archived', false)
+    .order('updated_at', { ascending:true });
+  if (load) load.style.display = 'none';
+  if (tRes.error) {
+    host.innerHTML = '<div style="color:var(--danger,#EF4444);font-size:13px;padding:8px">Could not load: '+esc2(tRes.error.message||'unknown error')+'</div>';
+    return;
+  }
+  var tasks = tRes.data || [];
+  if (!tasks.length) {
+    host.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px">No task completions awaiting approval.</div>';
+    return;
+  }
+
+  var ids = tasks.map(function(t){ return t.id; });
+  var aRes = await sb.from('task_assignments').select('task_id,assigned_to').in('task_id', ids);
+  var byTask = {};
+  (aRes.data||[]).forEach(function(a){ (byTask[a.task_id]=byTask[a.task_id]||[]).push(a.assigned_to); });
+
+  host.innerHTML = tasks.map(function(t){
+    var owners = (byTask[t.id]||[]).map(function(n){ return esc2(_tasksShortName(n)); }).join(', ') || '—';
+    var priMeta = TASK_PRIORITY_META[t.priority] || TASK_PRIORITY_META['medium'];
+    return '<div class="approval-card" style="border:1px solid var(--border,#E5E7EB);border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#fff">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">'+
+        '<div style="min-width:0;flex:1 1 240px">'+
+          '<div style="font-weight:600;font-size:14px">'+esc2(t.title||'(untitled)')+'</div>'+
+          '<div style="font-size:12px;color:var(--muted);margin-top:2px">'+
+            '<span class="badge '+priMeta.cls+'" style="margin-right:6px">'+esc2(priMeta.label)+'</span>'+
+            owners+' · submitted '+(typeof fmtDate === 'function' ? fmtDate(t.updated_at) : esc2(String(t.updated_at||'').slice(0,10)))+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+
+          '<input type="text" id="tar2-'+t.id+'" placeholder="Remark (optional)" '+
+            'style="width:140px;font-size:11px;padding:4px 6px;border:1px solid var(--border,#D1D5DB);border-radius:4px">'+
+          '<button class="btn btn-sm btn-success btn-icon-only" title="Approve" '+
+            'onclick="approveTaskCompletion('+t.id+', document.getElementById(\'tar2-'+t.id+'\').value)">'+
+            '<i data-lucide="check"></i></button>'+
+          '<button class="btn btn-sm btn-danger btn-icon-only" title="Reject — send back to Ongoing" '+
+            'onclick="rejectTaskCompletion('+t.id+', document.getElementById(\'tar2-'+t.id+'\').value)">'+
+            '<i data-lucide="x"></i></button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  if (typeof renderIcons === 'function') renderIcons();
 }
 
 // == CREATE + EDIT MODAL =========================================

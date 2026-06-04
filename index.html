@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v112',
+    release: 'netsec-portal@v113',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -252,6 +252,7 @@
     <div class="sidebar-submenu">
       <div class="sidebar-subitem" id="sbi-approvals-leave" onclick="navigateSub('approvals','leave')"><i data-lucide="calendar-check" class="sidebar-subicon"></i>Leave Requests</div>
       <div class="sidebar-subitem" id="sbi-approvals-ot"    onclick="navigateSub('approvals','ot')"><i data-lucide="timer" class="sidebar-subicon"></i>OT Requests</div>
+      <div class="sidebar-subitem" id="sbi-approvals-tasks" onclick="navigateSub('approvals','tasks')"><i data-lucide="check-square" class="sidebar-subicon"></i>Task Completions</div>
     </div>
   </div>
 
@@ -1240,6 +1241,14 @@
     </div>
     <div id="ot-approvals-load" class="loading"><div class="spinner"></div>Loading...</div>
     <div id="ot-approvals-content"></div>
+  </div>
+
+  <!-- v113: Task Completions sub-tab. Filter bar omitted — the queue is
+       small (only pending_approval rows) and ordered oldest-first by the
+       renderer; an Employee/Date filter would be more chrome than help. -->
+  <div id="apptab-tasks" style="display:none">
+    <div id="ts-approvals-load" class="loading" style="display:none"><div class="spinner"></div>Loading...</div>
+    <div id="ts-approvals-content"></div>
   </div>
 </div>
 

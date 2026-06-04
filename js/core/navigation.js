@@ -32,12 +32,14 @@ function showLeaveTab(tab) {
 }
 
 function showApprovalsTab(tab) {
-  ['leave','ot'].forEach(function(t) {
+  // v113: 'tasks' sub-tab added for task-completion approvals.
+  ['leave','ot','tasks'].forEach(function(t) {
     var el = document.getElementById('apptab-'+t);
     if (el) el.style.display = t===tab ? 'block' : 'none';
   });
   if (tab==='leave') renderLeaveApprovals();
   else if (tab==='ot') renderOTApprovals();
+  else if (tab==='tasks' && typeof renderTaskApprovals === 'function') renderTaskApprovals();
   setSidebarSubActive('approvals', tab);
 }
 
