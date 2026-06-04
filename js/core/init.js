@@ -9,7 +9,7 @@
 // SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
 // HTTP-cached copy of /sw.js can't be served when this file ships. The
 // version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=115';
+var SW_REGISTRATION_URL = '/sw.js?v=116';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -41,6 +41,25 @@ function initServiceWorker() {
           showUpdateIcon();
         }
       });
+    });
+
+    // v116: keep long-lived tabs current. Without these, reg.update() only
+    // ran once at page load, so users who left the tab open all day never
+    // saw the Update pill and had to close + reopen to discover deploys.
+    //
+    // (a) Periodic check every 5 min. Cheap — /sw.js?v=N is small and
+    //     returns 304 when unchanged.
+    // (b) When the tab regains visibility (user switches back to it),
+    //     trigger an immediate check so they see the pill within seconds
+    //     of focusing the tab.
+    var SW_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
+    setInterval(function() {
+      try { reg.update(); } catch (e) { /* update() can throw if SW gone */ }
+    }, SW_UPDATE_INTERVAL_MS);
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') {
+        try { reg.update(); } catch (e) { /* ignore */ }
+      }
     });
   }).catch(function(err) {
     console.warn('SW registration failed:', err);
@@ -316,6 +335,16 @@ function initFocusAuthCheck() {
   });
 }
 
+// v116: populate the user-menu version label from SW_REGISTRATION_URL so
+// the trio (sw.js / init.js / index.html Sentry release) stays the single
+// source of truth — no 4th place to keep in sync.
+function initAppVersionLabel() {
+  var el = document.getElementById('user-menu-version');
+  if (!el) return;
+  var m = String(SW_REGISTRATION_URL || '').match(/v=(\d+)/);
+  el.textContent = m ? ('v' + m[1]) : '—';
+}
+
 // == INIT ==========================================================
 window.onload = async function() {
   initServiceWorker();
@@ -326,6 +355,7 @@ window.onload = async function() {
   initUserMenuOutsideClose();
   initPullToRefresh();
   initFocusAuthCheck();
+  initAppVersionLabel();
   // Supabase puts the link type in the URL hash:
   //   type=recovery            -> forgot-password reset link
   //   type=invite | type=signup -> invitation from manager (first-time login)

@@ -633,6 +633,14 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .user-menu-item-danger i{color:var(--danger)}
 .user-menu-item-danger:hover{background:#FEF2F2;color:#991B1B}
 .user-menu-item-danger:hover i{color:#991B1B}
+/* v116: small version label at the bottom of the user menu. Intentionally
+   muted (not a button); a one-click reveal for "what version am I on?"
+   without adding always-on header chrome. Populated at startup from
+   SW_REGISTRATION_URL so there's only one place to bump. */
+.user-menu-version{
+  padding:8px 12px 6px;font-size:11px;color:var(--muted);
+  font-family:'DM Mono',monospace;letter-spacing:.4px;text-align:center;opacity:.7;
+}
 
 .notif-badge{margin-left:auto;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
 
