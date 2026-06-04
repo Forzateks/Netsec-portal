@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v113',
+    release: 'netsec-portal@v114',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -205,6 +205,12 @@
       <div class="db-dot" id="db-dot"></div>
       <span class="db-status-label">Live</span>
     </div>
+    <!-- v114: shown by showUpdateIcon() once a new SW reaches 'installed'.
+         Click → applyUpdate() → SKIP_WAITING → controllerchange → reload. -->
+    <button id="update-available-btn" onclick="applyUpdate()" title="A new version is available — click to update"
+      style="display:none;align-items:center;gap:6px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:14px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;margin-right:10px">
+      <span class="update-dot"></span>Update
+    </button>
     <button class="top-bar-bell" id="notif-bell-wrap" onclick="toggleNotifDropdown()" style="display:none" title="Notifications">
       <i data-lucide="bell"></i>
       <span class="notif-pill" id="notif-bell-count" style="display:none">0</span>

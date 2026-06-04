@@ -578,6 +578,20 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 }
 @media (prefers-reduced-motion: reduce){ .db-dot.connected{animation:none} }
 
+/* v114: "Update available" pill in the top bar. Hidden until showUpdateIcon()
+   reveals it when a new SW is waiting. The dot pulses to draw the eye
+   without being aggressive — matches db-dot's understated approach. */
+.update-dot{
+  width:7px; height:7px; border-radius:50%; background:#D97706;
+  display:inline-block;
+  animation: updatePulse 1.2s ease-in-out infinite;
+}
+@keyframes updatePulse{
+  0%, 100% { opacity:1;    transform:scale(1);   }
+  50%      { opacity:0.35; transform:scale(0.7); }
+}
+@media (prefers-reduced-motion: reduce){ .update-dot{ animation:none } }
+
 /* Notification bell — clean SVG button, manager-only. Pill shows pending
    count over the icon. Hidden by default until updateNotifBadge unhides
    it for managers with pending approvals. */

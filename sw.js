@@ -10,7 +10,7 @@
 // Bump CACHE_VERSION whenever the shell changes meaningfully so old clients
 // drop stale assets on activate.
 
-var CACHE_VERSION = 'netsec-v113';
+var CACHE_VERSION = 'netsec-v114';
 // Critical bootstrap files only — pre-caching the full shell on install
 // fires 25 parallel fetches that saturate mobile bandwidth and starve
 // the Supabase queries that follow. Everything else now caches on demand
@@ -35,7 +35,16 @@ self.addEventListener('install', function(e) {
       }));
     })
   );
-  self.skipWaiting();
+  // v114: skipWaiting() removed from install. The worker now stays in the
+  // 'waiting' state until the page postMessages SKIP_WAITING (triggered by
+  // the user clicking the "Update" button in the header). Previously the
+  // silent auto-activation could yank the page out from under a user
+  // mid-form, losing unsaved input.
+});
+
+// v114: explicit handoff so the user controls when the update lands.
+self.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', function(e) {

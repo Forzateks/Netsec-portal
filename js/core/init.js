@@ -9,7 +9,7 @@
 // SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
 // HTTP-cached copy of /sw.js can't be served when this file ships. The
 // version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=113';
+var SW_REGISTRATION_URL = '/sw.js?v=114';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -24,6 +24,24 @@ function initServiceWorker() {
     // Without this iOS PWA only re-checks on the browser's own schedule
     // (which can be rare), so a deployed v9 might never reach users.
     try { reg.update(); } catch (e) { /* update() can throw if SW gone */ }
+
+    // v114: an SW may already be waiting from a previous visit — surface
+    // the icon right away in that case.
+    if (reg.waiting && navigator.serviceWorker.controller) {
+      showUpdateIcon();
+    }
+    // Otherwise, watch for one installing now. 'installed' + existing
+    // controller = this is an UPDATE (not first install); only then do
+    // we prompt the user.
+    reg.addEventListener('updatefound', function() {
+      var nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', function() {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateIcon();
+        }
+      });
+    });
   }).catch(function(err) {
     console.warn('SW registration failed:', err);
   });
@@ -33,6 +51,8 @@ function initServiceWorker() {
   // once so the running page tosses its old JS/HTML and picks up the
   // fresh shell. Guarded against reload loops; ignored on first install
   // (when there was no previous controller).
+  // v114: with skipWaiting() removed from install, this only fires AFTER
+  // the user clicks the Update button (which postMessages SKIP_WAITING).
   var firstControllerSeen = !!navigator.serviceWorker.controller;
   var refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -41,6 +61,34 @@ function initServiceWorker() {
     refreshing = true;
     window.location.reload();
   });
+}
+
+// v114: header pill — hidden by default, revealed by showUpdateIcon() once
+// a new SW reaches 'installed'. Clicking the pill calls applyUpdate(),
+// which postMessages SKIP_WAITING to the waiting worker → activate →
+// controllerchange → reload onto the new version.
+function showUpdateIcon() {
+  var b = document.getElementById('update-available-btn');
+  if (b) b.style.display = 'inline-flex';
+}
+
+function applyUpdate() {
+  navigator.serviceWorker.getRegistration().then(function(reg) {
+    if (reg && reg.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      // Edge case: button clicked but the waiting worker is gone (e.g. it
+      // already activated in another tab). Hard reload to pick up whatever
+      // is current.
+      window.location.reload();
+    }
+  });
+  var b = document.getElementById('update-available-btn');
+  if (b) {
+    b.textContent = 'Updating…';
+    b.disabled = true;
+    b.style.cursor = 'default';
+  }
 }
 
 // Close the user-menu dropdown when the user taps anywhere outside it.
