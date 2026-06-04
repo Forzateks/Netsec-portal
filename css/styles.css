@@ -2630,6 +2630,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .badge.task-st-ong{background:#FEF3C7;color:#92400E}
 .badge.task-st-done{background:#D1FAE5;color:#065F46}
 .badge.task-st-cnc{background:#F1F5F9;color:#94A3B8;text-decoration:line-through}
+/* v112: pending_approval — amber with dashed border to differentiate from
+   the plain amber 'ongoing' status. Mirrors the leave_requests
+   needs_review precedent (v81). Locked state: no dropdown counterpart. */
+.badge.task-st-pending{background:#FFFBEB;color:#92400E;border:1px dashed #D97706;padding:2px 6px}
 
 /* Inline status dropdown — picks up the same colour family as the
    matching badge so the cell still reads as a status at a glance. */

@@ -47,11 +47,16 @@ var TASK_PRIORITY_META = {
   urgent: { label:'Urgent', cls:'task-pri-urgent' }
 };
 var TASK_STATUS_META = {
-  yet_to_start: { label:'Yet to start', cls:'task-st-yts' },
-  ongoing:      { label:'Ongoing',      cls:'task-st-ong' },
-  completed:    { label:'Completed',    cls:'task-st-done' },
-  cancelled:    { label:'Cancelled',    cls:'task-st-cnc' }
+  yet_to_start:     { label:'Yet to start',     cls:'task-st-yts' },
+  ongoing:          { label:'Ongoing',          cls:'task-st-ong' },
+  pending_approval: { label:'Pending Approval', cls:'task-st-pending' },
+  completed:        { label:'Completed',        cls:'task-st-done' },
+  cancelled:        { label:'Cancelled',        cls:'task-st-cnc' }
 };
+// v112: pending_approval is a system-set state — not selectable from the
+// status dropdown. The DB trigger routes non-manager 'completed' attempts
+// through it; managers Approve/Reject via inline action buttons.
+var TASK_STATUS_NON_SELECTABLE = ['pending_approval'];
 var TASK_FREQUENCY_META = {
   general:   { label:'General',   short:'One-off'   },
   daily:     { label:'Daily',     short:'Daily'     },
@@ -201,6 +206,10 @@ function _tasksFiltered() {
       return bk.localeCompare(ak);
     });
   } else {
+    // v103: only 'completed' rows sink to the bottom. v112 explicitly leaves
+    // 'pending_approval' in the top group — it's active work awaiting
+    // manager review, not finished work. yet_to_start / ongoing / cancelled
+    // also stay top-grouped per the original v103 strict reading.
     rows.sort(function(a,b){
       var ad = (a.status === 'completed') ? 1 : 0;
       var bd = (b.status === 'completed') ? 1 : 0;
@@ -269,12 +278,21 @@ function renderTasksList() {
 
     // Status cell: clickable dropdown for any allowed editor (manager
     // OR assignee). Read-only chip for everyone else.
+    // v112: pending_approval is a locked state for everyone — no dropdown.
+    // Manager acts via the Approve/Reject buttons appended in the actions
+    // cell below; employee can't un-submit via the dropdown.
     var statusCell;
-    if (canEdit && !t.is_archived) {
-      var opts = Object.keys(TASK_STATUS_META).map(function(k){
-        var sel = (k === t.status) ? ' selected' : '';
-        return '<option value="'+k+'"'+sel+'>'+esc2(TASK_STATUS_META[k].label)+'</option>';
-      }).join('');
+    if (t.status === 'pending_approval') {
+      statusCell = '<span class="badge '+stMeta.cls+'">'+esc2(stMeta.label)+'</span>';
+    } else if (canEdit && !t.is_archived) {
+      // pending_approval is system-set (DB trigger) and not user-selectable,
+      // so exclude it from the dropdown options.
+      var opts = Object.keys(TASK_STATUS_META)
+        .filter(function(k){ return TASK_STATUS_NON_SELECTABLE.indexOf(k) === -1; })
+        .map(function(k){
+          var sel = (k === t.status) ? ' selected' : '';
+          return '<option value="'+k+'"'+sel+'>'+esc2(TASK_STATUS_META[k].label)+'</option>';
+        }).join('');
       statusCell = '<select class="task-status-select '+stMeta.cls+'" data-task-id="'+t.id+'" onchange="changeTaskStatus('+t.id+', this.value)">'+opts+'</select>';
     } else {
       statusCell = '<span class="badge '+stMeta.cls+'">'+esc2(stMeta.label)+'</span>';
@@ -283,7 +301,14 @@ function renderTasksList() {
     // Actions: manager gets edit + archive/restore; assignees get edit
     // (modal opens with manager-only fields disabled). Plain readers
     // get no action buttons.
+    // v112: pending_approval rows also get manager-only Approve / Reject
+    // buttons prepended — Approve → completed, Reject → ongoing. Trigger
+    // lets manager UPDATEs pass through untouched.
     var actions = '';
+    if (isManager && t.status === 'pending_approval' && !t.is_archived) {
+      actions += '<button class="btn btn-sm btn-success btn-icon-only" title="Approve completion" onclick="approveTaskCompletion('+t.id+')" style="margin-right:4px"><i data-lucide="check"></i></button>';
+      actions += '<button class="btn btn-sm btn-danger btn-icon-only" title="Reject — send back to Ongoing" onclick="rejectTaskCompletion('+t.id+')" style="margin-right:4px"><i data-lucide="x"></i></button>';
+    }
     if (canEdit) {
       actions += '<button class="btn btn-sm btn-ghost btn-icon-only" title="Edit task" onclick="openEditTaskModal('+t.id+')"><i data-lucide="pencil"></i></button>';
     }
@@ -374,21 +399,81 @@ async function changeTaskStatus(taskId, newStatus) {
   if (!t) return;
   var old = t.status;
   if (old === newStatus) return;
-  t.status = newStatus;
+  // v112: non-managers can't complete directly — route through approval.
+  // Translate here so the .select() smoke-test sees a matching status (the
+  // DB BEFORE UPDATE trigger is the bypass-proof backstop for non-UI
+  // clients; this UI translate keeps the smoke-test consistent and gives
+  // the user accurate feedback "Submitted for approval" rather than a
+  // confusing "Could not update status").
+  var sentStatus = newStatus;
+  if (!isManager && newStatus === 'completed') {
+    sentStatus = 'pending_approval';
+  }
+  t.status = sentStatus;
   renderTasksList();
   var res = await sb.from('tasks')
-    .update({ status: newStatus })
+    .update({ status: sentStatus })
     .eq('id', taskId)
     .select('id,status')
     .single();
-  if (res.error || !res.data || res.data.status !== newStatus) {
+  if (res.error || !res.data || res.data.status !== sentStatus) {
     t.status = old;
     renderTasksList();
-    reportSilentFail('tasks', { op: 'status_change', task_id: taskId, expected: newStatus, got: res.data && res.data.status, error: res.error && res.error.message });
+    reportSilentFail('tasks', { op: 'status_change', task_id: taskId, expected: sentStatus, got: res.data && res.data.status, error: res.error && res.error.message });
     showError('Could not update status: ' + (res.error ? res.error.message : 'permission denied'));
     return;
   }
-  showToast('Status: ' + (TASK_STATUS_META[newStatus] ? TASK_STATUS_META[newStatus].label : newStatus));
+  showToast(sentStatus === 'pending_approval'
+    ? 'Submitted for manager approval'
+    : 'Status: ' + (TASK_STATUS_META[sentStatus] ? TASK_STATUS_META[sentStatus].label : sentStatus));
+  if (typeof updateTasksBadge === 'function') updateTasksBadge();
+}
+
+// == APPROVAL ACTIONS (v112, manager-only) =======================
+// Approve → pending_approval → completed (final).
+// Reject  → pending_approval → ongoing   (back to assignee).
+// Manager UPDATEs pass the tasks_enforce_approval_flow trigger untouched
+// since is_manager_user()=true. UI gate (isManager check) is defense in
+// depth; the trigger and the v74 .select() smoke-test are the real backstops.
+async function approveTaskCompletion(taskId) {
+  if (!await requireAuth()) return;
+  if (!isManager) return;
+  var t = (TASKS_DATA||[]).find(function(x){ return x.id === taskId; });
+  if (!t || t.status !== 'pending_approval') return;
+  var old = t.status;
+  t.status = 'completed';
+  renderTasksList();
+  var res = await sb.from('tasks').update({ status: 'completed' })
+    .eq('id', taskId).select('id,status').single();
+  if (res.error || !res.data || res.data.status !== 'completed') {
+    t.status = old;
+    renderTasksList();
+    reportSilentFail('tasks', { op: 'approve_completion', task_id: taskId, error: res.error && res.error.message });
+    showError('Could not approve: ' + (res.error ? res.error.message : 'permission denied'));
+    return;
+  }
+  showToast('Approved — task completed');
+  if (typeof updateTasksBadge === 'function') updateTasksBadge();
+}
+
+async function rejectTaskCompletion(taskId) {
+  if (!await requireAuth()) return;
+  if (!isManager) return;
+  var t = (TASKS_DATA||[]).find(function(x){ return x.id === taskId; });
+  if (!t || t.status !== 'pending_approval') return;
+  var old = t.status;
+  t.status = 'ongoing';
+  renderTasksList();
+  var res = await sb.from('tasks').update({ status: 'ongoing' })
+    .eq('id', taskId).select('id,status').single();
+  if (res.error || !res.data || res.data.status !== 'ongoing') {
+    t.status = old;
+    renderTasksList();
+    reportSilentFail('tasks', { op: 'reject_completion', task_id: taskId, error: res.error && res.error.message });
+    showError('Could not reject: ' + (res.error ? res.error.message : 'permission denied'));
+    return;
+  }
+  showToast('Rejected — sent back to Ongoing');
   if (typeof updateTasksBadge === 'function') updateTasksBadge();
 }
 

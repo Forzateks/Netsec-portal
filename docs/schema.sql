@@ -88,6 +88,25 @@ BEGIN
 END;
 $$;
 
+-- v112: enforce the manager-approval workflow for task completion.
+-- Employees translate 'completed' → 'pending_approval' client-side for a
+-- clean UX (and so the v74 .select() smoke-test matches the value they
+-- sent). This trigger is the authoritative backstop — any non-manager
+-- UPDATE that lands NEW.status='completed' is rewritten here, no matter
+-- the prior status. There is no legitimate non-manager transition INTO
+-- 'completed'; only managers can complete tasks. SECURITY DEFINER so
+-- is_manager_user() resolves in the function's own privilege context,
+-- matching the engagements precedent on the same pattern.
+CREATE OR REPLACE FUNCTION public.tasks_enforce_approval_flow()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  IF NEW.status = 'completed' AND NOT is_manager_user() THEN
+    NEW.status := 'pending_approval';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
 -- v72 + v76: defense-in-depth for the engagements UPDATE flow.
 -- Server-side stamps tracker_updated_at + updated_by on every update.
 -- For non-manager updates, silently reverts every manager-only column to
@@ -658,8 +677,13 @@ ALTER TABLE public.team_members             ADD CONSTRAINT team_members_country_
 ALTER TABLE public.tasks                    ADD CONSTRAINT tasks_pkey                  PRIMARY KEY (id);
 ALTER TABLE public.tasks                    ADD CONSTRAINT tasks_priority_check
   CHECK (priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'urgent'::text]));
+-- v112: status set expanded with 'pending_approval' for the manager-approval
+-- workflow on task completion. Employees translate 'completed' →
+-- 'pending_approval' client-side; the BEFORE UPDATE trigger
+-- tasks_enforce_approval_flow (see Triggers section below) is the
+-- authoritative gate that blocks employee bypass attempts.
 ALTER TABLE public.tasks                    ADD CONSTRAINT tasks_status_check
-  CHECK (status = ANY (ARRAY['yet_to_start'::text, 'ongoing'::text, 'completed'::text, 'cancelled'::text]));
+  CHECK (status = ANY (ARRAY['yet_to_start'::text, 'ongoing'::text, 'pending_approval'::text, 'completed'::text, 'cancelled'::text]));
 
 ALTER TABLE public.task_assignments         ADD CONSTRAINT task_assignments_pkey       PRIMARY KEY (id);
 ALTER TABLE public.task_assignments         ADD CONSTRAINT task_assignments_task_id_assigned_to_key UNIQUE (task_id, assigned_to);
@@ -989,6 +1013,14 @@ CREATE TRIGGER trg_team_members_touch
 CREATE TRIGGER trg_tasks_touch
   BEFORE UPDATE ON public.tasks
   FOR EACH ROW EXECUTE FUNCTION public._tasks_touch_updated_at();
+
+-- v112: defense-in-depth enforcement of the manager-approval workflow.
+-- Rewrites non-manager 'completed' UPDATEs to 'pending_approval'. The UI
+-- already does this client-side; the trigger blocks any path that skips
+-- the UI (direct API call, recompute tool, future bulk script, etc.).
+CREATE TRIGGER trg_tasks_enforce_approval
+  BEFORE UPDATE ON public.tasks
+  FOR EACH ROW EXECUTE FUNCTION public.tasks_enforce_approval_flow();
 
 -- v94: same touch function reused for task_templates (both tables just
 -- need an updated_at stamp on every UPDATE).
