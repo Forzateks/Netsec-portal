@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v110',
+    release: 'netsec-portal@v111',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -1923,11 +1923,15 @@
         <button class="btn btn-primary tasks-new-btn-split" id="tasks-new-btn" onclick="toggleNewTaskMenu(event)"><i data-lucide="plus" class="btn-icon"></i>New Task<i data-lucide="chevron-down" class="btn-icon-trail"></i></button>
         <div class="tasks-new-menu" id="tasks-new-menu">
           <button class="tasks-new-menu-item" onclick="closeNewTaskMenu();openCreateTaskModal()"><i data-lucide="square"></i><span>One-time Task</span></button>
-          <div class="tasks-new-menu-divider"></div>
-          <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('daily')"><i data-lucide="sun"></i><span>Daily Recurring</span></button>
-          <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('weekly')"><i data-lucide="calendar-days"></i><span>Weekly Recurring</span></button>
-          <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('monthly')"><i data-lucide="calendar"></i><span>Monthly Recurring</span></button>
-          <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('quarterly')"><i data-lucide="calendar-range"></i><span>Quarterly Recurring</span></button>
+          <!-- v111: recurring options are manager-only. _tasksApplyManagerVisibility
+               toggles this wrapper so employees see ONLY "One-time Task". -->
+          <div id="tasks-new-menu-recurring">
+            <div class="tasks-new-menu-divider"></div>
+            <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('daily')"><i data-lucide="sun"></i><span>Daily Recurring</span></button>
+            <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('weekly')"><i data-lucide="calendar-days"></i><span>Weekly Recurring</span></button>
+            <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('monthly')"><i data-lucide="calendar"></i><span>Monthly Recurring</span></button>
+            <button class="tasks-new-menu-item" onclick="openCreateRecurringTemplateModal('quarterly')"><i data-lucide="calendar-range"></i><span>Quarterly Recurring</span></button>
+          </div>
         </div>
       </div>
     </div>

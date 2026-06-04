@@ -916,7 +916,12 @@ CREATE POLICY team_members_delete_manager       ON public.team_members FOR DELET
 -- tasks (v93) — any authenticated user reads; manager-only create/archive;
 -- manager OR any assignee can UPDATE (frontend restricts which fields).
 CREATE POLICY tasks_select_authenticated ON public.tasks FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
-CREATE POLICY tasks_insert_manager       ON public.tasks FOR INSERT TO authenticated WITH CHECK (is_manager_user());
+-- v111: relaxed from manager-only INSERT. Employees can now create one-off
+-- tasks attributed to themselves (created_by must match the JWT email's
+-- employee_name). Managers retain create-as-anyone. Recurring tasks still
+-- gated separately via task_templates_insert_manager.
+CREATE POLICY tasks_insert_authenticated_self ON public.tasks FOR INSERT TO authenticated
+  WITH CHECK (auth.role() = 'authenticated' AND (created_by = current_employee_name() OR is_manager_user()));
 CREATE POLICY tasks_update_manager_or_assignee ON public.tasks FOR UPDATE TO authenticated
   USING (is_manager_user() OR (EXISTS (SELECT 1 FROM public.task_assignments ta WHERE ta.task_id = tasks.id AND ta.assigned_to = current_employee_name())))
   WITH CHECK (is_manager_user() OR (EXISTS (SELECT 1 FROM public.task_assignments ta WHERE ta.task_id = tasks.id AND ta.assigned_to = current_employee_name())));
@@ -925,7 +930,19 @@ CREATE POLICY tasks_delete_manager       ON public.tasks FOR DELETE TO authentic
 -- task_assignments (v93) — manager-managed junction. Authenticated read so
 -- the join used by tasks_update_manager_or_assignee works for non-managers.
 CREATE POLICY task_assignments_select_authenticated ON public.task_assignments FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
-CREATE POLICY task_assignments_insert_manager       ON public.task_assignments FOR INSERT TO authenticated WITH CHECK (is_manager_user());
+-- v111: relaxed parallel to tasks_insert_authenticated_self. Any authed
+-- user can INSERT an assignment row, but only for a task they created
+-- (or as manager). Prevents an employee from sneaking an assignment onto
+-- someone else's task.
+CREATE POLICY task_assignments_insert_authenticated ON public.task_assignments FOR INSERT TO authenticated
+  WITH CHECK (
+    auth.role() = 'authenticated'
+    AND EXISTS (
+      SELECT 1 FROM public.tasks t
+      WHERE t.id = task_assignments.task_id
+        AND (t.created_by = current_employee_name() OR is_manager_user())
+    )
+  );
 CREATE POLICY task_assignments_delete_manager       ON public.task_assignments FOR DELETE TO authenticated USING (is_manager_user());
 
 -- task_templates (v94) — authenticated read, manager-only write.

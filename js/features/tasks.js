@@ -118,7 +118,13 @@ async function loadTasks() {
 // New ▾ split button and Manage Templates button both surface mutations
 // the RLS would refuse for non-managers, so we hide rather than disable.
 function _tasksApplyManagerVisibility() {
-  ['tasks-new-btn-wrap','tasks-manage-templates-btn'].forEach(function(id){
+  // v111: "+ New Task" split button is now visible to ALL authenticated
+  // users — employees can create one-off general tasks. Recurring template
+  // controls (Manage Templates + the 4 recurring menu items inside the
+  // split-button dropdown) stay manager-only.
+  var newBtnWrap = document.getElementById('tasks-new-btn-wrap');
+  if (newBtnWrap) newBtnWrap.style.display = '';   // show to everyone
+  ['tasks-manage-templates-btn','tasks-new-menu-recurring'].forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.style.display = isManager ? '' : 'none';
   });
@@ -230,12 +236,15 @@ function renderTasksList() {
         btnText   = isManager ? 'New ' + freqLbl + ' Recurring' : null;
         btnOnclick= isManager ? "openCreateRecurringTemplateModal('" + activeTab + "')" : null;
       } else {
+        // v111: employees can create one-off tasks too. Empty-state CTA
+        // shown to everyone; copy phrasing diverges by role only because
+        // the manager voice differs from the self-serve voice.
         heading   = 'No general tasks yet';
         sub       = isManager
           ? 'Click + New Task above to create the first one.'
-          : 'Your manager has not created any tasks yet.';
-        btnText   = isManager ? 'Create the first task' : null;
-        btnOnclick= isManager ? 'openCreateTaskModal()' : null;
+          : 'Click + New Task above to create one.';
+        btnText   = 'Create the first task';
+        btnOnclick= 'openCreateTaskModal()';
       }
       emptyHtml = (typeof renderEmptyState === 'function')
         ? renderEmptyState({ icon:'check-square', heading:heading, sub:sub, btnText:btnText, btnOnclick:btnOnclick })
@@ -390,7 +399,10 @@ var _taskModalMode = null;     // 'create' | 'edit'
 var _taskModalEditingId = null;
 
 function openCreateTaskModal() {
-  if (!isManager) { showError('Only managers can create tasks.'); return; }
+  // v111: employees can create one-off general tasks. RLS gates the actual
+  // INSERT via tasks_insert_authenticated_self (created_by must be self).
+  // No frontend role gate here; per-field locks below restrict assignees +
+  // frequency for non-managers.
   _taskModalMode = 'create';
   _taskModalEditingId = null;
   _resetTaskModal();
@@ -550,6 +562,14 @@ async function saveTaskModal() {
 // strictly atomic, but functionally equivalent for the small-team
 // scale and clearer than wiring up a server-side RPC.
 async function _saveCreateTask(p) {
+  // v111: this path creates ONE-OFF tasks only (frequency defaults to
+  // 'general' via the v94 schema default — not passed in the payload).
+  // Recurring tasks use a separate flow via openCreateRecurringTemplateModal
+  // (manager-only, writes to task_templates not tasks). DO NOT add a
+  // frequency field here without also gating it on isManager — RLS
+  // tasks_insert_authenticated_self lets any authed user INSERT as long
+  // as created_by matches, so a non-manager could otherwise smuggle a
+  // recurring task in by manipulating the payload.
   var ins = await sb.from('tasks').insert({
     title: p.title,
     description: p.description,
