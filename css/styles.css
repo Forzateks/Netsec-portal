@@ -1707,6 +1707,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   border-color:rgba(255,255,255,.12);
   color:rgba(255,255,255,.9);
   box-shadow:none;
+  /* v115: undo the vestigial .db-status{width:14px;height:14px} from the
+     pre-pill design — those dimensions were painting a 14x14 inner box
+     visible as a small glass artifact behind the "Live" label. */
+  width:auto; height:auto;
 }
 .db-status-label{font-weight:500;letter-spacing:.2px}
 
