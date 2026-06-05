@@ -1127,6 +1127,21 @@ const INTERNAL_ACTIVITY_TYPES = ['Testing for customers','Lab setup','Others'];
 // engagement record. Short list; "Others" covers anything bespoke.
 const CUSTOMER_TESTING_ACTIVITY_TYPES = ['Lab Validation','Customer Demo','Others'];
 
+// v118: POC sessions have their own activity vocabulary, distinct from the
+// delivery list. Uses a value/label split so "Initial Config" displays to
+// the user but stores as the canonical "Initial Configuration" (preserves
+// the v109a Activity Matrix bucket — no re-fragmentation). "Design
+// Discussion" reuses the existing canonical. The other 5 are POC-specific.
+const POC_ACTIVITY_TYPES = [
+  { v:'PoC Documentation',          l:'PoC Documentation' },
+  { v:'Initial Discussion',         l:'Initial Discussion' },
+  { v:'Design Discussion',          l:'Design Discussion' },
+  { v:'Initial Configuration',      l:'Initial Config' },
+  { v:'PoC Branch Migration',       l:'PoC Branch Migration' },
+  { v:'Troubleshooting/Monitoring', l:'Troubleshooting/Monitoring' },
+  { v:'PoC Report',                 l:'PoC Report' }
+];
+
 const DEVICE_MODELS = ['EC-XS','EC-SP','EC-M','EC-10104','EC-10106'];
 
 // Return the activity-type options that apply for a given session type.
@@ -1135,12 +1150,16 @@ function activityTypesForSession(sessionType) {
   if (sessionType === 'presales')         return PRESALES_ACTIVITY_TYPES;
   if (sessionType === 'internal')         return INTERNAL_ACTIVITY_TYPES;
   if (sessionType === 'customer_testing') return CUSTOMER_TESTING_ACTIVITY_TYPES;
-  // Project + POC additionally get "Design Discussion" (v86) — design
-  // conversations are a real activity here. AMC + Support stick to the
-  // delivery list as-is (maintenance/firefighting flows don't need it).
-  if (sessionType === 'project' || sessionType === 'poc') {
+  // v118: POC sessions get their own vocabulary (POC_ACTIVITY_TYPES),
+  // distinct from the delivery list. Split from the previous shared
+  // 'project | poc' branch — Project keeps the delivery list + Design
+  // Discussion + Daily Sync Call (v86 + v109b) unchanged.
+  if (sessionType === 'poc') return POC_ACTIVITY_TYPES;
+  if (sessionType === 'project') {
     return ACTIVITY_TYPES.concat(['Design Discussion','Daily Sync Call']);
   }
+  // AMC + Support stick to the delivery list as-is (maintenance/firefighting
+  // flows don't need the design-conversation extras).
   return ACTIVITY_TYPES;
 }
 
@@ -1154,10 +1173,25 @@ function activityTypesForSession(sessionType) {
 function fillActivitySelect(selectId, sessionType, legacyValue) {
   var el = document.getElementById(selectId); if (!el) return;
   var cur = el.value;
+  // v118: accept both plain-string and {v,l}-object entries. POC uses the
+  // object form so an option can render one label ("Initial Config") while
+  // storing a different canonical value ("Initial Configuration"). All
+  // other lists are still plain strings — normalized to {val:s, lbl:s}.
   var list = activityTypesForSession(sessionType);
+  var norm = list.map(function(item){
+    return (typeof item === 'string')
+      ? { val:item, lbl:item }
+      : { val:item.v, lbl:item.l };
+  });
   var html = '<option value="">-- Select --</option>'
-    + list.map(function(a){ return '<option>'+esc2(a)+'</option>'; }).join('');
-  if (legacyValue && list.indexOf(legacyValue) === -1) {
+    + norm.map(function(o){
+        return '<option value="'+esc2(o.val)+'">'+esc2(o.lbl)+'</option>';
+      }).join('');
+  // Legacy-value preservation compares against stored values (norm.val), so
+  // an existing POC row with activity_type='Initial Configuration' resolves
+  // to the canonical option above (not surfaced as legacy), while an old
+  // value not in the list still appears as "<value> (legacy)".
+  if (legacyValue && !norm.some(function(o){ return o.val === legacyValue; })) {
     html += '<option value="'+esc2(legacyValue)+'">'+esc2(legacyValue)+' (legacy)</option>';
   }
   el.innerHTML = html;
