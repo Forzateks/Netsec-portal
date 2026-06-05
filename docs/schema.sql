@@ -214,6 +214,12 @@ CREATE TABLE public.engagements (
   vendor text,
   product_line text,
   converted_to_project boolean DEFAULT false NOT NULL,
+  -- v120: on-demand PoC flag. Extracted from the tracker_status dropdown
+  -- (where 'On demand request' was a phase) into a dedicated boolean.
+  -- POC-only in the UI; column exists on every row but stays false for
+  -- non-POC engagements. The tracker_status CHECK constraint still allows
+  -- 'On demand request' as a harmless vestige.
+  is_on_demand boolean DEFAULT false NOT NULL,
   is_archived boolean DEFAULT false NOT NULL,
   archived_at timestamptz
 );

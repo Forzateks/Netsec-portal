@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v119',
+    release: 'netsec-portal@v120',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -1114,6 +1114,16 @@
           <span class="poc-conv-text">Converted to project</span>
         </label>
         <div class="poc-conv-help">Tick this if the customer adopted the POC and it became a paid engagement.</div>
+      </div>
+      <!-- v120: PoC categorization — on-demand vs standard engagement.
+           POC-only (hidden for other types). Reuses the .poc-conv-* CSS family
+           for visual parity with the Converted-to-project control above. -->
+      <div class="form-group full poc-conv-row" id="trk-edit-ondemand-row" style="display:none">
+        <label class="poc-conv-label">
+          <input type="checkbox" id="trk-edit-ondemand" class="poc-conv-cb">
+          <span class="poc-conv-text">On demand request</span>
+        </label>
+        <div class="poc-conv-help">Mark this PoC as an on-demand request (vs a standard PoC engagement).</div>
       </div>
       <div class="form-group">
         <label>Country</label>

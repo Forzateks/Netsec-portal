@@ -42,7 +42,11 @@ var TRK_PHASES_POC = [
   'Design Discussion',
   'Initial Config',
   'PoC Branch Migration',
-  'On demand request',
+  // v120: 'On demand request' removed from the phase dropdown — it was a
+  // categorization (on-demand vs standard PoC), not a workflow phase.
+  // Now lives on engagements.is_on_demand as a dedicated checkbox in the
+  // tracker edit form. Vestige still allowed by the tracker_status CHECK
+  // constraint so historical/future writes don't error, but no UI offers it.
   'Troubleshooting',
   'PoC Report',
   'Commercial Process'
@@ -84,7 +88,7 @@ async function loadTracker() {
   // Avoids relying on Supabase nested-select FK metadata.
   var engRes = await fetchAllRows(function(){
     return sb.from('engagements')
-      .select('id,customer_id,name,type,status,vendor,product_line,country,partner,category,project_order_no,start_date,end_date,tracker_status,orch_version,ec_version,license_expiry,signed_off_on,owner_employee,tracker_remarks,tracker_updated_at,updated_by,created_at,converted_to_project,is_archived')
+      .select('id,customer_id,name,type,status,vendor,product_line,country,partner,category,project_order_no,start_date,end_date,tracker_status,orch_version,ec_version,license_expiry,signed_off_on,owner_employee,tracker_remarks,tracker_updated_at,updated_by,created_at,converted_to_project,is_on_demand,is_archived')
       .eq('is_archived', false)
       .order('tracker_updated_at',{ascending:false,nullsFirst:false});
   });
@@ -354,6 +358,14 @@ function trkConvertedBadge(row) {
   return row.converted_to_project
     ? '<span class="badge trk-conv trk-conv-won"><i data-lucide="check" class="trk-st-icon"></i> Converted</span>'
     : '<span class="badge trk-conv trk-conv-none">Not converted</span>';
+}
+
+// v120: On-demand PoC badge — renders for POC rows where is_on_demand=true,
+// regardless of status (unlike Converted which is post-hoc). Lets a manager
+// distinguish on-demand vs standard PoCs at a glance without opening each.
+function trkOnDemandBadge(row) {
+  if (!row || row.type !== 'poc' || !row.is_on_demand) return '';
+  return '<span class="badge" style="background:#EDE9FE;color:#5B21B6;font-size:10px;margin-left:4px">On Demand</span>';
 }
 
 function trkTypeBadge(t) {
@@ -641,7 +653,7 @@ function _trkRenderTable(rows, TYPE_DEF) {
         (r.country?'<div class="trk-cell-sub">'+esc2(r.country)+'</div>':'')+
       '</td>'+
       '<td class="hide-mobile">'+esc2(r.owner_employee||'—')+'</td>'+
-      '<td>'+trkTopStatusBadge(r.status, r.tracker_status)+trkConvertedBadge(r)+'</td>'+
+      '<td>'+trkTopStatusBadge(r.status, r.tracker_status)+trkConvertedBadge(r)+trkOnDemandBadge(r)+'</td>'+
       '<td class="hide-mobile dim num" style="font-size:12px"'+(r.tracker_updated_at?' title="'+relativeTimeTitle(r.tracker_updated_at)+'"':'')+'>'+(r.tracker_updated_at?relativeTime(r.tracker_updated_at):'—')+'</td>'+
       '<td><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openTrackerDetail('+r.id+')"><i data-lucide="eye" class="btn-icon"></i><span class="hide-mobile">View</span></button></td>'+
     '</tr>';
@@ -671,7 +683,7 @@ function _trkRenderCards(rows, TYPE_DEF) {
       (r.vendor?'<div class="trk-card-meta">'+esc2(r.vendor)+(r.product_line?' · '+esc2(r.product_line):'')+'</div>':'')+
       (r.owner_employee?'<div class="trk-card-meta">Owner: '+esc2(r.owner_employee)+'</div>':'')+
       '<div class="trk-card-foot">'+
-        trkTopStatusBadge(r.status, r.tracker_status)+trkConvertedBadge(r)+
+        trkTopStatusBadge(r.status, r.tracker_status)+trkConvertedBadge(r)+trkOnDemandBadge(r)+
         '<span class="trk-card-date num"'+updatedTitle+'>'+updated+'</span>'+
       '</div>'+
       (remarksFull?'<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+esc2(remarksFull)+'</div>':'')+
@@ -704,7 +716,7 @@ function openTrackerDetail(id) {
   var r = _trkData.find(function(x){return x.id===id;});
   if (!r) return;
 
-  document.getElementById('trk-detail-type').innerHTML = trkTypeBadge(r.type) + ' ' + trkTopStatusBadge(r.status, r.tracker_status) + trkConvertedBadge(r);
+  document.getElementById('trk-detail-type').innerHTML = trkTypeBadge(r.type) + ' ' + trkTopStatusBadge(r.status, r.tracker_status) + trkConvertedBadge(r) + trkOnDemandBadge(r);
   document.getElementById('trk-detail-name').textContent = r.name || '';
   document.getElementById('trk-detail-customer').textContent = (r.customer_name||'—') +
     (r.country?(' · '+r.country):'') +
@@ -920,6 +932,17 @@ function _trkRefreshConvertedToggle() {
   row.classList.toggle('poc-conv-disabled', isActive);
 }
 
+// v120: On-demand PoC checkbox. POC-only (hidden for other types), but
+// unlike converted_to_project this one stays enabled regardless of status —
+// on-demand is a property of HOW the PoC was requested, knowable from day 1.
+function _trkRefreshOnDemandToggle() {
+  var row = document.getElementById('trk-edit-ondemand-row');
+  var cb  = document.getElementById('trk-edit-ondemand');
+  if (!row || !cb) return;
+  var engType = cb.dataset.engType || '';
+  row.style.display = (engType === 'poc') ? '' : 'none';
+}
+
 function openTrackerEditModal(id) {
   // Employees can now open this modal to edit a limited field set
   // (Remarks / Phase / Versions / Category). The DB trigger
@@ -972,9 +995,17 @@ function openTrackerEditModal(id) {
     convCb.checked  = !!r.converted_to_project;
     convCb.dataset.engType = r.type || '';
   }
+  // v120: On-demand PoC checkbox — POC-only categorization (vs standard).
+  // Same seed-then-refresh pattern as the converted toggle above.
+  var odCb = document.getElementById('trk-edit-ondemand');
+  if (odCb) {
+    odCb.checked = !!r.is_on_demand;
+    odCb.dataset.engType = r.type || '';
+  }
   // Apply the Phase enable/disable rule based on the just-set top status.
   _trkUpdatePhaseEnabledState();
   _trkRefreshConvertedToggle();
+  _trkRefreshOnDemandToggle();
   document.getElementById('trk-edit-info').style.display = 'none';
 
   _trkApplyEmployeeLocks();
@@ -1119,6 +1150,13 @@ async function saveTrackerEdit() {
   var convCb = document.getElementById('trk-edit-converted');
   if (convCb && convCb.dataset.engType === 'poc') {
     patch.converted_to_project = !!convCb.checked;
+  }
+
+  // v120: same POC-only gate for is_on_demand — don't overwrite the column
+  // on non-POC rows (the checkbox is hidden there and would always read false).
+  var odCb = document.getElementById('trk-edit-ondemand');
+  if (odCb && odCb.dataset.engType === 'poc') {
+    patch.is_on_demand = !!odCb.checked;
   }
 
   // A sign-off date flips engagement.status to 'sign-off' unless the user
