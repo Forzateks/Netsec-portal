@@ -1312,6 +1312,15 @@ async function renderPjEmployeeSummary() {
       if (r.employee) participants.push(r.employee);
     } else {
       var names = r.team_members.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+      // v119: always include the logger as a match candidate. Previously the
+      // logger was credited only as a fallback when team_members matched no
+      // known employee — so sessions a user logged but whose own name wasn't
+      // in team_members lost their credit (Nasif: 338 sessions / ~633h dropped).
+      // Brings Employee Summary into agreement with the Activity Matrix
+      // (both = true Model A: logger ∪ team_members). No double-count:
+      // EMPLOYEES.forEach credits each employee at most once per session
+      // via a single .some() match.
+      if (r.employee) names.push(r.employee);
       EMPLOYEES.forEach(function(emp) {
         var firstName = emp.split(' ')[0].toLowerCase();
         var hit = names.some(function(n) {
