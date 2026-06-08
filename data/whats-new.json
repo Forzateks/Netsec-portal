@@ -148,6 +148,13 @@
       "category": "new",
       "title": "See what's new before updating",
       "body": "Clicking the Update pill now opens a popup listing what changed since your last version. Review the changes, then click 'Update now' — or 'Later' to keep working and update when ready."
+    },
+    {
+      "id": "v122-internal-troubleshooting",
+      "version": "v122",
+      "category": "new",
+      "title": "Troubleshooting on Internal sessions",
+      "body": "Internal session Activity Type now includes 'Troubleshooting' alongside Testing for customers, Lab setup, and Others. Use it for time spent diagnosing internal lab or environment issues."
     }
   ]
 }

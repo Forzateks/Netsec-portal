@@ -1120,7 +1120,7 @@ const PRESALES_ACTIVITY_TYPES = ['PS Calculation','SOW','Tech Proposal','Design 
 
 // Internal-session activity list (session_type='internal'). Distinct
 // from delivery work — no customer or engagement attached.
-const INTERNAL_ACTIVITY_TYPES = ['Testing for customers','Lab setup','Others'];
+const INTERNAL_ACTIVITY_TYPES = ['Testing for customers','Lab setup','Troubleshooting','Others'];
 
 // Customer Testing activity list (session_type='customer_testing'). Lab
 // validations and customer demos against a named customer — no formal
