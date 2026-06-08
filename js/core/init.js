@@ -9,7 +9,7 @@
 // SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
 // HTTP-cached copy of /sw.js can't be served when this file ships. The
 // version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=120';
+var SW_REGISTRATION_URL = '/sw.js?v=121';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -102,12 +102,121 @@ function applyUpdate() {
       window.location.reload();
     }
   });
+  // v121: the visible "Updating…" affordance now lives on the modal's
+  // "Update now" button (set inside _renderUpdateModal). Still update the
+  // pill text as a fallback for the empty-notes / direct-apply path.
   var b = document.getElementById('update-available-btn');
   if (b) {
     b.textContent = 'Updating…';
     b.disabled = true;
     b.style.cursor = 'default';
   }
+}
+
+// v121: parse a version-ish string into a comparable integer. Accepts the
+// canonical 'vNNN', the Sentry 'netsec-portal@vNNN', or the SW URL '?v=NNN'.
+// Returns 0 on no match — items without a version field cleanly fall out
+// of the update modal's "newer than current" filter.
+function _verNum(v) {
+  var m = String(v||'').match(/(\d+)/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+// v121: pill click handler. Fetches whats-new.json fresh (no-store — the
+// SW already bypasses /data/ but the explicit hint makes intent obvious),
+// filters items whose version is strictly greater than the running version,
+// and renders the modal. Empty list → skip the modal and apply directly so
+// test-only synced-trio bumps don't impose ceremony on users.
+async function showUpdateNotes() {
+  var current = _verNum(SW_REGISTRATION_URL);
+  var items = [];
+  try {
+    var resp = await fetch('data/whats-new.json', { cache: 'no-store' });
+    var all  = await resp.json();
+    var pool = (all && Array.isArray(all.items)) ? all.items : [];
+    items = pool
+      .filter(function(it){ return it.version && _verNum(it.version) > current; })
+      .sort(function(a,b){ return _verNum(b.version) - _verNum(a.version); });
+  } catch (e) {
+    items = [];
+  }
+  if (!items.length) { applyUpdate(); return; }
+
+  // Cap to the most recent 5 distinct versions to keep the modal short
+  // when a user has been offline across many ships. Sorted desc already.
+  var versionsSeen = [];
+  items.forEach(function(it){
+    var v = _verNum(it.version);
+    if (versionsSeen.indexOf(v) === -1) versionsSeen.push(v);
+  });
+  var keep = versionsSeen.slice(0, 5);
+  var shown = items.filter(function(it){ return keep.indexOf(_verNum(it.version)) !== -1; });
+  var hiddenOlder = items.length > shown.length;
+
+  _renderUpdateModal(shown, hiddenOlder);
+}
+
+function _categoryTag(cat) {
+  if (cat === 'fixed') return '<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">FIXED</span>';
+  if (cat === 'new')   return '<span style="background:rgba(0,160,210,0.12);color:#0073A0;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">NEW</span>';
+  return '<span style="background:#EEF2FF;color:#0A1F5C;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">UPDATE</span>';
+}
+
+function _renderUpdateModal(items, hiddenOlder) {
+  // esc2 is defined in helpers.js — text-only fields below.
+  var rows = items.map(function(it){
+    var v = it.version ? '<span style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);margin-left:6px">'+esc2(it.version)+'</span>' : '';
+    return '<div style="padding:10px 0;border-bottom:1px solid #F1F5F9">'+
+      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">'+
+        _categoryTag(it.category)+
+        '<strong style="font-size:13.5px;color:var(--navy);line-height:1.3">'+esc2(it.title||'')+'</strong>'+
+        v+
+      '</div>'+
+      (it.body ? '<div style="font-size:12.5px;color:#475569;line-height:1.5">'+esc2(it.body)+'</div>' : '')+
+    '</div>';
+  }).join('');
+  var more = hiddenOlder
+    ? '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">…and earlier updates.</div>'
+    : '';
+
+  var html =
+    '<div class="modal-overlay show" id="update-notes-overlay" onclick="if(event.target===this)closeUpdateNotesModal()">'+
+      '<div class="modal" style="max-width:520px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px">'+
+          '<div class="modal-title">What\'s new</div>'+
+          '<button class="btn btn-ghost" onclick="closeUpdateNotesModal()" style="font-size:18px;padding:4px 10px" title="Close">×</button>'+
+        '</div>'+
+        '<div style="max-height:52vh;overflow-y:auto;border-top:1px solid #F1F5F9">'+rows+'</div>'+
+        more+
+        '<div class="modal-actions">'+
+          '<button class="btn btn-ghost" onclick="closeUpdateNotesModal()">Later</button>'+
+          '<button class="btn btn-primary" id="update-notes-apply-btn" onclick="_updateNotesConfirm()">Update now</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+
+  var wrap = document.createElement('div');
+  wrap.innerHTML = html;
+  document.body.appendChild(wrap.firstChild);
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+function closeUpdateNotesModal() {
+  var el = document.getElementById('update-notes-overlay');
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+
+function _updateNotesConfirm() {
+  // Flip the modal's primary button to the same "Updating…" affordance
+  // applyUpdate sets on the pill, so the user sees something happening
+  // before the reload swaps the page out.
+  var btn = document.getElementById('update-notes-apply-btn');
+  if (btn) {
+    btn.textContent = 'Updating…';
+    btn.disabled = true;
+    btn.style.cursor = 'default';
+  }
+  applyUpdate();
 }
 
 // Close the user-menu dropdown when the user taps anywhere outside it.

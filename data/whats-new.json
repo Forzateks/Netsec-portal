@@ -1,5 +1,5 @@
 {
-  "_comment": "To add a new tip: append a new object to items. Use a unique id (tip-016, tip-017...). category is 'new' | 'tip' | 'app'. body should be 2-3 sentences max. link is one of the keys in WHATS_NEW_ROUTES inside dashboard.js (currently: customer-summary, engagement-summary, employee-summary, team-skills, team, leave, certificates, knowledge-base, my-sessions, approvals, log-session) — leave null to render no link button. Push the file to deploy; existing users see new items in their next shuffle (the JS detects items added since the last shuffle and reshuffles). Tips older than 3-4 months that were category 'new' should be edited down to 'tip' so the badge accurately reflects 'recently shipped'.",
+  "_comment": "To add a new tip: append a new object to items. Use a unique id (tip-016, tip-017...). category is 'new' | 'tip' | 'app' | 'fixed'. body should be 2-3 sentences max. link is one of the keys in WHATS_NEW_ROUTES inside dashboard.js (currently: customer-summary, engagement-summary, employee-summary, team-skills, team, leave, certificates, knowledge-base, my-sessions, approvals, log-session) — leave null to render no link button. Push the file to deploy; existing users see new items in their next shuffle (the JS detects items added since the last shuffle and reshuffles). Tips older than 3-4 months that were category 'new' should be edited down to 'tip' so the badge accurately reflects 'recently shipped'. v121 NEW FIELD: 'version' (e.g. 'v121') opts an item into the update-pill 'what's new' modal — items WITHOUT this field stay dashboard-tips-only. Every ship from v121 onward should append a versioned entry summarising what changed.",
   "items": [
     {
       "id": "tip-001",
@@ -120,6 +120,34 @@
       "body": "My Sessions has filter chips and a member filter at the top. Combine type + customer + engagement + dates to surface specific sessions fast.",
       "link": "my-sessions",
       "link_text": "Open My Sessions"
+    },
+    {
+      "id": "v118-poc-activities",
+      "version": "v118",
+      "category": "new",
+      "title": "POC-specific activity types",
+      "body": "When logging a POC session, Activity Type now offers POC-specific options: PoC Documentation, Initial Discussion, Design Discussion, PoC Branch Migration, Troubleshooting/Monitoring, and PoC Report."
+    },
+    {
+      "id": "v119-empsummary-fix",
+      "version": "v119",
+      "category": "fixed",
+      "title": "Employee Summary now counts all logged hours",
+      "body": "Employee Summary was dropping the logger's credit on sessions where their own name wasn't in team_members. Totals now agree with the Activity Matrix (logger plus team members)."
+    },
+    {
+      "id": "v120-ondemand-poc",
+      "version": "v120",
+      "category": "new",
+      "title": "On-demand PoC flag",
+      "body": "POCs can be marked as on-demand requests via a dedicated checkbox in the tracker edit form. Flagged POCs show a purple 'On Demand' badge in the tracker list, cards, and detail view."
+    },
+    {
+      "id": "v121-update-notes",
+      "version": "v121",
+      "category": "new",
+      "title": "See what's new before updating",
+      "body": "Clicking the Update pill now opens a popup listing what changed since your last version. Review the changes, then click 'Update now' — or 'Later' to keep working and update when ready."
     }
   ]
 }
