@@ -1006,6 +1006,20 @@ function openTrackerEditModal(id) {
   _trkUpdatePhaseEnabledState();
   _trkRefreshConvertedToggle();
   _trkRefreshOnDemandToggle();
+  // v127: surface the same Last-Updated context the detail modal shows
+  // (was hidden behind a Close → View loop while editing).
+  var luEl = document.getElementById('trk-edit-last-updated');
+  if (luEl) {
+    if (r.tracker_updated_at) {
+      var rel = (typeof relativeTime === 'function') ? relativeTime(r.tracker_updated_at) : r.tracker_updated_at;
+      var who = r.updated_by ? ' by ' + esc2(r.updated_by) : '';
+      luEl.textContent = 'Last updated ' + rel + who;
+      if (typeof relativeTimeTitle === 'function') luEl.title = relativeTimeTitle(r.tracker_updated_at);
+    } else {
+      luEl.textContent = '';
+      luEl.title = '';
+    }
+  }
   document.getElementById('trk-edit-info').style.display = 'none';
 
   _trkApplyEmployeeLocks();

@@ -982,6 +982,13 @@ async function saveEditProject() {
   if (oldType && oldType !== type) {
     var usT = await sb.from('unified_sessions').update({ session_type: type }).eq('engagement_name', name);
     if (usT.error) console.error('unified_sessions session_type cascade failed:', usT.error);
+    // v127: also clear tracker_status. The current phase value is anchored
+    // to the old waterfall (project/POC use different phase lists), so a
+    // project → poc switch would leave a project phase rendering as
+    // "(legacy)" in the tracker dropdown until the manager manually
+    // re-picks. Clearing forces a fresh pick on next edit.
+    var tsT = await sb.from('engagements').update({ tracker_status: null }).eq('id', id);
+    if (tsT.error) console.error('tracker_status clear on type-change failed:', tsT.error);
   }
 
   closeEditProjectModal();

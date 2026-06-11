@@ -80,7 +80,12 @@ function renderKBArticles(data) {
   var cards = data.map(function(a) {
     var tags = (a.tags||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
     var tagHtml = tags.map(function(t){return '<span class="kb-tag">'+esc2(t)+'</span>';}).join('');
-    var excerpt = (a.content||'').slice(0,180).trim() + ((a.content||'').length>180?'…':'');
+    // v127: cut at last space before 180 so excerpts don't end mid-word
+    // like "the configurat…". Falls back to a hard cut if there's no space
+    // in the last ~60 chars (very long single tokens).
+    var _raw = (a.content||'').slice(0,180);
+    var _cut = _raw.lastIndexOf(' ');
+    var excerpt = (_cut > 120 ? _raw.slice(0,_cut) : _raw).trim() + ((a.content||'').length>180?'…':'');
     return '<div class="kb-card">'+
       '<div class="kb-card-meta">'+
       '<span class="badge '+kbCatClass(a.category)+'">'+esc2(a.category||'General')+'</span>'+

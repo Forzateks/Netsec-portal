@@ -40,13 +40,23 @@ async function renderNotifications() {
     ot_deleted_after_approval: '🗑️',
   };
 
-  listEl.innerHTML = rows.map(function(n){
+  // v127: "Mark all read" header link + dim already-read items so unread
+  // items stand out. The header link is only meaningful when there's at
+  // least one unread row.
+  var unreadCount = rows.filter(function(n){ return !n.read_at; }).length;
+  var headerHtml = unreadCount
+    ? '<div style="display:flex;justify-content:flex-end;padding:6px 10px;border-bottom:1px solid var(--border);background:#F8FAFC">'+
+        '<button class="btn btn-sm btn-ghost" style="font-size:11px;padding:3px 8px" onclick="markAllNotificationsRead()">Mark all read</button>'+
+      '</div>'
+    : '';
+  var itemsHtml = rows.map(function(n){
     var icon = typeIcons[n.type] || '🔔';
     var age = n.created_at ? fmtNotifAge(n.created_at) : '';
     var bg = n.read_at ? 'transparent' : '#FEF3C7';
-    return '<div class="notif-item" data-notif-id="'+n.id+'" '+
+    var op = n.read_at ? 'opacity:.65;' : '';
+    return '<div class="notif-item" data-notif-id="'+n.id+'"'+(n.read_at?' data-read="1"':'')+' '+
       'onclick="markNotificationRead('+n.id+')" '+
-      'style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;background:'+bg+'">'+
+      'style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;background:'+bg+';'+op+'">'+
       '<div style="display:flex;gap:8px;align-items:flex-start">'+
         '<div style="font-size:18px;line-height:1">'+icon+'</div>'+
         '<div style="flex:1;font-size:13px;line-height:1.4;color:var(--navy)">'+esc2(n.message||'')+'</div>'+
@@ -54,6 +64,21 @@ async function renderNotifications() {
       '<div style="font-size:11px;color:var(--muted);margin-top:4px;margin-left:26px">'+age+(n.read_at?'  · read':'')+'</div>'+
       '</div>';
   }).join('');
+  listEl.innerHTML = headerHtml + itemsHtml;
+}
+
+// v127: mark every currently-rendered unread notification as read in one
+// click. Uses the same is('read_at', null) guard as the per-row marker.
+async function markAllNotificationsRead() {
+  if (!await requireAuth()) return;
+  var rows = document.querySelectorAll('.notif-item:not([data-read])');
+  if (!rows.length) return;
+  var ids = Array.from(rows).map(function(el){ return parseInt(el.getAttribute('data-notif-id'), 10); }).filter(Boolean);
+  if (!ids.length) return;
+  var nowIso = new Date().toISOString();
+  await sb.from('notifications').update({ read_at: nowIso }).in('id', ids).is('read_at', null);
+  renderNotifications();
+  if (typeof updateNotifBellCount === 'function') updateNotifBellCount();
 }
 
 function fmtNotifAge(iso) {

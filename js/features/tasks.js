@@ -358,10 +358,16 @@ function renderTasksList() {
 
     // Recurring tabs swap the date triplet column for a single period
     // label (e.g. "Today" / "Week 22" / "May 2026" / "Q2 2026").
+    // v127: append the Start/ETA/End triplet underneath the period pill —
+    // they were hidden entirely on recurring tabs, so an ETA set on a
+    // weekly/monthly/quarterly instance was invisible until edit.
     var periodOrDatesCell;
     if (isRecurringTab) {
       var lbl = formatPeriodLabel(t.period_key, activeTab);
-      periodOrDatesCell = '<td><span class="task-period-pill">'+esc2(lbl)+'</span></td>';
+      var datesLine = datesText
+        ? '<div style="font-family:DM Mono,monospace;font-size:10.5px;color:var(--muted);margin-top:3px;white-space:nowrap">'+datesText+'</div>'
+        : '';
+      periodOrDatesCell = '<td><span class="task-period-pill">'+esc2(lbl)+'</span>'+datesLine+'</td>';
     } else {
       periodOrDatesCell = '<td style="font-family:DM Mono,monospace;font-size:11.5px;color:var(--muted);white-space:nowrap">'+datesText+'</td>';
     }
@@ -929,21 +935,30 @@ async function restoreTask(taskId) {
 }
 
 // == SIDEBAR BADGE COUNTER =======================================
-// Counts open tasks (status NOT completed/cancelled, not archived):
-//   - Manager: ALL open tasks across the team.
-//   - Employee: just the ones they're assigned to.
+// Counts tasks that need attention from the current viewer:
+//   - Manager: just pending_approval rows (v127 — was every non-completed
+//     row, which turned into the full backlog and trained managers to
+//     ignore the badge; the Approvals badge already covers everything
+//     else needing manager review).
+//   - Employee: open tasks they're assigned to (status NOT completed/
+//     cancelled, not archived).
 // Polled by startNotifPolling every 60s in addition to the on-demand
 // refresh after create/update/archive.
 async function updateTasksBadge() {
   var badge = document.getElementById('tasks-badge');
   if (!badge) return;
   try {
-    var q = sb.from('tasks')
-      .select('id, task_assignments!inner(assigned_to)', { count:'exact', head:true })
-      .eq('is_archived', false)
-      .not('status', 'in', '(completed,cancelled)');
-    if (!isManager && currentUser) {
-      q = q.eq('task_assignments.assigned_to', currentUser);
+    var q;
+    if (isManager) {
+      // v127: actionable count — only rows awaiting the manager's approval.
+      q = sb.from('tasks').select('id', { count:'exact', head:true })
+        .eq('is_archived', false).eq('status', 'pending_approval');
+    } else {
+      q = sb.from('tasks')
+        .select('id, task_assignments!inner(assigned_to)', { count:'exact', head:true })
+        .eq('is_archived', false)
+        .not('status', 'in', '(completed,cancelled)');
+      if (currentUser) q = q.eq('task_assignments.assigned_to', currentUser);
     }
     var res = await q;
     if (res.error) {

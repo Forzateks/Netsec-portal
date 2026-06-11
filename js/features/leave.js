@@ -756,21 +756,23 @@ async function buildApprovedLeavesSection() {
     });
     return html;
   }
+  // v127: dropped the per-row Edit/Delete buttons. The banner above already
+  // says "edits have no effect on what an employee has 'used'"; the buttons
+  // contradicted that and mutated rows that don't drive any balance.
+  // History rows are read-only now. openEditALModal/deleteAL remain in the
+  // codebase for any back-office use but are unreachable from the UI.
   html += '<div class="table-wrap"><table style="width:100%;font-size:12px"><thead><tr>'+
-    '<th>Employee</th><th>Type</th><th>Start</th><th>End</th><th>Working Days</th><th>Created</th><th></th>'+
+    '<th>Employee</th><th>Type</th><th>Start</th><th>End</th><th>Working Days</th><th>Created</th>'+
     '</tr></thead><tbody>'+
     rows.map(function(r){
       return '<tr>'+
-        '<td><strong>'+r.employee+'</strong></td>'+
-        '<td><span class="badge" style="background:#f0f4ff;color:var(--navy)">'+(r.leave_type||'')+'</span></td>'+
+        '<td><strong>'+esc2(r.employee||'')+'</strong></td>'+
+        '<td><span class="badge" style="background:#f0f4ff;color:var(--navy)">'+esc2(r.leave_type||'')+'</span></td>'+
         '<td style="font-family:DM Mono,monospace">'+fmtDate(r.start_date)+'</td>'+
         '<td style="font-family:DM Mono,monospace">'+fmtDate(r.end_date)+'</td>'+
         '<td style="font-family:DM Mono,monospace;font-weight:700">'+r.working_days+'</td>'+
         '<td style="font-size:11px;color:var(--muted)"'+(r.created_at?' title="'+relativeTimeTitle(r.created_at)+'"':'')+'>'+(r.created_at?relativeTime(r.created_at):'')+'</td>'+
-        '<td style="white-space:nowrap">'+
-          '<button class="btn btn-sm btn-ghost" onclick="openEditALModal('+r.id+')" title="Edit">✏️</button>'+
-          '<button class="btn btn-sm btn-danger" onclick="deleteAL('+r.id+',\''+r.employee+'\')" title="Delete">✕</button>'+
-        '</td></tr>';
+        '</tr>';
     }).join('')+
     '</tbody></table></div>';
   return html;

@@ -774,13 +774,32 @@ function _renderAttentionCard(items, snoozedCount) {
   var visible = items.slice(0, visibleCap);
   var hidden  = items.slice(visibleCap);
   var rows = visible.map(_attnRowHtml).join('');
+  // v127: See-all is now a toggle — opens AND collapses. Previously you
+  // could only expand; busy weeks left the card stuck long with no way back.
   var hiddenHtml = hidden.length
     ? '<div id="attn-hidden" style="display:none">' + hidden.map(_attnRowHtml).join('') + '</div>'+
-      '<button class="attn-more" type="button" onclick="document.getElementById(\'attn-hidden\').style.display=\'\';this.style.display=\'none\';">See all ('+items.length+')</button>'
+      '<button class="attn-more" id="attn-more-btn" type="button" onclick="_attnToggleOverflow()" data-count="'+items.length+'">See all ('+items.length+')</button>'
     : '';
   return '<div class="card attn-card">' + head +
     '<div class="attn-list">' + rows + hiddenHtml + '</div>'+
   '</div>';
+}
+
+// v127: toggle for the See-all / Show-less button. Single function flips
+// the hidden block's visibility and re-labels the button so the user can
+// always retract a long expansion.
+function _attnToggleOverflow() {
+  var hidden = document.getElementById('attn-hidden');
+  var btn    = document.getElementById('attn-more-btn');
+  if (!hidden || !btn) return;
+  var isOpen = hidden.style.display !== 'none';
+  if (isOpen) {
+    hidden.style.display = 'none';
+    btn.textContent = 'See all (' + (btn.dataset.count || '') + ')';
+  } else {
+    hidden.style.display = '';
+    btn.textContent = 'Show less';
+  }
 }
 
 function _attnRowHtml(it) {

@@ -215,6 +215,10 @@ function _amcBadge(status) {
     label += ' · ' + status.days + 'd';
   } else if (status.key === 'expired' && status.days != null) {
     label += ' · ' + Math.abs(status.days) + 'd ago';
+  } else if (status.key === 'active' && status.days != null) {
+    // v127: surface the remaining-days countdown for active contracts too,
+    // so the list is renewal-planning-friendly without clicking into each row.
+    label += ' · ' + status.days + 'd';
   }
   return '<span class="'+cls+'">'+esc2(label)+'</span>';
 }

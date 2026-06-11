@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v126',
+    release: 'netsec-portal@v127',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -943,7 +943,7 @@
   <div id="pjtab-otpolicy" style="display:none">
     <div class="card">
       <div class="card-title">OT Policy Reference</div>
-      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#EFF6FF"><div style="width:10px;height:10px;border-radius:50%;background:var(--eve);margin-top:2px;flex-shrink:0"></div><div><strong>Eve (6:30PM–11:59PM weekday, no midnight cross):</strong> 1:1 always. 8 credited hrs = 1 Comp Off day.</div></div>
+      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#EFF6FF"><div style="width:10px;height:10px;border-radius:50%;background:var(--eve);margin-top:2px;flex-shrink:0"></div><div><strong>Eve (weekday session ending after 6:30PM UAE / 7:00PM KSA, no midnight cross):</strong> 1:1 always. 8 credited hrs = 1 Comp Off day.</div></div>
       <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#FFFBEB;border-left:3px solid var(--gold)"><div style="width:10px;height:10px;border-radius:50%;background:var(--gold);margin-top:2px;flex-shrink:0"></div><div><strong>Eve/Split (starts 6:30PM+, crosses midnight):</strong> Eve portion at 1:1 + Midnight portion doubled at 1:2. Cap 8hrs total.</div></div>
       <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#ECFDF5"><div style="width:10px;height:10px;border-radius:50%;background:var(--early);margin-top:2px;flex-shrink:0"></div><div><strong>Early Morning (start 5:00 AM–7:29 AM UAE / 5:00 AM–7:59 AM KSA):</strong> 1:1 always. Credit is capped at the regular-hours boundary (UAE 7:30 AM / KSA 8:00 AM) — only the time before regular working hours counts as OT. 8 credited hrs = 1 Comp Off day (pools with Eve hours).</div></div>
       <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#F5F3FF"><div style="width:10px;height:10px;border-radius:50%;background:var(--mid);margin-top:2px;flex-shrink:0"></div><div><strong>Midnight (crosses midnight before 6:30 PM, or starts before 5 AM):</strong> &lt;4hrs raw = 1:1, ≥4hrs raw = 1:2 (qualifies for CO). Credit capped at morning block start (UAE 7:30 AM / KSA 8:00 AM) — time after that is regular hours. 8 credited hrs = 1 Comp Off day.</div></div>
@@ -1205,6 +1205,9 @@
       </div>
     </div>
     <div id="trk-edit-info" style="display:none;margin-top:8px;padding:10px 12px;background:#EDE9FE;border-left:3px solid #7C3AED;border-radius:6px;font-size:12px;color:#5B21B6"></div>
+    <!-- v127: Last-Updated footer — matches the detail modal so managers
+         editing don't lose the audit context. Populated in openTrackerEditModal. -->
+    <div id="trk-edit-last-updated" class="dim" style="font-size:11px;margin-top:10px;text-align:right"></div>
     <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-primary" id="trk-edit-save-btn" onclick="saveTrackerEdit()"><i data-lucide="save" class="btn-icon"></i>Save Changes</button>
       <button class="btn btn-ghost" onclick="closeTrackerEditModal()">Cancel</button>
