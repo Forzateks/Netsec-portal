@@ -669,3 +669,17 @@ function closeAMCContractDetail() {
   var modal = document.getElementById('amc-detail-modal');
   if (modal) modal.classList.remove('show');
 }
+
+// v125: re-render when the viewport crosses the 768px table↔card boundary
+// (mirrors the ps-deals.js pattern). Without this, rotating a phone or
+// resizing leaves the AMC list stuck on the wrong layout until navigating
+// away and back.
+var _amcLastIsMobile = (typeof window !== 'undefined' && window.innerWidth < 768);
+window.addEventListener('resize', function(){
+  var nowMobile = window.innerWidth < 768;
+  if (_amcLastIsMobile !== nowMobile && AMC_CONTRACTS && AMC_CONTRACTS.length) {
+    var screenEl = document.getElementById('screen-amc');
+    if (screenEl && screenEl.classList.contains('active')) renderAMCContracts();
+  }
+  _amcLastIsMobile = nowMobile;
+});

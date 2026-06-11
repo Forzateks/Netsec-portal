@@ -197,7 +197,11 @@ function renderSkillsMatrix() {
     return;
   }
 
-  var isMobile = window.innerWidth < 720;
+  // v125: breakpoint raised 720 → 900 so tablets between 720-1024px get
+  // the accordion layout. The desktop matrix has 9 columns (6 employees +
+  // Gulfit + Product + Vendor) and overflows below ~1000px; below 900 the
+  // accordion is more usable.
+  var isMobile = window.innerWidth < 900;
   // v90: Gulfit Relevant chip bar. Counts are computed off the FULL
   // PRODUCT_LINES set (excluding "Other (specify)" and inactive lines —
   // same baseline as _skFilteredLines) so the totals don't shift as the
@@ -595,11 +599,11 @@ async function ensureSkillsLoaded() {
   if (!res.error) SKILLS = res.data || [];
 }
 
-// Re-render the matrix when the viewport crosses the 720px boundary
-// so the table↔accordion swap doesn't get stuck.
-var _skLastIsMobile = (typeof window !== 'undefined' && window.innerWidth < 720);
+// Re-render the matrix when the viewport crosses the 900px boundary
+// (v125: was 720) so the table↔accordion swap doesn't get stuck.
+var _skLastIsMobile = (typeof window !== 'undefined' && window.innerWidth < 900);
 window.addEventListener('resize', function(){
-  var nowMobile = window.innerWidth < 720;
+  var nowMobile = window.innerWidth < 900;
   if (_skLastIsMobile !== nowMobile && SKILLS) {
     var screenEl = document.getElementById('screen-skills');
     if (screenEl && screenEl.classList.contains('active')) renderSkillsMatrix();

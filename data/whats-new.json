@@ -169,6 +169,13 @@
       "category": "new",
       "title": "Accessibility pass — keyboard and screen reader support",
       "body": "Sidebar items, skill-matrix cells, and inline edit pencils are now keyboard-reachable with visible focus rings. Modals trap focus, support Escape to close, and announce themselves as dialogs to screen readers. Bell, hamburger, and account menu now announce their open/closed state. Icon-only buttons (Approve/Reject, Edit/Delete OT) have proper labels. Pending-approval task badge contrast bumped and a clock icon added so color-blind users can distinguish it from Ongoing."
+    },
+    {
+      "id": "v125-mobile",
+      "version": "v125",
+      "category": "fixed",
+      "title": "Mobile and tablet polish — 7 layout fixes",
+      "body": "Notifications dropdown anchors to both gutters on phones (no more clipping off-screen). Modal action bars sit side-by-side in a clean sticky bar instead of vertical stack. AMC list now swaps between table and cards when you rotate the device, matching PS Deals. Skill matrix accordion now kicks in on tablets up to 900px (was 720) so the 9-column matrix doesn't overflow. Task approve-remark input hides on phones (still available in the Approvals card view). Manager dashboard's 5th stat tile spans full width on tablets instead of dangling. Task Completions sub-tab now matches Leave/OT sub-tabs with a 'Pending Approval (N)' heading."
     }
   ]
 }

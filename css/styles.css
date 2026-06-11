@@ -605,6 +605,14 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .top-bar-bell i{width:18px;height:18px;stroke-width:2}
 .top-bar-bell:hover{background:rgba(255,255,255,.12);color:white}
 .notif-pill{position:absolute;top:2px;right:2px;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center;line-height:1.2;border:1.5px solid rgba(10,31,92,.85)}
+/* v125: notif dropdown styles extracted from inline. Desktop anchors to
+   the right edge of the bell; mobile fills the available width between
+   gutters so the dropdown doesn't clip off-screen on narrow viewports. */
+.notif-dropdown{position:absolute;top:calc(100% + 6px);right:140px;width:340px;max-height:420px;overflow-y:auto;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:300}
+.notif-dropdown-header{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--navy)}
+@media(max-width:640px){
+  .notif-dropdown{right:8px;left:8px;width:auto;max-width:none}
+}
 
 /* User chip — avatar (initials) + name + role badge + caret. Click toggles
    the menu dropdown. */
@@ -1025,6 +1033,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 @media(max-width:880px){
   .dash-stats{grid-template-columns:1fr 1fr}
   .dash-hours-row{grid-template-columns:minmax(0,1fr)}
+  /* v125: the manager dashboard has 5 stat cards; in a 2-col layout the
+     5th tile is alone on its row. Span it across both columns so the row
+     looks intentional rather than orphaned. The :last-child guard limits
+     this to the case where the 5th IS the trailing tile. */
+  .dash-stats > .stat-card:nth-child(5):last-child{grid-column:1 / -1}
 }
 @media(max-width:480px){
   .dash-hero-text h2{font-size:20px}
@@ -1270,9 +1283,14 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .table-wrap th:nth-last-child(-n+1),
   .table-wrap td:nth-last-child(-n+1){position:sticky;right:0;background:white}
 
-  /* Modal action buttons: full-width-ish on small screens */
-  .modal-actions{flex-direction:column-reverse;gap:8px}
-  .modal-actions .btn{width:100%;justify-content:center}
+  /* Modal action buttons: split the sticky bar evenly on small screens.
+     v125: was flex-direction:column-reverse, which stacked the buttons
+     vertically and broke the bottom-sheet sticky gradient (the gradient
+     in the earlier @media block at line 1143 was designed for a row
+     layout). Side-by-side row with flex:1 keeps the gradient intact and
+     gives ~140px per button even at 320px viewport. */
+  .modal-actions{flex-direction:row;gap:8px}
+  .modal-actions .btn{flex:1;justify-content:center;width:auto}
 
   /* Notification badge: move slightly so it doesn't crowd the icon */
   .notif-badge{top:4px;right:0}
@@ -2674,6 +2692,15 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    #92400E) so it's distinguishable from .task-st-ong for color-blind users
    on top of the clock icon prepended in tasks.js renderTasksList. */
 .badge.task-st-pending{background:#FEF3C7;color:#78350F;border:1px dashed #92400E;padding:2px 6px;display:inline-flex;align-items:center;gap:3px}
+
+/* v125: the inline approve-remark input + 2 icon buttons can't fit the
+   90px Actions column on phones (140px input alone overflows). Hide the
+   input on small screens; the manager keeps Approve/Reject inline, and
+   the remark is still available in the Approvals → Task Completions card
+   layout (which has room). */
+@media(max-width:640px){
+  .task-approve-remark{display:none !important}
+}
 
 /* Inline status dropdown — picks up the same colour family as the
    matching badge so the cell still reads as a status at a glance. */

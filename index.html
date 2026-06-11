@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v124',
+    release: 'netsec-portal@v125',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -219,8 +219,12 @@
       <i data-lucide="bell" aria-hidden="true"></i>
       <span class="notif-pill" id="notif-bell-count" style="display:none" aria-label="0 unread">0</span>
     </button>
-    <div id="notif-dropdown" role="menu" aria-label="Notifications" style="display:none;position:absolute;top:calc(100% + 6px);right:140px;width:340px;max-height:420px;overflow-y:auto;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:300">
-      <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--navy)">Notifications</div>
+    <!-- v125: extracted to .notif-dropdown class for a clean mobile override.
+         Was inline right:140px;width:340px which on a 360px viewport pushed
+         the left edge off-screen. Class lets @media(max-width:640px) anchor
+         to both gutters. -->
+    <div id="notif-dropdown" class="notif-dropdown" role="menu" aria-label="Notifications" style="display:none">
+      <div class="notif-dropdown-header">Notifications</div>
       <div id="notif-dropdown-list"></div>
     </div>
     <div class="user-menu-wrap">

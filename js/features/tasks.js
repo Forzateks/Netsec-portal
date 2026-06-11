@@ -589,7 +589,11 @@ async function renderTaskApprovals() {
   var byTask = {};
   (aRes.data||[]).forEach(function(a){ (byTask[a.task_id]=byTask[a.task_id]||[]).push(a.assigned_to); });
 
-  host.innerHTML = tasks.map(function(t){
+  // v125: sibling-parity heading. Leave/OT sub-tabs both render a "Pending
+  // (N)" section header above their cards; this gives Task Completions the
+  // same scannable count + visual rhythm.
+  var heading = '<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin:4px 0 10px;letter-spacing:.2px">Pending Approval ('+tasks.length+')</h3>';
+  host.innerHTML = heading + tasks.map(function(t){
     var owners = (byTask[t.id]||[]).map(function(n){ return esc2(_tasksShortName(n)); }).join(', ') || '—';
     var priMeta = TASK_PRIORITY_META[t.priority] || TASK_PRIORITY_META['medium'];
     return '<div class="approval-card" style="border:1px solid var(--border,#E5E7EB);border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#fff">'+
