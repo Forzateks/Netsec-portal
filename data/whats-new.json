@@ -197,6 +197,13 @@
       "category": "new",
       "title": "New 'Other' engagement type",
       "body": "Add Engagement now offers '📋 Other' as a 6th type alongside Project / POC / AMC / Support / Pre-Sales-Task. Use it for engagements that don't fit the standard categories. Sessions logged under an Other engagement count toward all the usual reports (Engagement Summary, Customer Summary, Employee Summary, Activity Matrix) — it's a real first-class type, not a hack. Phase dropdown defaults to the project waterfall; Activity Type defaults to the standard delivery list."
+    },
+    {
+      "id": "v129-dead-code",
+      "version": "v129",
+      "category": "fixed",
+      "title": "Internal cleanup — orphan backup code removed",
+      "body": "Removed 99 lines of unused backup code (checkBackupReminder / dismissBackup / downloadBackup) that lingered after the v126 legacy banner deletion. No user-visible change — the active backup path through Admin Tools → Full Backup is untouched."
     }
   ]
 }

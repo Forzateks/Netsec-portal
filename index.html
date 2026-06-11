@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v128',
+    release: 'netsec-portal@v129',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -378,12 +378,11 @@
 
 <div class="main-area">
 
-<!-- v126: legacy backup banner (pre-v95) deleted. checkBackupReminder()
-     never ran in practice; renderBackupReminderBanner() in dashboard.js
-     is the live path, injecting #backup-reminder-banner inside the
-     dash-content card. Two-banner risk removed. The dead helpers.js
-     functions (downloadBackup/dismissBackup/checkBackupReminder) remain
-     for a future dead-code-removal ship — harmless without a caller. -->
+<!-- v126: legacy backup banner (pre-v95) deleted. Live path:
+     renderBackupReminderBanner() in dashboard.js injects
+     #backup-reminder-banner inside the dash-content card.
+     v129: the orphan helpers.js functions (downloadBackup /
+     dismissBackup / checkBackupReminder) were cleared too. -->
 
 <div class="main">
 
