@@ -211,6 +211,13 @@
       "category": "fixed",
       "title": "Login + small polish — 6 fixes",
       "body": "Login error messages no longer disappear after 5 seconds (slow readers were losing them); they clear on next submit instead. Bad-password errors now say 'Wrong email or password — try again, or use Forgot password' instead of the raw Supabase code. Screen readers announce login errors and successes. Knowledge Base article body scrolls as one surface with the modal (no more nested scroll on mobile). Notifications bell hides on phones under 380px so the user-chip name doesn't clip. Team Skills 'G' column header shows the green dot emoji that matches the chip row. Logout spinner now appears on the user-menu Logout button (was targeting the old sidebar entry)."
+    },
+    {
+      "id": "v131-features",
+      "version": "v131",
+      "category": "new",
+      "title": "PS Deals status filter + certificate upload size indicator",
+      "body": "Pre-Sales Deals list gets a status chip-row above the table matching the AMC contracts layout — click All / Quoted / Won / In Progress / Completed / Lost / Cancelled to filter. Certificate upload button now shows the file size while uploading (e.g. 'Uploading 4.2 MB…') so you can see something is happening on slow connections."
     }
   ]
 }

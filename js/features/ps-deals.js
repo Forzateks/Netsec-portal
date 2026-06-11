@@ -42,6 +42,11 @@ var PS_STATUS_META = {
   cancelled:   { label:'Cancelled',   cls:'ps-st-cancelled' }
 };
 
+// v131: status chip-row filter — mirrors the AMC pattern. 'all' means no
+// status filter is applied; clicking a chip narrows the deal list to that
+// lifecycle state. Filter resets on clearPsFilters().
+var _psStatusFilter = 'all';
+
 // Per-milestone status (separate vocabulary from deal status). Five
 // states from "Not Started" through "Completed".
 var PS_MS_STATUSES = ['not_started','active','awaiting_signoff','awaiting_payment','completed'];
@@ -113,6 +118,7 @@ function clearPsFilters() {
   ['ps-search','ps-filter-client','ps-filter-region','ps-filter-year'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
+  _psStatusFilter = 'all'; // v131: also clear the chip-row filter
   renderPsDeals();
 }
 
@@ -141,7 +147,31 @@ function _psFilteredDeals() {
         .some(function(f){ return f && String(f).toLowerCase().indexOf(search) !== -1; });
     });
   }
+  // v131: status chip-row filter — applied last so the chip counts (which
+  // call _psCountByStatus on the unfiltered-by-status set) stay honest.
+  if (_psStatusFilter !== 'all') {
+    rows = rows.filter(function(d){ return d.status === _psStatusFilter; });
+  }
   return rows;
+}
+
+// v131: counts feeding the chip-row badges. Operates on the
+// non-archived universe (matching the non-archived rows shown in the
+// active list), so chip totals reflect "what's in the active workflow"
+// rather than the entire history.
+function _psCountByStatus() {
+  var c = { all:0, quoted:0, won:0, in_progress:0, completed:0, lost:0, cancelled:0 };
+  (PS_DEALS||[]).forEach(function(d){
+    if (d.is_archived) return;
+    c.all += 1;
+    if (c[d.status] !== undefined) c[d.status] += 1;
+  });
+  return c;
+}
+
+function setPsStatusFilter(key) {
+  _psStatusFilter = key;
+  renderPsDeals();
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────
@@ -220,9 +250,30 @@ function renderPsDeals() {
       : '<i data-lucide="archive" class="btn-icon"></i>Archived ('+archivedCount+')';
   }
   var rows = _psFilteredDeals();
+  // v131: status chip-row above the list. Reuses the .amc-chip-row /
+  // .amc-chip styles (the AMC variant already covers the visual treatment
+  // and active state we want here). One chip per lifecycle state plus All.
+  var counts = _psCountByStatus();
+  var chip = function(key, label, count) {
+    var active = (_psStatusFilter === key);
+    return '<button class="amc-chip'+(active?' amc-chip-active':'')+'" onclick="setPsStatusFilter(\''+key+'\')">'+
+      label+' <span class="amc-chip-count">'+fmtCount(count)+'</span>'+
+    '</button>';
+  };
+  var chipBar = _psShowArchived ? '' :
+    '<div class="amc-chip-row" style="margin-bottom:12px">'+
+      chip('all',         'All',         counts.all)+
+      chip('quoted',      '📝 Quoted',     counts.quoted)+
+      chip('won',         '🏆 Won',        counts.won)+
+      chip('in_progress', '⏳ In Progress', counts.in_progress)+
+      chip('completed',   '✅ Completed',  counts.completed)+
+      chip('lost',        '❌ Lost',       counts.lost)+
+      chip('cancelled',   '🚫 Cancelled',  counts.cancelled)+
+    '</div>';
+
   if (!rows.length) {
     var total = (PS_DEALS||[]).length;
-    content.innerHTML = renderEmptyState({
+    content.innerHTML = chipBar + renderEmptyState({
       icon: total === 0 ? 'briefcase' : 'search-x',
       heading: total === 0 ? 'No Professional Services deals yet' : 'No deals match the current filters',
       sub: total === 0
@@ -235,7 +286,7 @@ function renderPsDeals() {
     return;
   }
   var isMobile = window.innerWidth < 768;
-  content.innerHTML = (isMobile ? _psRenderCards(rows) : _psRenderTable(rows)) +
+  content.innerHTML = chipBar + (isMobile ? _psRenderCards(rows) : _psRenderTable(rows)) +
     '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Showing '+rows.length+' of '+(PS_DEALS||[]).length+' deals</div>';
   if (typeof renderIcons === 'function') renderIcons();
 }

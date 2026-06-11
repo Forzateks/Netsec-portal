@@ -284,8 +284,13 @@ async function uploadCertificate() {
   var file   = fileEl.files && fileEl.files[0];
   if (!_certValidate(name, issue, expiry, file, true, 'cert-up-error')) return;
 
+  // v131: show the file size in the button text during upload so users on
+  // slow connections see "Uploading 4.2 MB…" instead of a frozen-looking
+  // "Uploading…" spinner. The Supabase Storage SDK doesn't expose chunk
+  // progress events; this is the best determinate indicator we can give.
+  var sizeMB = (file.size / 1048576).toFixed(file.size > 1048576 ? 1 : 2);
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Uploading…';
+  btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Uploading '+sizeMB+' MB…';
 
   // 1. Upload to storage. Path = slug/timestamp_filename.
   var slug = _certSlug(currentUser);
