@@ -51,6 +51,14 @@ function applyKBFilters() {
   renderKBArticles(filtered);
 }
 
+// v126: reset both filters in one click — matches the Clear button on
+// Inventory / AMC / PS Deals. Re-applies (which renders the full list).
+function clearKBFilters() {
+  var s = document.getElementById('kb-search');     if (s) s.value = '';
+  var c = document.getElementById('kb-filter-cat'); if (c) c.value = '';
+  applyKBFilters();
+}
+
 function kbCatClass(cat) {
   var map={'Network':'kb-cat-Network','Security':'kb-cat-Security','Configuration':'kb-cat-Configuration','Troubleshooting':'kb-cat-Troubleshooting','General':'kb-cat-General'};
   return map[cat]||'kb-cat-General';

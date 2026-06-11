@@ -262,7 +262,7 @@ function _amcRenderTable(rows, linksByContract) {
         '<th>Status</th>'+
         '<th class="hide-mobile">Year</th>'+
         '<th class="hide-mobile">Engagements</th>'+
-        (manager?'<th></th>':'')+
+        (manager?'<th>Actions</th>':'')+
       '</tr></thead>'+
       '<tbody>'+body+'</tbody></table></div>'+
   '</div>';

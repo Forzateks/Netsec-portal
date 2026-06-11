@@ -1342,6 +1342,30 @@ async function renderPjEmployeeSummary() {
     });
   });
 
+  // v126: cache aggregated rows for exportEmployeeSummaryCsv. Flattens
+  // each engagement-map into a "name: hours; name: hours" string.
+  window._pjEmpRowsCache = EMPLOYEES.map(function(emp) {
+    var d = empData[emp];
+    var engs = Object.keys(d.engagements)
+      .sort(function(a,b){ return d.engagements[b]-d.engagements[a]; })
+      .map(function(p){ return p+': '+fmtHours(d.engagements[p])+'h'; })
+      .join('; ');
+    return {
+      employee: emp,
+      sessions: d.sessions,
+      total: d.total,
+      project: d.project,
+      poc: d.poc,
+      amc: d.amc,
+      support: d.support,
+      presales: d.presales,
+      customer_testing: d.customer_testing,
+      internal: d.internal,
+      days: d.total / 8,
+      engagements: engs
+    };
+  });
+
   const tableRows = EMPLOYEES.map(function(emp) {
     const d = empData[emp];
     const engCount = Object.keys(d.engagements).length;
@@ -1640,6 +1664,60 @@ function exportCustomerSummaryCsv() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
   showToast('Customer Summary exported ✓');
+}
+
+// v126: shared CSV cell formatter — quotes only when needed.
+function _pjCsvCell(v) {
+  var s = (v == null) ? '' : String(v);
+  if (/[,"\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+function _pjDownloadCsv(lines, filename) {
+  var csv = '﻿' + lines.join('\n');  // BOM so Excel opens it as UTF-8
+  var blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+// v126: Engagement Summary export — matches the Customer Summary pattern.
+// Pulls from window._pjEngRowsCache populated in renderEngagementSummary
+// (unified-sessions.js), so the export reflects the current filter+sort.
+function exportEngagementSummaryCsv() {
+  var rows = window._pjEngRowsCache || [];
+  if (!rows.length) { showToast('Nothing to export.'); return; }
+  var headers = ['Engagement','Type','Customer','Sessions','Total Hours','Working Days','Team Breakdown'];
+  var lines = [headers.map(_pjCsvCell).join(',')];
+  rows.forEach(function(r){
+    lines.push([
+      r.engagement, r.type, r.customer, r.sessions,
+      r.hours.toFixed(2), (r.days).toFixed(2), r.team
+    ].map(_pjCsvCell).join(','));
+  });
+  _pjDownloadCsv(lines, 'engagement-summary-' + new Date().toISOString().split('T')[0] + '.csv');
+  showToast('Engagement Summary exported ✓');
+}
+
+// v126: Employee Summary export — same shape.
+function exportEmployeeSummaryCsv() {
+  var rows = window._pjEmpRowsCache || [];
+  if (!rows.length) { showToast('Nothing to export.'); return; }
+  var headers = ['Employee','Sessions','Total Hours','Project','POC','AMC','Support','Pre-Sales','Customer Testing','Internal','Working Days','Engagements'];
+  var lines = [headers.map(_pjCsvCell).join(',')];
+  rows.forEach(function(r){
+    lines.push([
+      r.employee, r.sessions, r.total.toFixed(2),
+      r.project.toFixed(2), r.poc.toFixed(2), r.amc.toFixed(2),
+      r.support.toFixed(2), r.presales.toFixed(2),
+      r.customer_testing.toFixed(2), r.internal.toFixed(2),
+      r.days.toFixed(2), r.engagements
+    ].map(_pjCsvCell).join(','));
+  });
+  _pjDownloadCsv(lines, 'employee-summary-' + new Date().toISOString().split('T')[0] + '.csv');
+  showToast('Employee Summary exported ✓');
 }
 
 // ── PIE CHART HELPERS ────────────────────────────────────────────

@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v125',
+    release: 'netsec-portal@v126',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -378,14 +378,12 @@
 
 <div class="main-area">
 
-<!-- BACKUP REMINDER BANNER (manager only) -->
-<div id="backup-banner" style="display:none;background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-bottom:1px solid #F59E0B;padding:10px 16px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-  <div style="font-size:13px;color:#92400E;font-weight:500">⚠️ Weekly backup is due — last backup was over 7 days ago.</div>
-  <div style="display:flex;gap:8px">
-    <button class="btn btn-sm" style="background:#F59E0B;color:white;border:none" onclick="downloadBackup(this)"><i data-lucide="download" class="btn-icon"></i>Download Backup Now</button>
-    <button class="btn btn-sm btn-ghost" onclick="dismissBackup()" style="font-size:12px">Dismiss</button>
-  </div>
-</div>
+<!-- v126: legacy backup banner (pre-v95) deleted. checkBackupReminder()
+     never ran in practice; renderBackupReminderBanner() in dashboard.js
+     is the live path, injecting #backup-reminder-banner inside the
+     dash-content card. Two-banner risk removed. The dead helpers.js
+     functions (downloadBackup/dismissBackup/checkBackupReminder) remain
+     for a future dead-code-removal ship — harmless without a caller. -->
 
 <div class="main">
 
@@ -623,7 +621,11 @@
     <div class="card">
       <div class="flex-between mb-4">
         <div class="card-title" style="margin-bottom:0">📊 Engagement Summary</div>
-        <select id="pj-eng-year" onchange="renderEngagementSummary()" style="width:auto;padding:7px 12px"></select>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="pj-eng-year" onchange="renderEngagementSummary()" style="width:auto;padding:7px 12px"></select>
+          <!-- v126: Export CSV for sibling parity with Customer Summary. -->
+          <button class="btn btn-sm btn-ghost" onclick="exportEngagementSummaryCsv()" title="Export current view to CSV"><i data-lucide="download" class="btn-icon"></i>Export CSV</button>
+        </div>
       </div>
       <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
         <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">Type:</label>
@@ -673,7 +675,11 @@
     <div class="card">
       <div class="flex-between mb-4">
         <div class="card-title" style="margin-bottom:0">👥 Employee Summary</div>
-        <select id="pj-emp-year" onchange="renderPjEmployeeSummary()" style="width:auto;padding:7px 12px"></select>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="pj-emp-year" onchange="renderPjEmployeeSummary()" style="width:auto;padding:7px 12px"></select>
+          <!-- v126: Export CSV for sibling parity with the other Reports tabs. -->
+          <button class="btn btn-sm btn-ghost" onclick="exportEmployeeSummaryCsv()" title="Export current view to CSV"><i data-lucide="download" class="btn-icon"></i>Export CSV</button>
+        </div>
       </div>
       <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
         <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
@@ -808,6 +814,10 @@
         <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
         <input type="date" id="sessions-date-to" onchange="renderSessions()" style="width:auto;padding:6px 8px;font-size:13px">
         <button class="btn btn-sm btn-ghost" onclick="clearSessionsFilters()">✕ Clear</button>
+        <!-- v126: live period indicator matching the OT Summary tab's existing
+             #summary-period-note, so it's clear at a glance when From/To are
+             restricting the table. -->
+        <span id="sessions-period-note" style="font-size:11px;color:var(--muted);margin-left:auto"></span>
       </div>
       <div id="sessions-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div class="table-wrap" id="sessions-table" style="display:none">
@@ -1881,7 +1891,10 @@
           <option>General</option>
         </select>
       </div>
-      <div style="display:flex;align-items:flex-end">
+      <div style="display:flex;align-items:flex-end;gap:6px">
+        <!-- v126: Clear filters matches the affordance Inventory / AMC /
+             PS Deals all have on their filter bars. -->
+        <button class="btn btn-sm btn-ghost" onclick="clearKBFilters()" title="Clear search + category">✕ Clear</button>
         <button class="btn btn-sm btn-ghost" onclick="loadKBArticles()">↻ Refresh</button>
       </div>
     </div>
@@ -2281,9 +2294,13 @@
         <label>Session Info *</label>
         <input type="text" id="edit-us-info">
       </div>
+      <!-- v126: checkbox group mirrors the Log Session form (#us-team-checkboxes)
+           so editing uses the same typo-proof, name-collision-proof UI.
+           Populated by buildEditUSTeamCheckboxes(); seeded from r.team_members
+           in openEditUS; read back in saveEditUS. -->
       <div class="form-group full">
         <label>Team Members</label>
-        <input type="text" id="edit-us-team" placeholder="e.g. Ahmed Ali, Mohammed Nasif">
+        <div id="edit-us-team-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:white"></div>
       </div>
       <div class="form-group full">
         <label>Stake Holders</label>

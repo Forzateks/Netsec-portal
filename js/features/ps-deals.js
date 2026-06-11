@@ -287,7 +287,7 @@ function _psRenderTable(rows) {
         '<th>Status</th>'+
         '<th class="hide-mobile">Progress</th>'+
         '<th class="hide-mobile">Engagement</th>'+
-        '<th></th>'+
+        '<th>Actions</th>'+
       '</tr></thead><tbody>'+body+'</tbody></table></div>'+
   '</div>';
 }

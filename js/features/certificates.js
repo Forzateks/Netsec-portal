@@ -126,7 +126,7 @@ function renderCertList() {
       '<div class="amc-chip-row" style="margin-bottom:12px">'+
         chipFn('all',    'All',     allN)+
         chipFn('gulfit', '🟢 Gulfit Relevant', gulfitN)+
-        chipFn('other',  '⚪ Other', otherN)+
+        chipFn('other',  '⚪ General', otherN)+
       '</div>';
   }
 

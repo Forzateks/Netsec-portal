@@ -320,20 +320,23 @@ function populateUSCustomerDropdown() {
   fillActivitySelect('us-activity-type');
 }
 
-function buildUSTeamCheckboxes() {
-  var box = document.getElementById('us-team-checkboxes');
+// v126: shared chip+checkbox builder so Log Session and Edit Session render
+// the same UI. `seedCurrentUser` defaults true for the Log form (auto-tick
+// the logger); Edit pre-seeds from the saved CSV via buildEditUSTeamCheckboxes.
+function _buildUSTeamCheckboxesInto(boxId, name, seedCurrentUser) {
+  var box = document.getElementById(boxId);
   if (!box || box.children.length) return;
   EMPLOYEES.forEach(function(emp){
     var label = document.createElement('label');
     label.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;padding:6px 12px;border:1.5px solid var(--border);border-radius:20px;background:white;transition:all .15s';
     var cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.value = emp; cb.name = 'us-team';
+    cb.type = 'checkbox'; cb.value = emp; cb.name = name;
     cb.style.accentColor = 'var(--teal)';
     cb.onchange = function(){
       label.style.background = cb.checked ? '#E0F7FF' : 'white';
       label.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
     };
-    if (emp === currentUser) {
+    if (seedCurrentUser && emp === currentUser) {
       cb.checked = true;
       label.style.background = '#E0F7FF';
       label.style.borderColor = 'var(--teal)';
@@ -341,6 +344,36 @@ function buildUSTeamCheckboxes() {
     label.appendChild(cb);
     label.appendChild(document.createTextNode((typeof empShortName === 'function') ? empShortName(emp) : emp.split(' ')[0]));
     box.appendChild(label);
+  });
+}
+
+function buildUSTeamCheckboxes() {
+  _buildUSTeamCheckboxesInto('us-team-checkboxes', 'us-team', true);
+}
+
+// v126: builder for the Edit Session form's checkbox group. Builds once
+// per page load (chips persist across opens); seedEditUSTeamFromCsv flips
+// the checked state on each open.
+function buildEditUSTeamCheckboxes() {
+  _buildUSTeamCheckboxesInto('edit-us-team-checkboxes', 'edit-us-team', false);
+}
+
+// v126: seed the Edit Session team checkboxes from the saved CSV. Called
+// every openEditUS so each open reflects that row's actual team members.
+// Matching is exact (full-name) — the saved CSV is what the create form
+// wrote, so values are always canonical EMPLOYEES names.
+function seedEditUSTeamFromCsv(csv) {
+  var names = (csv || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  var nameSet = {};
+  names.forEach(function(n){ nameSet[n] = true; });
+  document.querySelectorAll('#edit-us-team-checkboxes input[type=checkbox]').forEach(function(cb){
+    var on = !!nameSet[cb.value];
+    cb.checked = on;
+    var lbl = cb.parentNode;
+    if (lbl) {
+      lbl.style.background  = on ? '#E0F7FF' : 'white';
+      lbl.style.borderColor = on ? 'var(--teal)' : 'var(--border)';
+    }
   });
 }
 
@@ -946,7 +979,11 @@ async function openEditUS(id) {
   document.getElementById('edit-us-customer').value = r.customer_name || '';
   document.getElementById('edit-us-engagement').value = r.engagement_name || '';
   document.getElementById('edit-us-activity-type').value = r.activity_type || '';
-  document.getElementById('edit-us-team').value = r.team_members || '';
+  // v126: build the edit-form team-checkbox group on first open (idempotent;
+  // the function bails if already populated), then flip checked state from
+  // this row's team_members CSV.
+  buildEditUSTeamCheckboxes();
+  seedEditUSTeamFromCsv(r.team_members);
   document.getElementById('edit-us-stake').value = r.stake_holders || '';
   document.getElementById('edit-us-mode').value = r.mode || '';
   document.getElementById('edit-us-remarks').value = r.remarks || '';
@@ -1037,7 +1074,10 @@ async function saveEditUS() {
   var customer = document.getElementById('edit-us-customer').value;
   var engagement = document.getElementById('edit-us-engagement').value;
   var actType = document.getElementById('edit-us-activity-type').value;
-  var team  = document.getElementById('edit-us-team').value.trim();
+  // v126: read team from the checkbox group (CSV of canonical employee names)
+  // instead of the free-text input. Matches the Log Session save flow.
+  var teamChecks = document.querySelectorAll('#edit-us-team-checkboxes input[type=checkbox]:checked');
+  var team = Array.from(teamChecks).map(function(cb){ return cb.value; }).join(', ');
   var stake = document.getElementById('edit-us-stake').value.trim();
   var mode  = document.getElementById('edit-us-mode').value;
   var remarks = document.getElementById('edit-us-remarks').value.trim();
@@ -1365,6 +1405,24 @@ async function renderEngagementSummary() {
     presales: '<span class="badge" style="background:#FDF2F8;color:#BE185D">PRE-SALES-TASK</span>'
   };
 
+  // v126: cache the aggregated rows so exportEngagementSummaryCsv can write
+  // exactly what's on screen (filter + sort already applied).
+  window._pjEngRowsCache = sorted.map(function(name){
+    var d = byEng[name];
+    var cleanName = name.replace(/ · (Project|POC|AMC|Support|Pre-Sales-Task)$/, '');
+    var membersFlat = Object.keys(d.members).map(function(m){
+      return m + ': ' + fmtHours(d.members[m]) + 'h';
+    }).join('; ');
+    return {
+      engagement: cleanName,
+      type: (typeKey === 'all') ? (TYPE_LABELS[d.sessionType] || d.sessionType || '') : '',
+      customer: d.customer || '',
+      sessions: d.sessions,
+      hours: d.hours,
+      days: d.hours / 8,
+      team: membersFlat
+    };
+  });
   var tableRows = sorted.map(function(name){
     var d = byEng[name];
     var cleanName = name.replace(/ · (Project|POC|AMC|Support|Pre-Sales-Task)$/, '');

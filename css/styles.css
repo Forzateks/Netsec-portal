@@ -658,8 +658,6 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 
 .notif-badge{margin-left:auto;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
 
-.notif-badge{margin-left:auto;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
-
 /* ── MAIN ── */
 /* Default cap (1200px) keeps comfortable reading-line widths on laptops.
    At ≥1600px the cap lifts so table-heavy pages (Tracker, Sessions, Inventory,

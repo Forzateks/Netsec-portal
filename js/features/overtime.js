@@ -348,6 +348,13 @@ async function renderSessions() {
   if (fTo)    q=q.lte('ot_date', fTo);
   const {data}=await q;
   document.getElementById('sessions-loading').style.display='none';
+  // v126: mirrors the OT Summary "Period:" note so an active date filter is
+  // visible without needing to look at the inputs.
+  var pNote = document.getElementById('sessions-period-note');
+  if (pNote) {
+    if (fFrom || fTo) pNote.textContent = 'Period: ' + (fFrom || '…') + ' → ' + (fTo || '…');
+    else pNote.textContent = 'Period: all sessions';
+  }
   if (!data||!data.length){document.getElementById('sessions-empty').style.display='block';return;}
   // Cache so the info popover can look up a row by id without refetching
   _otSessionsById = {};
