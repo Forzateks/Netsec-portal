@@ -1323,15 +1323,25 @@ async function renderEngagementSummary() {
     if (!byEng[key]) byEng[key] = { sessions: 0, hours: 0, members: {}, customer: r.customer_name || '-', sessionType: r.session_type };
     byEng[key].sessions += 1;
     byEng[key].hours    += parseFloat(r.total_hours || 0);
+    // v123: mirrors the v119 fix from renderPjEmployeeSummary. Previously
+    // the else-if path only credited the logger when team_members was
+    // empty — sessions where a user logged but their own name wasn't in
+    // team_members dropped the logger from the per-engagement breakdown.
+    // Build a deduped credit set: team_members ∪ {logger}. Each unique
+    // name gets credited once per session; engagement total is unaffected
+    // (it's summed independently above).
+    var hrs = parseFloat(r.total_hours || 0);
+    var people = {};
     if (r.team_members) {
       r.team_members.split(',').forEach(function(name){
         name = name.trim();
-        if (!name) return;
-        byEng[key].members[name] = (byEng[key].members[name] || 0) + parseFloat(r.total_hours || 0);
+        if (name) people[name] = true;
       });
-    } else if (r.employee) {
-      byEng[key].members[r.employee] = (byEng[key].members[r.employee] || 0) + parseFloat(r.total_hours || 0);
     }
+    if (r.employee) people[r.employee] = true;
+    Object.keys(people).forEach(function(name){
+      byEng[key].members[name] = (byEng[key].members[name] || 0) + hrs;
+    });
   });
   var sorted = Object.keys(byEng).sort(function(a,b){ return byEng[b].hours - byEng[a].hours; });
   var totalHours    = sorted.reduce(function(s,k){ return s + byEng[k].hours; }, 0);

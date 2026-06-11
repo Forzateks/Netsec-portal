@@ -17,14 +17,18 @@ function _certSlug(name) {
   return String(name||'').trim().toLowerCase().replace(/\s+/g, '_');
 }
 
-// Cert status: 🟢 Active (>60d) / 🟡 Soon (0-60d) / 🔴 Expired
+// Cert status: 🟢 Active (>30d) / 🟡 Soon (0-30d) / 🔴 Expired
+// v123: threshold lowered 60d→30d so the row badge matches the dashboard
+// expiry alert window (dashboard.js:914 uses 30d). Previously a cert
+// 31-60 days from expiry showed yellow on the list with no dashboard
+// surface — out of sync with CLAUDE.md "30-day expiry surfaces on dashboard".
 function _certStatus(expiryISO) {
   if (!expiryISO) return { key:'unknown', label:'—', cls:'cert-st-unknown' };
   var today = new Date(); today.setHours(0,0,0,0);
   var exp = new Date(String(expiryISO).split('T')[0] + 'T00:00:00');
   var days = Math.floor((exp - today) / 86400000);
   if (days < 0)      return { key:'expired', label:'Expired',        cls:'cert-st-expired',  days:days };
-  if (days <= 60)    return { key:'soon',    label:'Expiring Soon',  cls:'cert-st-soon',     days:days };
+  if (days <= 30)    return { key:'soon',    label:'Expiring Soon',  cls:'cert-st-soon',     days:days };
   return                  { key:'active',  label:'Active',         cls:'cert-st-active',   days:days };
 }
 

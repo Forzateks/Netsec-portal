@@ -496,7 +496,7 @@ async function renderEmployeeDashboard() {
     html += '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Band</th><th>Rate</th><th>Credited</th></tr></thead><tbody>';
     recent.forEach(function(r){
       html += '<tr><td style="font-size:12px">'+fmtDate(r.ot_date)+'</td>'+
-        '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.activity+'</td>'+
+        '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc2(r.activity||'')+'</td>'+
         '<td>'+bandBadge(r)+'</td>'+
         '<td><span class="badge '+(r.rate==='1:2'?'badge-12':'badge-11')+'">'+r.rate+'</span></td>'+
         '<td><strong style="color:var(--teal)">'+fmtHours(r.credited_hours)+'</strong>'+creditDriftMarker(r)+'</td></tr>';

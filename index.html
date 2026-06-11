@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v122',
+    release: 'netsec-portal@v123',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -1060,7 +1060,10 @@
           <select id="trk-ms-new-status">
             <option value="pending">Pending</option>
             <option value="in_progress">In Progress</option>
-            <option value="closed">Closed</option>
+            <!-- v123: value was 'closed' but the renderer + progress bar
+                 key off status==='completed'. Saving 'closed' left the
+                 milestone visually incomplete forever. -->
+            <option value="completed">Completed</option>
             <option value="blocked">Blocked</option>
           </select>
         </div>
@@ -1226,11 +1229,16 @@
         <option value="compoff_half">Comp Off (Half)</option>
       </select>
       <label style="font-size:12px;color:var(--muted);font-weight:600">Status:</label>
+      <!-- v123: needs_review + cancelled added so the History list can be
+           narrowed to parked or recently-cancelled requests. Were previously
+           reachable only by scrolling. -->
       <select id="lv-app-status" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
         <option value="">All</option>
         <option value="pending">Pending</option>
+        <option value="needs_review">Needs Re-Review</option>
         <option value="approved">Approved</option>
         <option value="rejected">Rejected</option>
+        <option value="cancelled">Cancelled</option>
       </select>
       <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">From:</label>
       <input type="date" id="lv-app-from" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 8px;font-size:13px">
@@ -1296,8 +1304,14 @@
         <label>Model</label>
         <select id="inv-filter-model" onchange="applyInventoryFilters()">
           <option value="">All Models</option>
+          <!-- v123: synced with the 5 models in the Add Device form below
+               (was missing EC-SP / EC-M / EC-10104 / EC-10106, plus
+               EC-XS NFR isn't a value the form supports). -->
           <option>EC-XS</option>
-          <option>EC-XS NFR</option>
+          <option>EC-SP</option>
+          <option>EC-M</option>
+          <option>EC-10104</option>
+          <option>EC-10106</option>
         </select>
       </div>
       <div class="form-group">
@@ -2319,9 +2333,13 @@
       </div>
       <div class="form-group">
         <label>Type</label>
+        <!-- v123: explicit value=... so save writes lowercase 'annual'/'sick'
+             matching the DB CHECK + the rest of the app's filters and the
+             balance calc. Was saving capitalized 'Annual'/'Sick' and silently
+             breaking team overview + annual-used totals. -->
         <select id="edit-lv-type">
-          <option>Annual</option>
-          <option>Sick</option>
+          <option value="annual">Annual</option>
+          <option value="sick">Sick</option>
         </select>
       </div>
       <div class="form-group">
@@ -2334,10 +2352,17 @@
       </div>
       <div class="form-group">
         <label>Status</label>
+        <!-- v123: needs_review + cancelled are first-class states reachable
+             from the approvals UI and cancellation flow. Without these
+             options, editing one of those rows fell back to 'pending' and
+             clobbered the state + the cancelled_at / effective_end_date
+             audit trail. -->
         <select id="edit-lv-status">
           <option value="pending">Pending</option>
+          <option value="needs_review">Needs Re-Review</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
+          <option value="cancelled">Cancelled</option>
         </select>
       </div>
       <div class="form-group full">

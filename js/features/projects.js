@@ -841,7 +841,7 @@ async function renderManageProjects() {
         '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
         '<td>'+custCell+'</td>'+
         '<td><span style="background:'+tb.bg+';color:'+tb.color+';padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">'+tb.label+'</span></td>'+
-        '<td><strong>'+p.name+'</strong></td>'+
+        '<td><strong>'+esc2(p.name||'')+'</strong></td>'+
         '<td><span class="pj-status-badge" style="background:'+sc.bg+';color:'+sc.color+'"><i data-lucide="'+sc.icon+'"></i>'+sc.label+'</span></td>'+
         '<td style="white-space:nowrap">'+actions+'</td>'+
         '</tr>';

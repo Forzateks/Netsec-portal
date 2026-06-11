@@ -155,6 +155,13 @@
       "category": "new",
       "title": "Troubleshooting on Internal sessions",
       "body": "Internal session Activity Type now includes 'Troubleshooting' alongside Testing for customers, Lab setup, and Others. Use it for time spent diagnosing internal lab or environment issues."
+    },
+    {
+      "id": "v123-bug-sweep",
+      "version": "v123",
+      "category": "fixed",
+      "title": "Nine bug fixes from a full-app audit",
+      "body": "Engagement Summary now credits the logger on every session (same fix Employee Summary got in v119). Milestones can be marked Completed (the Closed option never worked). Certificates expiring within 30 days now match the dashboard alert window. Inventory model filter includes all 5 supported models. Leave edit modal stores lowercase type and supports needs_review/cancelled status. Leave Approvals filter includes those states too. Plus two XSS-safe escapes on user-typed names."
     }
   ]
 }
