@@ -283,7 +283,10 @@ function renderTasksList() {
     // cell below; employee can't un-submit via the dropdown.
     var statusCell;
     if (t.status === 'pending_approval') {
-      statusCell = '<span class="badge '+stMeta.cls+'">'+esc2(stMeta.label)+'</span>';
+      // v124 a11y: prepend a clock icon so the pending state is distinguishable
+      // from 'ongoing' for color-blind users (both render amber). The icon is
+      // decorative — the label text is the accessible name.
+      statusCell = '<span class="badge '+stMeta.cls+'"><i data-lucide="clock-3" aria-hidden="true" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px"></i>'+esc2(stMeta.label)+'</span>';
     } else if (canEdit && !t.is_archived) {
       // pending_approval is system-set (DB trigger) and not user-selectable,
       // so exclude it from the dropdown options.
@@ -312,14 +315,17 @@ function renderTasksList() {
     if (isManager && t.status === 'pending_approval' && !t.is_archived) {
       actions += '<input type="text" class="task-approve-remark" id="tar-'+t.id+'" '+
                    'placeholder="Remark (optional)" '+
+                   'aria-label="Approval remark (optional)" '+
                    'style="width:120px;font-size:11px;padding:3px 6px;margin-right:4px;'+
                    'border:1px solid var(--border,#D1D5DB);border-radius:4px">';
-      actions += '<button class="btn btn-sm btn-success btn-icon-only" title="Approve completion" '+
+      // v124 a11y: aria-label on each icon-only button so SRs announce the
+      // action (title= alone doesn't reach most mobile SRs). Icon is decorative.
+      actions += '<button class="btn btn-sm btn-success btn-icon-only" title="Approve completion" aria-label="Approve completion" '+
                    'onclick="approveTaskCompletion('+t.id+', document.getElementById(\'tar-'+t.id+'\').value)" '+
-                   'style="margin-right:4px"><i data-lucide="check"></i></button>';
-      actions += '<button class="btn btn-sm btn-danger btn-icon-only" title="Reject — send back to Ongoing" '+
+                   'style="margin-right:4px"><i data-lucide="check" aria-hidden="true"></i></button>';
+      actions += '<button class="btn btn-sm btn-danger btn-icon-only" title="Reject — send back to Ongoing" aria-label="Reject completion, send back to Ongoing" '+
                    'onclick="rejectTaskCompletion('+t.id+', document.getElementById(\'tar-'+t.id+'\').value)" '+
-                   'style="margin-right:4px"><i data-lucide="x"></i></button>';
+                   'style="margin-right:4px"><i data-lucide="x" aria-hidden="true"></i></button>';
     }
     if (canEdit) {
       actions += '<button class="btn btn-sm btn-ghost btn-icon-only" title="Edit task" onclick="openEditTaskModal('+t.id+')"><i data-lucide="pencil"></i></button>';
@@ -597,13 +603,14 @@ async function renderTaskApprovals() {
         '</div>'+
         '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+
           '<input type="text" id="tar2-'+t.id+'" placeholder="Remark (optional)" '+
+            'aria-label="Approval remark (optional)" '+
             'style="width:140px;font-size:11px;padding:4px 6px;border:1px solid var(--border,#D1D5DB);border-radius:4px">'+
-          '<button class="btn btn-sm btn-success btn-icon-only" title="Approve" '+
+          '<button class="btn btn-sm btn-success btn-icon-only" title="Approve" aria-label="Approve completion" '+
             'onclick="approveTaskCompletion('+t.id+', document.getElementById(\'tar2-'+t.id+'\').value)">'+
-            '<i data-lucide="check"></i></button>'+
-          '<button class="btn btn-sm btn-danger btn-icon-only" title="Reject — send back to Ongoing" '+
+            '<i data-lucide="check" aria-hidden="true"></i></button>'+
+          '<button class="btn btn-sm btn-danger btn-icon-only" title="Reject — send back to Ongoing" aria-label="Reject completion, send back to Ongoing" '+
             'onclick="rejectTaskCompletion('+t.id+', document.getElementById(\'tar2-'+t.id+'\').value)">'+
-            '<i data-lucide="x"></i></button>'+
+            '<i data-lucide="x" aria-hidden="true"></i></button>'+
         '</div>'+
       '</div>'+
     '</div>';

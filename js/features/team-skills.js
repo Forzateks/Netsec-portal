@@ -264,7 +264,15 @@ function _skRenderMatrix(lines, emps) {
         var onclick = sk
           ? 'openSkillModal('+sk.id+')'
           : 'openSkillModal(null, '+JSON.stringify(e).replace(/"/g,'&quot;')+', '+p.id+')';
-        return '<td class="'+cls+'" onclick="'+onclick+'">'+inner+'</td>';
+        // v124 a11y: make matrix cells keyboard-reachable. role=button +
+        // tabindex=0 + an inline keydown shim translate Enter/Space into the
+        // same onclick. aria-label describes the action so SRs read context.
+        var lbl = sk
+          ? 'Edit '+e+' skill: '+(p.product_line||'')
+          : 'Add '+e+' skill: '+(p.product_line||'');
+        return '<td class="'+cls+'" role="button" tabindex="0" aria-label="'+esc2(lbl)+'" '+
+          'onclick="'+onclick+'" '+
+          'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}">'+inner+'</td>';
       }).join('')+
     '</tr>';
   }).join('');

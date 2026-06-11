@@ -441,6 +441,12 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
   .amc-detail-status{text-align:left;align-items:flex-start}
 }
 .sidebar-item{display:flex;align-items:center;gap:12px;padding:9px 20px 9px 17px;font-size:14px;color:var(--text);cursor:pointer;transition:background .15s,color .15s;border-left:3px solid transparent;font-weight:500;position:relative;user-select:none}
+/* v124 a11y: visible keyboard focus on sidebar items + subitems. They're
+   role=button tabindex=0 (set in initSidebarKeyboard) so they're now Tab-
+   reachable; this gives keyboard users a clear focus ring without changing
+   the resting hover/active styles. */
+.sidebar-item:focus-visible,
+.sidebar-subitem:focus-visible{outline:2px solid var(--teal);outline-offset:-2px;background:rgba(0,160,210,.06)}
 .sidebar-item:hover{background:rgba(10,31,92,.04);color:var(--navy)}
 .sidebar-item.active{background:rgba(0,160,210,.08);color:var(--navy);border-left-color:var(--teal);font-weight:600}
 .sidebar-item .sidebar-icon{width:18px;height:18px;flex-shrink:0;stroke-width:2;color:currentColor;display:inline-block;vertical-align:middle}
@@ -2254,6 +2260,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .sk-matrix tbody td.sk-rowhead strong{color:var(--navy)}
 .sk-matrix tbody td.sk-vendorhead{color:var(--muted);font-size:12px}
 .sk-cell{cursor:default;transition:background .12s}
+/* v124 a11y: keyboard focus on the now-focusable matrix cells. */
+.sk-cell:focus-visible{outline:2px solid var(--teal);outline-offset:-2px;position:relative;z-index:1}
 .sk-cell-filled,.sk-cell-empty{cursor:pointer}
 .sk-cell-filled:hover,.sk-cell-empty:hover{background:#F8FAFC}
 .sk-cell-add{display:inline-block;width:18px;height:18px;line-height:16px;border:1.5px dashed var(--border);color:var(--muted);border-radius:50%;font-size:13px;font-weight:600;text-align:center;opacity:0;transition:opacity .12s}
@@ -2426,6 +2434,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .team-card-edit-pencil:hover{background:#F1F5F9;border-color:#E2E8F0}
 .team-card-edit-pencil:hover i{color:var(--teal)}
 .team-card:hover .team-card-edit-pencil{opacity:1}
+/* v124 a11y: pencil also reveals on keyboard focus so non-mouse users can
+   find and activate it without hovering. Outlines the focused state too. */
+.team-card-edit-pencil:focus{opacity:1;outline:2px solid var(--teal);outline-offset:1px}
 .team-card-edit-pencil-inline{padding:1px 4px}
 /* The inline <input> rendered while editing — replaces the span so the
    user types into the same visual slot. */
@@ -2658,8 +2669,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .badge.task-st-cnc{background:#F1F5F9;color:#94A3B8;text-decoration:line-through}
 /* v112: pending_approval — amber with dashed border to differentiate from
    the plain amber 'ongoing' status. Mirrors the leave_requests
-   needs_review precedent (v81). Locked state: no dropdown counterpart. */
-.badge.task-st-pending{background:#FFFBEB;color:#92400E;border:1px dashed #D97706;padding:2px 6px}
+   needs_review precedent (v81). Locked state: no dropdown counterpart.
+   v124 a11y: contrast bumped (color #92400E → #78350F, border #D97706 →
+   #92400E) so it's distinguishable from .task-st-ong for color-blind users
+   on top of the clock icon prepended in tasks.js renderTasksList. */
+.badge.task-st-pending{background:#FEF3C7;color:#78350F;border:1px dashed #92400E;padding:2px 6px;display:inline-flex;align-items:center;gap:3px}
 
 /* Inline status dropdown — picks up the same colour family as the
    matching badge so the cell still reads as a status at a glance. */

@@ -162,6 +162,13 @@
       "category": "fixed",
       "title": "Nine bug fixes from a full-app audit",
       "body": "Engagement Summary now credits the logger on every session (same fix Employee Summary got in v119). Milestones can be marked Completed (the Closed option never worked). Certificates expiring within 30 days now match the dashboard alert window. Inventory model filter includes all 5 supported models. Leave edit modal stores lowercase type and supports needs_review/cancelled status. Leave Approvals filter includes those states too. Plus two XSS-safe escapes on user-typed names."
+    },
+    {
+      "id": "v124-a11y",
+      "version": "v124",
+      "category": "new",
+      "title": "Accessibility pass — keyboard and screen reader support",
+      "body": "Sidebar items, skill-matrix cells, and inline edit pencils are now keyboard-reachable with visible focus rings. Modals trap focus, support Escape to close, and announce themselves as dialogs to screen readers. Bell, hamburger, and account menu now announce their open/closed state. Icon-only buttons (Approve/Reject, Edit/Delete OT) have proper labels. Pending-approval task badge contrast bumped and a clock icon added so color-blind users can distinguish it from Ongoing."
     }
   ]
 }

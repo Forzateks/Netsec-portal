@@ -9,7 +9,7 @@
 // SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
 // HTTP-cached copy of /sw.js can't be served when this file ships. The
 // version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=123';
+var SW_REGISTRATION_URL = '/sw.js?v=124';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -454,6 +454,137 @@ function initAppVersionLabel() {
   el.textContent = m ? ('v' + m[1]) : '—';
 }
 
+// v124 a11y: make sidebar navigation keyboard-reachable. The nav items are
+// <div onclick> rather than <button> — historically for tighter visual
+// control. This retrofit gives them button semantics + Enter/Space activation
+// + aria-expanded sync on accordion parents, without changing the markup.
+function initSidebarKeyboard() {
+  var items = document.querySelectorAll('.sidebar-item, .sidebar-subitem');
+  items.forEach(function(el) {
+    if (!el.hasAttribute('role'))     el.setAttribute('role', 'button');
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    if (el.classList.contains('has-children') && !el.hasAttribute('aria-expanded')) {
+      // Accordion parents reflect their .sidebar-group.open state.
+      var group = el.closest('.sidebar-group');
+      el.setAttribute('aria-expanded', (group && group.classList.contains('open')) ? 'true' : 'false');
+    }
+  });
+  // Delegated keydown — Enter/Space activates, just like a real button.
+  document.addEventListener('keydown', function(ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    var t = ev.target;
+    if (!t || !t.classList) return;
+    if (!t.classList.contains('sidebar-item') && !t.classList.contains('sidebar-subitem')) return;
+    ev.preventDefault();
+    t.click();
+  });
+  // Keep aria-expanded on accordion parents in sync when sidebar-group open
+  // class flips. One MutationObserver, watches the parent groups.
+  var observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      if (m.attributeName !== 'class') return;
+      var group = m.target;
+      if (!group.classList || !group.classList.contains('sidebar-group')) return;
+      var head = group.querySelector('.sidebar-item.has-children');
+      if (head) head.setAttribute('aria-expanded', group.classList.contains('open') ? 'true' : 'false');
+    });
+  });
+  document.querySelectorAll('.sidebar-group').forEach(function(g) {
+    observer.observe(g, { attributes: true, attributeFilter: ['class'] });
+  });
+}
+
+// v124 a11y: make every modal a proper dialog — role/aria-modal on the
+// inner .modal, initial focus on the first interactive element when opened,
+// and a Tab/Shift-Tab trap so focus stays inside while .show is active. Esc
+// closes via the existing close button (we just synthesise its click).
+function initModalA11y() {
+  // 1. Static markup pass — all modals get role+aria-modal once.
+  document.querySelectorAll('.modal-overlay > .modal').forEach(function(m) {
+    if (!m.hasAttribute('role'))       m.setAttribute('role', 'dialog');
+    if (!m.hasAttribute('aria-modal')) m.setAttribute('aria-modal', 'true');
+    if (!m.hasAttribute('tabindex'))   m.setAttribute('tabindex', '-1');
+  });
+
+  function focusables(modal) {
+    return Array.from(modal.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(function(el) { return el.offsetParent !== null; });
+  }
+
+  function activeOverlay() {
+    var overlays = document.querySelectorAll('.modal-overlay.show');
+    // The topmost shown overlay is the one to trap into (rare nesting case).
+    return overlays.length ? overlays[overlays.length - 1] : null;
+  }
+
+  // 2. Tab/Shift-Tab + Esc trap — single delegated listener.
+  document.addEventListener('keydown', function(ev) {
+    if (ev.key !== 'Tab' && ev.key !== 'Escape') return;
+    var ov = activeOverlay();
+    if (!ov) return;
+    var modal = ov.querySelector('.modal');
+    if (!modal) return;
+    if (ev.key === 'Escape') {
+      // Click the modal's × close button if present, else just hide the overlay.
+      var closeBtn = modal.querySelector('button[onclick*="close"], button[title="Close"]');
+      if (closeBtn) { ev.preventDefault(); closeBtn.click(); }
+      else { ev.preventDefault(); ov.classList.remove('show'); }
+      return;
+    }
+    var f = focusables(modal);
+    if (!f.length) { ev.preventDefault(); return; }
+    var first = f[0], last = f[f.length - 1];
+    if (ev.shiftKey && document.activeElement === first) {
+      ev.preventDefault(); last.focus();
+    } else if (!ev.shiftKey && document.activeElement === last) {
+      ev.preventDefault(); first.focus();
+    }
+  });
+
+  // 3. Initial focus — one MutationObserver on document.body watching for
+  // .modal-overlay nodes flipping into .show. The check runs cheaply (class
+  // attribute filter); when an overlay enters .show, focus the first
+  // interactive element so keyboard users land inside the dialog.
+  var openObserver = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      if (m.attributeName !== 'class') return;
+      var t = m.target;
+      if (!t.classList || !t.classList.contains('modal-overlay')) return;
+      if (!t.classList.contains('show')) return;
+      var modal = t.querySelector('.modal');
+      if (!modal) return;
+      var f = focusables(modal);
+      // setTimeout(0) yields to any onclick handlers that mutate the modal
+      // contents on open (e.g. seeding inputs).
+      setTimeout(function() {
+        if (f.length) f[0].focus();
+        else modal.focus();
+      }, 0);
+    });
+  });
+  document.querySelectorAll('.modal-overlay').forEach(function(ov) {
+    openObserver.observe(ov, { attributes: true, attributeFilter: ['class'] });
+  });
+  // Also observe new overlays added later (e.g. the Update-notes modal
+  // injected dynamically in v121).
+  new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      m.addedNodes.forEach(function(node) {
+        if (node.nodeType !== 1) return;
+        if (node.classList && node.classList.contains('modal-overlay')) {
+          openObserver.observe(node, { attributes: true, attributeFilter: ['class'] });
+          var inner = node.querySelector('.modal');
+          if (inner) {
+            if (!inner.hasAttribute('role'))       inner.setAttribute('role', 'dialog');
+            if (!inner.hasAttribute('aria-modal')) inner.setAttribute('aria-modal', 'true');
+          }
+        }
+      });
+    });
+  }).observe(document.body, { childList: true });
+}
+
 // == INIT ==========================================================
 window.onload = async function() {
   initServiceWorker();
@@ -465,6 +596,8 @@ window.onload = async function() {
   initPullToRefresh();
   initFocusAuthCheck();
   initAppVersionLabel();
+  initSidebarKeyboard();
+  initModalA11y();
   // Supabase puts the link type in the URL hash:
   //   type=recovery            -> forgot-password reset link
   //   type=invite | type=signup -> invitation from manager (first-time login)

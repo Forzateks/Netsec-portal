@@ -81,6 +81,9 @@ function toggleNotifDropdown() {
   if (!dd) return;
   var visible = dd.style.display === 'block';
   dd.style.display = visible ? 'none' : 'block';
+  // v124 a11y: sync aria-expanded on the bell button so SRs announce state.
+  var bell = document.getElementById('notif-bell-wrap');
+  if (bell) bell.setAttribute('aria-expanded', !visible ? 'true' : 'false');
   if (!visible) renderNotifications();
 }
 

@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v123',
+    release: 'netsec-portal@v124',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -194,7 +194,7 @@
 
 <!-- ── UNIFIED HEADER (full width, above sidebar + main) ── -->
 <header class="top-bar">
-  <button class="hamburger" onclick="toggleSidebar(true)" aria-label="Open menu">☰</button>
+  <button class="hamburger" onclick="toggleSidebar(true)" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">☰</button>
   <div class="top-bar-brand" onclick="showScreen('dashboard');closeSidebarOnMobile()" title="Dashboard">
     <img class="top-bar-logo" src="/logo.jpg" alt="Gulf IT">
     <div class="top-bar-brand-text">NetSec <span>Portal</span></div>
@@ -213,16 +213,18 @@
       style="display:none;align-items:center;gap:6px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:14px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;margin-right:10px">
       <span class="update-dot"></span>Update
     </button>
-    <button class="top-bar-bell" id="notif-bell-wrap" onclick="toggleNotifDropdown()" style="display:none" title="Notifications">
-      <i data-lucide="bell"></i>
-      <span class="notif-pill" id="notif-bell-count" style="display:none">0</span>
+    <!-- v124 a11y: aria-label + haspopup + expanded so SRs announce the bell as
+         a menu button; inner icon is decorative. -->
+    <button class="top-bar-bell" id="notif-bell-wrap" onclick="toggleNotifDropdown()" style="display:none" title="Notifications" aria-label="Notifications" aria-haspopup="true" aria-expanded="false" aria-controls="notif-dropdown">
+      <i data-lucide="bell" aria-hidden="true"></i>
+      <span class="notif-pill" id="notif-bell-count" style="display:none" aria-label="0 unread">0</span>
     </button>
-    <div id="notif-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:140px;width:340px;max-height:420px;overflow-y:auto;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:300">
+    <div id="notif-dropdown" role="menu" aria-label="Notifications" style="display:none;position:absolute;top:calc(100% + 6px);right:140px;width:340px;max-height:420px;overflow-y:auto;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:300">
       <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--navy)">Notifications</div>
       <div id="notif-dropdown-list"></div>
     </div>
     <div class="user-menu-wrap">
-      <button class="user-chip" onclick="toggleUserMenu(event)" title="Account menu">
+      <button class="user-chip" onclick="toggleUserMenu(event)" title="Account menu" aria-label="Account menu" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu">
         <span class="user-avatar" id="user-avatar">··</span>
         <span class="user-chip-text">
           <span class="user-chip-name" id="header-username"></span>
@@ -716,7 +718,7 @@
           <div style="font-size:13px;color:var(--muted)">Master list of all customers. Each customer can have multiple engagements.</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input id="cust-mgr-search" oninput="renderCustomersTable()" class="cust-tbl-search" placeholder="Search customers...">
+          <input id="cust-mgr-search" oninput="renderCustomersTable()" class="cust-tbl-search" placeholder="Search customers..." aria-label="Search customers">
           <button class="btn btn-primary" onclick="addCustomerPrompt()"><i data-lucide="plus" class="btn-icon"></i>Add Customer</button>
         </div>
       </div>
@@ -742,7 +744,7 @@
           <div style="font-size:13px;color:var(--muted)">All engagements across customers — projects, POCs, AMCs, support, pre-sales.</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input id="pj-manage-search" oninput="renderManageProjects()" class="cust-tbl-search" placeholder="Search engagements...">
+          <input id="pj-manage-search" oninput="renderManageProjects()" class="cust-tbl-search" placeholder="Search engagements..." aria-label="Search engagements">
           <select id="pj-manage-type-filter" onchange="renderManageProjects()" style="width:auto;padding:7px 12px">
             <option value="">All Types</option>
             <option value="project">📁 Project</option>
@@ -969,7 +971,7 @@
   <div class="trk-search-row">
     <div class="trk-search-input">
       <i data-lucide="search" class="trk-search-ico"></i>
-      <input type="text" id="trk-search" placeholder="Search by name, customer, partner, owner, remarks..." oninput="_trkOnSearchInput()">
+      <input type="text" id="trk-search" placeholder="Search by name, customer, partner, owner, remarks..." oninput="_trkOnSearchInput()" aria-label="Search engagement tracker by name, customer, partner, owner, or remarks">
     </div>
     <button class="btn btn-ghost trk-filter-toggle" id="trk-filter-toggle" onclick="trkToggleFilters()">
       <i data-lucide="sliders-horizontal" class="btn-icon"></i>Filter

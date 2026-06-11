@@ -214,10 +214,17 @@ function toggleUserMenu(e) {
   var wrap = document.querySelector('.user-menu-wrap');
   if (!wrap) return;
   wrap.classList.toggle('open');
+  // v124 a11y: sync aria-expanded on the trigger so SRs announce state.
+  var chip = wrap.querySelector('.user-chip');
+  if (chip) chip.setAttribute('aria-expanded', wrap.classList.contains('open') ? 'true' : 'false');
 }
 function closeUserMenu() {
   var wrap = document.querySelector('.user-menu-wrap');
-  if (wrap) wrap.classList.remove('open');
+  if (wrap) {
+    wrap.classList.remove('open');
+    var chip = wrap.querySelector('.user-chip');
+    if (chip) chip.setAttribute('aria-expanded', 'false');
+  }
 }
 
 function toggleSidebar(open) {
@@ -227,6 +234,9 @@ function toggleSidebar(open) {
   if (open === undefined) open = !sb.classList.contains('open');
   sb.classList.toggle('open', open);
   if (ov) ov.classList.toggle('show', open);
+  // v124 a11y: sync aria-expanded on the hamburger.
+  var hb = document.querySelector('.hamburger');
+  if (hb) hb.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 function closeSidebarOnMobile() {
