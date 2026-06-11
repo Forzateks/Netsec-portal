@@ -1223,11 +1223,20 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .kb-filter-bar .form-group{flex:1;min-width:140px;margin:0}
 
 /* ── KB ARTICLE MODAL ── */
-.kb-article-body{font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap;max-height:60vh;overflow-y:auto;padding-right:4px}
+/* v130: dropped the max-height + overflow-y on the article body — nested
+   scroll inside a bottom-sheet modal was awkward on mobile. The modal
+   itself handles vertical scrolling now, so the body grows to fit and the
+   user scrolls one surface. */
+.kb-article-body{font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap;padding-right:4px}
 
 /* Small phones */
 @media(max-width:380px){
   .summary-grid{grid-template-columns:1fr}
+  /* v130: hide the notif bell entirely under 380px — the header already
+     packs hamburger + brand + Update pill + user-chip; the bell was
+     clipping the user-chip's name. Notifications stay reachable via the
+     user-menu dropdown's status line. */
+  .top-bar-bell{display:none !important}
 }
 
 /* ══ MOBILE — comprehensive polish (additive to 640px block above) ══ */

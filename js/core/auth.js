@@ -1,11 +1,16 @@
 ﻿// == AUTH (Supabase) ==============================================
+// v130 a11y: dropped the 5s auto-hide on errors — a slow reader could lose
+// the message before reading it, and bad-password errors disappeared while
+// the user was mid-correction. The error now clears on next submit attempt
+// (showLoginError replaces the text) or on form-switch (resetLoginButtons
+// is called by show{Signin,Forgot,Reset}Form). Successes still auto-hide
+// because they confirm a transient action.
 function showLoginError(msg) {
   const e = document.getElementById('login-error');
   e.textContent = '❌ ' + msg;
   e.style.display = 'block'; e.style.background='#FEE2E2'; e.style.color='#B91C1C';
   e.style.padding='10px'; e.style.borderRadius='8px'; e.style.fontSize='13px';
   e.style.marginBottom='12px'; e.style.textAlign='center';
-  setTimeout(function(){ e.style.display = 'none'; }, 5000);
 }
 
 function showLoginSuccess(msg) {
@@ -13,6 +18,29 @@ function showLoginSuccess(msg) {
   e.textContent = '✅ ' + msg;
   e.style.display = 'block';
   setTimeout(function(){ e.style.display = 'none'; }, 6000);
+}
+
+// v130: map common Supabase auth error codes to friendlier copy so users
+// know what to do, not just that something failed. Falls through to the
+// raw message for anything not mapped.
+function _friendlyAuthError(raw) {
+  var s = String(raw || '').toLowerCase();
+  if (s.indexOf('invalid login credentials') !== -1) {
+    return 'Wrong email or password — try again, or use Forgot password.';
+  }
+  if (s.indexOf('email not confirmed') !== -1) {
+    return 'This account is not confirmed yet — check your inbox or ask your manager to re-invite you.';
+  }
+  if (s.indexOf('email rate limit') !== -1 || s.indexOf('too many requests') !== -1) {
+    return 'Too many attempts in a short time — wait a minute and try again.';
+  }
+  if (s.indexOf('user not found') !== -1) {
+    return 'No account found for that email — check the spelling or ask your manager to invite you.';
+  }
+  if (s.indexOf('network') !== -1 || s.indexOf('failed to fetch') !== -1) {
+    return 'Network error — check your connection and try again.';
+  }
+  return raw || 'Sign in failed.';
 }
 
 // Reset every login button to its idle state. doLogin keeps the Sign In
@@ -79,7 +107,7 @@ async function doLogin() {
   setLoginBtnLoading('login-signin-btn', 'Signing in…');
   try {
     const {data, error} = await sb.auth.signInWithPassword({ email: email, password: password });
-    if (error)               { clearLoginBtnLoading('login-signin-btn'); showLoginError(error.message || 'Sign in failed.'); return; }
+    if (error)               { clearLoginBtnLoading('login-signin-btn'); showLoginError(_friendlyAuthError(error.message)); return; }
     if (!data || !data.user) { clearLoginBtnLoading('login-signin-btn'); showLoginError('Sign in failed.'); return; }
 
     // If "Remember me" is unchecked, sign out when window closes.
@@ -91,7 +119,7 @@ async function doLogin() {
     await initAppFromUser(data.user);
   } catch (err) {
     clearLoginBtnLoading('login-signin-btn');
-    showLoginError((err && err.message) || 'Sign in failed.');
+    showLoginError(_friendlyAuthError(err && err.message));
   }
 }
 
@@ -101,7 +129,7 @@ async function doForgot() {
   setLoginBtnLoading('login-forgot-btn', 'Sending…');
   const redirectTo = window.location.origin + window.location.pathname;
   const {error} = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirectTo });
-  if (error) { clearLoginBtnLoading('login-forgot-btn'); showLoginError(error.message || 'Could not send reset link.'); return; }
+  if (error) { clearLoginBtnLoading('login-forgot-btn'); showLoginError(_friendlyAuthError(error.message)); return; }
   clearLoginBtnLoading('login-forgot-btn');
   showLoginSuccess('Reset link sent. Check your email inbox.');
   setTimeout(showSigninForm, 1500);
@@ -114,7 +142,7 @@ async function doResetPassword() {
   if (p1 !== p2)     { showLoginError('Passwords do not match.'); return; }
   setLoginBtnLoading('login-reset-btn', 'Saving…');
   const {error} = await sb.auth.updateUser({ password: p1 });
-  if (error) { clearLoginBtnLoading('login-reset-btn'); showLoginError(error.message || 'Could not update password.'); return; }
+  if (error) { clearLoginBtnLoading('login-reset-btn'); showLoginError(_friendlyAuthError(error.message)); return; }
   showLoginSuccess('Password set! Signing you in…');
   // After updateUser the session is already active — go straight in.
   const {data} = await sb.auth.getUser();
@@ -126,7 +154,9 @@ async function doResetPassword() {
 async function doLogout() {
   // Lock the logout entry to prevent double-clicks and surface progress —
   // the signOut round trip can take a beat on a slow connection.
-  var btn = document.querySelector('.sidebar-item-logout');
+  // v130: prefer the user-menu logout button (current live location);
+  // fall back to the legacy sidebar logout for back-compat.
+  var btn = document.querySelector('.user-menu-item-danger') || document.querySelector('.sidebar-item-logout');
   var original = btn ? btn.innerHTML : '';
   if (btn) {
     btn.style.pointerEvents = 'none';

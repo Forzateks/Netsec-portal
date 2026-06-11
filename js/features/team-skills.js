@@ -235,7 +235,7 @@ function _skRenderMatrix(lines, emps) {
   SKILLS.forEach(function(s){ byKey[s.employee_name + '|' + s.product_line_id] = s; });
 
   var head = '<tr>'+
-    '<th class="sk-gulfithead" title="Gulfit Relevant — managers can toggle">G</th>'+
+    '<th class="sk-gulfithead" title="Gulfit Relevant — managers can toggle">🟢</th>'+
     '<th class="sk-rowhead">Product Line</th>'+
     '<th class="sk-vendorhead hide-mobile">Vendor</th>'+
     emps.map(function(e){ return '<th class="sk-emphead">'+esc2(_skFirstName(e))+'</th>'; }).join('')+

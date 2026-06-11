@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v129',
+    release: 'netsec-portal@v130',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -137,8 +137,11 @@
       <h1 class="login-heading" id="login-heading">Welcome back</h1>
       <p class="login-sub" id="login-sub">Sign in to continue to your portal</p>
 
-      <div class="login-error" id="login-error" style="display:none"></div>
-      <div class="login-success" id="login-success" style="display:none"></div>
+      <!-- v130 a11y: role="alert" on errors so screen readers announce them
+           as soon as they appear; role="status" + aria-live="polite" on
+           successes so they're announced without interrupting. -->
+      <div class="login-error" id="login-error" role="alert" aria-live="assertive" style="display:none"></div>
+      <div class="login-success" id="login-success" role="status" aria-live="polite" style="display:none"></div>
 
       <!-- Sign-in form -->
       <div id="login-form-signin">

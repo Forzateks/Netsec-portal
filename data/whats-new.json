@@ -204,6 +204,13 @@
       "category": "fixed",
       "title": "Internal cleanup — orphan backup code removed",
       "body": "Removed 99 lines of unused backup code (checkBackupReminder / dismissBackup / downloadBackup) that lingered after the v126 legacy banner deletion. No user-visible change — the active backup path through Admin Tools → Full Backup is untouched."
+    },
+    {
+      "id": "v130-login-polish",
+      "version": "v130",
+      "category": "fixed",
+      "title": "Login + small polish — 6 fixes",
+      "body": "Login error messages no longer disappear after 5 seconds (slow readers were losing them); they clear on next submit instead. Bad-password errors now say 'Wrong email or password — try again, or use Forgot password' instead of the raw Supabase code. Screen readers announce login errors and successes. Knowledge Base article body scrolls as one surface with the modal (no more nested scroll on mobile). Notifications bell hides on phones under 380px so the user-chip name doesn't clip. Team Skills 'G' column header shows the green dot emoji that matches the chip row. Logout spinner now appears on the user-menu Logout button (was targeting the old sidebar entry)."
     }
   ]
 }
