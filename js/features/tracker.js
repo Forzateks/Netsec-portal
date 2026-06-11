@@ -373,6 +373,7 @@ function trkTypeBadge(t) {
   if (t === 'project') return '<span class="badge trk-type trk-type-project">Project</span>';
   if (t === 'amc')     return '<span class="badge trk-type trk-type-amc">AMC</span>';
   if (t === 'support') return '<span class="badge trk-type trk-type-support">Support</span>';
+  if (t === 'other')   return '<span class="badge trk-type trk-type-other">Other</span>';
   return '<span class="badge">'+esc2((t||'').toUpperCase())+'</span>';
 }
 
@@ -594,7 +595,8 @@ function renderTracker() {
     'amc':      { icon:'wrench', text:'AMC' },
     'support':  { icon:'life-buoy', text:'Support' },
     'presales': { icon:'briefcase', text:'Pre-sales' },
-    'project':  { icon:'folder', text:'Project' }
+    'project':  { icon:'folder', text:'Project' },
+    'other':    { icon:'circle-help', text:'Other' }
   };
 
   // Viewport-aware: <768px renders a card list (vertical stack) instead of a

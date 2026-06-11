@@ -600,8 +600,12 @@ ALTER TABLE public.product_lines            ADD CONSTRAINT product_lines_vendor_
 
 ALTER TABLE public.engagements              ADD CONSTRAINT engagements_pkey             PRIMARY KEY (id);
 ALTER TABLE public.engagements              ADD CONSTRAINT engagements_customer_id_name_type_key UNIQUE (customer_id, name, type);
+-- v128: 'other' added as a catch-all engagement type for work that doesn't
+-- fit the 5 standard categories. Falls through to the project waterfall
+-- phase list and the default delivery activity list in the UI; renders
+-- with a grey .trk-type-other badge.
 ALTER TABLE public.engagements              ADD CONSTRAINT engagements_type_check
-  CHECK (type = ANY (ARRAY['project'::text, 'poc'::text, 'amc'::text, 'support'::text, 'presales'::text]));
+  CHECK (type = ANY (ARRAY['project'::text, 'poc'::text, 'amc'::text, 'support'::text, 'presales'::text, 'other'::text]));
 -- v108: expanded to include POC-specific phases. The union covers both
 -- project waterfall (13 stages) and POC-specific cycle (10 stages, some
 -- shared with project list like 'Yet to start', 'Troubleshooting',
@@ -637,8 +641,10 @@ ALTER TABLE public.ps_milestones            ADD CONSTRAINT ps_milestones_percent
   CHECK ((percentage IS NULL) OR ((percentage >= 0::numeric) AND (percentage <= 100::numeric)));
 
 ALTER TABLE public.unified_sessions         ADD CONSTRAINT unified_sessions_pkey        PRIMARY KEY (id);
+-- v128: kept in lockstep with engagements_type_check — sessions logged
+-- against an 'other' engagement need 'other' as a valid session_type too.
 ALTER TABLE public.unified_sessions         ADD CONSTRAINT unified_sessions_session_type_check
-  CHECK (session_type = ANY (ARRAY['project'::text, 'poc'::text, 'amc'::text, 'support'::text, 'internal'::text, 'presales'::text, 'customer_testing'::text]));
+  CHECK (session_type = ANY (ARRAY['project'::text, 'poc'::text, 'amc'::text, 'support'::text, 'internal'::text, 'presales'::text, 'customer_testing'::text, 'other'::text]));
 
 ALTER TABLE public.ot_sessions              ADD CONSTRAINT ot_sessions_pkey             PRIMARY KEY (id);
 

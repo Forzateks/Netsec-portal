@@ -1342,7 +1342,7 @@ async function renderEngagementSummary() {
   document.getElementById('pj-eng-loading').style.display = 'none';
   var rows = res.data || [];
 
-  var TYPE_LABELS = { project:'Project', poc:'POC', amc:'AMC', support:'Support', presales:'Pre-Sales-Task', customer_testing:'Customer Testing' };
+  var TYPE_LABELS = { project:'Project', poc:'POC', amc:'AMC', support:'Support', presales:'Pre-Sales-Task', customer_testing:'Customer Testing', other:'Other' };
   var typeLabel   = typeKey==='all' ? 'Engagement' : TYPE_LABELS[typeKey] || typeKey;
 
   if (!rows.length) {
@@ -1402,7 +1402,8 @@ async function renderEngagementSummary() {
     poc:      '<span class="badge" style="background:#F5F3FF;color:#7C3AED">POC</span>',
     amc:      '<span class="badge" style="background:#FFFBEB;color:#B45309">AMC</span>',
     support:  '<span class="badge" style="background:#FFF1F2;color:#9F1239">SUPPORT</span>',
-    presales: '<span class="badge" style="background:#FDF2F8;color:#BE185D">PRE-SALES-TASK</span>'
+    presales: '<span class="badge" style="background:#FDF2F8;color:#BE185D">PRE-SALES-TASK</span>',
+    other:    '<span class="badge" style="background:#F1F5F9;color:#475569">OTHER</span>'
   };
 
   // v126: cache the aggregated rows so exportEngagementSummaryCsv can write

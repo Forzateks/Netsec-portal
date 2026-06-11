@@ -1453,6 +1453,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-type-project{background:#DBEAFE;color:#1E3A8A}
 .trk-type-amc{background:#FFFBEB;color:#B45309}
 .trk-type-support{background:#FFF1F2;color:#9F1239}
+/* v128: 'other' engagement type — neutral grey to signal "doesn't fit a
+   standard workflow". Falls back to project waterfall in the tracker
+   phase dropdown and the default delivery list in activityTypesForSession. */
+.trk-type-other{background:#F1F5F9;color:#475569}
 
 /* ── VENDORS & PRODUCT LINES MANAGE ─────────────────────────────── */
 /* Stats row across the top — three pill cards summarising the catalog

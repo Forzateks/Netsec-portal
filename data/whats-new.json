@@ -190,6 +190,13 @@
       "category": "new",
       "title": "UX polish — 10 small improvements",
       "body": "Tasks sidebar badge now counts only items awaiting your approval, not every open task. Dashboard 'Needs Your Attention' See-all toggles back to Show less so you can collapse it. Edit Engagement modal shows Last Updated so you don't lose audit context while editing. Changing an engagement type clears the stale phase value (POC and Project use different phase lists). Notifications get a Mark all read link and read items dim out. Recurring task tabs show the Start/ETA/End dates underneath the period pill (were hidden entirely). AMC list shows 'N days' remaining on active contracts so renewals are visible at a glance. KB excerpts cut at word boundaries instead of mid-word. OT Policy 'Eve' band text now matches the actual rule. Legacy approved-leave records are now read-only (the banner said edits don't count — now the buttons match)."
+    },
+    {
+      "id": "v128-other-type",
+      "version": "v128",
+      "category": "new",
+      "title": "New 'Other' engagement type",
+      "body": "Add Engagement now offers '📋 Other' as a 6th type alongside Project / POC / AMC / Support / Pre-Sales-Task. Use it for engagements that don't fit the standard categories. Sessions logged under an Other engagement count toward all the usual reports (Engagement Summary, Customer Summary, Employee Summary, Activity Matrix) — it's a real first-class type, not a hack. Phase dropdown defaults to the project waterfall; Activity Type defaults to the standard delivery list."
     }
   ]
 }
