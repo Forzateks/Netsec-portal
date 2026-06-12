@@ -126,7 +126,14 @@ function renderInventoryTable(data) {
     var sc = invStatusClass(d.availability_status);
     rows += '<tr>'+
       '<td style="font-size:11px;color:var(--muted);font-weight:600">'+(i+1)+'</td>'+
-      '<td style="font-family:\'DM Mono\',monospace;font-size:12px;font-weight:600">'+esc2(d.serial_number||'')+'</td>'+
+      '<td style="font-family:\'DM Mono\',monospace;font-size:12px;font-weight:600">'+
+        '<span style="display:inline-flex;align-items:center;gap:6px">'+
+          esc2(d.serial_number||'')+
+          (d.serial_number
+            ? '<button class="inv-copy-btn" title="Copy serial number" aria-label="Copy serial number" data-serial="'+esc2(d.serial_number)+'" onclick="copyInvSerial(this)"><i data-lucide="copy" aria-hidden="true"></i></button>'
+            : '')+
+        '</span>'+
+      '</td>'+
       '<td>'+esc2(d.model_no||'—')+'</td>'+
       '<td><span class="badge '+sc+'">'+esc2(d.availability_status||'—')+'</span></td>'+
       '<td class="hide-mobile">'+esc2(d.current_location||'—')+'</td>'+
@@ -153,6 +160,56 @@ function renderInventoryTable(data) {
     '</tr></thead>'+
     '<tbody>'+rows+'</tbody>'+
     '</table></div>';
+}
+
+// v132: copy a device serial number to the clipboard from the inline copy
+// button in the devices table. Shows a toast + a brief checkmark on the
+// button. Serial comes from the button's data-serial attribute (esc2'd at
+// render — the attribute-quote-break vector is closed; serials are
+// alphanumeric in practice anyway).
+function copyInvSerial(btn) {
+  var serial = btn.getAttribute('data-serial') || '';
+  if (!serial) return;
+  _invCopyText(serial).then(function(ok) {
+    if (!ok) { showError('Could not copy serial.'); return; }
+    showToast('Serial copied ✓');
+    if (btn._copyRevert) clearTimeout(btn._copyRevert);
+    btn.classList.add('inv-copy-done');
+    btn.innerHTML = '<span style="font-size:13px;line-height:1">✓</span>';
+    btn._copyRevert = setTimeout(function() {
+      btn.classList.remove('inv-copy-done');
+      btn.innerHTML = '<i data-lucide="copy" aria-hidden="true"></i>';
+      if (typeof renderIcons === 'function') renderIcons();
+    }, 1200);
+  });
+}
+
+// Prefer the async Clipboard API (works on HTTPS / localhost). Fall back to
+// a hidden-textarea + execCommand for older browsers or non-secure contexts.
+// Returns a Promise<boolean>.
+function _invCopyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text)
+      .then(function() { return true; })
+      .catch(function() { return _invCopyFallback(text); });
+  }
+  return Promise.resolve(_invCopyFallback(text));
+}
+function _invCopyFallback(text) {
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    var ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
 }
 
 function resetAddDeviceForm() {

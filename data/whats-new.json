@@ -218,6 +218,13 @@
       "category": "new",
       "title": "PS Deals status filter + certificate upload size indicator",
       "body": "Pre-Sales Deals list gets a status chip-row above the table matching the AMC contracts layout — click All / Quoted / Won / In Progress / Completed / Lost / Cancelled to filter. Certificate upload button now shows the file size while uploading (e.g. 'Uploading 4.2 MB…') so you can see something is happening on slow connections."
+    },
+    {
+      "id": "v132-copy-serial",
+      "version": "v132",
+      "category": "new",
+      "title": "Copy serial numbers in Inventory",
+      "body": "Each device row in Inventory now has a small copy button next to its serial number. Click it to copy the serial to your clipboard — handy for pasting into emails, tickets, or vendor portals without retyping. A green checkmark confirms the copy."
     }
   ]
 }

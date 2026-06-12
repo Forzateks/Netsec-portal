@@ -1199,6 +1199,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .inv-status-unavailable{background:#FEF2F2;color:#991B1B}
 .inv-status-locked{background:#FEF3C7;color:#92400E}
 .inv-status-default{background:#F9FAFB;color:#6B7280}
+/* v132: inline copy button on serial-number cells. Muted by default,
+   teal on hover, green while showing the post-copy checkmark. */
+.inv-copy-btn{background:transparent;border:none;cursor:pointer;padding:2px;border-radius:4px;color:var(--muted);display:inline-flex;align-items:center;line-height:1;transition:background .12s,color .12s;flex-shrink:0}
+.inv-copy-btn i{width:13px;height:13px}
+.inv-copy-btn:hover{background:#F1F5F9;color:var(--teal)}
+.inv-copy-btn.inv-copy-done{color:var(--success)}
+.inv-copy-btn:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
 .inv-filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:16px;background:white;border:1px solid var(--border);border-radius:12px;margin-bottom:20px}
 .inv-filter-bar .form-group{flex:1;min-width:140px;margin:0}
 .inv-log-row{padding:12px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
