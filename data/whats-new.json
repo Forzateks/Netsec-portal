@@ -225,6 +225,13 @@
       "category": "new",
       "title": "Copy serial numbers in Inventory",
       "body": "Each device row in Inventory now has a small copy button next to its serial number. Click it to copy the serial to your clipboard — handy for pasting into emails, tickets, or vendor portals without retyping. A green checkmark confirms the copy."
+    },
+    {
+      "id": "v133-serial-weight",
+      "version": "v133",
+      "category": "fixed",
+      "title": "Inventory serial numbers no longer bold",
+      "body": "Serial numbers in the Inventory devices table now render at normal weight instead of bold, for a cleaner, less heavy look."
     }
   ]
 }

@@ -126,7 +126,7 @@ function renderInventoryTable(data) {
     var sc = invStatusClass(d.availability_status);
     rows += '<tr>'+
       '<td style="font-size:11px;color:var(--muted);font-weight:600">'+(i+1)+'</td>'+
-      '<td style="font-family:\'DM Mono\',monospace;font-size:12px;font-weight:600">'+
+      '<td style="font-family:\'DM Mono\',monospace;font-size:12px">'+
         '<span style="display:inline-flex;align-items:center;gap:6px">'+
           esc2(d.serial_number||'')+
           (d.serial_number
