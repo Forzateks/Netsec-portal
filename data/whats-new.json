@@ -232,6 +232,13 @@
       "category": "fixed",
       "title": "Inventory serial numbers no longer bold",
       "body": "Serial numbers in the Inventory devices table now render at normal weight instead of bold, for a cleaner, less heavy look."
+    },
+    {
+      "id": "v134-kenya-location",
+      "version": "v134",
+      "category": "new",
+      "title": "Kenya added to Inventory locations",
+      "body": "Kenya is now a Current Location option when adding, editing, or filtering devices in Inventory — alongside UAE, KSA, Oman, Qatar, Nigeria, Bahrain, and KDM."
     }
   ]
 }
