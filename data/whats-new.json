@@ -239,6 +239,13 @@
       "category": "new",
       "title": "Kenya added to Inventory locations",
       "body": "Kenya is now a Current Location option when adding, editing, or filtering devices in Inventory — alongside UAE, KSA, Oman, Qatar, Nigeria, Bahrain, and KDM."
+    },
+    {
+      "id": "v135-leave-used-fix",
+      "version": "v135",
+      "category": "fixed",
+      "title": "Leave request preview now shows days used correctly",
+      "body": "The Request Leave preview always showed 'Used This Year 0' (and an overstated 'Balance After') because it matched the dropdown value 'annual_full' against the stored category 'annual'. It now counts your approved leave for the year correctly. Affected the live preview only — submitted requests and approvals were always stored correctly."
     }
   ]
 }

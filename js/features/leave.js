@@ -153,7 +153,13 @@ async function updateLeavePreview() {
   }
   var days = isHalfDay ? 0.5 : calcWorkingDays(start,end,currentUser);
   const year = start.split('-')[0];
-  const used = await getLeaveDaysUsed(currentUser,year,ltype);
+  // v135 fix: pass the DB category ('annual'/'sick'), NOT the raw dropdown
+  // value ('annual_full'). leave_requests.leave_type stores the category
+  // (see submit path), so getLeaveDaysUsed's `r.leave_type === leaveType`
+  // match returned false for every row since v104 introduced the _full/_half
+  // dropdown variants — making "Used This Year" always read 0 and overstating
+  // "Balance After".
+  const used = await getLeaveDaysUsed(currentUser,year,parsed.category);
   const balAfter = allowance - used - days;
   document.getElementById('lv-prev-days').textContent = fmtDays(days);
   document.getElementById('lv-prev-used').textContent = fmtNumber(used,1)+' / '+allowance;
