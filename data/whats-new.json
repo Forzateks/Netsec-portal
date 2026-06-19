@@ -246,6 +246,13 @@
       "category": "fixed",
       "title": "Leave request preview now shows days used correctly",
       "body": "The Request Leave preview always showed 'Used This Year 0' (and an overstated 'Balance After') because it matched the dropdown value 'annual_full' against the stored category 'annual'. It now counts your approved leave for the year correctly. Affected the live preview only — submitted requests and approvals were always stored correctly."
+    },
+    {
+      "id": "v136-weekend-override",
+      "version": "v136",
+      "category": "fixed",
+      "title": "OT now supports rotation weekends",
+      "body": "If someone works an onsite rotation on a different weekend (e.g. Thursday + Friday off instead of Saturday + Sunday), their overtime for that period is now banded against the right weekend. Applied to Ahmed Ali's 30-Dec-2025 to 5-Feb-2026 rotation and recalculated his OT for those dates."
     }
   ]
 }

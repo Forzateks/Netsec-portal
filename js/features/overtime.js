@@ -1,5 +1,16 @@
 ﻿// == OT CALCULATION ENGINE ========================================
-function isWeekend(wd, employee) {
+function isWeekend(wd, employee, dateStr) {
+  // v136: dated weekend overrides (e.g. an onsite rotation with Thu+Fri off).
+  // dateStr is the raw 'YYYY-MM-DD' so the range check is a plain lexical
+  // string compare — no Date()/timezone shift. Falls through to region default.
+  if (dateStr && typeof WEEKEND_OVERRIDES !== 'undefined') {
+    for (var i = 0; i < WEEKEND_OVERRIDES.length; i++) {
+      var o = WEEKEND_OVERRIDES[i];
+      if (o.employee === employee && dateStr >= o.from && dateStr <= o.to) {
+        return o.weekendDays.indexOf(wd) !== -1;
+      }
+    }
+  }
   return KSA_EMP.includes(employee) ? (wd===5||wd===6) : (wd===0||wd===6);
 }
 
@@ -21,7 +32,7 @@ function getOTThresholds(employee) {
 function validateOTStart(dateStr, startStr, employee, endStr) {
   if (!dateStr || !startStr) return null;
   var d = new Date(dateStr); var wd = d.getDay();
-  if (isWeekend(wd, employee)) return null;
+  if (isWeekend(wd, employee, dateStr)) return null;
   var t = getOTThresholds(employee);
 
   // If we have the end time, check whether ANY portion is OT.
@@ -44,7 +55,7 @@ function calcOT(dateStr, startStr, endStr, employee) {
   employee = employee || '';
   if (!dateStr||!startStr||!endStr) return null;
   const d = new Date(dateStr); const wd = d.getDay();
-  const isWknd = isWeekend(wd, employee);
+  const isWknd = isWeekend(wd, employee, dateStr);
   const sp=startStr.split(':').map(Number); const sh=sp[0],sm=sp[1];
   const ep=endStr.split(':').map(Number);   const eh=ep[0],em=ep[1];
   const sf=sh+sm/60, ef=eh+em/60;
@@ -116,7 +127,7 @@ function explainOT(session) {
   var region = KSA_EMP.includes(emp) ? 'KSA' : 'UAE';
   var d = new Date(session.ot_date);
   var wd = d.getDay();
-  var isWknd = isWeekend(wd, emp);
+  var isWknd = isWeekend(wd, emp, session.ot_date);
   var sp = session.start_time.split(':').map(Number);
   var ep = session.end_time.split(':').map(Number);
   var sf = sp[0] + sp[1]/60;
