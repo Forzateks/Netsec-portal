@@ -673,6 +673,43 @@ async function saveUnifiedSession() {
     }
   }
 
+  // v137: soft duplicate caution. Two people sometimes log the same work
+  // independently. Warn (don't block) when a session already exists with the
+  // same date + type + customer and an overlapping time, so the logger can
+  // verify before adding. Advisory only — they can still proceed. A query
+  // error is swallowed so a transient failure never blocks a legitimate save.
+  try {
+    var dupQ = sb.from('unified_sessions')
+      .select('employee,start_time,end_time,activity_type,customer_name')
+      .eq('session_date', date)
+      .eq('session_type', type);
+    if ((isEng || isCustomerTest) && customer) dupQ = dupQ.eq('customer_name', customer);
+    var dupRes = await dupQ;
+    if (!dupRes.error && dupRes.data && dupRes.data.length) {
+      // Time-overlap on HH:MM strings (same-day approximation — fine for an
+      // advisory check). Two ranges overlap when start_a < end_b AND end_a > start_b.
+      var clashes = dupRes.data.filter(function(r){
+        return r.start_time && r.end_time && r.start_time < end && r.end_time > start;
+      });
+      if (clashes.length) {
+        var c0 = clashes[0];
+        var who = clashes.map(function(r){ return r.employee; })
+                         .filter(function(v, i, a){ return a.indexOf(v) === i; });
+        var subject = customer || ('this ' + type + ' work');
+        var body = clashes.length === 1
+          ? who[0] + ' already logged ' + subject + ' on ' + date + ' (' + c0.start_time + '–' + c0.end_time + (c0.activity_type ? ', ' + c0.activity_type : '') + '). Please verify this isn’t a duplicate before adding.'
+          : clashes.length + ' overlapping sessions already exist for ' + subject + ' on ' + date + ' (' + who.join(', ') + '). Please verify this isn’t a duplicate before adding.';
+        var proceedDup = await confirmAction({
+          title: 'Possible duplicate session',
+          body: body,
+          confirmText: 'Add anyway',
+          danger: false
+        });
+        if (!proceedDup) return;
+      }
+    }
+  } catch (e) { /* never block a save on the advisory check */ }
+
   // Engagement snapshot (name) for non-internal
   var engagement_name = null;
   if (isEng && engId) {

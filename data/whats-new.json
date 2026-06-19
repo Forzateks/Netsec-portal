@@ -253,6 +253,13 @@
       "category": "fixed",
       "title": "OT now supports rotation weekends",
       "body": "If someone works an onsite rotation on a different weekend (e.g. Thursday + Friday off instead of Saturday + Sunday), their overtime for that period is now banded against the right weekend. Applied to Ahmed Ali's 30-Dec-2025 to 5-Feb-2026 rotation and recalculated his OT for those dates."
+    },
+    {
+      "id": "v137-dup-session-caution",
+      "version": "v137",
+      "category": "new",
+      "title": "Duplicate-session caution when logging",
+      "body": "When you log a session, if a similar one already exists — same date, type, and customer with an overlapping time — you'll see a heads-up showing who already logged it, so two people don't double-log the same work. It's a caution, not a block: you can still 'Add anyway' after verifying."
     }
   ]
 }
