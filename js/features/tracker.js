@@ -49,7 +49,8 @@ var TRK_PHASES_POC = [
   // constraint so historical/future writes don't error, but no UI offers it.
   'Troubleshooting',
   'PoC Report',
-  'Commercial Process'
+  'Commercial Process',
+  'Hardware Retrieval'   // v139: close-out — retrieving PoC hardware
 ];
 function _trkPhasesFor(type) { return (type === 'poc') ? TRK_PHASES_POC : TRK_PHASES_PROJECT; }
 // Phase dropdown is only enabled when the top-level status is exactly

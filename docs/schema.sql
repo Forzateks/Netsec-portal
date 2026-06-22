@@ -619,7 +619,8 @@ ALTER TABLE public.engagements              ADD CONSTRAINT engagements_tracker_s
     'Pilot Sites Rollout'::text, 'Migration'::text, 'KT / Training'::text,
     'As-Built Documentation'::text, 'Troubleshooting'::text, 'On demand request'::text,
     'Hardware Delivery'::text, 'PoC License Document'::text, 'Design Discussion'::text,
-    'Initial Config'::text, 'PoC Branch Migration'::text, 'PoC Report'::text, 'Commercial Process'::text])));
+    'Initial Config'::text, 'PoC Branch Migration'::text, 'PoC Report'::text, 'Commercial Process'::text,
+    'Hardware Retrieval'::text])));  -- v139: PoC close-out phase
 
 ALTER TABLE public.engagement_milestones    ADD CONSTRAINT engagement_milestones_pkey   PRIMARY KEY (id);
 ALTER TABLE public.engagement_milestones    ADD CONSTRAINT engagement_milestones_status_check

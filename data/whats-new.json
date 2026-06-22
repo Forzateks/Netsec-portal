@@ -267,6 +267,13 @@
       "category": "new",
       "title": "'Sign Off' activity type for Project sessions",
       "body": "Project sessions now offer 'Sign Off' as an Activity Type — for logging project closure / handover work. Available on both Log Session and Edit Session."
+    },
+    {
+      "id": "v139-hardware-retrieval-phase",
+      "version": "v139",
+      "category": "new",
+      "title": "'Hardware Retrieval' phase for POCs",
+      "body": "The POC Current Phase dropdown in the tracker now includes 'Hardware Retrieval' — the close-out step for collecting PoC hardware back from the customer site."
     }
   ]
 }
