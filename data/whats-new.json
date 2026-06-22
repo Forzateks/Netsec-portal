@@ -274,6 +274,13 @@
       "category": "new",
       "title": "'Hardware Retrieval' phase for POCs",
       "body": "The POC Current Phase dropdown in the tracker now includes 'Hardware Retrieval' — the close-out step for collecting PoC hardware back from the customer site."
+    },
+    {
+      "id": "v140-tracker-remarks-instant",
+      "version": "v140",
+      "category": "new",
+      "title": "Snappier tracker edits + bold latest remark",
+      "body": "Editing an engagement's status or remarks now feels instant — the change shows and the dialog closes immediately while it saves in the background (if a save ever fails, it's reverted with a clear message, never lost). And the most recent sentence in each engagement's remarks is now bold across Projects and POCs, so the latest status note stands out at a glance."
     }
   ]
 }

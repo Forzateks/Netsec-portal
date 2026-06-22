@@ -637,7 +637,7 @@ function _trkRenderTable(rows, TYPE_DEF) {
     var td = TYPE_DEF[r.type] || TYPE_DEF['project'];
     var remarksFull = (r.tracker_remarks || '').replace(/\s+/g,' ').trim();
     var remarksLine = remarksFull
-      ? '<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+esc2(remarksFull)+'</div>'
+      ? '<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+trkRemarksHtml(remarksFull, true)+'</div>'
       : '';
     var vendorCell = r.vendor
       ? '<div>'+esc2(r.vendor)+'</div>'+
@@ -689,7 +689,7 @@ function _trkRenderCards(rows, TYPE_DEF) {
         trkTopStatusBadge(r.status, r.tracker_status)+trkConvertedBadge(r)+trkOnDemandBadge(r)+
         '<span class="trk-card-date num"'+updatedTitle+'>'+updated+'</span>'+
       '</div>'+
-      (remarksFull?'<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+esc2(remarksFull)+'</div>':'')+
+      (remarksFull?'<div class="trk-cell-remarks" title="'+esc2(remarksFull)+'">'+trkRemarksHtml(remarksFull, true)+'</div>':'')+
     '</div>';
   }).join('');
   return '<div class="trk-cards">'+cards+'</div>';
@@ -714,6 +714,26 @@ window.addEventListener('resize', function(){
     _trkLastIsMobile = nowMobile;
   }, 150);
 });
+
+// v140: render remarks with the LAST sentence bolded, so the most recent
+// status note stands out at a glance (Project + POC tracker). `collapse`
+// flattens whitespace for the one-line list/card cells; the detail modal
+// passes collapse=false and keeps line breaks (white-space:pre-wrap).
+function _trkLastSentenceSplit(t) {
+  var re = /[.!?]+\s+/g, m, boundary = -1;
+  while ((m = re.exec(t)) !== null) {
+    var end = m.index + m[0].length;
+    if (end < t.length) boundary = end;   // only split where text follows the terminator
+  }
+  return boundary === -1 ? ['', t] : [t.slice(0, boundary), t.slice(boundary)];
+}
+function trkRemarksHtml(text, collapse) {
+  var t = (text || '');
+  t = collapse ? t.replace(/\s+/g, ' ').trim() : t.replace(/^\s+|\s+$/g, '');
+  if (!t) return '';
+  var hl = _trkLastSentenceSplit(t);
+  return esc2(hl[0]) + '<strong>' + esc2(hl[1]) + '</strong>';
+}
 
 function openTrackerDetail(id) {
   var r = _trkData.find(function(x){return x.id===id;});
@@ -763,7 +783,7 @@ function openTrackerDetail(id) {
   var remarks = (r.tracker_remarks||'').trim();
   var remarksHtml = remarks
     ? '<div class="trk-remarks-block"><div class="trk-field-label" style="margin-bottom:6px">Remarks</div>'+
-      '<div style="font-size:13px;line-height:1.6;color:#1F2937;white-space:pre-wrap">'+esc2(remarks)+'</div></div>'
+      '<div style="font-size:13px;line-height:1.6;color:#1F2937;white-space:pre-wrap">'+trkRemarksHtml(remarks, false)+'</div></div>'
     : '';
 
   // Manager-only: surface Professional Services deals linked to this engagement so commercial
@@ -1186,28 +1206,45 @@ async function saveTrackerEdit() {
     patch.status = 'sign-off';
   }
 
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Saving…';
-  var { error } = await sb.from('engagements').update(patch).eq('id', id);
-  btn.disabled = false;
-  btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Changes';
-  if (typeof renderIcons === 'function') renderIcons();
-
-  if (error) { showError('Error saving: ' + error.message); return; }
-
-  // Invalidate the projects cache so engagement dropdowns + Manage Engagements
-  // reflect the change without a full reload.
-  if (typeof _projectsLoaded !== 'undefined') {
-    _projectsLoaded = false;
-    if (typeof loadProjects === 'function') {
-      try { await loadProjects(); } catch(e){}
-      if (typeof populateProjectDropdowns === 'function') populateProjectDropdowns();
-    }
+  // v140: optimistic save. Apply the change to the in-memory row, close the
+  // modal, and re-render immediately so it feels instant — then write to the
+  // DB in the background. If the write fails (RLS denial, network, or a v74
+  // silent 0-row update) we revert the row and surface an error, so a failed
+  // save can never quietly masquerade as a successful one.
+  var row = _trkData.find(function(x){ return x.id === id; });
+  var snapshot = null;
+  if (row) {
+    snapshot = {};
+    Object.keys(patch).forEach(function(k){ snapshot[k] = row[k]; });
+    Object.assign(row, patch);
+    if (typeof currentUser !== 'undefined' && currentUser) row.updated_by = currentUser;
   }
-
   closeTrackerEditModal();
   showToast('Engagement updated ✓');
-  await loadTracker();
+  renderTracker();
+
+  // Background write — .select() so an RLS-silent failure (0 rows, no error)
+  // is caught and reverted. Not awaited against the UI.
+  sb.from('engagements').update(patch).eq('id', id).select('id').then(function(res){
+    if (res.error || !res.data || !res.data.length) {
+      if (row && snapshot) { Object.assign(row, snapshot); renderTracker(); }
+      if (typeof reportSilentFail === 'function') {
+        reportSilentFail('engagements', { op:'tracker_edit', id:id, error: res.error && res.error.message });
+      }
+      showError('Could not save "' + (row ? row.name : 'engagement') + '" — change reverted. Please try again.');
+      return;
+    }
+    // Success — refresh the projects cache in the background so engagement
+    // dropdowns + Manage Engagements reflect the change. Non-blocking.
+    if (typeof _projectsLoaded !== 'undefined') {
+      _projectsLoaded = false;
+      if (typeof loadProjects === 'function') {
+        loadProjects().then(function(){
+          if (typeof populateProjectDropdowns === 'function') populateProjectDropdowns();
+        }).catch(function(){});
+      }
+    }
+  });
 }
 
 async function deleteTrackerEngagement() {
