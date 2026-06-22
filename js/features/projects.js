@@ -1163,7 +1163,8 @@ function activityTypesForSession(sessionType) {
   // Discussion + Daily Sync Call (v86 + v109b) unchanged.
   if (sessionType === 'poc') return POC_ACTIVITY_TYPES;
   if (sessionType === 'project') {
-    return ACTIVITY_TYPES.concat(['Design Discussion','Daily Sync Call']);
+    // v138: 'Sign Off' added (project-only) — closing/handover activity.
+    return ACTIVITY_TYPES.concat(['Design Discussion','Daily Sync Call','Sign Off']);
   }
   // AMC + Support stick to the delivery list as-is (maintenance/firefighting
   // flows don't need the design-conversation extras).

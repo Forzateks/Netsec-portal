@@ -260,6 +260,13 @@
       "category": "new",
       "title": "Duplicate-session caution when logging",
       "body": "When you log a session, if a similar one already exists — same date, type, and customer with an overlapping time — you'll see a heads-up showing who already logged it, so two people don't double-log the same work. It's a caution, not a block: you can still 'Add anyway' after verifying."
+    },
+    {
+      "id": "v138-signoff-activity",
+      "version": "v138",
+      "category": "new",
+      "title": "'Sign Off' activity type for Project sessions",
+      "body": "Project sessions now offer 'Sign Off' as an Activity Type — for logging project closure / handover work. Available on both Log Session and Edit Session."
     }
   ]
 }
