@@ -194,10 +194,9 @@ function _tasksFiltered() {
   });
 
   // Recurring tabs: sort by period_key DESC so the newest period sits on top.
-  // General tab (v103): completed tasks sink to the bottom; everything else
-  // (yet_to_start, ongoing, cancelled) stays on top. created_at-desc is the
-  // tie-breaker within each group, preserving newest-first within both
-  // sections.
+  // General tab (v103): finished tasks sink to the bottom; active ones stay
+  // on top. created_at-desc is the tie-breaker within each group, preserving
+  // newest-first within both sections.
   if (activeTab !== 'general') {
     rows.sort(function(a,b){
       var ak = a.period_key || '';
@@ -206,13 +205,14 @@ function _tasksFiltered() {
       return bk.localeCompare(ak);
     });
   } else {
-    // v103: only 'completed' rows sink to the bottom. v112 explicitly leaves
-    // 'pending_approval' in the top group — it's active work awaiting
-    // manager review, not finished work. yet_to_start / ongoing / cancelled
-    // also stay top-grouped per the original v103 strict reading.
+    // v141: 'cancelled' now sinks to the bottom alongside 'completed' — both
+    // are finished/closed states, so they belong below active work. Active
+    // states (yet_to_start, ongoing, pending_approval) stay top-grouped;
+    // pending_approval is awaiting manager review, not finished, so it stays up.
+    var _taskDone = function(s){ return (s === 'completed' || s === 'cancelled') ? 1 : 0; };
     rows.sort(function(a,b){
-      var ad = (a.status === 'completed') ? 1 : 0;
-      var bd = (b.status === 'completed') ? 1 : 0;
+      var ad = _taskDone(a.status);
+      var bd = _taskDone(b.status);
       if (ad !== bd) return ad - bd;
       return (b.created_at||'').localeCompare(a.created_at||'');
     });
