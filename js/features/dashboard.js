@@ -457,8 +457,8 @@ async function renderEmployeeDashboard() {
   // === STATS GRID === (no 160h target progress bar — that was aspirational)
   html += '<div class="dash-stats">'+
     '<div class="stat-card green"><div class="stat-label">CO Balance</div>'+
-      '<div class="stat-value" style="color:'+balColor+'"><span data-counter="'+s.balance+'">'+fmtNumber(s.balance,1)+'</span></div>'+
-      '<div class="stat-sub">Earned '+fmtNumber(s.totalCO,1)+' &middot; Used '+fmtNumber(s.used,1)+'</div></div>'+
+      '<div class="stat-value" style="color:'+balColor+'"><span data-counter="'+s.balance+'">'+fmtNumber(s.balance,2)+'</span></div>'+
+      '<div class="stat-sub">Earned '+fmtNumber(s.totalCO,2)+' &middot; Used '+fmtNumber(s.used,2)+'</div></div>'+
     '<div class="stat-card teal"><div class="stat-label">Annual Leave</div>'+
       '<div class="stat-value" style="color:'+lvColor+'"><span data-counter="'+leaveBalance+'">'+fmtNumber(leaveBalance,1)+'</span></div>'+
       '<div class="stat-sub">of '+fmtDays(LEAVE_ALLOWANCE)+' &middot; '+year+'</div></div>'+

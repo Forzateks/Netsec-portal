@@ -320,15 +320,22 @@ function calcSummary(sessions, compoffs, employee) {
     else if(x.band==='Mid'){if(x.rate==='1:2')mid12+=cr;else mid11+=cr;}
     else if(x.band==='Wknd'){if(x.rate==='1:2')wk12+=cr;else wk11+=cr;}
   });
-  // Eve + Early pool together (both 1:1) — 8 combined hrs = 1 CO day
+  // v142 (management decision): comp-off is now FRACTIONAL and pools are
+  // COMBINED. Every CO-eligible credited hour counts at 8h = 1 day, summed
+  // across Eve+Early + Mid 1:2 + Weekend (Mid 1:1 still earns no CO). Was
+  // previously Math.floor per separate pool with partials banked forward —
+  // that lost up to ~1 day per pool to flooring. Now partials count
+  // immediately as a decimal day. The per-pool coEarlyEve/coMid/coWknd values
+  // are kept (now fractional) for the informational OT-summary breakdown cards.
   var combined=eveCred+earlyCred;
   var wkTotal=wk11+wk12;
-  var coEarlyEve=Math.floor(combined/8),coMid=Math.floor(mid12/8),coWknd=Math.floor(wkTotal/8);
-  var totalCO=coEarlyEve+coMid+coWknd;
+  var coEligible=combined+mid12+wkTotal;            // Mid 1:1 excluded by design
+  var coEarlyEve=r2(combined/8),coMid=r2(mid12/8),coWknd=r2(wkTotal/8);
+  var totalCO=r2(coEligible/8);
   var used=0; c.forEach(function(x){ used+=parseFloat(x.days)||0; });
   var remEve=combined===0?8:(combined%8===0?0:8-(combined%8));
   return {sessions:s.length,eveCred,earlyCred,mid11,mid12,wk11,wk12,
-          coEarlyEve,coMid,coWknd,totalCO,used,balance:totalCO-used,remEve:r2(remEve)};
+          coEarlyEve,coMid,coWknd,totalCO,used,balance:r2(totalCO-used),remEve:r2(remEve)};
 }
 
 // == RENDER SESSIONS ==============================================
@@ -452,15 +459,15 @@ async function renderSummary(emp) {
   document.getElementById('summary-content').innerHTML=
     '<div class="summary-grid">'+
     '<div class="stat-card navy"><div class="stat-label">Total Sessions</div><div class="stat-value">'+s.sessions+'</div></div>'+
-    '<div class="stat-card '+bc+'"><div class="stat-label">CO Balance</div><div class="stat-value" style="color:'+(s.balance<0?'var(--danger)':s.balance>0?'var(--success)':'var(--navy)')+'">'+s.balance+'</div><div class="stat-sub">Earned: '+s.totalCO+' | Used: '+s.used+'</div></div>'+
-    '<div class="stat-card teal"><div class="stat-label">Rem. to Next CO</div><div class="stat-value">'+s.remEve+'</div><div class="stat-sub">Eve+Early hrs needed</div></div>'+
+    '<div class="stat-card '+bc+'"><div class="stat-label">CO Balance</div><div class="stat-value" style="color:'+(s.balance<0?'var(--danger)':s.balance>0?'var(--success)':'var(--navy)')+'">'+fmtNumber(s.balance,2)+'</div><div class="stat-sub">Earned: '+fmtNumber(s.totalCO,2)+' | Used: '+fmtNumber(s.used,2)+'</div></div>'+
+    '<div class="stat-card teal"><div class="stat-label">Eve + Early CO</div><div class="stat-value">'+fmtNumber(s.coEarlyEve,2)+'</div><div class="stat-sub">CO days from those hrs</div></div>'+
     '</div><div class="summary-grid">'+
     '<div class="stat-card eve"><div class="stat-label">Eve Credited</div><div class="stat-value">'+r2(s.eveCred)+'</div><div class="stat-sub">hrs (pools with Early)</div></div>'+
-    '<div class="stat-card early"><div class="stat-label">Early Morning</div><div class="stat-value">'+r2(s.earlyCred)+'</div><div class="stat-sub">hrs → '+s.coEarlyEve+' CO days (combined)</div></div>'+
-    '<div class="stat-card mid"><div class="stat-label">Midnight 1:1</div><div class="stat-value">'+r2(s.mid11)+'</div><div class="stat-sub">hrs</div></div>'+
-    '<div class="stat-card mid"><div class="stat-label">Midnight 1:2</div><div class="stat-value">'+r2(s.mid12)+'</div><div class="stat-sub">hrs → '+s.coMid+' CO days</div></div>'+
-    '<div class="stat-card wknd"><div class="stat-label">Weekend 1:1</div><div class="stat-value">'+r2(s.wk11)+'</div><div class="stat-sub">hrs</div></div>'+
-    '<div class="stat-card wknd"><div class="stat-label">Weekend 1:2</div><div class="stat-value">'+r2(s.wk12)+'</div><div class="stat-sub">hrs → '+s.coWknd+' CO days</div></div>'+
+    '<div class="stat-card early"><div class="stat-label">Early Morning</div><div class="stat-value">'+r2(s.earlyCred)+'</div><div class="stat-sub">hrs → '+fmtNumber(s.coEarlyEve,2)+' CO days</div></div>'+
+    '<div class="stat-card mid"><div class="stat-label">Midnight 1:1</div><div class="stat-value">'+r2(s.mid11)+'</div><div class="stat-sub">hrs (no CO)</div></div>'+
+    '<div class="stat-card mid"><div class="stat-label">Midnight 1:2</div><div class="stat-value">'+r2(s.mid12)+'</div><div class="stat-sub">hrs → '+fmtNumber(s.coMid,2)+' CO days</div></div>'+
+    '<div class="stat-card wknd"><div class="stat-label">Weekend 1:1</div><div class="stat-value">'+r2(s.wk11)+'</div><div class="stat-sub">hrs → '+fmtNumber(s.coWknd,2)+' CO days</div></div>'+
+    '<div class="stat-card wknd"><div class="stat-label">Weekend 1:2</div><div class="stat-value">'+r2(s.wk12)+'</div><div class="stat-sub">hrs (in weekend CO)</div></div>'+
     '</div>';
 }
 

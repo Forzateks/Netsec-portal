@@ -288,6 +288,13 @@
       "category": "fixed",
       "title": "Cancelled tasks sink to the bottom",
       "body": "On the Tasks list, tasks marked Cancelled now sort to the bottom alongside Completed ones — keeping active work (Yet to start, Ongoing, Pending Approval) at the top where it belongs."
+    },
+    {
+      "id": "v142-comp-off-fractional",
+      "version": "v142",
+      "category": "new",
+      "title": "Comp-off now counts partial hours (fractional days)",
+      "body": "Comp-off days are now fractional and all credited OT pools are combined: every eligible hour counts at 8 hours = 1 day, right away — no more rounding down per pool or waiting for hours to 'bank' toward a full day. Your earned total now reflects every eligible hour (e.g. 13.48 credited hours = 1.69 days). Balances recalculated live from your sessions — Mid 1:1 hours still don't earn comp-off."
     }
   ]
 }

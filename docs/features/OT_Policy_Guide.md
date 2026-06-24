@@ -102,7 +102,7 @@ Each session is automatically classified into one band based on date and start t
 - **CO conversion:** 8 credited hours = 1 day
 
 **Example:** Ahmed works 5:00 AM – 8:30 PM on a Saturday.
-- Credited: **15.5 hours** (1 CO day + 7.5 hours banked toward the next)
+- Credited: **15.5 hours** → 15.5 ÷ 8 = **1.94 CO days** (fractional; counted immediately)
 
 ### ⚪ Day
 
@@ -114,15 +114,32 @@ Each session is automatically classified into one band based on date and start t
 
 ## 4. Comp Off — how days are earned
 
-Approved sessions convert to Comp Off at **8 credited hours = 1 day**. The credited hours are tracked in three buckets that don't mix:
+Approved sessions convert to Comp Off at **8 credited hours = 1 day**, counted as
+**fractional days** — partial hours count immediately, there's no rounding down and
+nothing is "banked" waiting to cross a threshold.
 
-| Bucket | What it includes | Example |
-|---|---|---|
-| **Eve + Early** (combined) | All Eve, Early, and Eve/Split hours | 5h Eve + 4h Early = 9h → **1 CO day** + 1h banked |
-| **Midnight 1:2** | Only Mid sessions where raw ≥ 4 hours | 8.5h Mid 1:2 = **1 CO day** + 0.5h banked |
-| **Weekend** | All weekend hours | 15.5h Weekend = **1 CO day** + 7.5h banked |
+**All CO-eligible credited hours are summed together** and divided by 8:
 
-Banked hours roll forward — they don't expire and they keep accumulating until they cross the next 8-hour mark.
+```
+CO days earned  =  (Eve + Early + Eve/Split + Midnight 1:2 + all Weekend hours) ÷ 8
+```
+
+| Counts toward CO | Does **not** count |
+|---|---|
+| Eve, Early, Eve/Split hours | Midnight **1:1** (raw < 4h) — tracked for record only |
+| Midnight **1:2** hours (raw ≥ 4h) | |
+| Weekend 1:1 + 1:2 hours | |
+
+Examples:
+- 5h Eve + 4h Early = 9h → **1.13 CO days**
+- 6.48h Weekend = **0.81 CO days**
+- 7h Eve+Early + 6.48h Weekend (across the year) = 13.48h → **1.69 CO days**
+
+> **Policy change (v142):** comp-off used to be whole days per separate pool, with
+> partial hours banked toward the next full day. As of v142 all eligible hours are
+> combined and counted as fractional days, so partials are credited right away.
+> Balances are computed live from your sessions — there's no migration, the new
+> total simply reflects every eligible hour.
 
 ---
 
@@ -160,8 +177,10 @@ A: The hours after the morning boundary (7:30 AM UAE / 8:00 AM KSA) don't count 
 **Q: Why do my old (pre-2026) weekend hours still show 8h credited even when I worked longer?**
 A: Pre-2026 sessions follow the previous policy (8h cap on weekend). New policy uncaps weekend hours but does not retroactively change historical records unless the manager re-runs a recompute.
 
-**Q: Do banked hours expire?**
-A: No. They roll forward indefinitely until you accumulate enough to convert to a CO day.
+**Q: Do partial hours count, or do I lose them?**
+A: They count. Every CO-eligible credited hour converts at 8h = 1 day as a fractional
+day, so there's nothing to "lose" or wait for — a 6.48h weekend session is 0.81 of a
+CO day straight away.
 
 **Q: Can I take Comp Off on the same day I earned it?**
 A: No — Comp Off must be requested separately and approved by the manager.

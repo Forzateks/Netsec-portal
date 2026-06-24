@@ -189,8 +189,11 @@ and are rejected/auto-archived). Sessions that straddle the boundary get partial
 | Mid | Crosses midnight starting before eve threshold, OR starts before 5 AM | <4h raw = 1:1, ≥4h raw = 1:2 (cap 8h, capped at morning boundary) | Mid 1:2 pool only |
 | Wknd | Weekend day | 1:1, no cap | Weekend pool (credited = raw hours) |
 
-**Comp-off:** 8 credited hours = 1 day. **Three buckets that never mix:** Eve+Early,
-Mid-1:2, Weekend. Banked hours roll forward indefinitely; they never expire. A mixed
+**Comp-off (v142):** 8 credited hours = 1 day, counted as **fractional days** with
+**all CO-eligible pools combined** — `calcSummary` sums Eve+Early + Mid-1:2 + Weekend
+credited hours and divides by 8 (Mid-1:1 excluded). Partial hours count immediately;
+there is no per-pool flooring and no banking. (Pre-v142 this was `Math.floor` per
+separate pool with partials banked forward — do **not** reintroduce that.) A mixed
 weekday session covering both morning Early and evening Eve OT is stored as band `Eve`
 but `bandBadge()` re-derives and renders both badges.
 

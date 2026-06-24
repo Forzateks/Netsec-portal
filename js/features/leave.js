@@ -132,7 +132,7 @@ async function updateLeavePreview() {
     const s = calcSummary(sessions||[], coRegs||[], currentUser);
     const balAfter = s.balance - reqDays;
     document.getElementById('lv-prev-days').textContent = fmtDays(reqDays);
-    document.getElementById('lv-prev-used').textContent = fmtNumber(s.used,1)+' / '+fmtNumber(s.totalCO,1);
+    document.getElementById('lv-prev-used').textContent = fmtNumber(s.used,2)+' / '+fmtNumber(s.totalCO,2);
     document.getElementById('lv-prev-bal').textContent  = fmtDays(balAfter);
     document.getElementById('lv-prev-bal').style.color  = balAfter<0?'var(--danger)':balAfter<=1?'var(--gold)':'var(--success)';
     return;
@@ -555,9 +555,9 @@ async function renderTeamOTSummary() {
       '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+r2(s.mid12)+'</td>'+
       '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace" title="Weekend 1:1 — earns CO at 8h = 1 day">'+r2(s.wk11)+'</td>'+
       '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+r2(s.wk12)+'</td>'+
-      '<td><strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+s.totalCO+'</strong></td>'+
-      '<td style="font-family:\'DM Mono\',monospace">'+s.used+'</td>'+
-      '<td><strong style="font-family:\'DM Mono\',monospace;color:'+bc+'">'+s.balance+'</strong></td></tr>';
+      '<td><strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+fmtNumber(s.totalCO,2)+'</strong></td>'+
+      '<td style="font-family:\'DM Mono\',monospace">'+fmtNumber(s.used,2)+'</td>'+
+      '<td><strong style="font-family:\'DM Mono\',monospace;color:'+bc+'">'+fmtNumber(s.balance,2)+'</strong></td></tr>';
   }).join('');
   document.getElementById('team-ot-content').innerHTML=
     '<div class="table-wrap"><table><thead><tr>'+
