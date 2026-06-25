@@ -1205,7 +1205,15 @@ var BACKUP_TABLES = [
   { table:'employee_skills',         sheet:'Employee Skills',          idCol:'id' },
   { table:'kb_articles',             sheet:'Knowledge Base',           idCol:'id' },
   { table:'notifications',           sheet:'Notifications',            idCol:'id' },
-  { table:'dashboard_alert_snoozes', sheet:'Dashboard Alert Snoozes',  idCol:'id' }
+  { table:'dashboard_alert_snoozes', sheet:'Dashboard Alert Snoozes',  idCol:'id' },
+  // v143: tables added after the original backup list shipped — were silently
+  // missing from every Full Backup. FK order: tasks before task_assignments,
+  // task_templates before task_template_assignees. team_members is standalone.
+  { table:'team_members',            sheet:'Team Portfolio',           idCol:'id' },
+  { table:'tasks',                   sheet:'Tasks',                    idCol:'id' },
+  { table:'task_assignments',        sheet:'Task Assignments',         idCol:'id' },
+  { table:'task_templates',          sheet:'Task Templates',           idCol:'id' },
+  { table:'task_template_assignees', sheet:'Task Template Assignees',  idCol:'id' }
 ];
 
 // Escape a JS value into a SQL literal safe for an INSERT VALUES clause.

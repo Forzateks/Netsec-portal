@@ -20,7 +20,7 @@ Every Full Backup contains three files:
 | File | Purpose |
 |---|---|
 | `netsec-backup-<DATE>.xlsx` | Every table as a separate sheet. Human-readable. Use this to eyeball data before restoring, or to extract a single row/value when the DB is intact. |
-| `netsec-backup-<DATE>.sql` | Data-only INSERT statements for all 23 tables, in FK-safe order, wrapped in `BEGIN`/`COMMIT`. **This is what you apply during recovery.** |
+| `netsec-backup-<DATE>.sql` | Data-only INSERT statements for all 28 tables, in FK-safe order, wrapped in `BEGIN`/`COMMIT`. **This is what you apply during recovery.** |
 | `README.txt` | One-page summary: when it was generated, table count, row count, pointer to this runbook. |
 
 The backup is **data-only**. The schema (CREATE TABLE statements, RLS policies, functions, triggers) is **not** in the .zip — see Step 2.
@@ -29,7 +29,7 @@ The backup is **data-only**. The schema (CREATE TABLE statements, RLS policies, 
 
 ## Tables covered by the backup
 
-23 tables, in restore order (parents before children):
+28 tables, in restore order (parents before children):
 
 1. `user_profiles`
 2. `customers`
@@ -54,6 +54,13 @@ The backup is **data-only**. The schema (CREATE TABLE statements, RLS policies, 
 21. `kb_articles`
 22. `notifications`
 23. `dashboard_alert_snoozes`
+24. `team_members`
+25. `tasks`
+26. `task_assignments`
+27. `task_templates`
+28. `task_template_assignees`
+
+(`backup_log` is intentionally excluded — it's the backup audit trail, not user data.)
 
 `auth.users` is **not** in the backup — it's owned by Supabase Auth. See Step 6 for re-creating users.
 
@@ -108,7 +115,10 @@ Verify the table count:
 SELECT COUNT(*) FROM information_schema.tables
 WHERE table_schema='public' AND table_type='BASE TABLE';
 ```
-Should be 23.
+Expect ~30: the 28 user-data tables restored here, plus `backup_log` (audit trail)
+and any leftover temp tables (e.g. `_cleanup_v109_backup`). Don't chase an exact
+number — confirm the 28 backup tables from the list above all exist and the count
+matches whatever `docs/schema.sql` defines.
 
 ### Step 5 — Apply the data dump
 
@@ -174,7 +184,12 @@ UNION ALL SELECT 'certificates',            COUNT(*) FROM certificates
 UNION ALL SELECT 'employee_skills',         COUNT(*) FROM employee_skills
 UNION ALL SELECT 'kb_articles',             COUNT(*) FROM kb_articles
 UNION ALL SELECT 'notifications',           COUNT(*) FROM notifications
-UNION ALL SELECT 'dashboard_alert_snoozes', COUNT(*) FROM dashboard_alert_snoozes;
+UNION ALL SELECT 'dashboard_alert_snoozes', COUNT(*) FROM dashboard_alert_snoozes
+UNION ALL SELECT 'team_members',            COUNT(*) FROM team_members
+UNION ALL SELECT 'tasks',                   COUNT(*) FROM tasks
+UNION ALL SELECT 'task_assignments',        COUNT(*) FROM task_assignments
+UNION ALL SELECT 'task_templates',          COUNT(*) FROM task_templates
+UNION ALL SELECT 'task_template_assignees', COUNT(*) FROM task_template_assignees;
 ```
 
 Counts must match the source exactly. If any row count is off, the dump likely hit an FK error — re-check the `BEGIN`/`COMMIT` log in the SQL Editor.
