@@ -4,6 +4,7 @@
 > [`recovery-guide-simple.md`](recovery-guide-simple.md). It explains what can go wrong,
 > the two safety nets (GitHub for the app, backups for the data), and when to use this
 > runbook. *This* file is the detailed click-by-click steps for the data restore.
+> For a one-page crisis reference, print [`EMERGENCY-CARD.md`](EMERGENCY-CARD.md).
 
 **Purpose:** restore the NetSec Portal database from a Full Backup .zip after total Supabase project loss (project deleted, region outage, account compromise, etc.).
 
@@ -84,6 +85,16 @@ If the project is already gone, skip to Step 2 with the most recent available ba
 
 ### Step 2 — Get `schema.sql`
 
+> ⚠️ **This is the #1 thing that makes a restore fail.** The data dump (`.zip`) only works
+> if it's loaded into a database with the **matching structure**. That structure comes from
+> `docs/schema.sql`. If that file is **out of date** (someone added a table/column and didn't
+> refresh it), the data import will throw errors — you'll be debugging mismatches in the
+> middle of an incident. **Keep it current** and you avoid the worst of recovery pain.
+>
+> **How to know it's current:** the last commit that changed `docs/schema.sql` should be on
+> or after the last database migration. If a migration shipped without a matching schema.sql
+> update, it's stale — regenerate it (below) before relying on it.
+
 The schema lives outside the data backup .zip. It's checked into the repo at **`docs/schema.sql`**. That file is the canonical schema — apply it to the new project's SQL Editor in Step 4.
 
 **Keep `docs/schema.sql` fresh.** Any time the live database gets a schema change (new table, new column, new RLS policy, new trigger), regenerate it. Two ways:
@@ -141,6 +152,30 @@ The dump:
 psql 'postgresql://postgres:<PASSWORD>@db.<PROJECT_REF>.supabase.co:5432/postgres' -f netsec-backup-<DATE>.sql
 ```
 Connection string is under **Settings → Database → Connection String**.
+
+### Step 5b — Restore the certificate files (Storage)
+
+The data dump restored the `certificates` **table** (the records), but the actual PDF/image
+files live in Supabase **Storage**, which is **not** in the `.zip`. As of this writing that's
+the **`certificates`** bucket — **~37 files, ~16 MB, private**. Each `certificates` row's
+`file_url` is a path like `<employee-slug>/<timestamp>_<filename>` inside that bucket.
+
+You need a **separate, recent export of the bucket** (see "Backing up the certificate files"
+in [`recovery-guide-simple.md`](recovery-guide-simple.md) §3 — keep one alongside each `.zip`).
+
+To restore:
+
+1. In the new project: **Storage → New bucket** → name it exactly **`certificates`** → set it
+   **Private** (not public) → create.
+2. Upload your saved files back into it, preserving the **same folder paths** as the originals
+   (so each row's `file_url` resolves). The dashboard uploader keeps folder structure if you
+   drag whole folders; for many files, the Supabase CLI (`supabase storage cp --recursive`) or
+   a small script is faster.
+3. Spot-check: in the app, open **Certificates** and preview one — the PDF should load.
+
+**If you don't have the files** (no Storage export was kept): the records still exist, but
+previews/downloads will fail. Either re-collect the PDFs from employees and re-upload, or
+accept the dangling links. This is exactly why §6's checklist says to back up Storage too.
 
 ### Step 6 — Re-invite users via Supabase Auth
 
@@ -203,10 +238,11 @@ Counts must match the source exactly. If any row count is off, the dump likely h
 
 Edit the Supabase URL and anon key in the app:
 
-- In `index.html` (or wherever `sb = supabase.createClient(...)` lives), update:
-  - `https://rxxcrlobbtlvjgcqgjjm.supabase.co` → the new project URL
-  - The anon key string → the new project's anon key
-- Commit + push.
+- In **`js/core/state.js`** (top of file — the `SUPABASE_URL` and `SUPABASE_KEY` constants
+  fed to `supabase.createClient(...)`), update:
+  - `SUPABASE_URL` (`https://rxxcrlobbtlvjgcqgjjm.supabase.co`) → the new project URL
+  - `SUPABASE_KEY` → the new project's anon key (Settings → API → `anon` public)
+- Commit + push to `master`.
 - Cloudflare Pages auto-deploys in ~30s.
 
 Hard-refresh the live site. Log in. Spot-check a few flows:
@@ -214,6 +250,29 @@ Hard-refresh the live site. Log in. Spot-check a few flows:
 - OT Sessions list populated
 - Engagement Summary populated
 - Team Portfolio loads
+
+### Step 8b — If the Cloudflare site itself is gone
+
+Step 8 assumes Cloudflare Pages is still serving the app and just needs the new push. If the
+**Pages project was deleted** or you're rebuilding hosting from scratch, re-create it — the
+code is intact in GitHub, so this is quick:
+
+1. **Cloudflare dashboard → Workers & Pages → Create → Pages → Connect to Git.**
+2. Authorise GitHub and pick the **`Forzateks/Netsec-portal`** repository.
+3. Production branch: **`master`**.
+4. Build settings (this is a plain static site — **no build step**):
+   - **Framework preset:** `None`
+   - **Build command:** *(leave empty)*
+   - **Build output directory:** `/` (the repository root — `index.html` is at the top level)
+   - **Root directory:** *(leave default / empty)*
+5. No environment variables are needed (the Supabase URL + anon key live in the committed
+   code, in `js/core/state.js`).
+6. **Save and Deploy.** You'll get a new `*.pages.dev` URL. Cloudflare re-deploys automatically
+   on every future push to `master`.
+
+> The previous public URL was `netsec-portal.pages.dev`. A new Pages project gets a new
+> subdomain unless you re-attach the same custom domain. Update any bookmarks/links if the
+> URL changes.
 
 ### Step 9 — Re-test the backup pipeline
 
@@ -245,7 +304,7 @@ If anything in steps 4–7 surprises you, fix this runbook before the surprise b
 - **Single-quote-heavy data in `notes` / `manager_comment` / `session_info`:** the dump's `_sqlEscape` doubles single quotes; PostgreSQL accepts newlines / backslashes / tabs as-is inside standard `'...'` strings. No special handling needed.
 - **JSONB column (`inventory_activity_log.field_changes`):** the dump JSON-stringifies the object, escapes single quotes, and inserts as text — PostgreSQL auto-casts to `jsonb` on column type match.
 - **Soft-deleted rows (`is_archived=true` in engagements / amc_contracts / ps_deals):** these are preserved as-is. Restoration carries soft-delete state forward.
-- **Storage buckets (certificates files):** Supabase Storage is NOT in this backup. Cert PDFs etc. live in the `certificates` bucket. If you need to preserve files, separately export the bucket contents via Supabase Studio → Storage → download (no bulk export in the dashboard, may need the CLI or a small script). The `certificates` table's `file_url` references will dangle in the new project until you re-upload the files OR clear the cert rows.
+- **Storage buckets (certificate files):** Supabase Storage is NOT in this backup — see **Step 5b** for the full export/restore procedure. Short version: the `certificates` bucket holds the PDFs (~37 files, ~16 MB); keep a separate recent export of it next to each `.zip`, and re-upload to the same paths during recovery or the `file_url` links dangle.
 
 ---
 

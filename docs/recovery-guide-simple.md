@@ -6,6 +6,9 @@
 This is the simple overview. The exact click-by-click steps live in
 [`disaster-recovery.md`](disaster-recovery.md) — but read this first.
 
+> 🚨 **In a hurry / something's broken right now?** Jump to the one-page
+> [**Emergency Card**](EMERGENCY-CARD.md) — print it and pin it near the desk.
+
 ---
 
 ## 1. The app is made of two halves
@@ -88,8 +91,20 @@ from a backup **you** took. **No backup = no recovery of data.**
 > - **User logins** — after a restore, each person is simply re-invited by email and sets
 >   a new password. Their history is untouched.
 > - **Uploaded certificate PDFs** — the *records* of certificates are backed up, but the
->   actual PDF files are stored separately. If those files matter, download them from
->   Supabase → Storage occasionally and keep them with your backups.
+>   actual PDF files are stored separately (in Supabase "Storage"). Today that's about
+>   **37 files (~16 MB)**, and they are **not** in the `.zip`. If those files matter, back
+>   them up too (next box).
+
+> **How to back up the certificate files (do this occasionally):**
+> 1. Supabase dashboard → **Storage** → open the **`certificates`** bucket.
+> 2. Open each folder and **download** the PDFs to a folder on your PC
+>    (e.g. `cert-files-2026-06-26`). There's no one-click "download all," but at ~37 files
+>    it only takes a few minutes.
+> 3. Keep that folder next to your backup `.zip` (cloud drive + lab server).
+>
+> To put them back after a recovery: re-create a **private** bucket named `certificates`
+> in the new project and upload the files to the **same folder paths**. (The detailed
+> steps are in `disaster-recovery.md`.)
 
 ---
 
@@ -122,10 +137,13 @@ from a backup **you** took. **No backup = no recovery of data.**
 3. Create a **new, empty Supabase project**.
 4. Load the structure (`schema.sql`, kept in GitHub) and then the **data** from your
    backup `.zip` into it.
-5. **Re-invite the team** by email so everyone can log in again.
-6. Point the app at the new Supabase (a small one-line change in the code, pushed to
+5. **Put the certificate files back:** create a private `certificates` bucket in the new
+   project and upload your saved PDF files to the same paths. (Skip if you don't rely on
+   those files.)
+6. **Re-invite the team** by email so everyone can log in again.
+7. Point the app at the new Supabase (a small one-line change in the code, pushed to
    GitHub — Cloudflare re-publishes automatically).
-7. Everyone logs in; history is back.
+8. Everyone logs in; history is back.
 
 → The exact clicks are in [`disaster-recovery.md`](disaster-recovery.md), Steps 1–9.
 The whole thing is roughly **30–45 minutes** for someone following the runbook.
@@ -136,8 +154,11 @@ The whole thing is roughly **30–45 minutes** for someone following the runbook
 2. If it's a **bad change**, rewind to the last good version (revert the commit) and push.
    Cloudflare re-publishes the good version in ~30 seconds.
 3. If the live site is **gone or attacked**, change the Cloudflare + GitHub passwords,
-   then re-connect GitHub to Cloudflare (or trigger a fresh publish). It rebuilds from
-   the clean code in GitHub.
+   then re-publish from GitHub. If the whole Cloudflare Pages project was deleted, make a
+   new one: **Cloudflare → Pages → Create → connect `Forzateks/Netsec-portal` → branch
+   `master`**, and set **Framework preset = None, Build command = (empty), Output
+   directory = `/`**. That's it — it rebuilds from the clean code in GitHub. (Full details
+   in `disaster-recovery.md`.)
 4. **None of your data is touched** in this scenario — the data lives in Supabase, a
    separate place. You're only rebuilding the screens.
 
@@ -147,9 +168,32 @@ The whole thing is roughly **30–45 minutes** for someone following the runbook
 
 ---
 
-## 6. The 5-minute prevention checklist (do these, sleep well)
+## 6. How much could we lose, and how fast can we recover?
+
+Two plain numbers your manager will want:
+
+- **How much data could we lose?** At most, *everything entered since the last backup.*
+  - Back up **weekly** → worst case you lose up to **a week** of entries.
+  - Back up **daily** → worst case **a day**.
+  - This is the single biggest reason to back up often. The app code (in GitHub) is never
+    at risk — only the data, and only back to your last backup.
+- **How long to get back?**
+  - Broken/attacked website → **minutes** (re-publish from GitHub).
+  - Lost Supabase → **~45 minutes** following the runbook, plus a few minutes for the
+    certificate files.
+
+So the honest summary: *with weekly backups, the worst realistic day costs us ~a week of
+data and under an hour of recovery.* Take backups more often and the "week" shrinks.
+
+---
+
+## 7. The 5-minute prevention checklist (do these, sleep well)
 
 - [ ] **Take a Full Backup regularly** (weekly + after big changes). Admin Tools → Full Backup.
+- [ ] **Check the backup actually worked.** Open the Excel file in the `.zip` and confirm
+      it has rows (an empty or unopenable backup is not a backup). 30 seconds.
+- [ ] **Keep the last several backups** (e.g. the last 4–8 weeks), not just one. If the most
+      recent file is ever corrupt, you fall back to the one before it.
 - [ ] **Store each backup in two places** — cloud drive *and* the lab server.
 - [ ] **Protect three logins** and write down who has them: **GitHub**, **Supabase**,
       **Cloudflare**. Turn on two-factor authentication where possible.
@@ -158,12 +202,11 @@ The whole thing is roughly **30–45 minutes** for someone following the runbook
 - [ ] **Once a quarter, do a practice run** of the data recovery on a throwaway Supabase
       project (see the drill section in the technical runbook). The first real recovery
       should not be the first time anyone tries it.
-- [ ] **Occasionally download the certificate PDFs** from Supabase → Storage if those
-      files matter to you.
+- [ ] **Occasionally back up the certificate PDFs** from Supabase → Storage (see §3).
 
 ---
 
-## 7. What you need access to (keep this list safe)
+## 8. What you need access to (keep this list safe)
 
 | Thing | What it's for | Where |
 |---|---|---|
