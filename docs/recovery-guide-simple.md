@@ -178,4 +178,64 @@ from anything on this page.**
 
 ---
 
-*Need the detailed, click-by-click steps? See [`disaster-recovery.md`](disaster-recovery.md).*
+---
+
+## Appendix — Backing up to your PC for **free** (no Pro plan)
+
+**You do NOT need the Supabase Pro plan to back up your data.** The Pro plan only adds
+*automatic* daily backups and point-in-time recovery (a convenience). Taking your own
+backups to your PC is **free and unlimited**. There are two ways — use the first, and
+add the second occasionally for completeness.
+
+### Way 1 — The app's own Full Backup (easiest, do this regularly) ⭐
+
+This is the simplest and needs **no installation**.
+
+1. Log in as the manager → **Admin Tools → Full Backup**.
+2. A `.zip` downloads to your PC (Excel + a technical `.sql` file).
+3. Copy it to a cloud drive **and** the lab server.
+
+This covers **all your data** (28 tables: OT, leave, tasks, customers, inventory, etc.).
+It does **not** include the database structure (that's safe in GitHub as `schema.sql`),
+your user logins, or uploaded certificate PDFs. For day-to-day safety, this is enough —
+combined with GitHub you can fully recover.
+
+### Way 2 — A complete one-file dump with `pg_dump` (occasional, more thorough)
+
+`pg_dump` is the standard, free Postgres backup tool. It produces a **single file with
+everything** — structure *and* data *and* the security rules — which is the most complete
+backup possible. It's a one-time setup, then a single command each time.
+
+**One-time setup:**
+1. Install the free PostgreSQL tools on your PC (this includes `pg_dump`):
+   download from https://www.postgresql.org/download/windows/ (the "command line tools"
+   are enough; you don't have to run a database).
+2. In Supabase: **Settings → Database → Connection string** → copy the **"Session pooler"**
+   connection string. It looks like
+   `postgresql://postgres.rxxcrlobbtlvjgcqgjjm:[PASSWORD]@aws-0-...pooler.supabase.com:5432/postgres`.
+   Replace `[PASSWORD]` with your database password (same page — reset it if you don't
+   know it; resetting only changes the DB password, not the app).
+
+**Each time you want a backup**, open a terminal and run (paste your real connection string):
+
+```bash
+pg_dump "postgresql://postgres.rxxcrlobbtlvjgcqgjjm:YOUR_PASSWORD@aws-0-...pooler.supabase.com:5432/postgres" --no-owner --no-privileges -f netsec-full-2026-06-26.sql
+```
+
+That writes `netsec-full-2026-06-26.sql` to your PC — a complete, restorable copy. Name
+each file with the date and store two copies (cloud drive + lab server).
+
+> **Which should I use?** Use **Way 1 (the app button)** as your regular weekly backup —
+> it's effortless. Use **Way 2 (`pg_dump`)** every so often (e.g. monthly) for a single
+> all-in-one file. Together with GitHub holding the app code, you're covered for free.
+
+### What the Pro plan would add (optional, paid)
+- **Automatic daily backups** taken for you (so you can't forget).
+- **Point-in-time recovery** — rewind the database to any minute in the last N days.
+
+Useful as the team grows, but **not required** — your free manual backups protect the same
+data; they just rely on you remembering to take them.
+
+---
+
+*Need the detailed, click-by-click steps for a full recovery? See [`disaster-recovery.md`](disaster-recovery.md).*
