@@ -1,5 +1,10 @@
 # Disaster Recovery Runbook
 
+> **New here, or non-technical?** Read the plain-English overview first:
+> [`recovery-guide-simple.md`](recovery-guide-simple.md). It explains what can go wrong,
+> the two safety nets (GitHub for the app, backups for the data), and when to use this
+> runbook. *This* file is the detailed click-by-click steps for the data restore.
+
 **Purpose:** restore the NetSec Portal database from a Full Backup .zip after total Supabase project loss (project deleted, region outage, account compromise, etc.).
 
 **Audience:** Mohammed Nasif / Venkatesan / whoever has the GitHub repo + Supabase billing access.
