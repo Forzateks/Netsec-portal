@@ -15,19 +15,52 @@ let _projectsLoaded = false;
 // Customer & engagement lookup
 let CUSTOMERS = []; // [{id, name, status, country}]
 
-// v144: country options for customers. Blank means "not set". Adjust here
-// if a new country is needed — it's a plain text column, so any value saves.
-var CUSTOMER_COUNTRIES = ['UAE','KSA','Oman','Qatar','Bahrain','Kuwait','Kenya','Nigeria','Egypt','Other'];
+// v144/v147: country options for customers. Blank means "not set". The
+// regional ones the team works in most are pinned at the top ("Frequent",
+// using the short forms already in the data — UAE/KSA); the full world list
+// follows alphabetically. The two groups are kept disjoint (the Frequent
+// countries are NOT repeated in the world list) so a country never appears
+// twice and there's one canonical value per country.
+var CUSTOMER_COUNTRIES_FREQUENT = ['UAE','KSA','Oman','Qatar','Bahrain','Kuwait','Kenya','Nigeria','Egypt','Botswana'];
+var CUSTOMER_COUNTRIES_ALL = [
+  'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan',
+  'Bahamas','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi',
+  'Cambodia','Cameroon','Canada','Cape Verde','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo (Brazzaville)','Congo (Kinshasa)','Costa Rica','Croatia','Cuba','Cyprus','Czechia',
+  'Denmark','Djibouti','Dominica','Dominican Republic',
+  'Ecuador','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia',
+  'Fiji','Finland','France',
+  'Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana',
+  'Haiti','Honduras','Hungary',
+  'Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Ivory Coast',
+  'Jamaica','Japan','Jordan',
+  'Kazakhstan','Kiribati','Kosovo','Kyrgyzstan',
+  'Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg',
+  'Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar',
+  'Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','North Korea','North Macedonia','Norway',
+  'Pakistan','Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal',
+  'Romania','Russia','Rwanda',
+  'Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria',
+  'Taiwan','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu',
+  'Uganda','Ukraine','United Kingdom','United States','Uruguay','Uzbekistan',
+  'Vanuatu','Vatican City','Venezuela','Vietnam',
+  'Yemen',
+  'Zambia','Zimbabwe',
+  'Other'
+];
+// Union used for membership checks (e.g. preserving a legacy value on edit).
+var CUSTOMER_COUNTRIES = CUSTOMER_COUNTRIES_FREQUENT.concat(CUSTOMER_COUNTRIES_ALL);
 function _custCountryOptionsHtml(selected) {
-  var opts = '<option value="">— Not set —</option>';
-  CUSTOMER_COUNTRIES.forEach(function(c){
-    opts += '<option'+(c===selected?' selected':'')+'>'+esc2(c)+'</option>';
-  });
-  // Preserve a legacy/typed value not in the list so editing doesn't drop it.
-  if (selected && CUSTOMER_COUNTRIES.indexOf(selected) === -1) {
-    opts += '<option selected>'+esc2(selected)+'</option>';
+  function optsFor(list) {
+    return list.map(function(c){ return '<option'+(c===selected?' selected':'')+'>'+esc2(c)+'</option>'; }).join('');
   }
-  return opts;
+  var html = '<option value="">— Not set —</option>'+
+    '<optgroup label="Frequent">'+optsFor(CUSTOMER_COUNTRIES_FREQUENT)+'</optgroup>'+
+    '<optgroup label="All countries">'+optsFor(CUSTOMER_COUNTRIES_ALL)+'</optgroup>';
+  // Preserve a legacy/typed value not in either list so editing doesn't drop it.
+  if (selected && CUSTOMER_COUNTRIES.indexOf(selected) === -1) {
+    html += '<option selected>'+esc2(selected)+'</option>';
+  }
+  return html;
 }
 let ENGAGEMENTS = []; // [{id, customer_id, name, type, status, vendor, product_line, ...}]
 let PROJECT_CUSTOMER = {}; // { engagementName: customerName }

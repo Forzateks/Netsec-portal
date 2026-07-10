@@ -323,6 +323,13 @@
       "category": "new",
       "title": "Team Overview shows upcoming leave only",
       "body": "The leave-dates column in Team Overview now lists only upcoming approved leave (today onward), so the view stays focused on who's about to be off rather than the whole year's history."
+    },
+    {
+      "id": "v147-all-countries",
+      "version": "v147",
+      "category": "new",
+      "title": "Full country list for customers (+ Botswana)",
+      "body": "The customer Country dropdown now offers every country in the world, with your frequently-used ones (UAE, KSA, Oman, Qatar, Bahrain, Kuwait, Kenya, Nigeria, Egypt, Botswana) pinned at the top for quick access and the full list below. Botswana added."
     }
   ]
 }
