@@ -498,19 +498,18 @@ async function renderLeaveTeam() {
       ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">+'+fmtNumber(annualUpcoming,1)+' approved upcoming</div>' : '';
     var sUpcomingHint = sickUpcoming>0
       ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">+'+fmtNumber(sickUpcoming,1)+' approved upcoming</div>' : '';
-    // v145: list this person's APPROVED leave date ranges for the year, so the
-    // manager sees exactly when each person is off (from → to), not just totals.
-    // Past-dated ranges are dimmed; upcoming ones stay full-colour.
+    // v145/v146: list this person's UPCOMING approved leave date ranges
+    // (end date today or later), so the manager sees exactly when each person
+    // is going to be off (from → to). Past leaves are not shown. Sick tagged.
     var approvedRanges = empRecs
-      .filter(function(r){ return r.status === 'approved' && r.start_date; })
+      .filter(function(r){ return r.status === 'approved' && r.start_date && r.end_date && r.end_date >= todayISO; })
       .sort(function(a,b){ return (a.start_date||'').localeCompare(b.start_date||''); })
       .map(function(r){
         var rng = (r.start_date === r.end_date)
           ? fmtDate(r.start_date)
           : fmtDateRange(r.start_date, r.end_date);
         var tag = ((r.leave_type||'annual') === 'sick') ? ' <span style="color:var(--gold)">(Sick)</span>' : '';
-        var past = (r.end_date && r.end_date < todayISO);
-        return '<div style="white-space:nowrap;font-size:11.5px;'+(past?'color:var(--muted)':'color:var(--navy)')+'">'+esc2(rng)+tag+'</div>';
+        return '<div style="white-space:nowrap;font-size:11.5px;color:var(--navy)">'+esc2(rng)+tag+'</div>';
       });
     var approvedCell = approvedRanges.length ? approvedRanges.join('') : '<span class="dim">—</span>';
     return '<tr>'+
@@ -530,7 +529,7 @@ async function renderLeaveTeam() {
     '<div class="card"><div class="card-title">'+(isManager?'Team':'My')+' Leave Overview '+year+'</div>'+
     '<div class="table-wrap"><table><thead><tr>'+
     '<th>Employee</th>'+
-    '<th>Approved Leave (dates)</th>'+
+    '<th>Upcoming Leave (dates)</th>'+
     '<th>Annual Used</th><th>Annual Rem.</th><th>Usage</th><th>Status</th>'+
     '<th>Sick Used</th><th>Sick Rem.</th><th>Status</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+

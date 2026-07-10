@@ -316,6 +316,13 @@
       "category": "new",
       "title": "Leave Team Overview shows approved dates",
       "body": "The Leave → Team Overview now has an 'Approved Leave (dates)' column showing each person's approved leave date ranges for the year (from → to), so you can see exactly when everyone is off — not just the totals. Past dates are dimmed, upcoming ones stand out, and sick leave is tagged."
+    },
+    {
+      "id": "v146-upcoming-leave-only",
+      "version": "v146",
+      "category": "new",
+      "title": "Team Overview shows upcoming leave only",
+      "body": "The leave-dates column in Team Overview now lists only upcoming approved leave (today onward), so the view stays focused on who's about to be off rather than the whole year's history."
     }
   ]
 }
