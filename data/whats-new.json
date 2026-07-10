@@ -309,6 +309,13 @@
       "category": "new",
       "title": "Customer countries + export",
       "body": "Customers can now be tagged with a country (UAE, KSA, Oman, Qatar, Bahrain, Kuwait, Kenya, Nigeria, Egypt, Other). Set it when adding a customer or via Edit, see it as a sortable column in Manage Customers, and export the whole list (name · country · engagements) to a CSV that opens in Excel."
+    },
+    {
+      "id": "v145-team-overview-leave-dates",
+      "version": "v145",
+      "category": "new",
+      "title": "Leave Team Overview shows approved dates",
+      "body": "The Leave → Team Overview now has an 'Approved Leave (dates)' column showing each person's approved leave date ranges for the year (from → to), so you can see exactly when everyone is off — not just the totals. Past dates are dimmed, upcoming ones stand out, and sick leave is tagged."
     }
   ]
 }
