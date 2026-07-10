@@ -302,6 +302,13 @@
       "category": "fixed",
       "title": "Full Backup now includes Tasks and Team Portfolio",
       "body": "The Full Backup was missing five tables added after it was first built — Tasks (234 rows), Task Assignments, Task Templates, Task Template Assignees, and Team Portfolio. They're now included in every backup and the disaster-recovery runbook, so a restore won't lose that data."
+    },
+    {
+      "id": "v144-customer-country",
+      "version": "v144",
+      "category": "new",
+      "title": "Customer countries + export",
+      "body": "Customers can now be tagged with a country (UAE, KSA, Oman, Qatar, Bahrain, Kuwait, Kenya, Nigeria, Egypt, Other). Set it when adding a customer or via Edit, see it as a sortable column in Manage Customers, and export the whole list (name · country · engagements) to a CSV that opens in Excel."
     }
   ]
 }

@@ -13,7 +13,22 @@ let PROJECTS = [
 let _projectsLoaded = false;
 
 // Customer & engagement lookup
-let CUSTOMERS = []; // [{id, name}]
+let CUSTOMERS = []; // [{id, name, status, country}]
+
+// v144: country options for customers. Blank means "not set". Adjust here
+// if a new country is needed — it's a plain text column, so any value saves.
+var CUSTOMER_COUNTRIES = ['UAE','KSA','Oman','Qatar','Bahrain','Kuwait','Kenya','Nigeria','Egypt','Other'];
+function _custCountryOptionsHtml(selected) {
+  var opts = '<option value="">— Not set —</option>';
+  CUSTOMER_COUNTRIES.forEach(function(c){
+    opts += '<option'+(c===selected?' selected':'')+'>'+esc2(c)+'</option>';
+  });
+  // Preserve a legacy/typed value not in the list so editing doesn't drop it.
+  if (selected && CUSTOMER_COUNTRIES.indexOf(selected) === -1) {
+    opts += '<option selected>'+esc2(selected)+'</option>';
+  }
+  return opts;
+}
 let ENGAGEMENTS = []; // [{id, customer_id, name, type, status, vendor, product_line, ...}]
 let PROJECT_CUSTOMER = {}; // { engagementName: customerName }
 
@@ -54,7 +69,7 @@ async function loadProjects() {
 
   // 2) Fresh fetch — customers + engagements + vendor catalog in parallel.
   const [cRes, eRes, vRes, plRes] = await Promise.all([
-    sb.from('customers').select('id,name,status').order('name'),
+    sb.from('customers').select('id,name,status,country').order('name'),
     sb.from('engagements').select('id,customer_id,name,type,status,vendor,product_line,created_by,created_at').order('name'),
     sb.from('vendors').select('id,name,display_order,is_active').order('display_order').order('name'),
     sb.from('product_lines').select('id,vendor_id,name,display_order,is_active,is_gulfit_relevant').order('display_order').order('name')
@@ -371,7 +386,7 @@ async function updateProjectStatus(idOrName, newStatus) {
 // programmatically (from the inline +Add new customer dropdown flow).
 // Without an argument it returns false instead of throwing — the caller
 // decides how to surface the error.
-async function addCustomer(nameArg) {
+async function addCustomer(nameArg, countryArg) {
   if (!await requireAuth()) return;
   var name = (nameArg !== undefined ? nameArg : '').trim();
   if (!name) return null;
@@ -380,7 +395,8 @@ async function addCustomer(nameArg) {
   var dup = (CUSTOMERS||[]).some(function(c){ return c.name.toLowerCase() === name.toLowerCase(); });
   if (dup) { showError('A customer named "'+name+'" already exists.'); return null; }
 
-  var res = await sb.from('customers').insert({ name: name, status: 'active' }).select().single();
+  var country = (countryArg || '').trim() || null;  // v144
+  var res = await sb.from('customers').insert({ name: name, status: 'active', country: country }).select().single();
   if (res.error) { showError('Error: '+res.error.message); return null; }
   showToast('Customer added ✓');
   _projectsLoaded = false;
@@ -495,6 +511,49 @@ async function addCustomerPrompt() {
   await addCustomer(name);
 }
 
+// v144: Manage Customers "Add Customer" — modal so a country can be set at
+// creation. (The inline "+ Add new customer…" in the engagement form still
+// uses the name-only prompt above; country can be added later via Edit.)
+function openAddCustomerModal() {
+  document.getElementById('add-cust-name').value = '';
+  document.getElementById('add-cust-country').innerHTML = _custCountryOptionsHtml('');
+  var errEl = document.getElementById('add-cust-error');
+  if (errEl) errEl.style.display = 'none';
+  document.getElementById('add-customer-modal').classList.add('show');
+  if (typeof renderIcons === 'function') renderIcons();
+  setTimeout(function(){ var n = document.getElementById('add-cust-name'); if (n && n.focus) n.focus(); }, 60);
+}
+function closeAddCustomerModal() {
+  document.getElementById('add-customer-modal').classList.remove('show');
+}
+async function saveAddCustomer() {
+  var name = (document.getElementById('add-cust-name').value||'').trim();
+  var country = document.getElementById('add-cust-country').value || '';
+  var errEl = document.getElementById('add-cust-error');
+  if (errEl) errEl.style.display = 'none';
+  if (!name) { if (errEl) { errEl.textContent='Customer name is required.'; errEl.style.display='block'; } return; }
+  var dup = (CUSTOMERS||[]).some(function(c){ return c.name.toLowerCase() === name.toLowerCase(); });
+  if (dup) { if (errEl) { errEl.textContent='A customer named "'+name+'" already exists.'; errEl.style.display='block'; } return; }
+  var created = await addCustomer(name, country);
+  if (created) closeAddCustomerModal();
+}
+
+// v144: export the customer master list (name + country + engagement count)
+// to a CSV that opens directly in Excel. Uses the shared CSV helpers.
+function exportCustomersCsv() {
+  var rows = (CUSTOMERS||[]).slice();
+  if (!rows.length) { showToast('No customers to export.'); return; }
+  var counts = {};
+  (ENGAGEMENTS||[]).forEach(function(e){ if (e.is_archived) return; counts[e.customer_id] = (counts[e.customer_id]||0) + 1; });
+  rows.sort(function(a,b){ return String(a.name||'').toLowerCase().localeCompare(String(b.name||'').toLowerCase()); });
+  var lines = [['Customer','Country','Engagements'].map(_pjCsvCell).join(',')];
+  rows.forEach(function(c){
+    lines.push([ c.name, c.country || '', (counts[c.id] || 0) ].map(_pjCsvCell).join(','));
+  });
+  _pjDownloadCsv(lines, 'customers-' + new Date().toISOString().split('T')[0] + '.csv');
+  showToast('Customers exported ✓');
+}
+
 // ─── MANAGE CUSTOMERS TABLE ──────────────────────────────────────
 // Searchable + sortable table on its own page. Edit reuses the
 // existing edit-customer modal; Delete blocks when engagement_count > 0.
@@ -561,6 +620,11 @@ function renderCustomersTable() {
     if (_custMgrSort.by === 'count') {
       av = counts[a.id] || 0;
       bv = counts[b.id] || 0;
+    } else if (_custMgrSort.by === 'country') {
+      // Blank countries sort to the end regardless of direction, so "unset"
+      // rows don't crowd the top when sorting to review coverage.
+      av = String(a.country||'').toLowerCase() || '~~~';
+      bv = String(b.country||'').toLowerCase() || '~~~';
     } else {
       av = String(a.name||'').toLowerCase();
       bv = String(b.name||'').toLowerCase();
@@ -591,6 +655,7 @@ function renderCustomersTable() {
       : '<span class="dim">'+fmtCount(n)+'</span>';
     return '<tr class="cust-mgr-row'+rowCls+'" data-cust-name="'+esc2(c.name||'')+'">'+
       '<td><strong style="color:var(--navy)">'+esc2(c.name)+'</strong></td>'+
+      '<td>'+(c.country ? esc2(c.country) : '<span class="dim">—</span>')+'</td>'+
       '<td class="num">'+countCell+'</td>'+
       '<td style="white-space:nowrap;text-align:right">'+
         '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openEditCustomer('+c.id+')" title="Rename"><i data-lucide="pencil"></i></button>'+
@@ -603,6 +668,7 @@ function renderCustomersTable() {
     '<div class="table-wrap"><table class="cust-mgr-table">'+
       '<thead><tr>'+
         '<th><button class="cust-mgr-sort-btn" onclick="_custMgrSetSort(\'name\')">Customer Name'+sortArrow('name')+'</button></th>'+
+        '<th><button class="cust-mgr-sort-btn" onclick="_custMgrSetSort(\'country\')">Country'+sortArrow('country')+'</button></th>'+
         '<th><button class="cust-mgr-sort-btn" onclick="_custMgrSetSort(\'count\')">Engagements'+sortArrow('count')+'</button></th>'+
         '<th style="text-align:right">Actions</th>'+
       '</tr></thead>'+
@@ -628,6 +694,7 @@ async function openEditCustomer(id) {
   if (error || !data) { showError('Could not load customer.'); return; }
   document.getElementById('edit-cust-id').value = data.id;
   document.getElementById('edit-cust-name').value = data.name || '';
+  document.getElementById('edit-cust-country').innerHTML = _custCountryOptionsHtml(data.country || '');
   document.getElementById('edit-cust-status').value = data.status || 'active';
   document.getElementById('edit-cust-error').style.display = 'none';
   document.getElementById('edit-customer-modal').classList.add('show');
@@ -640,6 +707,7 @@ async function saveEditCustomer() {
   var id = document.getElementById('edit-cust-id').value;
   var name = (document.getElementById('edit-cust-name').value||'').trim();
   var status = document.getElementById('edit-cust-status').value;
+  var country = (document.getElementById('edit-cust-country').value||'').trim() || null;
   var errEl = document.getElementById('edit-cust-error');
   errEl.style.display = 'none';
   if (!name) { errEl.textContent='Customer name is required.'; errEl.style.display='block'; return; }
@@ -651,7 +719,7 @@ async function saveEditCustomer() {
   var dup = (CUSTOMERS||[]).some(function(c){ return String(c.id) !== String(id) && c.name.toLowerCase() === name.toLowerCase(); });
   if (dup) { errEl.textContent='Another customer is already named "'+name+'".'; errEl.style.display='block'; return; }
 
-  var {error} = await sb.from('customers').update({ name: name, status: status }).eq('id', id);
+  var {error} = await sb.from('customers').update({ name: name, status: status, country: country }).eq('id', id);
   if (error) { errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
 
   // If renamed, cascade to every session table that snapshots customer_name
