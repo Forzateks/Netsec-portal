@@ -330,6 +330,13 @@
       "category": "new",
       "title": "Full country list for customers (+ Botswana)",
       "body": "The customer Country dropdown now offers every country in the world, with your frequently-used ones (UAE, KSA, Oman, Qatar, Bahrain, Kuwait, Kenya, Nigeria, Egypt, Botswana) pinned at the top for quick access and the full list below. Botswana added."
+    },
+    {
+      "id": "v148-others-activity-type",
+      "version": "v148",
+      "category": "new",
+      "title": "\"Others\" activity type for POC and Pre-Sales",
+      "body": "Log Session → Activity Type now includes an \"Others\" option for PoC and Pre-Sales-Task sessions, matching every other session type, so you're never stuck without a fitting category."
     }
   ]
 }

@@ -1224,7 +1224,7 @@ const ACTIVITY_TYPES = [
 // pre-sales scoping are a real activity worth tracking. "Tech Review"
 // added in v89 — separate from Tech Proposal since reviewing someone
 // else's proposal is a distinct activity from drafting one.
-const PRESALES_ACTIVITY_TYPES = ['PS Calculation','SOW','Tech Proposal','Design Discussion','Tech Review'];
+const PRESALES_ACTIVITY_TYPES = ['PS Calculation','SOW','Tech Proposal','Design Discussion','Tech Review','Others'];
 
 // Internal-session activity list (session_type='internal'). Distinct
 // from delivery work — no customer or engagement attached.
@@ -1247,7 +1247,8 @@ const POC_ACTIVITY_TYPES = [
   { v:'Initial Configuration',      l:'Initial Config' },
   { v:'PoC Branch Migration',       l:'PoC Branch Migration' },
   { v:'Troubleshooting/Monitoring', l:'Troubleshooting/Monitoring' },
-  { v:'PoC Report',                 l:'PoC Report' }
+  { v:'PoC Report',                 l:'PoC Report' },
+  { v:'Others',                     l:'Others' }
 ];
 
 const DEVICE_MODELS = ['EC-XS','EC-SP','EC-M','EC-10104','EC-10106'];
