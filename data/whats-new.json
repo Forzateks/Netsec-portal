@@ -351,6 +351,13 @@
       "category": "new",
       "title": "Revenue by Year chart for Professional Services",
       "body": "The Professional Services screen now shows a Revenue by Year bar chart above the deal list — total awarded value (Won / In Progress / Completed) per year, in both USD and AED. It's always company-wide, independent of the page's search and filters."
+    },
+    {
+      "id": "v151-revenue-chart-scaling-fix",
+      "version": "v151",
+      "category": "fixed",
+      "title": "Revenue by Year chart scaling fix",
+      "body": "Fixed the Revenue by Year chart (Professional Services) so each bar's value labels sit directly above that bar instead of a fixed height, and the chart no longer shrinks illegibly once several years of data accumulate — it now scrolls horizontally instead, matching how wide tables already behave elsewhere in the app."
     }
   ]
 }
