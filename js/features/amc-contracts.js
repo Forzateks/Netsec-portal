@@ -822,3 +822,80 @@ window.addEventListener('resize', function(){
   }
   _amcLastIsMobile = nowMobile;
 });
+
+// == ACTIVITY LOG (v152) ============================================
+// Mirrors js/features/inventory.js's showInventoryTab()/loadActivityLog()
+// pattern exactly. Note: deliberately doesn't replicate that function's
+// "invsub-*" element lookup — those ids don't exist anywhere in index.html
+// (dead code in the original), so this version omits it rather than
+// copying dead code forward.
+function showAMCTab(tab) {
+  ['contracts','log'].forEach(function(t) {
+    var el = document.getElementById('amctab-'+t);
+    if (el) el.style.display = (t === tab) ? 'block' : 'none';
+  });
+  if (tab === 'contracts') loadAMCContracts();
+  if (tab === 'log')       loadAMCActivityLog();
+  setSidebarSubActive('amc', tab);
+}
+
+async function loadAMCActivityLog() {
+  var container = document.getElementById('amc-log-content');
+  if (!container) return;
+  container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+
+  var res = await sb.from('amc_contract_activity_log')
+    .select('*').order('changed_at', {ascending:false}).limit(200);
+  if (res.error) {
+    container.innerHTML = '<div class="alert alert-error show">Error: '+res.error.message+'</div>';
+    return;
+  }
+  var data = res.data || [];
+  if (!data.length) {
+    container.innerHTML = renderEmptyState({
+      icon: 'history',
+      heading: 'No activity yet',
+      sub: 'When a contract is created, edited, archived, restored, or permanently deleted, the change history shows up here.'
+    });
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
+
+  var actionMeta = {
+    created:              { icon:'✅', color:'var(--success)', label:'Created' },
+    updated:              { icon:'✏️', color:'var(--teal)',    label:'Updated' },
+    archived:             { icon:'📦', color:'var(--muted)',   label:'Archived' },
+    restored:             { icon:'↩️', color:'var(--success)', label:'Restored' },
+    permanently_deleted:  { icon:'🗑️', color:'var(--danger)',  label:'Permanently Deleted' }
+  };
+
+  var rows = '';
+  data.forEach(function(log) {
+    var meta = actionMeta[log.action] || { icon:'•', color:'var(--muted)', label:cap(log.action||'') };
+    var changesHtml = '—';
+    if (log.action === 'updated' && log.field_changes && typeof log.field_changes === 'object') {
+      var parts = [];
+      Object.keys(log.field_changes).forEach(function(f) {
+        var c = log.field_changes[f];
+        parts.push('<span style="color:var(--muted)">'+f+':</span> '+
+          '<span style="color:var(--danger);text-decoration:line-through">'+esc2(String(c.from!=null?c.from:'—'))+'</span>'+
+          ' → <span style="color:var(--success)">'+esc2(String(c.to!=null?c.to:'—'))+'</span>');
+      });
+      changesHtml = parts.join('<br>');
+    }
+    rows +=
+      '<tr>'+
+      '<td style="white-space:nowrap;font-size:12px;color:var(--muted)" title="'+relativeTimeTitle(log.changed_at)+'">'+relativeTime(log.changed_at)+'</td>'+
+      '<td style="font-weight:600">'+esc2(log.customer_name||'')+'</td>'+
+      '<td><span style="color:'+meta.color+';font-weight:600">'+meta.icon+' '+meta.label+'</span></td>'+
+      '<td>'+esc2(log.changed_by||'')+'</td>'+
+      '<td style="font-size:12px;line-height:1.7">'+changesHtml+'</td>'+
+      '</tr>';
+  });
+
+  container.innerHTML =
+    '<div class="table-wrap"><table>'+
+    '<thead><tr><th>Date</th><th>Client</th><th>Action</th><th>Changed By</th><th>Changes</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody>'+
+    '</table></div>';
+}

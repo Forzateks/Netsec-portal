@@ -128,7 +128,7 @@ function showScreen(name) {
   if (name==='kb')         showKBTab('browse');
   if (name==='tracker')    { if (typeof showTrackerTab === 'function') showTrackerTab('all'); if (typeof loadTracker === 'function') loadTracker(); }
   if (name==='certificates') { if (typeof showCertTab === 'function') showCertTab('mine'); }
-  if (name==='amc') { if (typeof loadAMCContracts === 'function') loadAMCContracts(); }
+  if (name==='amc') { if (typeof showAMCTab === 'function') showAMCTab('contracts'); }
   if (name==='psdeals') { if (typeof loadPsDeals === 'function') loadPsDeals(); }
   if (name==='skills')  { if (typeof loadSkills === 'function')  loadSkills(); }
   if (name==='tasks')   { if (typeof loadTasks === 'function')   loadTasks(); }
@@ -178,6 +178,7 @@ function navigateSub(screen, subTab) {
   else if (screen==='kb')        showKBTab(subTab);
   else if (screen==='tracker')   showTrackerTab(subTab);
   else if (screen==='certificates') showCertTab(subTab);
+  else if (screen==='amc')       showAMCTab(subTab);
   closeSidebarOnMobile();
 }
 

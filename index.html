@@ -333,7 +333,15 @@
     <div class="sidebar-item" id="sbi-projects-custmgr" onclick="navigateSub('projects','custmgr');closeSidebarOnMobile()"><i data-lucide="building" class="sidebar-icon"></i>Customers</div>
     <div class="sidebar-item" id="sbi-projects-manage"  onclick="navigateSub('projects','manage');closeSidebarOnMobile()"><i data-lucide="handshake" class="sidebar-icon"></i>Engagements</div>
     <div class="sidebar-item" id="tab-psdeals"          onclick="showScreen('psdeals');closeSidebarOnMobile()"><i data-lucide="briefcase" class="sidebar-icon"></i>Professional Services</div>
-    <div class="sidebar-item" id="tab-amc"              onclick="showScreen('amc');closeSidebarOnMobile()"><i data-lucide="file-text" class="sidebar-icon"></i>AMC Contracts</div>
+    <div class="sidebar-group" id="sbg-amc">
+      <div class="sidebar-item has-children" id="tab-amc" onclick="showScreen('amc');closeSidebarOnMobile()">
+        <i data-lucide="file-text" class="sidebar-icon"></i>AMC Contracts<span class="sidebar-chevron">›</span>
+      </div>
+      <div class="sidebar-submenu">
+        <div class="sidebar-subitem" id="sbi-amc-contracts" onclick="navigateSub('amc','contracts')"><i data-lucide="file-text" class="sidebar-subicon"></i>Contracts</div>
+        <div class="sidebar-subitem" id="sbi-amc-log"       onclick="navigateSub('amc','log')"><i data-lucide="history" class="sidebar-subicon"></i>Activity Log</div>
+      </div>
+    </div>
   </div>
 
   <!-- ── CATALOG: reference data + people-skills ── -->
@@ -1488,30 +1496,48 @@
 
 <!-- ══ AMC CONTRACTS SCREEN (manager-only sidebar entry) ══ -->
 <div class="screen" id="screen-amc">
-  <div class="amc-page-header">
-    <div>
-      <div class="amc-page-title">AMC Contracts</div>
-      <div class="amc-page-sub">Commercial register of every active and past AMC. Use this for renewal tracking and revenue rollups.</div>
+
+  <!-- ── CONTRACTS TAB ── -->
+  <div id="amctab-contracts">
+    <div class="amc-page-header">
+      <div>
+        <div class="amc-page-title">AMC Contracts</div>
+        <div class="amc-page-sub">Commercial register of every active and past AMC. Use this for renewal tracking and revenue rollups.</div>
+      </div>
+      <button class="btn btn-primary manager-only-el" onclick="openAMCContractModal()"><i data-lucide="plus" class="btn-icon"></i>New Contract</button>
     </div>
-    <button class="btn btn-primary manager-only-el" onclick="openAMCContractModal()"><i data-lucide="plus" class="btn-icon"></i>New Contract</button>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <input id="amc-search" oninput="renderAMCContracts()" placeholder="Search client, SO, partner..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:220px;flex:1">
+        <label style="font-size:12px;color:var(--muted);font-weight:600">Region:</label>
+        <div class="ms" id="amc-filter-region"></div>
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Vendor:</label>
+        <div class="ms" id="amc-filter-vendor"></div>
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Year:</label>
+        <select id="amc-filter-year" onchange="renderAMCContracts()" style="width:auto;padding:7px 10px;font-size:13px"></select>
+        <button class="btn btn-sm btn-ghost" onclick="clearAMCFilters()">✕ Clear</button>
+      </div>
+    </div>
+
+    <div id="amc-total-card" class="amc-total-card" style="display:none"></div>
+    <div id="amc-load" class="loading"><div class="spinner"></div>Loading contracts...</div>
+    <div id="amc-content"></div>
   </div>
 
-  <div class="card" style="margin-bottom:14px">
-    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-      <input id="amc-search" oninput="renderAMCContracts()" placeholder="Search client, SO, partner..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:220px;flex:1">
-      <label style="font-size:12px;color:var(--muted);font-weight:600">Region:</label>
-      <div class="ms" id="amc-filter-region"></div>
-      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Vendor:</label>
-      <div class="ms" id="amc-filter-vendor"></div>
-      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Year:</label>
-      <select id="amc-filter-year" onchange="renderAMCContracts()" style="width:auto;padding:7px 10px;font-size:13px"></select>
-      <button class="btn btn-sm btn-ghost" onclick="clearAMCFilters()">✕ Clear</button>
+  <!-- ── ACTIVITY LOG TAB ── -->
+  <div id="amctab-log" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">Activity Log</div>
+        <button class="btn btn-sm btn-ghost" onclick="loadAMCActivityLog()">↻ Refresh</button>
+      </div>
+      <div id="amc-log-content">
+        <div class="loading"><div class="spinner"></div>Loading...</div>
+      </div>
     </div>
   </div>
 
-  <div id="amc-total-card" class="amc-total-card" style="display:none"></div>
-  <div id="amc-load" class="loading"><div class="spinner"></div>Loading contracts...</div>
-  <div id="amc-content"></div>
 </div><!-- /screen-amc -->
 
 <!-- ══ PS DEALS SCREEN (manager-only) ══ -->
