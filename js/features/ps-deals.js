@@ -235,6 +235,33 @@ function _psLinkedEngagementLabel(engId) {
   return '<span class="ps-eng-link" title="Linked engagement"><i data-lucide="link-2" style="width:11px;height:11px;vertical-align:-1px"></i> '+esc2(eng.name)+archBadge+'</span>';
 }
 
+// v150: statuses that count as "closed" revenue for the yearly chart.
+// Quoted hasn't happened yet; Lost/Cancelled never happened.
+var PS_REVENUE_STATUSES = ['won', 'in_progress', 'completed'];
+
+// v150: revenue-by-year aggregation for the "Revenue by Year" chart card.
+// Sums final_ps_value_usd for deals in PS_REVENUE_STATUSES, grouped by
+// awarded_year. Always reads the full PS_DEALS array — independent of
+// every filter/chip on this page (a fixed company-wide figure, not a
+// filtered view). Deals that qualify by status but have no awarded_year
+// set are excluded from every bucket and counted separately so the chart
+// can footnote them (mirrors the AMC Total Value card's missing-value
+// footnote in js/features/amc-contracts.js).
+function _psYearlyRevenue() {
+  var byYear = {};
+  var excludedCount = 0;
+  (PS_DEALS||[]).forEach(function(d){
+    if (d.is_archived) return;
+    if (PS_REVENUE_STATUSES.indexOf(d.status) === -1) return;
+    if (!d.awarded_year) { excludedCount++; return; }
+    byYear[d.awarded_year] = (byYear[d.awarded_year] || 0) + (Number(d.final_ps_value_usd) || 0);
+  });
+  var years = Object.keys(byYear)
+    .map(function(y){ return { year: Number(y), usd: byYear[y] }; })
+    .sort(function(a,b){ return a.year - b.year; });
+  return { years: years, excludedCount: excludedCount };
+}
+
 // ── RENDER ────────────────────────────────────────────────────────
 function renderPsDeals() {
   var content = document.getElementById('ps-content');
