@@ -164,6 +164,13 @@ function renderAMCContracts() {
   var counts = _amcCountByStatus();
   _amcRenderTotalCard(rows);
 
+  // Engagement count per contract via the link table — shared by the main
+  // list and the expired section below.
+  var linksByContract = {};
+  (AMC_CONTRACT_LINKS||[]).forEach(function(l){
+    linksByContract[l.contract_id] = (linksByContract[l.contract_id]||0) + 1;
+  });
+
   // Status chip row (lives above the filter bar)
   var chip = function(key, label, count) {
     var active = (_amcStatusFilter === key);
@@ -183,6 +190,11 @@ function renderAMCContracts() {
       (counts.archived ? chip('archived', '📦 Archived', counts.archived) : '')+
     '</div>';
 
+  // v149: 60+ day expired contracts get their own section below the main
+  // list. Independent of the status chip above; hidden while browsing the
+  // Archived view (that's a separate historical view already).
+  var expiredSectionHtml = (_amcStatusFilter === 'archived') ? '' : _amcRenderExpiredSection(linksByContract);
+
   if (!rows.length) {
     content.innerHTML = chipBar + renderEmptyState({
       icon: (counts.all === 0) ? 'file-plus-2' : 'search-x',
@@ -192,21 +204,16 @@ function renderAMCContracts() {
         : 'Try adjusting the filters or clearing them.',
       btnText: (counts.all === 0 && isManager) ? '+ New Contract' : (counts.all > 0 ? 'Clear filters' : ''),
       btnOnclick: (counts.all === 0 && isManager) ? 'openAMCContractModal()' : (counts.all > 0 ? 'clearAMCFilters()' : '')
-    });
+    }) + expiredSectionHtml;
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
 
-  // Engagement count per contract via the link table
-  var linksByContract = {};
-  (AMC_CONTRACT_LINKS||[]).forEach(function(l){
-    linksByContract[l.contract_id] = (linksByContract[l.contract_id]||0) + 1;
-  });
-
   var isMobile = window.innerWidth < 768;
   var listHtml = isMobile ? _amcRenderCards(rows, linksByContract) : _amcRenderTable(rows, linksByContract);
   content.innerHTML = chipBar + listHtml +
-    '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Showing '+rows.length+' of '+counts.all+' contracts · Sorted by end date</div>';
+    '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Showing '+rows.length+' of '+counts.all+' contracts · Sorted by end date</div>' +
+    expiredSectionHtml;
   if (typeof renderIcons === 'function') renderIcons();
 }
 
@@ -338,6 +345,39 @@ function _amcRenderCards(rows, linksByContract) {
         : '')+
     '</div>';
   }).join('') + '</div>';
+}
+
+// v149: subtotal line for the expired section — same missing-value
+// footnote pattern as _amcRenderTotalCard, just returns a string instead
+// of writing to the fixed #amc-total-card element.
+function _amcExpiredSectionSubtotalHtml(rows) {
+  var n = rows ? rows.length : 0;
+  var sum = 0, missing = 0;
+  (rows||[]).forEach(function(r){
+    var v = r.amc_value_usd;
+    if (v === null || v === undefined || v === '' || isNaN(v)) missing++;
+    else sum += Number(v);
+  });
+  var foot = missing > 0
+    ? ' <span class="amc-expired-section-foot">('+missing+' excluded, missing value)</span>'
+    : '';
+  return 'Total Expired Value: '+_amcFmtUSD(sum, true)+' · '+n+' contract'+(n===1?'':'s')+foot;
+}
+
+// v149: build the "Expired AMC Contracts (60+ days)" section HTML. Reuses
+// the same table/card renderers as the main list — same columns, same
+// badge, same manager Edit/Archive actions. Returns '' when there's
+// nothing to show so renderAMCContracts doesn't add an empty section.
+function _amcRenderExpiredSection(linksByContract) {
+  var rows = _amcLongExpiredContracts();
+  if (!rows.length) return '';
+  var isMobile = window.innerWidth < 768;
+  var listHtml = isMobile ? _amcRenderCards(rows, linksByContract) : _amcRenderTable(rows, linksByContract);
+  return '<div class="amc-expired-section">'+
+    '<div class="amc-expired-section-title">Expired AMC Contracts (60+ days)</div>'+
+    '<div class="amc-expired-section-sub">'+_amcExpiredSectionSubtotalHtml(rows)+'</div>'+
+    listHtml+
+  '</div>';
 }
 
 // ── FILTERS ──────────────────────────────────────────────────────

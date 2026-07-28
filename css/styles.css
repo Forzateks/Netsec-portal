@@ -368,6 +368,14 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .amc-total-sub{font-size:12px;color:var(--muted);margin-top:6px}
 .amc-total-foot{font-size:11px;color:#92400E;margin-top:4px;font-style:italic}
 
+/* v149: "Expired AMC Contracts (60+ days)" section — sits below the main
+   table/cards, separated by a dashed rule rather than its own card so it
+   reads as part of the same page, not a competing panel. */
+.amc-expired-section{margin-top:22px;padding-top:18px;border-top:1px dashed var(--border)}
+.amc-expired-section-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.amc-expired-section-sub{font-size:12px;color:var(--muted);margin-bottom:10px;font-family:'DM Mono',monospace}
+.amc-expired-section-foot{font-family:'DM Sans',sans-serif;font-style:italic;color:#92400E}
+
 /* Status chip strip above the filter bar — same idea as the Tracker
    strip but visually simpler (no count gradient). */
 .amc-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
