@@ -290,14 +290,15 @@ function _psRenderRevenueChart() {
   var bars = data.years.map(function(y, i){
     var x = padL + i*(barW+gap);
     var h = maxUsd > 0 ? Math.round((y.usd/maxUsd) * barAreaH) : 0;
+    if (y.usd > 0 && h < 2) h = 2;
     var barY = padTop + (barAreaH - h);
     var cx = x + barW/2;
     var usdLabel = fmtUsd(y.usd, false);
     var aedLabel = fmtAed(usdToAed(y.usd), false);
     return '<g>'+
       '<rect x="'+x+'" y="'+barY+'" width="'+barW+'" height="'+h+'" rx="4" fill="#00A0D2"/>'+
-      '<text x="'+cx+'" y="'+(padTop-24)+'" text-anchor="middle" font-family="DM Mono,monospace" font-weight="700" font-size="14" fill="#0A1F5C">'+usdLabel+'</text>'+
-      '<text x="'+cx+'" y="'+(padTop-8)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="#6b7280">'+aedLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(barY-24)+'" text-anchor="middle" font-family="DM Mono,monospace" font-weight="700" font-size="14" fill="#0A1F5C">'+usdLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(barY-8)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="#6b7280">'+aedLabel+'</text>'+
       '<text x="'+cx+'" y="'+(padTop+barAreaH+20)+'" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="12" font-weight="600" fill="#0A1F5C">'+y.year+'</text>'+
     '</g>';
   }).join('');
@@ -308,7 +309,9 @@ function _psRenderRevenueChart() {
 
   wrap.innerHTML = '<div class="card" style="margin-bottom:14px">'+
     '<div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">Revenue by Year (Awarded)</div>'+
-    '<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:100%;max-width:'+svgW+'px;height:'+svgH+'px;display:block">'+bars+'</svg>'+
+    '<div style="overflow-x:auto">'+
+    '<svg viewBox="0 0 '+svgW+' '+svgH+'" width="'+svgW+'" height="'+svgH+'" style="display:block">'+bars+'</svg>'+
+    '</div>'+
     footnote+
   '</div>';
 }
