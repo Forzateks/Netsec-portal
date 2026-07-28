@@ -344,6 +344,13 @@
       "category": "new",
       "title": "Expired AMC Contracts section",
       "body": "AMC Contracts that have been expired for more than 60 days now move to their own \"Expired AMC Contracts\" section below the main list, and drop out of the Total AMC Value figure. Editing a contract's dates to a new period moves it straight back to the main list and the total automatically — no separate status field to manage."
+    },
+    {
+      "id": "v150-ps-revenue-chart",
+      "version": "v150",
+      "category": "new",
+      "title": "Revenue by Year chart for Professional Services",
+      "body": "The Professional Services screen now shows a Revenue by Year bar chart above the deal list — total awarded value (Won / In Progress / Completed) per year, in both USD and AED. It's always company-wide, independent of the page's search and filters."
     }
   ]
 }
