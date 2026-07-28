@@ -910,8 +910,11 @@ CREATE POLICY amc_contract_engagements_delete_manager       ON public.amc_contra
 
 -- amc_contract_activity_log — no UPDATE/DELETE policy anywhere below: RLS
 -- denies both by default, making this log genuinely append-only/tamper-proof.
+-- v152 follow-up: INSERT also binds changed_by = current_employee_name(),
+-- so a manager can't attribute a log row to someone else — closes the gap
+-- where changed_by/changed_at were otherwise fully client-controlled.
 CREATE POLICY amc_contract_activity_log_select_authenticated ON public.amc_contract_activity_log FOR SELECT TO authenticated USING (true);
-CREATE POLICY amc_contract_activity_log_insert_manager       ON public.amc_contract_activity_log FOR INSERT TO authenticated WITH CHECK (is_manager_user());
+CREATE POLICY amc_contract_activity_log_insert_manager       ON public.amc_contract_activity_log FOR INSERT TO authenticated WITH CHECK (is_manager_user() AND changed_by = current_employee_name());
 
 -- ps_deals
 CREATE POLICY "ps_deals manager only"      ON public.ps_deals      FOR ALL TO authenticated USING (is_manager_user()) WITH CHECK (is_manager_user());

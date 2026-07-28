@@ -26,7 +26,7 @@ Every Full Backup contains three files:
 | File | Purpose |
 |---|---|
 | `netsec-backup-<DATE>.xlsx` | Every table as a separate sheet. Human-readable. Use this to eyeball data before restoring, or to extract a single row/value when the DB is intact. |
-| `netsec-backup-<DATE>.sql` | Data-only INSERT statements for all 28 tables, in FK-safe order, wrapped in `BEGIN`/`COMMIT`. **This is what you apply during recovery.** |
+| `netsec-backup-<DATE>.sql` | Data-only INSERT statements for all 29 tables, in FK-safe order, wrapped in `BEGIN`/`COMMIT`. **This is what you apply during recovery.** |
 | `README.txt` | One-page summary: when it was generated, table count, row count, pointer to this runbook. |
 
 The backup is **data-only**. The schema (CREATE TABLE statements, RLS policies, functions, triggers) is **not** in the .zip — see Step 2.
@@ -35,7 +35,7 @@ The backup is **data-only**. The schema (CREATE TABLE statements, RLS policies, 
 
 ## Tables covered by the backup
 
-28 tables, in restore order (parents before children):
+29 tables, in restore order (parents before children):
 
 1. `user_profiles`
 2. `customers`
@@ -45,26 +45,27 @@ The backup is **data-only**. The schema (CREATE TABLE statements, RLS policies, 
 6. `engagement_milestones`
 7. `amc_contracts`
 8. `amc_contract_engagements`
-9. `ps_deals`
-10. `ps_milestones`
-11. `unified_sessions`
-12. `ot_sessions`
-13. `annual_leave`
-14. `leave_requests`
-15. `comp_off_register`
-16. `comp_off_requests`
-17. `inventory`
-18. `inventory_activity_log`
-19. `certificates`
-20. `employee_skills`
-21. `kb_articles`
-22. `notifications`
-23. `dashboard_alert_snoozes`
-24. `team_members`
-25. `tasks`
-26. `task_assignments`
-27. `task_templates`
-28. `task_template_assignees`
+9. `amc_contract_activity_log`
+10. `ps_deals`
+11. `ps_milestones`
+12. `unified_sessions`
+13. `ot_sessions`
+14. `annual_leave`
+15. `leave_requests`
+16. `comp_off_register`
+17. `comp_off_requests`
+18. `inventory`
+19. `inventory_activity_log`
+20. `certificates`
+21. `employee_skills`
+22. `kb_articles`
+23. `notifications`
+24. `dashboard_alert_snoozes`
+25. `team_members`
+26. `tasks`
+27. `task_assignments`
+28. `task_templates`
+29. `task_template_assignees`
 
 (`backup_log` is intentionally excluded — it's the backup audit trail, not user data.)
 
@@ -210,6 +211,7 @@ UNION ALL SELECT 'engagements',             COUNT(*) FROM engagements
 UNION ALL SELECT 'engagement_milestones',   COUNT(*) FROM engagement_milestones
 UNION ALL SELECT 'amc_contracts',           COUNT(*) FROM amc_contracts
 UNION ALL SELECT 'amc_contract_engagements',COUNT(*) FROM amc_contract_engagements
+UNION ALL SELECT 'amc_contract_activity_log',COUNT(*) FROM amc_contract_activity_log
 UNION ALL SELECT 'ps_deals',                COUNT(*) FROM ps_deals
 UNION ALL SELECT 'ps_milestones',           COUNT(*) FROM ps_milestones
 UNION ALL SELECT 'unified_sessions',        COUNT(*) FROM unified_sessions
@@ -302,7 +304,7 @@ If anything in steps 4–7 surprises you, fix this runbook before the surprise b
 
 - **Sequences out of sync:** the dump bumps each identity sequence past `max(id)` after the inserts. If you skip that (e.g. only restore a single table manually), the next app insert will fail with a unique-violation. Run the `setval` line by hand to fix.
 - **Single-quote-heavy data in `notes` / `manager_comment` / `session_info`:** the dump's `_sqlEscape` doubles single quotes; PostgreSQL accepts newlines / backslashes / tabs as-is inside standard `'...'` strings. No special handling needed.
-- **JSONB column (`inventory_activity_log.field_changes`):** the dump JSON-stringifies the object, escapes single quotes, and inserts as text — PostgreSQL auto-casts to `jsonb` on column type match.
+- **JSONB columns (`inventory_activity_log.field_changes`, `amc_contract_activity_log.field_changes`):** the dump JSON-stringifies the object, escapes single quotes, and inserts as text — PostgreSQL auto-casts to `jsonb` on column type match.
 - **Soft-deleted rows (`is_archived=true` in engagements / amc_contracts / ps_deals):** these are preserved as-is. Restoration carries soft-delete state forward.
 - **Storage buckets (certificate files):** Supabase Storage is NOT in this backup — see **Step 5b** for the full export/restore procedure. Short version: the `certificates` bucket holds the PDFs (~37 files, ~16 MB); keep a separate recent export of it next to each `.zip`, and re-upload to the same paths during recovery or the `file_url` links dangle.
 
