@@ -337,6 +337,13 @@
       "category": "new",
       "title": "\"Others\" activity type for POC and Pre-Sales",
       "body": "Log Session → Activity Type now includes an \"Others\" option for PoC and Pre-Sales-Task sessions, matching every other session type, so you're never stuck without a fitting category."
+    },
+    {
+      "id": "v149-amc-long-expired-section",
+      "version": "v149",
+      "category": "new",
+      "title": "Expired AMC Contracts section",
+      "body": "AMC Contracts that have been expired for more than 60 days now move to their own \"Expired AMC Contracts\" section below the main list, and drop out of the Total AMC Value figure. Editing a contract's dates to a new period moves it straight back to the main list and the total automatically — no separate status field to manage."
     }
   ]
 }
