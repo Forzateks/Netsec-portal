@@ -70,26 +70,14 @@ async function loadAMCContracts() {
   renderAMCContracts();
 }
 
-// Apply current status-chip + filter-bar selections to the contracts
-// list. Returns the filtered+sorted array.
-function _amcFilteredContracts() {
+// Shared search/region/vendor/year predicate — used by both the main
+// list (_amcFilteredContracts) and the 60+ day expired section
+// (_amcLongExpiredContracts) so the two stay in lockstep.
+function _amcApplyCommonFilters(rows) {
   var search = (((document.getElementById('amc-search')||{}).value)||'').toLowerCase().trim();
   var regions = (typeof msGetValues === 'function') ? msGetValues('amc-filter-region') : [];
   var vendors = (typeof msGetValues === 'function') ? msGetValues('amc-filter-vendor') : [];
   var year    = ((document.getElementById('amc-filter-year')||{}).value)||'';
-
-  // Archived view is its own filter — show archived rows, all other
-  // filters still apply within that set. Every other chip hides archived
-  // by default (the Archived chip is the only path to them).
-  var rows;
-  if (_amcStatusFilter === 'archived') {
-    rows = (AMC_CONTRACTS||[]).filter(function(c){ return !!c.is_archived; });
-  } else {
-    rows = (AMC_CONTRACTS||[]).filter(function(c){ return !c.is_archived; });
-    if (_amcStatusFilter !== 'all') {
-      rows = rows.filter(function(c){ return _amcStatusFor(c).key === _amcStatusFilter; });
-    }
-  }
   if (search) {
     rows = rows.filter(function(c){
       return [c.customer_name, c.git_sales_order, c.partner]
@@ -102,14 +90,46 @@ function _amcFilteredContracts() {
   return rows;
 }
 
+// Apply current status-chip + filter-bar selections to the contracts
+// list. Returns the filtered+sorted array.
+function _amcFilteredContracts() {
+  // Archived view is its own filter — show archived rows, all other
+  // filters still apply within that set. Every other chip hides archived
+  // by default (the Archived chip is the only path to them).
+  var rows;
+  if (_amcStatusFilter === 'archived') {
+    rows = (AMC_CONTRACTS||[]).filter(function(c){ return !!c.is_archived; });
+  } else {
+    // v149: long-expired (60+ days past due) contracts live in their own
+    // section below and are excluded from every non-archived chip bucket.
+    rows = (AMC_CONTRACTS||[]).filter(function(c){ return !c.is_archived && !_amcIsLongExpired(c); });
+    if (_amcStatusFilter !== 'all') {
+      rows = rows.filter(function(c){ return _amcStatusFor(c).key === _amcStatusFilter; });
+    }
+  }
+  return _amcApplyCommonFilters(rows);
+}
+
+// v149: rows for the "Expired AMC Contracts (60+ days)" section — always
+// non-archived + long-expired, independent of the status-chip selection
+// above, but respects the same search/region/vendor/year filters as the
+// main list (see _amcApplyCommonFilters).
+function _amcLongExpiredContracts() {
+  var rows = (AMC_CONTRACTS||[]).filter(function(c){ return !c.is_archived && _amcIsLongExpired(c); });
+  return _amcApplyCommonFilters(rows);
+}
+
 function _amcCountByStatus() {
   // Counts feed the chip badges. "All" + lifecycle counts (active /
-  // expiring / expired) include only non-archived rows so the active
-  // workflow numbers are honest. "archived" is the separate counter
-  // that drives the visibility of the Archived chip.
+  // expiring / expired) include only non-archived, non-long-expired rows
+  // so the active workflow numbers are honest. "archived" is the separate
+  // counter that drives the visibility of the Archived chip. Long-expired
+  // rows aren't counted here — the expired section gets its own count
+  // from _amcLongExpiredContracts().length where it needs it.
   var c = { all:0, active:0, expiring:0, expired:0, archived:0 };
   (AMC_CONTRACTS||[]).forEach(function(row){
     if (row.is_archived) { c.archived += 1; return; }
+    if (_amcIsLongExpired(row)) return;
     c.all += 1;
     var k = _amcStatusFor(row).key;
     if (c[k] !== undefined) c[k] += 1;
