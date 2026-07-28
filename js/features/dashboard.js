@@ -1552,9 +1552,12 @@ function _invalidateLastBackupCache() {
 
 // == BACKUP REMINDER BANNER (v95) ================================
 // Gated on isBackupResponsible. Reads latest backup_log row and
-// renders an amber (3-7 days) or red (>7 days OR never) card at
-// the top of the dashboard. Idempotent: removes any previous banner
-// before deciding whether to draw a new one.
+// renders a red overdue card at the top of the dashboard once 14+
+// days have passed since the last backup (or none was ever taken).
+// v153: collapsed from the old two-stage 3-day-amber/7-day-red
+// schedule to a single 14-day threshold — less frequent nagging.
+// Idempotent: removes any previous banner before deciding whether to
+// draw a new one.
 async function renderBackupReminderBanner() {
   // Wipe existing banner first so re-renders don't stack.
   var existing = document.getElementById('backup-reminder-banner');
@@ -1571,7 +1574,7 @@ async function renderBackupReminderBanner() {
   if (last && last.taken_at) {
     var ms = Date.now() - new Date(last.taken_at).getTime();
     daysSince = Math.floor(ms / 86400000);
-    if (daysSince < 3) return; // fresh enough, no banner
+    if (daysSince < 14) return; // fresh enough, no banner
   }
 
   var tone, icon, title, sub;
@@ -1580,16 +1583,11 @@ async function renderBackupReminderBanner() {
     icon  = '🚨';
     title = 'No backups recorded yet.';
     sub   = 'Take your first full backup now to start the disaster-recovery clock.';
-  } else if (daysSince > 7) {
+  } else {
     tone  = 'danger';
     icon  = '🚨';
     title = 'Last backup: ' + daysSince + ' days ago — overdue.';
     sub   = 'Data loss risk is climbing. Take a fresh backup now.';
-  } else {
-    tone  = 'warn';
-    icon  = '⚠️';
-    title = 'Last backup: ' + daysSince + ' days ago' + (last.taken_by ? ' (taken by ' + esc2(last.taken_by) + ')' : '') + '.';
-    sub   = 'Time to take a fresh one.';
   }
 
   var banner = document.createElement('div');

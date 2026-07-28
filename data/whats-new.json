@@ -365,6 +365,13 @@
       "category": "new",
       "title": "AMC Contracts Activity Log",
       "body": "AMC Contracts now has an Activity Log sub-tab (in the sidebar, under AMC Contracts) recording every create, field edit, archive, restore, and permanent delete — who did it, when, and exactly what changed. Same audit-trail pattern the Inventory screen already has."
+    },
+    {
+      "id": "v153-backup-reminder-14-days",
+      "version": "v153",
+      "category": "fixed",
+      "title": "Backup reminder now every 2 weeks",
+      "body": "The dashboard backup reminder banner no longer nags starting 3 days after your last backup — it now waits until 14 days have passed before showing a single overdue notice."
     }
   ]
 }
