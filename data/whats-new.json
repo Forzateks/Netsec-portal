@@ -358,6 +358,13 @@
       "category": "fixed",
       "title": "Revenue by Year chart scaling fix",
       "body": "Fixed the Revenue by Year chart (Professional Services) so each bar's value labels sit directly above that bar instead of a fixed height, and the chart no longer shrinks illegibly once several years of data accumulate — it now scrolls horizontally instead, matching how wide tables already behave elsewhere in the app."
+    },
+    {
+      "id": "v152-amc-activity-log",
+      "version": "v152",
+      "category": "new",
+      "title": "AMC Contracts Activity Log",
+      "body": "AMC Contracts now has an Activity Log sub-tab (in the sidebar, under AMC Contracts) recording every create, field edit, archive, restore, and permanent delete — who did it, when, and exactly what changed. Same audit-trail pattern the Inventory screen already has."
     }
   ]
 }
