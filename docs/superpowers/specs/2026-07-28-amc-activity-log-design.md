@@ -84,15 +84,40 @@ CREATE POLICY amc_contract_activity_log_insert_manager
 - **Deliberately stricter than `inventory_activity_log`'s current RLS**: this
   table gets no UPDATE or DELETE policy at all (Inventory's existing policy
   is a single blanket `FOR ALL USING (auth.role()='authenticated')`, which —
-  despite `BACKEND.md` describing that table as "append-only" — technically
-  permits authenticated users to modify or delete rows in it). Omitting
-  UPDATE/DELETE policies here means RLS denies both by default for everyone,
-  making this log genuinely tamper-proof. This is a one-line policy
-  difference from the mirrored precedent, not a new pattern.
+  despite `CLAUDE.md`'s own permission table describing that log as
+  "Append-only (no UPDATE/DELETE policy on it)" — technically permits
+  authenticated users to modify or delete rows in it; that line in
+  `CLAUDE.md` is aspirational today, not yet true of the actual policy).
+  Omitting UPDATE/DELETE policies here means RLS denies both by default for
+  everyone, making this log genuinely tamper-proof. This is a one-line
+  policy difference from the mirrored precedent, not a new pattern. Bundled
+  into this same change: tighten `inventory_activity_log`'s policy the same
+  way, which makes `CLAUDE.md`'s existing claim about it finally accurate.
 - INSERT is manager-only (`is_manager_user()`), matching `amc_contracts`
   itself (`amc_contracts_insert_manager`/`_update_manager`/`_delete_manager`)
   rather than Inventory's looser any-authenticated-can-write policy — AMC
   Contracts is already a fully manager-gated screen, so its log should be too.
+
+### 1a. Bundled fix: tighten `inventory_activity_log`'s RLS to match
+
+Same trip to the Supabase SQL Editor, same theme (tamper-proof audit logs),
+so it ships alongside the new table rather than as a separate change:
+
+```sql
+DROP POLICY IF EXISTS inventory_activity_log_authed ON public.inventory_activity_log;
+
+CREATE POLICY inventory_activity_log_select_authenticated
+  ON public.inventory_activity_log FOR SELECT TO authenticated USING (true);
+CREATE POLICY inventory_activity_log_insert_authenticated
+  ON public.inventory_activity_log FOR INSERT TO authenticated WITH CHECK (true);
+```
+
+INSERT stays open to any authenticated user (not manager-gated) — unlike
+AMC Contracts, Inventory already allows non-managers to add/edit devices
+(`CLAUDE.md` §8 permission table: "Inventory | Add/edit; no delete"), so its
+log needs to accept inserts from non-managers too. Only the missing
+UPDATE/DELETE denial is the actual fix. `docs/schema.sql`'s existing
+`inventory_activity_log_authed` policy line is replaced with these two.
 
 ### 2. Logging hook points in `js/features/amc-contracts.js`
 
@@ -152,9 +177,20 @@ the following ship in the same change, not as an afterthought:
 
 - `docs/schema.sql` — add the new `CREATE TABLE`, PK constraint, RLS
   enable, and the two policies, in the same place `amc_contracts` and
-  `inventory_activity_log` already appear.
-- `BACKEND.md` — new numbered table section, same doc style as the existing
-  `### 9. inventory_activity_log` entry, including the "SQL to run" block.
+  `inventory_activity_log` already appear. This is the actual current
+  source of truth for schema — see the note below on `BACKEND.md`.
+- `BACKEND.md` — **not updated for the new table.** Checked: no table added
+  since `kb_articles` (`amc_contracts`, `ps_deals`, `engagements`, the task
+  tables, etc. — over a dozen tables) has its own numbered section in this
+  file; `docs/schema.sql` has been the sole source of truth for schema in
+  practice for a long time despite `BACKEND.md`'s header still claiming
+  otherwise. Adding a lone new section here would be inconsistent with how
+  every other recent table was actually handled, so this change follows the
+  real precedent and skips it. Separately, `BACKEND.md`'s "## RLS Policies"
+  section (~line 320) still describes a "PIN auth, open anon-key policies"
+  model that predates the real Supabase Auth + per-row RLS system described
+  in `CLAUDE.md` §8 — a pre-existing doc-staleness issue, unrelated to this
+  feature, flagged here rather than silently fixed.
 - `js/features/dashboard.js` `BACKUP_TABLES` — add
   `{ table:'amc_contract_activity_log', sheet:'AMC Contract Activity Log', idCol:'id' }`
   in FK-dependency order (after `amc_contract_engagements`, alongside where
@@ -219,3 +255,10 @@ Manual — no automated tests in this repo (`docs/testing/`).
    view's own state correctly (e.g. leaving Contracts mid-filter and coming
    back doesn't lose the filter; Activity Log always shows the full,
    unfiltered list).
+10. After the bundled `inventory_activity_log` RLS fix runs: adding or
+    editing an Inventory device still writes a log row as before (INSERT
+    still works for non-managers). Confirm via the Supabase SQL Editor (or
+    the REST API directly) that an `UPDATE`/`DELETE` against
+    `inventory_activity_log` is now rejected — this can't be exercised
+    through the app UI (nothing in the app ever tries to modify a log row),
+    so it needs a direct check.
