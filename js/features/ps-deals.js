@@ -72,6 +72,7 @@ async function loadPsDeals() {
   PS_DEALS      = dRes.data || [];
   PS_MILESTONES = mRes.data || [];
   _psPopulateFilters();
+  _psRenderRevenueChart();
   renderPsDeals();
 }
 
@@ -263,6 +264,55 @@ function _psYearlyRevenue() {
 }
 
 // ── RENDER ────────────────────────────────────────────────────────
+
+// v150: builds the inline SVG "Revenue by Year" bar chart and writes it
+// to #ps-revenue-chart. Same hand-rolled-SVG technique as buildPieChart()
+// in js/features/projects.js — no charting library. Independent of every
+// filter on this page; called once from loadPsDeals() whenever PS_DEALS
+// refreshes, not from renderPsDeals() (which reruns on every keystroke in
+// the search box — this chart never changes based on that).
+function _psRenderRevenueChart() {
+  var data = _psYearlyRevenue();
+  var wrap = document.getElementById('ps-revenue-chart');
+  if (!wrap) return;
+  if (!data.years.length) {
+    wrap.innerHTML = '<div class="card" style="text-align:center;color:var(--muted);padding:20px;margin-bottom:14px">No revenue recorded yet</div>';
+    return;
+  }
+
+  var barW = 70, gap = 30, padL = 30, padR = 30, padTop = 50, barAreaH = 140, padBottom = 34;
+  var n = data.years.length;
+  var svgW = padL + padR + n*barW + (n-1)*gap;
+  var svgH = padTop + barAreaH + padBottom;
+  var maxUsd = 0;
+  data.years.forEach(function(y){ if (y.usd > maxUsd) maxUsd = y.usd; });
+
+  var bars = data.years.map(function(y, i){
+    var x = padL + i*(barW+gap);
+    var h = maxUsd > 0 ? Math.round((y.usd/maxUsd) * barAreaH) : 0;
+    var barY = padTop + (barAreaH - h);
+    var cx = x + barW/2;
+    var usdLabel = fmtUsd(y.usd, false);
+    var aedLabel = fmtAed(usdToAed(y.usd), false);
+    return '<g>'+
+      '<rect x="'+x+'" y="'+barY+'" width="'+barW+'" height="'+h+'" rx="4" fill="#00A0D2"/>'+
+      '<text x="'+cx+'" y="'+(padTop-24)+'" text-anchor="middle" font-family="DM Mono,monospace" font-weight="700" font-size="14" fill="#0A1F5C">'+usdLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(padTop-8)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="#6b7280">'+aedLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(padTop+barAreaH+20)+'" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="12" font-weight="600" fill="#0A1F5C">'+y.year+'</text>'+
+    '</g>';
+  }).join('');
+
+  var footnote = data.excludedCount > 0
+    ? '<div style="font-size:11px;color:#92400E;font-style:italic;margin-top:6px">'+data.excludedCount+' deal'+(data.excludedCount===1?'':'s')+' excluded — no awarded year set</div>'
+    : '';
+
+  wrap.innerHTML = '<div class="card" style="margin-bottom:14px">'+
+    '<div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">Revenue by Year (Awarded)</div>'+
+    '<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:100%;max-width:'+svgW+'px;height:'+svgH+'px;display:block">'+bars+'</svg>'+
+    footnote+
+  '</div>';
+}
+
 function renderPsDeals() {
   var content = document.getElementById('ps-content');
   if (!content) return;
