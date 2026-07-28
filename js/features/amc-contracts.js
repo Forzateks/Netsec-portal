@@ -18,6 +18,10 @@ var _amcEditingId    = null;             // null = add, number = edit
 // Region dropdown is hardcoded — small fixed list, not worth a table.
 var AMC_REGIONS = ['UAE', 'KSA', 'Qatar', 'Oman', 'Bahrain', 'Kuwait', 'Kenya', 'Other'];
 
+// v149: contracts expired more than this many days move out of the main
+// list into their own "Expired AMC Contracts" section below.
+var AMC_LONG_EXPIRED_DAYS = 60;
+
 // Derive status from end_date relative to today. Days-to-end is
 // surfaced separately so the badge can read "Expires in 62 days".
 function _amcStatusFor(contract) {
@@ -28,6 +32,15 @@ function _amcStatusFor(contract) {
   if (days < 0)  return { key:'expired',  label:'Expired',         days:days };
   if (days <= 90) return { key:'expiring', label:'Expiring Soon',  days:days };
   return            { key:'active',   label:'Active',          days:days };
+}
+
+// v149: true once a contract has been expired for more than
+// AMC_LONG_EXPIRED_DAYS days — routes it into the separate expired
+// section instead of the main list. Doesn't change _amcStatusFor's
+// 'expired' key/badge — same status, different section.
+function _amcIsLongExpired(contract) {
+  var st = _amcStatusFor(contract);
+  return st.key === 'expired' && st.days != null && st.days < -AMC_LONG_EXPIRED_DAYS;
 }
 
 // USD formatter — "1,234,567" for table cells, no decimals for clarity
