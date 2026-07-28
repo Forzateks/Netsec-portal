@@ -18,6 +18,15 @@ var _amcEditingId    = null;             // null = add, number = edit
 // Region dropdown is hardcoded — small fixed list, not worth a table.
 var AMC_REGIONS = ['UAE', 'KSA', 'Qatar', 'Oman', 'Bahrain', 'Kuwait', 'Kenya', 'Other'];
 
+// v152: column → display-label map for the activity log's field diff.
+// Matches inventory.js's fieldLabels pattern exactly.
+var AMC_LOG_FIELD_LABELS = {
+  customer_name:'Client', partner:'Partner', region:'Region', vendor:'Vendor',
+  git_sales_order:'GIT Sales Order', amc_value_usd:'AMC Value (USD)',
+  amc_start_date:'Start Date', amc_end_date:'End Date',
+  booking_year:'Booking Year', notes:'Notes'
+};
+
 // v149: contracts expired more than this many days move out of the main
 // list into their own "Expired AMC Contracts" section below.
 var AMC_LONG_EXPIRED_DAYS = 60;
@@ -581,16 +590,45 @@ async function saveAMCContract() {
 
   var contractId = _amcEditingId;
   if (contractId) {
+    var oldContract = (AMC_CONTRACTS||[]).find(function(x){ return x.id === contractId; });
     var upd = await sb.from('amc_contracts').update(payload).eq('id', contractId);
     if (upd.error) return _amcModalError('Could not save: ' + upd.error.message);
     // Replace link rows wholesale — simpler than diffing.
     var del = await sb.from('amc_contract_engagements').delete().eq('contract_id', contractId);
     if (del.error) return _amcModalError('Could not refresh engagement links: ' + del.error.message);
+    // v152: log only the fields that actually changed. No row is written
+    // if nothing did (matches inventory.js's save-edit-device behavior).
+    if (oldContract) {
+      var fieldChanges = {};
+      Object.keys(AMC_LOG_FIELD_LABELS).forEach(function(k){
+        var oldVal = oldContract[k] != null ? oldContract[k] : '';
+        var newVal = payload[k]    != null ? payload[k]    : '';
+        if (String(oldVal) !== String(newVal)) {
+          fieldChanges[AMC_LOG_FIELD_LABELS[k]] = { from: oldVal, to: newVal };
+        }
+      });
+      if (Object.keys(fieldChanges).length > 0) {
+        await sb.from('amc_contract_activity_log').insert({
+          contract_id:   contractId,
+          customer_name: customerName,
+          changed_by:    currentUser,
+          action:        'updated',
+          field_changes: fieldChanges
+        });
+      }
+    }
   } else {
     payload.created_by = currentUser;
     var ins = await sb.from('amc_contracts').insert(payload).select().single();
     if (ins.error) return _amcModalError('Could not create: ' + ins.error.message);
     contractId = ins.data.id;
+    await sb.from('amc_contract_activity_log').insert({
+      contract_id:   contractId,
+      customer_name: customerName,
+      changed_by:    currentUser,
+      action:        'created',
+      field_changes: payload
+    });
   }
 
   if (checked.length) {
@@ -622,6 +660,13 @@ async function archiveAMCContract(id, name) {
     archived_at: new Date().toISOString()
   }).eq('id', id);
   if (error) { showError('Could not archive: '+error.message); return; }
+  await sb.from('amc_contract_activity_log').insert({
+    contract_id:   id,
+    customer_name: name,
+    changed_by:    currentUser,
+    action:        'archived',
+    field_changes: {}
+  });
   showToast('Archived ✓');
   await loadAMCContracts();
 }
@@ -642,6 +687,13 @@ async function restoreAMCContract(id) {
     archived_at: null
   }).eq('id', id);
   if (error) { showError('Could not restore: '+error.message); return; }
+  await sb.from('amc_contract_activity_log').insert({
+    contract_id:   id,
+    customer_name: c.customer_name || '',
+    changed_by:    currentUser,
+    action:        'restored',
+    field_changes: {}
+  });
   showToast('Restored ✓');
   await loadAMCContracts();
 }
@@ -660,6 +712,16 @@ async function permanentlyDeleteAMCContract(id, name) {
     requireTyping: name,
     confirmText: 'Permanently Delete'
   })) return;
+  // v152: log BEFORE the delete — same ordering as inventory.js's
+  // deleteDevice(), so the entry exists even though the contract it
+  // references won't (no FK on contract_id, so this is safe either way).
+  await sb.from('amc_contract_activity_log').insert({
+    contract_id:   id,
+    customer_name: name,
+    changed_by:    currentUser,
+    action:        'permanently_deleted',
+    field_changes: {}
+  });
   var { error } = await sb.from('amc_contracts').delete().eq('id', id);
   if (error) { showError('Could not delete: '+error.message); return; }
   showToast('Permanently deleted ✓');
