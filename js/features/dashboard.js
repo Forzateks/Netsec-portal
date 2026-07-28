@@ -1191,6 +1191,7 @@ var BACKUP_TABLES = [
   { table:'engagement_milestones',   sheet:'Engagement Milestones',    idCol:'id' },
   { table:'amc_contracts',           sheet:'AMC Contracts',            idCol:'id' },
   { table:'amc_contract_engagements',sheet:'AMC Contract Links',       idCol:'id' },
+  { table:'amc_contract_activity_log',sheet:'AMC Contract Activity Log', idCol:'id' },
   { table:'ps_deals',                sheet:'PS Deals',                 idCol:'id' },
   { table:'ps_milestones',           sheet:'PS Milestones',            idCol:'id' },
   { table:'unified_sessions',        sheet:'Unified Sessions',         idCol:'id' },
@@ -1230,9 +1231,10 @@ function _sqlEscape(v) {
     return String(v);
   }
   if (typeof v === 'object') {
-    // jsonb column — only inventory_activity_log.field_changes in the
-    // current schema. JSON-stringify then escape as text; PG auto-casts
-    // on INSERT into a jsonb column.
+    // jsonb column — inventory_activity_log.field_changes and
+    // amc_contract_activity_log.field_changes in the current schema.
+    // JSON-stringify then escape as text; PG auto-casts on INSERT into
+    // a jsonb column.
     return "'" + JSON.stringify(v).replace(/'/g, "''") + "'";
   }
   return "'" + String(v).replace(/'/g, "''") + "'";
