@@ -332,7 +332,15 @@
     <div class="sidebar-section-label">Customers &amp; Deals</div>
     <div class="sidebar-item" id="sbi-projects-custmgr" onclick="navigateSub('projects','custmgr');closeSidebarOnMobile()"><i data-lucide="building" class="sidebar-icon"></i>Customers</div>
     <div class="sidebar-item" id="sbi-projects-manage"  onclick="navigateSub('projects','manage');closeSidebarOnMobile()"><i data-lucide="handshake" class="sidebar-icon"></i>Engagements</div>
-    <div class="sidebar-item" id="tab-psdeals"          onclick="showScreen('psdeals');closeSidebarOnMobile()"><i data-lucide="briefcase" class="sidebar-icon"></i>Professional Services</div>
+    <div class="sidebar-group" id="sbg-psdeals">
+      <div class="sidebar-item has-children" id="tab-psdeals" onclick="showScreen('psdeals');closeSidebarOnMobile()">
+        <i data-lucide="briefcase" class="sidebar-icon"></i>Professional Services<span class="sidebar-chevron">›</span>
+      </div>
+      <div class="sidebar-submenu">
+        <div class="sidebar-subitem" id="sbi-psdeals-deals" onclick="navigateSub('psdeals','deals')"><i data-lucide="briefcase" class="sidebar-subicon"></i>Deals</div>
+        <div class="sidebar-subitem" id="sbi-psdeals-log"   onclick="navigateSub('psdeals','log')"><i data-lucide="history" class="sidebar-subicon"></i>Activity Log</div>
+      </div>
+    </div>
     <div class="sidebar-group" id="sbg-amc">
       <div class="sidebar-item has-children" id="tab-amc" onclick="showScreen('amc');closeSidebarOnMobile()">
         <i data-lucide="file-text" class="sidebar-icon"></i>AMC Contracts<span class="sidebar-chevron">›</span>
@@ -1542,35 +1550,53 @@
 
 <!-- ══ PS DEALS SCREEN (manager-only) ══ -->
 <div class="screen" id="screen-psdeals">
-  <div class="amc-page-header">
-    <div>
-      <div class="amc-page-title">Professional Services</div>
-      <div class="amc-page-sub">Commercial register of Professional Services engagements — manager only.</div>
+
+  <!-- ── DEALS TAB ── -->
+  <div id="pstab-deals">
+    <div class="amc-page-header">
+      <div>
+        <div class="amc-page-title">Professional Services</div>
+        <div class="amc-page-sub">Commercial register of Professional Services engagements — manager only.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost manager-only-el" onclick="downloadPsDealsCsv()" title="Download CSV"><i data-lucide="download" class="btn-icon"></i>CSV</button>
+        <button class="btn btn-primary manager-only-el" onclick="openPsDealModal()"><i data-lucide="plus" class="btn-icon"></i>New Deal</button>
+      </div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-ghost manager-only-el" onclick="downloadPsDealsCsv()" title="Download CSV"><i data-lucide="download" class="btn-icon"></i>CSV</button>
-      <button class="btn btn-primary manager-only-el" onclick="openPsDealModal()"><i data-lucide="plus" class="btn-icon"></i>New Deal</button>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <input id="ps-search" oninput="renderPsDeals()" placeholder="Search client, partner, remarks..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:220px;flex:1">
+        <label style="font-size:12px;color:var(--muted);font-weight:600">Client:</label>
+        <select id="ps-filter-client" onchange="renderPsDeals()" style="width:auto;padding:7px 10px;font-size:13px"></select>
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Region:</label>
+        <select id="ps-filter-region" onchange="renderPsDeals()" style="width:auto;padding:7px 10px;font-size:13px"></select>
+        <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Year:</label>
+        <select id="ps-filter-year" onchange="renderPsDeals()" style="width:auto;padding:7px 10px;font-size:13px"></select>
+        <button class="btn btn-sm btn-ghost" onclick="clearPsFilters()">✕ Clear</button>
+        <button class="btn btn-sm btn-ghost archived-toggle-btn" id="ps-archived-toggle" onclick="_psToggleArchivedView()" style="margin-left:auto"></button>
+      </div>
+    </div>
+
+    <div id="ps-revenue-chart"></div>
+
+    <div id="ps-load" class="loading"><div class="spinner"></div>Loading deals...</div>
+    <div id="ps-content"></div>
+  </div>
+
+  <!-- ── ACTIVITY LOG TAB ── -->
+  <div id="pstab-log" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">Activity Log</div>
+        <button class="btn btn-sm btn-ghost" onclick="loadPsDealActivityLog()">↻ Refresh</button>
+      </div>
+      <div id="ps-log-content">
+        <div class="loading"><div class="spinner"></div>Loading...</div>
+      </div>
     </div>
   </div>
 
-  <div class="card" style="margin-bottom:14px">
-    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-      <input id="ps-search" oninput="renderPsDeals()" placeholder="Search client, partner, remarks..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-width:220px;flex:1">
-      <label style="font-size:12px;color:var(--muted);font-weight:600">Client:</label>
-      <select id="ps-filter-client" onchange="renderPsDeals()" style="width:auto;padding:7px 10px;font-size:13px"></select>
-      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Region:</label>
-      <select id="ps-filter-region" onchange="renderPsDeals()" style="width:auto;padding:7px 10px;font-size:13px"></select>
-      <label style="font-size:12px;color:var(--muted);font-weight:600;margin-left:6px">Year:</label>
-      <select id="ps-filter-year" onchange="renderPsDeals()" style="width:auto;padding:7px 10px;font-size:13px"></select>
-      <button class="btn btn-sm btn-ghost" onclick="clearPsFilters()">✕ Clear</button>
-      <button class="btn btn-sm btn-ghost archived-toggle-btn" id="ps-archived-toggle" onclick="_psToggleArchivedView()" style="margin-left:auto"></button>
-    </div>
-  </div>
-
-  <div id="ps-revenue-chart"></div>
-
-  <div id="ps-load" class="loading"><div class="spinner"></div>Loading deals...</div>
-  <div id="ps-content"></div>
 </div><!-- /screen-psdeals -->
 
 <!-- PS DEAL CREATE/EDIT MODAL -->

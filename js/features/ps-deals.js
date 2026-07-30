@@ -1425,3 +1425,77 @@ window.addEventListener('resize', function(){
   }
   _psLastIsMobile = nowMobile;
 });
+
+// == ACTIVITY LOG (v154) ============================================
+// Mirrors js/features/amc-contracts.js's showAMCTab()/loadAMCActivityLog()
+// pattern exactly (which itself mirrors inventory.js's Activity Log).
+function showPsDealsTab(tab) {
+  ['deals','log'].forEach(function(t) {
+    var el = document.getElementById('pstab-'+t);
+    if (el) el.style.display = (t === tab) ? 'block' : 'none';
+  });
+  if (tab === 'deals') loadPsDeals();
+  if (tab === 'log')   loadPsDealActivityLog();
+  setSidebarSubActive('psdeals', tab);
+}
+
+async function loadPsDealActivityLog() {
+  var container = document.getElementById('ps-log-content');
+  if (!container) return;
+  container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+
+  var res = await sb.from('ps_deal_activity_log')
+    .select('*').order('changed_at', {ascending:false}).limit(200);
+  if (res.error) {
+    container.innerHTML = '<div class="alert alert-error show">Error: '+res.error.message+'</div>';
+    return;
+  }
+  var data = res.data || [];
+  if (!data.length) {
+    container.innerHTML = renderEmptyState({
+      icon: 'history',
+      heading: 'No activity yet',
+      sub: 'When a deal is created, edited, archived, restored, or permanently deleted, the change history shows up here.'
+    });
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
+
+  var actionMeta = {
+    created:              { icon:'✅', color:'var(--success)', label:'Created' },
+    updated:              { icon:'✏️', color:'var(--teal)',    label:'Updated' },
+    archived:             { icon:'📦', color:'var(--muted)',   label:'Archived' },
+    restored:             { icon:'↩️', color:'var(--success)', label:'Restored' },
+    permanently_deleted:  { icon:'🗑️', color:'var(--danger)',  label:'Permanently Deleted' }
+  };
+
+  var rows = '';
+  data.forEach(function(log) {
+    var meta = actionMeta[log.action] || { icon:'•', color:'var(--muted)', label:cap(log.action||'') };
+    var changesHtml = '—';
+    if (log.action === 'updated' && log.field_changes && typeof log.field_changes === 'object') {
+      var parts = [];
+      Object.keys(log.field_changes).forEach(function(f) {
+        var c = log.field_changes[f];
+        parts.push('<span style="color:var(--muted)">'+f+':</span> '+
+          '<span style="color:var(--danger);text-decoration:line-through">'+esc2(String(c.from!=null?c.from:'—'))+'</span>'+
+          ' → <span style="color:var(--success)">'+esc2(String(c.to!=null?c.to:'—'))+'</span>');
+      });
+      changesHtml = parts.join('<br>');
+    }
+    rows +=
+      '<tr>'+
+      '<td style="white-space:nowrap;font-size:12px;color:var(--muted)" title="'+relativeTimeTitle(log.changed_at)+'">'+relativeTime(log.changed_at)+'</td>'+
+      '<td style="font-weight:600">'+esc2(log.client_name||'')+'</td>'+
+      '<td><span style="color:'+meta.color+';font-weight:600">'+meta.icon+' '+meta.label+'</span></td>'+
+      '<td>'+esc2(log.changed_by||'')+'</td>'+
+      '<td style="font-size:12px;line-height:1.7">'+changesHtml+'</td>'+
+      '</tr>';
+  });
+
+  container.innerHTML =
+    '<div class="table-wrap"><table>'+
+    '<thead><tr><th>Date</th><th>Client</th><th>Action</th><th>Changed By</th><th>Changes</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody>'+
+    '</table></div>';
+}
