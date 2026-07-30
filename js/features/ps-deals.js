@@ -42,6 +42,18 @@ var PS_STATUS_META = {
   cancelled:   { label:'Cancelled',   cls:'ps-st-cancelled' }
 };
 
+// v154: column → display-label map for the activity log's field diff.
+// Matches amc-contracts.js's AMC_LOG_FIELD_LABELS pattern exactly.
+// Milestones are NOT included here — out of scope per the approved spec.
+var PS_LOG_FIELD_LABELS = {
+  client_name:'Client', partner:'Partner', region:'Region', mode:'Mode', vendor:'Vendor',
+  quoted_year:'Quoted Year', quoted_month:'Quoted Month', awarded_year:'Awarded Year',
+  man_days:'Man Days', ps_quoted_tech_usd:'PS Tech (USD)', ps_quoted_sales_usd:'PS Sales (USD)',
+  final_ps_value_usd:'Final PS Value (USD)', status:'Status',
+  consulted_with_tech:'Consulted With (Tech)', remarks:'Remarks',
+  linked_engagement_id:'Linked Engagement'
+};
+
 // v131: status chip-row filter — mirrors the AMC pattern. 'all' means no
 // status filter is applied; clicking a chip narrows the deal list to that
 // lifecycle state. Filter resets on clearPsFilters().
@@ -1128,13 +1140,42 @@ async function savePsDeal() {
 
   var dealId = _psEditingId;
   if (dealId) {
+    var oldDeal = (PS_DEALS||[]).find(function(x){ return x.id === dealId; });
     var upd = await sb.from('ps_deals').update(payload).eq('id', dealId);
     if (upd.error) { _psResetSaveBtn(btn, orig); _psShowModalError('Save failed: '+upd.error.message); return; }
+    // v154: log only the fields that actually changed. No row is written
+    // if nothing did (matches amc-contracts.js's saveAMCContract behavior).
+    if (oldDeal) {
+      var fieldChanges = {};
+      Object.keys(PS_LOG_FIELD_LABELS).forEach(function(k){
+        var oldVal = oldDeal[k] != null ? oldDeal[k] : '';
+        var newVal = payload[k]  != null ? payload[k]  : '';
+        if (String(oldVal) !== String(newVal)) {
+          fieldChanges[PS_LOG_FIELD_LABELS[k]] = { from: oldVal, to: newVal };
+        }
+      });
+      if (Object.keys(fieldChanges).length > 0) {
+        await sb.from('ps_deal_activity_log').insert({
+          deal_id:       dealId,
+          client_name:   client,
+          changed_by:    currentUser,
+          action:        'updated',
+          field_changes: fieldChanges
+        });
+      }
+    }
   } else {
     payload.created_by = currentUser || null;
     var ins = await sb.from('ps_deals').insert(payload).select().single();
     if (ins.error || !ins.data) { _psResetSaveBtn(btn, orig); _psShowModalError('Save failed: '+((ins.error&&ins.error.message)||'no row returned')); return; }
     dealId = ins.data.id;
+    await sb.from('ps_deal_activity_log').insert({
+      deal_id:       dealId,
+      client_name:   client,
+      changed_by:    currentUser,
+      action:        'created',
+      field_changes: payload
+    });
   }
 
   // Id-preserving diff-update for milestones:
@@ -1225,6 +1266,13 @@ async function archivePsDealFromModal() {
     archived_at: new Date().toISOString()
   }).eq('id', _psEditingId);
   if (res.error) { showError('Archive failed: '+res.error.message); return; }
+  await sb.from('ps_deal_activity_log').insert({
+    deal_id:       _psEditingId,
+    client_name:   d.client_name || '',
+    changed_by:    currentUser,
+    action:        'archived',
+    field_changes: {}
+  });
   closePsDealModal();
   showToast('Archived ✓');
   await loadPsDeals();
@@ -1246,6 +1294,13 @@ async function restorePsDeal(id) {
     archived_at: null
   }).eq('id', id);
   if (res.error) { showError('Could not restore: '+res.error.message); return; }
+  await sb.from('ps_deal_activity_log').insert({
+    deal_id:       id,
+    client_name:   d.client_name || '',
+    changed_by:    currentUser,
+    action:        'restored',
+    field_changes: {}
+  });
   showToast('Restored ✓');
   await loadPsDeals();
 }
@@ -1261,6 +1316,16 @@ async function permanentlyDeletePsDeal(id) {
     requireTyping: d.client_name,
     confirmText: 'Permanently Delete'
   })) return;
+  // v154: log BEFORE the delete — same ordering as AMC/Inventory, so the
+  // entry exists even though the deal it references won't (no FK on
+  // deal_id, so this is safe either way).
+  await sb.from('ps_deal_activity_log').insert({
+    deal_id:       id,
+    client_name:   d.client_name || '',
+    changed_by:    currentUser,
+    action:        'permanently_deleted',
+    field_changes: {}
+  });
   var res = await sb.from('ps_deals').delete().eq('id', id);
   if (res.error) { showError('Could not delete: '+res.error.message); return; }
   showToast('Permanently deleted ✓');
