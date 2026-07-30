@@ -1194,6 +1194,7 @@ var BACKUP_TABLES = [
   { table:'amc_contract_activity_log',sheet:'AMC Contract Activity Log', idCol:'id' },
   { table:'ps_deals',                sheet:'PS Deals',                 idCol:'id' },
   { table:'ps_milestones',           sheet:'PS Milestones',            idCol:'id' },
+  { table:'ps_deal_activity_log',    sheet:'PS Deal Activity Log',     idCol:'id' },
   { table:'unified_sessions',        sheet:'Unified Sessions',         idCol:'id' },
   { table:'ot_sessions',             sheet:'OT Sessions',              idCol:'id' },
   { table:'annual_leave',            sheet:'Annual Leave',             idCol:'id' },
