@@ -26,7 +26,7 @@ Every Full Backup contains three files:
 | File | Purpose |
 |---|---|
 | `netsec-backup-<DATE>.xlsx` | Every table as a separate sheet. Human-readable. Use this to eyeball data before restoring, or to extract a single row/value when the DB is intact. |
-| `netsec-backup-<DATE>.sql` | Data-only INSERT statements for all 29 tables, in FK-safe order, wrapped in `BEGIN`/`COMMIT`. **This is what you apply during recovery.** |
+| `netsec-backup-<DATE>.sql` | Data-only INSERT statements for all 30 tables, in FK-safe order, wrapped in `BEGIN`/`COMMIT`. **This is what you apply during recovery.** |
 | `README.txt` | One-page summary: when it was generated, table count, row count, pointer to this runbook. |
 
 The backup is **data-only**. The schema (CREATE TABLE statements, RLS policies, functions, triggers) is **not** in the .zip — see Step 2.
@@ -35,7 +35,7 @@ The backup is **data-only**. The schema (CREATE TABLE statements, RLS policies, 
 
 ## Tables covered by the backup
 
-29 tables, in restore order (parents before children):
+30 tables, in restore order (parents before children):
 
 1. `user_profiles`
 2. `customers`
@@ -48,24 +48,25 @@ The backup is **data-only**. The schema (CREATE TABLE statements, RLS policies, 
 9. `amc_contract_activity_log`
 10. `ps_deals`
 11. `ps_milestones`
-12. `unified_sessions`
-13. `ot_sessions`
-14. `annual_leave`
-15. `leave_requests`
-16. `comp_off_register`
-17. `comp_off_requests`
-18. `inventory`
-19. `inventory_activity_log`
-20. `certificates`
-21. `employee_skills`
-22. `kb_articles`
-23. `notifications`
-24. `dashboard_alert_snoozes`
-25. `team_members`
-26. `tasks`
-27. `task_assignments`
-28. `task_templates`
-29. `task_template_assignees`
+12. `ps_deal_activity_log`
+13. `unified_sessions`
+14. `ot_sessions`
+15. `annual_leave`
+16. `leave_requests`
+17. `comp_off_register`
+18. `comp_off_requests`
+19. `inventory`
+20. `inventory_activity_log`
+21. `certificates`
+22. `employee_skills`
+23. `kb_articles`
+24. `notifications`
+25. `dashboard_alert_snoozes`
+26. `team_members`
+27. `tasks`
+28. `task_assignments`
+29. `task_templates`
+30. `task_template_assignees`
 
 (`backup_log` is intentionally excluded — it's the backup audit trail, not user data.)
 
@@ -214,6 +215,7 @@ UNION ALL SELECT 'amc_contract_engagements',COUNT(*) FROM amc_contract_engagemen
 UNION ALL SELECT 'amc_contract_activity_log',COUNT(*) FROM amc_contract_activity_log
 UNION ALL SELECT 'ps_deals',                COUNT(*) FROM ps_deals
 UNION ALL SELECT 'ps_milestones',           COUNT(*) FROM ps_milestones
+UNION ALL SELECT 'ps_deal_activity_log',    COUNT(*) FROM ps_deal_activity_log
 UNION ALL SELECT 'unified_sessions',        COUNT(*) FROM unified_sessions
 UNION ALL SELECT 'ot_sessions',             COUNT(*) FROM ot_sessions
 UNION ALL SELECT 'annual_leave',            COUNT(*) FROM annual_leave
