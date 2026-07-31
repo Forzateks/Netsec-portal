@@ -1155,13 +1155,16 @@ async function savePsDeal() {
         }
       });
       if (Object.keys(fieldChanges).length > 0) {
-        await sb.from('ps_deal_activity_log').insert({
+        var logRes = await sb.from('ps_deal_activity_log').insert({
           deal_id:       dealId,
           client_name:   client,
           changed_by:    currentUser,
           action:        'updated',
           field_changes: fieldChanges
         });
+        if (logRes.error && typeof reportSilentFail === 'function') {
+          reportSilentFail('ps_deal_activity_log', { op: 'updated', error: logRes.error.message });
+        }
       }
     }
   } else {
@@ -1169,13 +1172,16 @@ async function savePsDeal() {
     var ins = await sb.from('ps_deals').insert(payload).select().single();
     if (ins.error || !ins.data) { _psResetSaveBtn(btn, orig); _psShowModalError('Save failed: '+((ins.error&&ins.error.message)||'no row returned')); return; }
     dealId = ins.data.id;
-    await sb.from('ps_deal_activity_log').insert({
+    var logRes = await sb.from('ps_deal_activity_log').insert({
       deal_id:       dealId,
       client_name:   client,
       changed_by:    currentUser,
       action:        'created',
       field_changes: payload
     });
+    if (logRes.error && typeof reportSilentFail === 'function') {
+      reportSilentFail('ps_deal_activity_log', { op: 'created', error: logRes.error.message });
+    }
   }
 
   // Id-preserving diff-update for milestones:
@@ -1266,13 +1272,16 @@ async function archivePsDealFromModal() {
     archived_at: new Date().toISOString()
   }).eq('id', _psEditingId);
   if (res.error) { showError('Archive failed: '+res.error.message); return; }
-  await sb.from('ps_deal_activity_log').insert({
+  var logRes = await sb.from('ps_deal_activity_log').insert({
     deal_id:       _psEditingId,
     client_name:   d.client_name || '',
     changed_by:    currentUser,
     action:        'archived',
     field_changes: {}
   });
+  if (logRes.error && typeof reportSilentFail === 'function') {
+    reportSilentFail('ps_deal_activity_log', { op: 'archived', error: logRes.error.message });
+  }
   closePsDealModal();
   showToast('Archived ✓');
   await loadPsDeals();
@@ -1294,13 +1303,16 @@ async function restorePsDeal(id) {
     archived_at: null
   }).eq('id', id);
   if (res.error) { showError('Could not restore: '+res.error.message); return; }
-  await sb.from('ps_deal_activity_log').insert({
+  var logRes = await sb.from('ps_deal_activity_log').insert({
     deal_id:       id,
     client_name:   d.client_name || '',
     changed_by:    currentUser,
     action:        'restored',
     field_changes: {}
   });
+  if (logRes.error && typeof reportSilentFail === 'function') {
+    reportSilentFail('ps_deal_activity_log', { op: 'restored', error: logRes.error.message });
+  }
   showToast('Restored ✓');
   await loadPsDeals();
 }
@@ -1319,13 +1331,16 @@ async function permanentlyDeletePsDeal(id) {
   // v154: log BEFORE the delete — same ordering as AMC/Inventory, so the
   // entry exists even though the deal it references won't (no FK on
   // deal_id, so this is safe either way).
-  await sb.from('ps_deal_activity_log').insert({
+  var logRes = await sb.from('ps_deal_activity_log').insert({
     deal_id:       id,
     client_name:   d.client_name || '',
     changed_by:    currentUser,
     action:        'permanently_deleted',
     field_changes: {}
   });
+  if (logRes.error && typeof reportSilentFail === 'function') {
+    reportSilentFail('ps_deal_activity_log', { op: 'permanently_deleted', error: logRes.error.message });
+  }
   var res = await sb.from('ps_deals').delete().eq('id', id);
   if (res.error) { showError('Could not delete: '+res.error.message); return; }
   showToast('Permanently deleted ✓');
