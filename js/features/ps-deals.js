@@ -84,7 +84,6 @@ async function loadPsDeals() {
   PS_DEALS      = dRes.data || [];
   PS_MILESTONES = mRes.data || [];
   _psPopulateFilters();
-  _psRenderRevenueChart();
   renderPsDeals();
 }
 
@@ -252,18 +251,19 @@ function _psLinkedEngagementLabel(engId) {
 // Quoted hasn't happened yet; Lost/Cancelled never happened.
 var PS_REVENUE_STATUSES = ['won', 'in_progress', 'completed'];
 
-// v150: revenue-by-year aggregation for the "Revenue by Year" chart card.
+// v150: revenue-by-year aggregation for the "Revenue by Year" chart.
 // Sums final_ps_value_usd for deals in PS_REVENUE_STATUSES, grouped by
-// awarded_year. Always reads the full PS_DEALS array — independent of
-// every filter/chip on this page (a fixed company-wide figure, not a
-// filtered view). Deals that qualify by status but have no awarded_year
+// awarded_year. Deals that qualify by status but have no awarded_year
 // set are excluded from every bucket and counted separately so the chart
 // can footnote them (mirrors the AMC Total Value card's missing-value
 // footnote in js/features/amc-contracts.js).
-function _psYearlyRevenue() {
+// v157: takes rows as an argument (the Graphs tab fetches its own) rather
+// than reading the PS_DEALS global — the chart lives on its own sub-tab now
+// and must not depend on the Deals tab having been visited first.
+function _psYearlyRevenue(rows) {
   var byYear = {};
   var excludedCount = 0;
-  (PS_DEALS||[]).forEach(function(d){
+  (rows||[]).forEach(function(d){
     if (d.is_archived) return;
     if (PS_REVENUE_STATUSES.indexOf(d.status) === -1) return;
     if (!d.awarded_year) { excludedCount++; return; }
@@ -277,18 +277,44 @@ function _psYearlyRevenue() {
 
 // ── RENDER ────────────────────────────────────────────────────────
 
-// v150: builds the inline SVG "Revenue by Year" bar chart and writes it
-// to #ps-revenue-chart. Same hand-rolled-SVG technique as buildPieChart()
-// in js/features/projects.js — no charting library. Independent of every
-// filter on this page; called once from loadPsDeals() whenever PS_DEALS
-// refreshes, not from renderPsDeals() (which reruns on every keystroke in
-// the search box — this chart never changes based on that).
-function _psRenderRevenueChart() {
-  var data = _psYearlyRevenue();
-  var wrap = document.getElementById('ps-revenue-chart');
+// v157: the Graphs sub-tab fetches its own rows instead of reading the
+// PS_DEALS cache, so the tab works when opened directly (without visiting
+// Deals first) and is always fresh after an edit. Mirrors loadAMCGraphs()
+// in js/features/amc-contracts.js.
+async function loadPsGraphs() {
+  var el = document.getElementById('ps-graphs-content');
+  if (!el) return;
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+
+  var res = await sb.from('ps_deals')
+    .select('awarded_year,final_ps_value_usd,status,is_archived');
+  if (res.error) {
+    el.innerHTML = '<div class="alert alert-error show">Error: '+res.error.message+'</div>';
+    return;
+  }
+  _psRenderRevenueChart(res.data || []);
+}
+
+// v150: builds the inline SVG "Revenue by Year" bar chart. Same hand-rolled
+// SVG technique as buildPieChart() in js/features/projects.js — no charting
+// library. Deliberately has no filter controls: this is a fixed company-wide
+// figure, not a filtered view.
+// v157: moved out of the Deals tab onto its own Graphs sub-tab, writing to
+// #ps-graphs-content. The card + title now live in index.html (matching the
+// AMC Graphs tab), so this only emits the chart body.
+function _psRenderRevenueChart(rows) {
+  var data = _psYearlyRevenue(rows);
+  var wrap = document.getElementById('ps-graphs-content');
   if (!wrap) return;
   if (!data.years.length) {
-    wrap.innerHTML = '<div class="card" style="text-align:center;color:var(--muted);padding:20px;margin-bottom:14px">No revenue recorded yet</div>';
+    wrap.innerHTML = renderEmptyState({
+      icon: 'bar-chart-3',
+      heading: 'No revenue to chart yet',
+      sub: data.excludedCount > 0
+        ? ('The '+data.excludedCount+' closed deal'+(data.excludedCount===1?'':'s')+' on record '+(data.excludedCount===1?'has':'have')+' no awarded year set, so there is nothing to group by yet.')
+        : 'Once deals are marked Won, In Progress or Completed with an awarded year, revenue per year shows up here.'
+    });
+    if (typeof renderIcons === 'function') renderIcons();
     return;
   }
 
@@ -319,13 +345,11 @@ function _psRenderRevenueChart() {
     ? '<div style="font-size:11px;color:#92400E;font-style:italic;margin-top:6px">'+data.excludedCount+' deal'+(data.excludedCount===1?'':'s')+' excluded — no awarded year set</div>'
     : '';
 
-  wrap.innerHTML = '<div class="card" style="margin-bottom:14px">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">Revenue by Year (Awarded)</div>'+
+  wrap.innerHTML =
     '<div style="overflow-x:auto">'+
     '<svg viewBox="0 0 '+svgW+' '+svgH+'" width="'+svgW+'" height="'+svgH+'" style="display:block">'+bars+'</svg>'+
     '</div>'+
-    footnote+
-  '</div>';
+    footnote;
 }
 
 function renderPsDeals() {
@@ -1445,12 +1469,13 @@ window.addEventListener('resize', function(){
 // Mirrors js/features/amc-contracts.js's showAMCTab()/loadAMCActivityLog()
 // pattern exactly (which itself mirrors inventory.js's Activity Log).
 function showPsDealsTab(tab) {
-  ['deals','log'].forEach(function(t) {
+  ['deals','graphs','log'].forEach(function(t) {
     var el = document.getElementById('pstab-'+t);
     if (el) el.style.display = (t === tab) ? 'block' : 'none';
   });
-  if (tab === 'deals') loadPsDeals();
-  if (tab === 'log')   loadPsDealActivityLog();
+  if (tab === 'deals')  loadPsDeals();
+  if (tab === 'graphs') loadPsGraphs();
+  if (tab === 'log')    loadPsDealActivityLog();
   setSidebarSubActive('psdeals', tab);
 }
 

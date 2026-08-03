@@ -395,6 +395,22 @@
       "body": "Reports → Customer Summary now shows a Working Days column right next to Total hours, so you can read effort in days without doing the maths. Same hours ÷ 8 convention the Engagement Summary already uses. The column sorts, and it's included in the CSV export.",
       "link": "customer-summary",
       "link_text": "Open Customer Summary"
+    },
+    {
+      "id": "v157-update-prompt-once",
+      "version": "v157",
+      "category": "fixed",
+      "title": "Update prompt no longer repeats",
+      "body": "Pressing Update used to bring the prompt straight back a second time, because the app re-registered its service worker under a new address on every release and the browser treated that as another update. The address is now fixed, so one press is enough — and if two releases go out close together, they arrive as a single update instead of two.",
+      "link": null
+    },
+    {
+      "id": "v157-ps-graphs-tab",
+      "version": "v157",
+      "category": "new",
+      "title": "Professional Services Graphs",
+      "body": "The Revenue by Year chart has moved off the top of the Deals list into its own Graphs sub-tab, under Professional Services in the sidebar — matching AMC Contracts. The deals list now starts at the filters instead of being pushed down by the chart.",
+      "link": null
     }
   ]
 }
