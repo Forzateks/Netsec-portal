@@ -6,10 +6,24 @@
 // browser to actually check for new versions on every launch and reload
 // the page once the new SW takes control.
 //
-// SW_REGISTRATION_URL carries a ?v= cache-buster so a previously stuck
-// HTTP-cached copy of /sw.js can't be served when this file ships. The
-// version number tracks CACHE_VERSION inside sw.js. Bump them together.
-var SW_REGISTRATION_URL = '/sw.js?v=156';
+// APP_VERSION is the app's version number — bumped together with
+// CACHE_VERSION in sw.js and the Sentry release in index.html. It drives
+// the user-menu version label and the "what's new" filter; it is NOT part
+// of the registration URL.
+var APP_VERSION = 'v157';
+
+// v157: the registration URL is deliberately STABLE (no ?v= cache-buster).
+// It used to carry the version, which caused a phantom update prompt on the
+// very next load after a user applied an update: register() with a scriptURL
+// that differs from the existing registration's restarts installation
+// unconditionally — the byte-for-byte "nothing changed" short-circuit only
+// applies when the URL is the same. So a redundant, byte-identical worker
+// installed and parked in `waiting`, firing updatefound and re-showing the
+// Update pill for an update that had just been applied.
+// updateViaCache:'none' below already bypasses the HTTP cache for this
+// script, which is what the ?v= was there to guarantee — so the version in
+// the URL bought nothing and cost a duplicate prompt every single deploy.
+var SW_REGISTRATION_URL = '/sw.js';
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -128,7 +142,7 @@ function _verNum(v) {
 // and renders the modal. Empty list → skip the modal and apply directly so
 // test-only synced-trio bumps don't impose ceremony on users.
 async function showUpdateNotes() {
-  var current = _verNum(SW_REGISTRATION_URL);
+  var current = _verNum(APP_VERSION);
   var items = [];
   try {
     var resp = await fetch('data/whats-new.json', { cache: 'no-store' });
@@ -444,14 +458,16 @@ function initFocusAuthCheck() {
   });
 }
 
-// v116: populate the user-menu version label from SW_REGISTRATION_URL so
-// the trio (sw.js / init.js / index.html Sentry release) stays the single
+// v116: populate the user-menu version label from the app version so the
+// trio (sw.js / init.js / index.html Sentry release) stays the single
 // source of truth — no 4th place to keep in sync.
+// v157: reads APP_VERSION rather than parsing it out of SW_REGISTRATION_URL,
+// which no longer carries a version (see the note on that constant).
 function initAppVersionLabel() {
   var el = document.getElementById('user-menu-version');
   if (!el) return;
-  var m = String(SW_REGISTRATION_URL || '').match(/v=(\d+)/);
-  el.textContent = m ? ('v' + m[1]) : '—';
+  var n = _verNum(APP_VERSION);
+  el.textContent = n ? ('v' + n) : '—';
 }
 
 // v124 a11y: make sidebar navigation keyboard-reachable. The nav items are

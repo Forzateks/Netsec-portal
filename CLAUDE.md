@@ -126,14 +126,23 @@ load last (it wires `window.onload`).
 When the app shell changes meaningfully, **four places must stay in sync**:
 
 1. `sw.js` → `CACHE_VERSION = 'netsec-vNNN'`
-2. `js/core/init.js` → `SW_REGISTRATION_URL = '/sw.js?v=NNN'`
+2. `js/core/init.js` → `APP_VERSION = 'vNNN'`
 3. `index.html` → Sentry `release: 'netsec-portal@vNNN'`
 4. `data/whats-new.json` → add an item with `"version": "vNNN"` (drives the "What's new"
    modal; users see only items newer than their running version)
 
 Bumping the cache version is what forces existing PWA clients (especially iOS) to pick up
-the new shell. The user-menu version label reads from `SW_REGISTRATION_URL`, so the trio
-is the single source of truth — don't add a 5th place.
+the new shell. The user-menu version label and the "what's new" filter both read from
+`APP_VERSION`, so the trio is the single source of truth — don't add a 5th place.
+
+> ⚠️ **`SW_REGISTRATION_URL` must stay `'/sw.js'` — never put the version back in it.**
+> It used to be `'/sw.js?v=NNN'`. Because `register()` restarts installation whenever the
+> scriptURL differs from the existing registration (the byte-for-byte "nothing changed"
+> check only applies at the *same* URL), every deploy installed a redundant byte-identical
+> worker that parked in `waiting` and re-showed the Update pill — so users had to press
+> Update twice, once for the real update and once for a phantom. `updateViaCache:'none'`
+> already bypasses the HTTP cache for the script, which is all the `?v=` was for. Fixed in
+> v157.
 
 ---
 
