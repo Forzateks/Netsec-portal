@@ -830,11 +830,12 @@ window.addEventListener('resize', function(){
 // (dead code in the original), so this version omits it rather than
 // copying dead code forward.
 function showAMCTab(tab) {
-  ['contracts','log'].forEach(function(t) {
+  ['contracts','graphs','log'].forEach(function(t) {
     var el = document.getElementById('amctab-'+t);
     if (el) el.style.display = (t === tab) ? 'block' : 'none';
   });
   if (tab === 'contracts') loadAMCContracts();
+  if (tab === 'graphs')    loadAMCGraphs();
   if (tab === 'log')       loadAMCActivityLog();
   setSidebarSubActive('amc', tab);
 }
@@ -898,4 +899,131 @@ async function loadAMCActivityLog() {
     '<thead><tr><th>Date</th><th>Client</th><th>Action</th><th>Changed By</th><th>Changes</th></tr></thead>'+
     '<tbody>'+rows+'</tbody>'+
     '</table></div>';
+}
+
+// == GRAPHS (v155) ==================================================
+// "AMC Value by Year (Start Date)" — hand-rolled inline SVG bar chart,
+// same technique as _psRenderRevenueChart() in js/features/ps-deals.js
+// and buildPieChart() in js/features/projects.js. No charting library.
+//
+// The tab fetches its own rows instead of reading the AMC_CONTRACTS
+// cache, so it works when opened directly (without visiting Contracts
+// first) and is always fresh after an edit. Same shape as
+// loadAMCActivityLog(). Deliberately has no filter controls — like the
+// PS revenue chart, this is a fixed company-wide figure.
+
+// Gap-filling the year axis is capped at this span. Beyond it only the
+// years that actually have contracts are plotted — a single fat-fingered
+// start date (2202 instead of 2022) would otherwise generate ~180 bars
+// and a 17,000px-wide SVG.
+var AMC_CHART_MAX_YEAR_SPAN = 20;
+
+async function loadAMCGraphs() {
+  var el = document.getElementById('amc-graphs-content');
+  if (!el) return;
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+
+  var res = await sb.from('amc_contracts')
+    .select('amc_start_date,amc_value_usd,is_archived');
+  if (res.error) {
+    el.innerHTML = '<div class="alert alert-error show">Error: '+res.error.message+'</div>';
+    return;
+  }
+  _amcRenderValueChart(res.data || []);
+}
+
+// Year of a Postgres `date` as a number, or null if unparseable.
+// Deliberately string-sliced rather than parsed via new Date(): a date
+// column arrives as 'YYYY-MM-DD', which JS reads as UTC midnight, so a
+// 1-Jan start date can land in the previous year under a negative UTC
+// offset. Slicing can't drift.
+function _amcStartYear(d) {
+  var s = String(d == null ? '' : d).slice(0, 4);
+  return /^\d{4}$/.test(s) ? Number(s) : null;
+}
+
+// Sums amc_value_usd bucketed by the calendar year of amc_start_date.
+// Non-archived only — active, expiring, expired and long-expired all
+// count, because a start-date chart is a historical record: the 2024 bar
+// must not shrink as those contracts lapse. Archived is the app's
+// soft-delete, so archived rows stay out.
+//
+// Contracts with no value are excluded and counted separately so the
+// chart can footnote them, mirroring _amcRenderTotalCard's note.
+function _amcValueByStartYear(rows) {
+  var byYear = {}, missingValue = 0, minY = null, maxY = null;
+  (rows||[]).forEach(function(c){
+    if (c.is_archived) return;
+    var y = _amcStartYear(c.amc_start_date);
+    if (y === null) return;              // NOT NULL in schema — defensive only
+    var v = c.amc_value_usd;
+    if (v === null || v === undefined || v === '' || isNaN(v)) { missingValue++; return; }
+    byYear[y] = (byYear[y] || 0) + Number(v);
+    if (minY === null || y < minY) minY = y;
+    if (maxY === null || y > maxY) maxY = y;
+  });
+
+  var years = [];
+  if (minY !== null && (maxY - minY) <= AMC_CHART_MAX_YEAR_SPAN) {
+    // Continuous axis — gap years render as zero bars so a 2023/2026 pair
+    // doesn't read as two consecutive years.
+    for (var y2 = minY; y2 <= maxY; y2++) years.push({ year: y2, usd: byYear[y2] || 0 });
+  } else {
+    years = Object.keys(byYear)
+      .map(function(k){ return { year: Number(k), usd: byYear[k] }; })
+      .sort(function(a,b){ return a.year - b.year; });
+  }
+  return { years: years, missingValue: missingValue };
+}
+
+function _amcRenderValueChart(rows) {
+  var el = document.getElementById('amc-graphs-content');
+  if (!el) return;
+  var data = _amcValueByStartYear(rows);
+
+  if (!data.years.length) {
+    var m = data.missingValue;
+    el.innerHTML = renderEmptyState({
+      icon: 'bar-chart-3',
+      heading: 'No AMC value to chart yet',
+      sub: m > 0
+        ? ('The '+m+' contract'+(m===1?'':'s')+' on record '+(m===1?'has':'have')+' no AMC value set, so there is nothing to total yet.')
+        : 'Once contracts with a value are recorded, total AMC value per start year shows up here.'
+    });
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
+
+  var barW = 70, gap = 30, padL = 30, padR = 30, padTop = 50, barAreaH = 140, padBottom = 34;
+  var n = data.years.length;
+  var svgW = padL + padR + n*barW + (n-1)*gap;
+  var svgH = padTop + barAreaH + padBottom;
+  var maxUsd = 0;
+  data.years.forEach(function(y){ if (y.usd > maxUsd) maxUsd = y.usd; });
+
+  var bars = data.years.map(function(y, i){
+    var x = padL + i*(barW+gap);
+    var h = maxUsd > 0 ? Math.round((y.usd/maxUsd) * barAreaH) : 0;
+    if (y.usd > 0 && h < 2) h = 2;   // keep a tiny year visible
+    var barY = padTop + (barAreaH - h);
+    var cx = x + barW/2;
+    var usdLabel = fmtUsd(y.usd, false);
+    var aedLabel = fmtAed(usdToAed(y.usd), false);
+    return '<g>'+
+      '<rect x="'+x+'" y="'+barY+'" width="'+barW+'" height="'+h+'" rx="4" fill="#00A0D2"/>'+
+      '<text x="'+cx+'" y="'+(barY-24)+'" text-anchor="middle" font-family="DM Mono,monospace" font-weight="700" font-size="14" fill="#0A1F5C">'+usdLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(barY-8)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="#6b7280">'+aedLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(padTop+barAreaH+20)+'" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="12" font-weight="600" fill="#0A1F5C">'+y.year+'</text>'+
+    '</g>';
+  }).join('');
+
+  var footnote = data.missingValue > 0
+    ? '<div style="font-size:11px;color:#92400E;font-style:italic;margin-top:6px">'+data.missingValue+' contract'+(data.missingValue===1?'':'s')+' excluded — no AMC value set</div>'
+    : '';
+
+  el.innerHTML =
+    '<div style="overflow-x:auto">'+
+    '<svg viewBox="0 0 '+svgW+' '+svgH+'" width="'+svgW+'" height="'+svgH+'" style="display:block">'+bars+'</svg>'+
+    '</div>'+
+    footnote;
 }

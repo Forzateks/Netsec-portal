@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v154',
+    release: 'netsec-portal@v155',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -347,6 +347,7 @@
       </div>
       <div class="sidebar-submenu">
         <div class="sidebar-subitem" id="sbi-amc-contracts" onclick="navigateSub('amc','contracts')"><i data-lucide="file-text" class="sidebar-subicon"></i>Contracts</div>
+        <div class="sidebar-subitem" id="sbi-amc-graphs"    onclick="navigateSub('amc','graphs')"><i data-lucide="bar-chart-3" class="sidebar-subicon"></i>Graphs</div>
         <div class="sidebar-subitem" id="sbi-amc-log"       onclick="navigateSub('amc','log')"><i data-lucide="history" class="sidebar-subicon"></i>Activity Log</div>
       </div>
     </div>
@@ -1531,6 +1532,19 @@
     <div id="amc-total-card" class="amc-total-card" style="display:none"></div>
     <div id="amc-load" class="loading"><div class="spinner"></div>Loading contracts...</div>
     <div id="amc-content"></div>
+  </div>
+
+  <!-- ── GRAPHS TAB ── -->
+  <div id="amctab-graphs" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">AMC Value by Year (Start Date)</div>
+        <button class="btn btn-sm btn-ghost" onclick="loadAMCGraphs()">↻ Refresh</button>
+      </div>
+      <div id="amc-graphs-content">
+        <div class="loading"><div class="spinner"></div>Loading...</div>
+      </div>
+    </div>
   </div>
 
   <!-- ── ACTIVITY LOG TAB ── -->

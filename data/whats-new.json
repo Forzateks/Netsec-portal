@@ -379,6 +379,13 @@
       "category": "new",
       "title": "Professional Services Activity Log",
       "body": "Professional Services now has an Activity Log sub-tab (in the sidebar, under Professional Services) recording every deal create, field edit, archive, restore, and permanent delete — who did it, when, and exactly what changed. Same audit-trail pattern AMC Contracts already has."
+    },
+    {
+      "id": "v155-amc-graphs-tab",
+      "version": "v155",
+      "category": "new",
+      "title": "AMC Contracts Graphs",
+      "body": "AMC Contracts now has a Graphs sub-tab (in the sidebar, under AMC Contracts) charting total AMC value per year, grouped by contract start date, in USD and AED. Same chart style as the Professional Services revenue chart. Archived contracts are excluded; contracts with no value set are footnoted."
     }
   ]
 }
