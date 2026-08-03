@@ -386,6 +386,15 @@
       "category": "new",
       "title": "AMC Contracts Graphs",
       "body": "AMC Contracts now has a Graphs sub-tab (in the sidebar, under AMC Contracts) charting total AMC value per year, grouped by contract start date, in USD and AED. Same chart style as the Professional Services revenue chart. Archived contracts are excluded; contracts with no value set are footnoted."
+    },
+    {
+      "id": "v156-customer-summary-working-days",
+      "version": "v156",
+      "category": "new",
+      "title": "Working Days in Customer Summary",
+      "body": "Reports → Customer Summary now shows a Working Days column right next to Total hours, so you can read effort in days without doing the maths. Same hours ÷ 8 convention the Engagement Summary already uses. The column sorts, and it's included in the CSV export.",
+      "link": "customer-summary",
+      "link_text": "Open Customer Summary"
     }
   ]
 }

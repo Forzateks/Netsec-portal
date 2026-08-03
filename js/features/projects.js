@@ -1612,6 +1612,11 @@ async function renderPjCustomerSummary() {
       customer:    c.customer,
       sessions:    c.sessions,
       total:       c.total,
+      // v156: working-days equivalent of the total. Same hours/8 convention
+      // the Engagement Summary already uses — kept as a row field (rather
+      // than derived at render time) so the column sorts through the
+      // existing numeric path in _pjCustApplySort.
+      days:        c.total / 8,
       engagements: Object.keys(c.engagementIds).length,
       project:     c.project,
       poc:         c.poc,
@@ -1644,6 +1649,7 @@ async function renderPjCustomerSummary() {
       '<td><strong>'+esc2(r.customer)+'</strong></td>'+
       '<td style="font-family:DM Mono,monospace;font-size:13px">'+fmtCount(r.sessions)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:16px">'+fmtHours(r.total)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+fmtDays(r.days)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:13px">'+fmtCount(r.engagements)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.project)+'</td>'+
       '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.poc)+'</td>'+
@@ -1677,6 +1683,7 @@ async function renderPjCustomerSummary() {
       thSort('customer',         'Customer')+
       thSort('sessions',         'Sessions')+
       thSort('total',            'Total')+
+      thSort('days',             'Working Days')+
       thSort('engagements',      '# Engagements')+
       thSort('project',          '<span class="pj-th-ico"><i data-lucide="folder"></i>Project</span>')+
       thSort('poc',              '<span class="pj-th-ico"><i data-lucide="target"></i>POC</span>')+
@@ -1692,6 +1699,7 @@ async function renderPjCustomerSummary() {
         '<td>TOTAL ('+aggRows.length+' customer'+(aggRows.length===1?'':'s')+')</td>'+
         '<td style="font-family:DM Mono,monospace">'+fmtCount(totals.sessions)+'</td>'+
         '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+fmtHours(totals.total)+'</td>'+
+        '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+fmtDays(totals.total/8)+'</td>'+
         '<td style="font-family:DM Mono,monospace">'+fmtCount(totals.engagements)+'</td>'+
         '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.project)+'</td>'+
         '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.poc)+'</td>'+
@@ -1705,6 +1713,7 @@ async function renderPjCustomerSummary() {
     '</tbody></table></div>'+
     '<div style="margin-top:12px;font-size:12px;color:var(--muted)">'+
       'Year: '+(year==='all'?'All Years':year)+
+      ' | Working days = hours / 8.'+
       ' | # Engagements counts distinct engagement_id per customer (engagement-less sessions like Customer Testing don\'t add to this number).'+
       ' | Each session credits its customer ONCE — team size doesn\'t multiply hours here. For per-employee credit, see Employee Summary.'+
     '</div>';
@@ -1750,7 +1759,7 @@ function pjCustToggleSort(col) {
 function exportCustomerSummaryCsv() {
   const rows = window._pjCustRowsCache || [];
   if (!rows.length) { showToast('Nothing to export.'); return; }
-  const headers = ['Customer','Sessions','Total Hours','Engagements','Project Hours','POC Hours','AMC Hours','Support Hours','Pre-Sales Hours','Cust Test Hours','Internal Hours','Top Engagement'];
+  const headers = ['Customer','Sessions','Total Hours','Working Days','Engagements','Project Hours','POC Hours','AMC Hours','Support Hours','Pre-Sales Hours','Cust Test Hours','Internal Hours','Top Engagement'];
   function csvCell(v) {
     const s = (v == null) ? '' : String(v);
     // Quote only when needed (contains , " or newline); double inner quotes.
@@ -1760,7 +1769,7 @@ function exportCustomerSummaryCsv() {
   const lines = [headers.map(csvCell).join(',')];
   rows.forEach(function(r){
     lines.push([
-      r.customer, r.sessions, r.total, r.engagements,
+      r.customer, r.sessions, r.total, r2(r.days), r.engagements,
       r.project, r.poc, r.amc, r.support, r.presales,
       r.customer_testing, r.internal, r.top_engagement
     ].map(csvCell).join(','));
