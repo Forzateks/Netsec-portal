@@ -1,7 +1,7 @@
 # Cross-Region OT Timezone Shift (Team-Member Fan-Out)
 
 **Date:** 2026-08-01
-**Status:** Approved, pending implementation
+**Status:** Implemented in v158 (2026-08-05)
 **Area:** `js/features/unified-sessions.js` only. `js/features/overtime.js` (`calcOT()` and friends) is NOT modified.
 
 ## Problem

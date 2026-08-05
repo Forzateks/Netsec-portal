@@ -575,16 +575,61 @@ function _buildTeamList(loggerName, teamCsv) {
   return out;
 }
 
+function _employeeRegion(name) {
+  return KSA_EMP.indexOf(name) !== -1 ? 'KSA' : 'UAE';
+}
+
+// UAE = UTC+4, KSA = UTC+3, both fixed year-round (no DST in either country),
+// so the same literal clock string is NOT the same real-world instant in both.
+// Returns the hours to ADD to the logger's typed clock time to get the team
+// member's own real local clock time. 0 when both share a region.
+function _regionShiftHours(loggerName, memberName) {
+  var lr = _employeeRegion(loggerName), mr = _employeeRegion(memberName);
+  if (lr === mr) return 0;
+  return lr === 'UAE' ? -1 : 1; // UAE logger -> KSA member: -1h. KSA logger -> UAE member: +1h.
+}
+
+// Shifts 'HH:MM' by hoursDelta (integer, e.g. -1, 0, +1), rolling the date
+// string forward/back a day if the shift crosses midnight. Pure calendar
+// arithmetic via Date.UTC — never reads the browser's local timezone, matching
+// the WEEKEND_OVERRIDES convention of treating 'YYYY-MM-DD' as a plain
+// calendar value rather than feeding it through local-timezone Date() parsing.
+function _shiftClock(dateStr, timeStr, hoursDelta) {
+  if (!hoursDelta) return { date: dateStr, time: timeStr };
+  var dp = dateStr.split('-').map(Number), tp = timeStr.split(':').map(Number);
+  var totalMin = tp[0]*60 + tp[1] + hoursDelta*60;
+  var dayDelta = Math.floor(totalMin / 1440);
+  totalMin = ((totalMin % 1440) + 1440) % 1440;
+  var d = new Date(Date.UTC(dp[0], dp[1]-1, dp[2] + dayDelta));
+  var newDate = d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+  var newTime = String(Math.floor(totalMin/60)).padStart(2,'0') + ':' + String(totalMin%60).padStart(2,'0');
+  return { date: newDate, time: newTime };
+}
+
 // Run calcOT for one team member and return the ot_sessions row payload
 // (without id / source / status — caller fills those). Returns null if
 // the member's region produces zero credited hours (no OT row needed).
 // "Unknown" members (not in EMPLOYEES) are skipped with a console
 // warning — the spec asks for a toast, surfaced by the calling save.
-function _buildMemberOTRow(memberName, date, start, end, isEng, customer, engagementName, actType, info) {
+// loggerName is the session's owner (NOT necessarily the editor) — it's the
+// reference point the typed clock time belongs to, so a cross-region member's
+// times can be shifted into their own local frame before calcOT runs.
+function _buildMemberOTRow(memberName, loggerName, date, start, end, isEng, customer, engagementName, actType, info) {
   if (!EMPLOYEES || EMPLOYEES.indexOf(memberName) === -1) {
     console.warn('Team member "'+memberName+'" not in EMPLOYEES — OT auto-gen skipped');
     return { unknown: true, name: memberName };
   }
+  // Only the end CLOCK time is needed: calcOT takes a single anchor date and
+  // infers midnight-crossing itself by comparing start vs end, so shifting both
+  // by the same delta and anchoring on the shifted START date reproduces the
+  // semantics it already expects (and correctly re-derives a crossing that the
+  // shift introduces or resolves away).
+  var shift   = _regionShiftHours(loggerName, memberName);
+  var sAnchor = _shiftClock(date, start, shift);
+  var eTime   = _shiftClock(date, end, shift).time;
+  date  = sAnchor.date;
+  start = sAnchor.time;
+  end   = eTime;
   var c = calcOT(date, start, end, memberName);
   if (!c || !c.credited || c.credited <= 0) return null;
   var activityLabel = isEng
@@ -768,7 +813,7 @@ async function saveUnifiedSession() {
     var rowsToInsert = [];
     var createdParts = [];
     team.forEach(function(name){
-      var row = _buildMemberOTRow(name, date, start, end, isEng || isCustomerTest, customer, engagement_name, actType, info);
+      var row = _buildMemberOTRow(name, currentUser, date, start, end, isEng || isCustomerTest, customer, engagement_name, actType, info);
       if (row && row.unknown) { unknownMembers.push(row.name); return; }
       if (!row) return; // member's region yielded zero credit
       var calc = row._calc; delete row._calc;
@@ -790,7 +835,7 @@ async function saveUnifiedSession() {
   } else if (split.ot > 0 && split.otCalc) {
     // Internal session (no team field): generate OT for the logger only.
     var ic = split.otCalc;
-    var iRow = _buildMemberOTRow(currentUser, date, start, end, false, null, null, null, info);
+    var iRow = _buildMemberOTRow(currentUser, currentUser, date, start, end, false, null, null, null, info);
     if (iRow && !iRow.unknown) {
       delete iRow._calc;
       iRow.status            = 'pending';
@@ -1178,7 +1223,7 @@ async function saveEditUS() {
   var unknownMembers = [];
   var newOtByEmp = {};
   newTeam.forEach(function(name){
-    var row = _buildMemberOTRow(name, date, start, end, isEng || isCustomerTest, customer, engagement, actType, info);
+    var row = _buildMemberOTRow(name, sessionEmployee, date, start, end, isEng || isCustomerTest, customer, engagement, actType, info);
     if (row && row.unknown) { unknownMembers.push(row.name); return; }
     if (!row) return; // their region yields no OT
     delete row._calc;
