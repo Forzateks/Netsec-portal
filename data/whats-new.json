@@ -420,6 +420,22 @@
       "body": "When a session was logged with team members in the other region, everyone's OT was worked out from the clock time the logger typed — but KSA is one hour behind UAE, so that was the wrong local time for them. Each member's OT record now uses their own local start and end time, which can be worth up to an hour of credit on early-morning and late-evening sessions. Only sessions saved or edited from now on are affected; existing records are left as they are.",
       "link": "my-sessions",
       "link_text": "Open My Sessions"
+    },
+    {
+      "id": "v159-tracker-quoted-phase",
+      "version": "v159",
+      "category": "new",
+      "title": "New \"Quoted\" phase in Project Tracker",
+      "body": "Active engagements can now be marked as Quoted, sitting between \"Yet to start\" and \"Hardware Delivery\" in the Phase dropdown. It's available for Projects, AMC, Support, Pre-Sales and Other — POCs keep their own phase list, which already ends in Commercial Process.",
+      "link": null
+    },
+    {
+      "id": "v159-activity-log-datetime",
+      "version": "v159",
+      "category": "new",
+      "title": "Exact date and time in Activity Logs",
+      "body": "The Activity Log under Professional Services and AMC Contracts now has a Date & Time column showing exactly when each change happened, instead of only \"just now\" or \"last week\". Times are shown in your own local time, so UAE and KSA staff each see the clock time they'd have read off their own watch.",
+      "link": null
     }
   ]
 }

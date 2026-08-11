@@ -12,10 +12,11 @@ var _trkActiveTab = 'all';   // 'all' | 'projects' | 'pocs' | 'amc' | 'support'
 // a simpler sales-cycle vocabulary.
 // Phase = workflow step within an ACTIVE project. Lifecycle states like
 // Completed / Cancelled / Dormant / Sign-off live exclusively on
-// engagement.status (the top-level Status field). The 13 phase values
+// engagement.status (the top-level Status field). The 15 phase values
 // here are enforced by the CHECK constraint on engagements.tracker_status.
 var TRK_PHASES_PROJECT = [
   'Yet to start',
+  'Quoted',            // v159: commercial step before hardware/kick-off
   'Hardware Delivery',
   'Kick-off',
   'HLD Discussion',
@@ -60,7 +61,7 @@ function _trkPhasesFor(type) { return (type === 'poc') ? TRK_PHASES_POC : TRK_PH
 var TRK_PHASE_ALLOWED_STATUSES = ['active'];
 
 // v108: type-aware phase list. Projects/AMC/Support/Presales share
-// the 13-stage waterfall; POCs get their own 10-phase list.
+// the 15-stage waterfall; POCs get their own 10-phase list.
 function trkStatusesFor(type) { return _trkPhasesFor(type).slice(); }
 
 function showTrackerTab(tab) {
@@ -850,7 +851,7 @@ function _trkPopulateStatusOptions(type, currentValue) {
   var sel = document.getElementById('trk-edit-tracker-status');
   if (!sel) return;
   // v108: pick the phase list for this engagement's type. POC engagements
-  // get the POC-specific 10-phase list; everything else gets the 13-stage
+  // get the POC-specific 10-phase list; everything else gets the 15-stage
   // project waterfall. Legacy values not in the chosen list still surface
   // as "(legacy)" so a manager can re-select correctly.
   var phaseList = _trkPhasesFor(type);

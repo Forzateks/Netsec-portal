@@ -1525,7 +1525,8 @@ async function loadPsDealActivityLog() {
     }
     rows +=
       '<tr>'+
-      '<td style="white-space:nowrap;font-size:12px;color:var(--muted)" title="'+relativeTimeTitle(log.changed_at)+'">'+relativeTime(log.changed_at)+'</td>'+
+      '<td class="hide-mobile" style="white-space:nowrap;font-size:12px;color:var(--muted)">'+relativeTime(log.changed_at)+'</td>'+
+      '<td style="white-space:nowrap;font-family:DM Mono,monospace;font-size:12px;color:var(--muted)">'+(log.changed_at?fmtDateTime(log.changed_at):'—')+'</td>'+
       '<td style="font-weight:600">'+esc2(log.client_name||'')+'</td>'+
       '<td><span style="color:'+meta.color+';font-weight:600">'+meta.icon+' '+meta.label+'</span></td>'+
       '<td>'+esc2(log.changed_by||'')+'</td>'+
@@ -1535,7 +1536,7 @@ async function loadPsDealActivityLog() {
 
   container.innerHTML =
     '<div class="table-wrap"><table>'+
-    '<thead><tr><th>Date</th><th>Client</th><th>Action</th><th>Changed By</th><th>Changes</th></tr></thead>'+
+    '<thead><tr><th class="hide-mobile">When</th><th>Date &amp; Time</th><th>Client</th><th>Action</th><th>Changed By</th><th>Changes</th></tr></thead>'+
     '<tbody>'+rows+'</tbody>'+
     '</table></div>';
 }

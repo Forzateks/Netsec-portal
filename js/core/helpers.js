@@ -442,15 +442,21 @@ function fmtCount(n) {
   if (n === null || n === undefined || n === '' || isNaN(n)) return '0';
   return Math.round(Number(n)).toLocaleString('en-US');
 }
-// Datetime display: "08-May-2026, 14:32". Falls back to fmtDate for
-// date-only strings (no T separator).
+// Datetime display: "08-May-2026, 14:32", rendered in the VIEWER'S local time.
+// Postgres timestamptz comes back from Supabase in UTC ("...T10:32:00+00:00"),
+// so slicing the raw string would show a UAE viewer 10:32 for a 14:32 action.
+// Going through Date() converts to whatever zone the viewer's device is in —
+// correct for both UAE (UTC+4) and KSA (UTC+3) staff.
+// Falls back to fmtDate for date-only strings (no T separator).
 function fmtDateTime(iso) {
   if (!iso) return '';
   var s = String(iso);
   if (s.indexOf('T') === -1) return fmtDate(s);
-  var datePart = fmtDate(s);
-  var timePart = s.split('T')[1].slice(0, 5);
-  return datePart + ', ' + timePart;
+  var d = new Date(s);
+  if (isNaN(d.getTime())) return fmtDate(s);
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return String(d.getDate()).padStart(2,'0') + '-' + months[d.getMonth()] + '-' + d.getFullYear() +
+    ', ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
 // Date range display:
 //   same year  → "08-May → 15-May-2026"  (year dropped from start)

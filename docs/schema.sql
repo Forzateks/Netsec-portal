@@ -628,14 +628,16 @@ ALTER TABLE public.engagements              ADD CONSTRAINT engagements_customer_
 ALTER TABLE public.engagements              ADD CONSTRAINT engagements_type_check
   CHECK (type = ANY (ARRAY['project'::text, 'poc'::text, 'amc'::text, 'support'::text, 'presales'::text, 'other'::text]));
 -- v108: expanded to include POC-specific phases. The union covers both
--- project waterfall (13 stages) and POC-specific cycle (10 stages, some
+-- project waterfall (15 stages) and POC-specific cycle (10 stages, some
 -- shared with project list like 'Yet to start', 'Troubleshooting',
 -- 'On demand request'). UI type-branches via tracker.js _trkPhasesFor;
--- DB allows both lists in the same column so the union is 20 distinct
+-- DB allows both lists in the same column so the union is 22 distinct
 -- values (3 are shared between the two lists).
+-- v159: 'Quoted' added to the project waterfall (non-POC list only) as the
+-- commercial step between 'Yet to start' and 'Hardware Delivery'.
 ALTER TABLE public.engagements              ADD CONSTRAINT engagements_tracker_status_check
   CHECK ((tracker_status IS NULL) OR (tracker_status = ANY (ARRAY[
-    'Yet to start'::text, 'Kick-off'::text, 'HLD Discussion'::text, 'HLD Documentation'::text,
+    'Yet to start'::text, 'Quoted'::text, 'Kick-off'::text, 'HLD Discussion'::text, 'HLD Documentation'::text,
     'LLD Discussion'::text, 'LLD Documentation'::text, 'Initial Configuration'::text,
     'Pilot Sites Rollout'::text, 'Migration'::text, 'KT / Training'::text,
     'As-Built Documentation'::text, 'Troubleshooting'::text, 'On demand request'::text,
