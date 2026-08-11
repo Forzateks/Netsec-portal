@@ -317,7 +317,7 @@ function renderTasksList() {
                    'placeholder="Remark (optional)" '+
                    'aria-label="Approval remark (optional)" '+
                    'style="width:120px;font-size:11px;padding:3px 6px;margin-right:4px;'+
-                   'border:1px solid var(--border,#D1D5DB);border-radius:4px">';
+                   'border:1px solid var(--border,#dddddd);border-radius:4px">';
       // v124 a11y: aria-label on each icon-only button so SRs announce the
       // action (title= alone doesn't reach most mobile SRs). Icon is decorative.
       actions += '<button class="btn btn-sm btn-success btn-icon-only" title="Approve completion" aria-label="Approve completion" '+
@@ -365,11 +365,11 @@ function renderTasksList() {
     if (isRecurringTab) {
       var lbl = formatPeriodLabel(t.period_key, activeTab);
       var datesLine = datesText
-        ? '<div style="font-family:DM Mono,monospace;font-size:10.5px;color:var(--muted);margin-top:3px;white-space:nowrap">'+datesText+'</div>'
+        ? '<div style="font-variant-numeric:tabular-nums;font-size:10.5px;color:var(--muted);margin-top:3px;white-space:nowrap">'+datesText+'</div>'
         : '';
       periodOrDatesCell = '<td><span class="task-period-pill">'+esc2(lbl)+'</span>'+datesLine+'</td>';
     } else {
-      periodOrDatesCell = '<td style="font-family:DM Mono,monospace;font-size:11.5px;color:var(--muted);white-space:nowrap">'+datesText+'</td>';
+      periodOrDatesCell = '<td style="font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--muted);white-space:nowrap">'+datesText+'</td>';
     }
     var rowCls = 'task-pri-'+(t.priority||'medium');
     if (t.is_archived) rowCls += ' task-row-archived';
@@ -404,9 +404,9 @@ function renderTasksList() {
       stripHtml = '<div class="pending-strip" onclick="navigateSub(\'approvals\',\'tasks\')" '+
         'style="cursor:pointer;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;'+
         'padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'+
-        '<span style="font-size:13px;color:#92400E"><strong>'+pendingRows.length+'</strong> task'+
+        '<span style="font-size:13px;color:#793400"><strong>'+pendingRows.length+'</strong> task'+
         (pendingRows.length===1?'':'s')+' awaiting your approval</span>'+
-        '<span style="font-size:12px;color:#92400E;font-weight:600">Review in Approvals →</span></div>';
+        '<span style="font-size:12px;color:#793400;font-weight:600">Review in Approvals →</span></div>';
     } else if (currentUser) {
       var mine = pendingRows.filter(function(x){
         var as = assignByTask[x.id] || [];
@@ -415,7 +415,7 @@ function renderTasksList() {
       if (mine.length) {
         stripHtml = '<div class="pending-strip" '+
           'style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;'+
-          'padding:10px 14px;margin-bottom:12px;font-size:13px;color:#92400E">'+
+          'padding:10px 14px;margin-bottom:12px;font-size:13px;color:#793400">'+
           '<strong>'+mine.length+'</strong> of your task'+(mine.length===1?'':'s')+
           ' '+(mine.length===1?'is':'are')+' awaiting manager approval.</div>';
       }
@@ -581,7 +581,7 @@ async function renderTaskApprovals() {
     .order('updated_at', { ascending:true });
   if (load) load.style.display = 'none';
   if (tRes.error) {
-    host.innerHTML = '<div style="color:var(--danger,#EF4444);font-size:13px;padding:8px">Could not load: '+esc2(tRes.error.message||'unknown error')+'</div>';
+    host.innerHTML = '<div style="color:var(--danger,#d93025);font-size:13px;padding:8px">Could not load: '+esc2(tRes.error.message||'unknown error')+'</div>';
     return;
   }
   var tasks = tRes.data || [];
@@ -602,7 +602,7 @@ async function renderTaskApprovals() {
   host.innerHTML = heading + tasks.map(function(t){
     var owners = (byTask[t.id]||[]).map(function(n){ return esc2(_tasksShortName(n)); }).join(', ') || '—';
     var priMeta = TASK_PRIORITY_META[t.priority] || TASK_PRIORITY_META['medium'];
-    return '<div class="approval-card" style="border:1px solid var(--border,#E5E7EB);border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#fff">'+
+    return '<div class="approval-card" style="border:1px solid var(--border,#e6e6e6);border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#fff">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">'+
         '<div style="min-width:0;flex:1 1 240px">'+
           '<div style="font-weight:600;font-size:14px">'+esc2(t.title||'(untitled)')+'</div>'+
@@ -614,7 +614,7 @@ async function renderTaskApprovals() {
         '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+
           '<input type="text" id="tar2-'+t.id+'" placeholder="Remark (optional)" '+
             'aria-label="Approval remark (optional)" '+
-            'style="width:140px;font-size:11px;padding:4px 6px;border:1px solid var(--border,#D1D5DB);border-radius:4px">'+
+            'style="width:140px;font-size:11px;padding:4px 6px;border:1px solid var(--border,#dddddd);border-radius:4px">'+
           '<button class="btn btn-sm btn-success btn-icon-only" title="Approve" aria-label="Approve completion" '+
             'onclick="approveTaskCompletion('+t.id+', document.getElementById(\'tar2-'+t.id+'\').value)">'+
             '<i data-lucide="check" aria-hidden="true"></i></button>'+
@@ -1407,7 +1407,7 @@ function renderManageTemplatesList() {
     var asg  = (asByTpl[tpl.id] || []).map(function(n){ return esc2(_tasksShortName(n)); }).join(', ') || '<span class="dim">—</span>';
     var statusBadge = tpl.is_active
       ? '<span class="badge task-pri-low" style="background:#D1FAE5;color:#065F46">Active</span>'
-      : '<span class="badge task-pri-low" style="background:#F1F5F9;color:#94A3B8">Inactive</span>';
+      : '<span class="badge task-pri-low" style="background:#f6f5f4;color:#94A3B8">Inactive</span>';
     return '<tr>'+
       '<td class="dim" style="font-size:12px">'+(idx+1)+'</td>'+
       '<td><strong>'+esc2(tpl.title)+'</strong>'+

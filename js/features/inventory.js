@@ -126,7 +126,7 @@ function renderInventoryTable(data) {
     var sc = invStatusClass(d.availability_status);
     rows += '<tr>'+
       '<td style="font-size:11px;color:var(--muted);font-weight:600">'+(i+1)+'</td>'+
-      '<td style="font-family:\'DM Mono\',monospace;font-size:12px">'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+
         '<span style="display:inline-flex;align-items:center;gap:6px">'+
           esc2(d.serial_number||'')+
           (d.serial_number
@@ -434,7 +434,7 @@ async function loadActivityLog() {
     rows +=
       '<tr>'+
       '<td style="white-space:nowrap;font-size:12px;color:var(--muted)" title="'+relativeTimeTitle(log.changed_at)+'">'+relativeTime(log.changed_at)+'</td>'+
-      '<td style="font-family:\'DM Mono\',monospace;font-size:12px;font-weight:600">'+esc2(log.serial_number||'')+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px;font-weight:600">'+esc2(log.serial_number||'')+'</td>'+
       '<td><span style="color:'+color+';font-weight:600">'+icon+' '+cap(log.action)+'</span></td>'+
       '<td>'+esc2(log.changed_by||'')+'</td>'+
       '<td style="font-size:12px;line-height:1.7">'+changesHtml+'</td>'+

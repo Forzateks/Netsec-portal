@@ -45,7 +45,7 @@ async function renderNotifications() {
   // least one unread row.
   var unreadCount = rows.filter(function(n){ return !n.read_at; }).length;
   var headerHtml = unreadCount
-    ? '<div style="display:flex;justify-content:flex-end;padding:6px 10px;border-bottom:1px solid var(--border);background:#F8FAFC">'+
+    ? '<div style="display:flex;justify-content:flex-end;padding:6px 10px;border-bottom:1px solid var(--border);background:#f6f5f4">'+
         '<button class="btn btn-sm btn-ghost" style="font-size:11px;padding:3px 8px" onclick="markAllNotificationsRead()">Mark all read</button>'+
       '</div>'
     : '';

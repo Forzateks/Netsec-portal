@@ -334,15 +334,15 @@ function _psRenderRevenueChart(rows) {
     var usdLabel = fmtUsd(y.usd, false);
     var aedLabel = fmtAed(usdToAed(y.usd), false);
     return '<g>'+
-      '<rect x="'+x+'" y="'+barY+'" width="'+barW+'" height="'+h+'" rx="4" fill="#00A0D2"/>'+
-      '<text x="'+cx+'" y="'+(barY-24)+'" text-anchor="middle" font-family="DM Mono,monospace" font-weight="700" font-size="14" fill="#0A1F5C">'+usdLabel+'</text>'+
-      '<text x="'+cx+'" y="'+(barY-8)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="#6b7280">'+aedLabel+'</text>'+
-      '<text x="'+cx+'" y="'+(padTop+barAreaH+20)+'" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="12" font-weight="600" fill="#0A1F5C">'+y.year+'</text>'+
+      '<rect x="'+x+'" y="'+barY+'" width="'+barW+'" height="'+h+'" rx="4" fill="#0075de"/>'+
+      '<text x="'+cx+'" y="'+(barY-24)+'" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="14" fill="#0d0d0d">'+usdLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(barY-8)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#615d59">'+aedLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(padTop+barAreaH+20)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#0d0d0d">'+y.year+'</text>'+
     '</g>';
   }).join('');
 
   var footnote = data.excludedCount > 0
-    ? '<div style="font-size:11px;color:#92400E;font-style:italic;margin-top:6px">'+data.excludedCount+' deal'+(data.excludedCount===1?'':'s')+' excluded — no awarded year set</div>'
+    ? '<div style="font-size:11px;color:#793400;font-style:italic;margin-top:6px">'+data.excludedCount+' deal'+(data.excludedCount===1?'':'s')+' excluded — no awarded year set</div>'
     : '';
 
   wrap.innerHTML =
@@ -1526,7 +1526,7 @@ async function loadPsDealActivityLog() {
     rows +=
       '<tr>'+
       '<td class="hide-mobile" style="white-space:nowrap;font-size:12px;color:var(--muted)">'+relativeTime(log.changed_at)+'</td>'+
-      '<td style="white-space:nowrap;font-family:DM Mono,monospace;font-size:12px;color:var(--muted)">'+(log.changed_at?fmtDateTime(log.changed_at):'—')+'</td>'+
+      '<td style="white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)">'+(log.changed_at?fmtDateTime(log.changed_at):'—')+'</td>'+
       '<td style="font-weight:600">'+esc2(log.client_name||'')+'</td>'+
       '<td><span style="color:'+meta.color+';font-weight:600">'+meta.icon+' '+meta.label+'</span></td>'+
       '<td>'+esc2(log.changed_by||'')+'</td>'+

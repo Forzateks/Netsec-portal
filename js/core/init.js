@@ -10,7 +10,7 @@
 // CACHE_VERSION in sw.js and the Sentry release in index.html. It drives
 // the user-menu version label and the "what's new" filter; it is NOT part
 // of the registration URL.
-var APP_VERSION = 'v159';
+var APP_VERSION = 'v160';
 
 // v157: the registration URL is deliberately STABLE (no ?v= cache-buster).
 // It used to carry the version, which caused a phantom update prompt on the
@@ -171,16 +171,16 @@ async function showUpdateNotes() {
 }
 
 function _categoryTag(cat) {
-  if (cat === 'fixed') return '<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">FIXED</span>';
+  if (cat === 'fixed') return '<span style="background:#FEF3C7;color:#793400;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">FIXED</span>';
   if (cat === 'new')   return '<span style="background:rgba(0,160,210,0.12);color:#0073A0;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">NEW</span>';
-  return '<span style="background:#EEF2FF;color:#0A1F5C;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">UPDATE</span>';
+  return '<span style="background:#EEF2FF;color:#0d0d0d;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">UPDATE</span>';
 }
 
 function _renderUpdateModal(items, hiddenOlder) {
   // esc2 is defined in helpers.js — text-only fields below.
   var rows = items.map(function(it){
-    var v = it.version ? '<span style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);margin-left:6px">'+esc2(it.version)+'</span>' : '';
-    return '<div style="padding:10px 0;border-bottom:1px solid #F1F5F9">'+
+    var v = it.version ? '<span style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);margin-left:6px">'+esc2(it.version)+'</span>' : '';
+    return '<div style="padding:10px 0;border-bottom:1px solid #f6f5f4">'+
       '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">'+
         _categoryTag(it.category)+
         '<strong style="font-size:13.5px;color:var(--navy);line-height:1.3">'+esc2(it.title||'')+'</strong>'+
@@ -200,7 +200,7 @@ function _renderUpdateModal(items, hiddenOlder) {
           '<div class="modal-title">What\'s new</div>'+
           '<button class="btn btn-ghost" onclick="closeUpdateNotesModal()" style="font-size:18px;padding:4px 10px" title="Close">×</button>'+
         '</div>'+
-        '<div style="max-height:52vh;overflow-y:auto;border-top:1px solid #F1F5F9">'+rows+'</div>'+
+        '<div style="max-height:52vh;overflow-y:auto;border-top:1px solid #f6f5f4">'+rows+'</div>'+
         more+
         '<div class="modal-actions">'+
           '<button class="btn btn-ghost" onclick="closeUpdateNotesModal()">Later</button>'+

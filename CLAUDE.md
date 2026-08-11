@@ -309,9 +309,11 @@ Landmark's 542 sessions / 949h) must not be re-imported.
   - Toasts → `showToast()`; HTML-escape user text → `esc2()` (see Known Limitations)
 - **Reuse existing constants** — don't hardcode magic numbers: `LEAVE_ALLOWANCE = 22`,
   `SICK_ALLOWANCE = 12`, `KSA_EMP`, `EMPLOYEES` (all in `state.js`).
-- **`'DM Mono'` quoting trap:** using `'DM Mono'` inside a single-quoted JS string can
-  break the parser in some contexts — prefer `DM Mono` unquoted (CSS allows it for font
-  names) or escape carefully. This has bitten the codebase repeatedly.
+- **No monospace font (v160).** DM Mono was removed when the Notion design system
+  landed — the system is single-family Inter. For numeric data use
+  `font-variant-numeric:tabular-nums`, which keeps columns aligned. **Never
+  reintroduce a `font-family` with a mono face.** (SVG `<text>` in charts is the one
+  exception: it needs an explicit `font-family="Inter,sans-serif"` attribute.)
 - **Grouping:** new HTML screens use `<!-- ══ SCREEN NAME ══ -->` dividers; new JS
   sections use `// == SECTION ==` dividers. Match the surrounding style.
 - **Mobile-first.** Breakpoints `@media(max-width:640px)` and `@media(max-width:380px)`.
@@ -320,9 +322,29 @@ Landmark's 542 sessions / 949h) must not be re-imported.
   2×2, dropping to 1 column under 380px.
 
 ### Brand tokens (CSS variables in `css/styles.css`)
-Navy `#0A1F5C` (primary), Teal `#00A0D2` (accent/credited/success), Gold `#C8A832`
-(warnings/eve), Success `#10B981`, Danger `#EF4444`, Background `#F8FAFC`.
-Fonts: DM Sans (UI), DM Mono (hours, dates, codes, money).
+**v160 — the app runs the Notion design system.** Spec:
+`docs/design/notion-design-system.md`. Mapping + deliberate divergences:
+`docs/design/adoption-notes.md`. **Read the adoption notes before restyling.**
+
+Source tokens: Primary `#0075de` (the ONE structural accent — CTAs, links, active
+and focus states), Pressed `#005bab`, Secondary/dark-band `#213183`, Canvas
+`#f6f5f4` (warm paper page), Surface `#ffffff` (cards, fields, nav), Hairline
+`#e6e6e6`, Ink `#0d0d0d`, Ink-muted `#615d59`, Ink-faint `#a39e98`.
+Sticker palette (`--nx-sky/purple/pink/orange/teal/green/brown`) is **decoration
+and data categories only — never a CTA or structural fill**.
+Font: **Inter** everywhere; no monospace (numerals use `tabular-nums`).
+
+Legacy short names still work and are the normal way to reference colour —
+they're re-pointed at Notion values in `:root`: `--navy` → ink (it's a *text*
+token, 177/192 uses are `color:`), `--teal` → primary blue, `--gold` → sticker
+orange, `--bg` → canvas, `--muted` → ink-muted, `--border` → hairline.
+
+Radii: `--radius-xs` 4px (inputs — never pill a form field), `--radius-sm` 5px,
+`--radius-md` 8px (utility/nav buttons), `--radius-lg` 12px (cards),
+`--radius-xl` 16px, `--radius-full` (primary CTAs).
+Elevation: most cards are Level 0 (hairline, **no** shadow); `--shadow-1` /
+`--shadow-2` are many-layer near-transparent stacks. No heavy drop-shadows,
+no gradient "pillow" buttons, no inset highlights.
 
 ---
 

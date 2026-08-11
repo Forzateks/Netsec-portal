@@ -39,7 +39,7 @@ var TEAM_CATEGORY_LABELS = {
 var TEAM_CATEGORY_COLORS = {
   'sales':                'var(--navy)',
   'presales':             'var(--teal)',
-  'post_sales_technical': '#C8A832'
+  'post_sales_technical': '#dd5b00'
 };
 // Legacy → new section mapping used when falling back to the old JSON
 // shape if Supabase is unreachable. Lets us tolerate a partially-stale

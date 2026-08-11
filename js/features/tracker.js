@@ -339,7 +339,7 @@ function _trkTopStatusKey(raw) {
 function trkTopStatusBadge(raw, phase) {
   var key = _trkTopStatusKey(raw);
   var def = TRK_TOP_STATUS_MAP[key];
-  if (!def) return '<span class="badge" style="background:#F3F4F6;color:#6B7280">'+esc2(raw||'—')+'</span>';
+  if (!def) return '<span class="badge" style="background:#f6f5f4;color:#615d59">'+esc2(raw||'—')+'</span>';
   var phaseLbl = (phase && String(phase).trim()) ? String(phase).trim() : '';
   // Drop the literal placeholder some forms send instead of NULL.
   if (phaseLbl === '— None —' || phaseLbl === '-- None --' || phaseLbl === 'None') phaseLbl = '';
@@ -410,11 +410,11 @@ function renderTrackerStatRow() {
   // Mirror the badge palette so the strip reads as a colour key for the table.
   var THEME = {
     'active':          {bg:'#DCFCE7', fg:'#166534'},
-    'sign-off':        {bg:'#FEF3C7', fg:'#92400E'},
+    'sign-off':        {bg:'#FEF3C7', fg:'#793400'},
     'payment-pending': {bg:'#FEF9C3', fg:'#854D0E'},
     'closed':          {bg:'#E0F2FE', fg:'#075985'},
     'on-hold':         {bg:'#FED7AA', fg:'#9A3412'},
-    'dormant':         {bg:'#F3F4F6', fg:'#4B5563'},
+    'dormant':         {bg:'#f6f5f4', fg:'#4B5563'},
     'cancelled':       {bg:'#FEE2E2', fg:'#991B1B'}
   };
   // Multi-select highlight — any segment whose key is in the current filter
@@ -429,7 +429,7 @@ function renderTrackerStatRow() {
     // Unselected: muted neutral pill so selected ones pop visually.
     var style = isSel
       ? 'background:'+th.bg+';color:'+th.fg+';border:2px solid '+th.fg+';padding:3px 9px'
-      : 'background:#F3F4F6;color:#6B7280;border:1px solid transparent';
+      : 'background:#f6f5f4;color:#615d59;border:1px solid transparent';
     var checkIcon = isSel
       ? '<i data-lucide="check" class="trk-strip-check"></i>'
       : '';

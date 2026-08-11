@@ -292,13 +292,13 @@ function _amcRenderTable(rows, linksByContract) {
       '<td class="hide-mobile" style="font-size:12px">'+esc2(c.partner||'—')+'</td>'+
       '<td class="hide-mobile" style="font-size:12px">'+esc2(c.region||'—')+'</td>'+
       '<td class="hide-mobile" style="font-size:12px">'+esc2(c.vendor||'—')+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+esc2(c.git_sales_order||'—')+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:13px">'+_amcFmtUSD(c.amc_value_usd, false)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+(c.amc_start_date?fmtDate(c.amc_start_date):'—')+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+(c.amc_end_date?fmtDate(c.amc_end_date):'—')+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+esc2(c.git_sales_order||'—')+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal);font-size:13px">'+_amcFmtUSD(c.amc_value_usd, false)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+(c.amc_start_date?fmtDate(c.amc_start_date):'—')+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+(c.amc_end_date?fmtDate(c.amc_end_date):'—')+'</td>'+
       '<td>'+_amcBadge(st)+'</td>'+
-      '<td class="hide-mobile" style="font-family:DM Mono,monospace;font-size:12px">'+(c.booking_year||'—')+'</td>'+
-      '<td class="hide-mobile" style="font-family:DM Mono,monospace;font-size:12px;color:var(--muted)">'+fmtCount(n)+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;font-size:12px">'+(c.booking_year||'—')+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)">'+fmtCount(n)+'</td>'+
       (manager?'<td style="white-space:nowrap;text-align:right">'+actions+'</td>':'')+
     '</tr>';
   }).join('');
@@ -887,7 +887,7 @@ async function loadAMCActivityLog() {
     rows +=
       '<tr>'+
       '<td class="hide-mobile" style="white-space:nowrap;font-size:12px;color:var(--muted)">'+relativeTime(log.changed_at)+'</td>'+
-      '<td style="white-space:nowrap;font-family:DM Mono,monospace;font-size:12px;color:var(--muted)">'+(log.changed_at?fmtDateTime(log.changed_at):'—')+'</td>'+
+      '<td style="white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)">'+(log.changed_at?fmtDateTime(log.changed_at):'—')+'</td>'+
       '<td style="font-weight:600">'+esc2(log.customer_name||'')+'</td>'+
       '<td><span style="color:'+meta.color+';font-weight:600">'+meta.icon+' '+meta.label+'</span></td>'+
       '<td>'+esc2(log.changed_by||'')+'</td>'+
@@ -1011,15 +1011,15 @@ function _amcRenderValueChart(rows) {
     var usdLabel = fmtUsd(y.usd, false);
     var aedLabel = fmtAed(usdToAed(y.usd), false);
     return '<g>'+
-      '<rect x="'+x+'" y="'+barY+'" width="'+barW+'" height="'+h+'" rx="4" fill="#00A0D2"/>'+
-      '<text x="'+cx+'" y="'+(barY-24)+'" text-anchor="middle" font-family="DM Mono,monospace" font-weight="700" font-size="14" fill="#0A1F5C">'+usdLabel+'</text>'+
-      '<text x="'+cx+'" y="'+(barY-8)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="#6b7280">'+aedLabel+'</text>'+
-      '<text x="'+cx+'" y="'+(padTop+barAreaH+20)+'" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="12" font-weight="600" fill="#0A1F5C">'+y.year+'</text>'+
+      '<rect x="'+x+'" y="'+barY+'" width="'+barW+'" height="'+h+'" rx="4" fill="#0075de"/>'+
+      '<text x="'+cx+'" y="'+(barY-24)+'" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="14" fill="#0d0d0d">'+usdLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(barY-8)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#615d59">'+aedLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(padTop+barAreaH+20)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#0d0d0d">'+y.year+'</text>'+
     '</g>';
   }).join('');
 
   var footnote = data.missingValue > 0
-    ? '<div style="font-size:11px;color:#92400E;font-style:italic;margin-top:6px">'+data.missingValue+' contract'+(data.missingValue===1?'':'s')+' excluded — no AMC value set</div>'
+    ? '<div style="font-size:11px;color:#793400;font-style:italic;margin-top:6px">'+data.missingValue+' contract'+(data.missingValue===1?'':'s')+' excluded — no AMC value set</div>'
     : '';
 
   el.innerHTML =

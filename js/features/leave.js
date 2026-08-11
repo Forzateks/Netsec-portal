@@ -388,18 +388,18 @@ async function renderLeaveHistory() {
       return '<div class="request-card '+r.status+'">'+
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
         '<div><strong>'+r.employee+'</strong> <span style="font-size:11px;font-weight:600;color:var(--gold)">Comp Off ('+r.type+')</span><br>'+
-        '<span style="font-family:DM Mono,monospace;font-size:13px">'+fmtDate(r.request_date)+'</span><br>'+
+        '<span style="font-variant-numeric:tabular-nums;font-size:13px">'+fmtDate(r.request_date)+'</span><br>'+
         '<span style="font-size:12px;color:var(--muted)">'+fmtDays(r.days)+(r.remarks?' | '+r.remarks:(r.related_activity?' | '+r.related_activity:''))+'</span></div>'+
         '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span></div>'+
         (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:4px">💬 '+r.manager_comment+'</div>':'')+
         '</div>';
     }
     var ltIcon  = (r.leave_type||'annual')==='sick' ? 'Sick Leave' : 'Annual Leave';
-    var ltColor = (r.leave_type||'annual')==='sick' ? '#8B5CF6' : 'var(--teal)';
+    var ltColor = (r.leave_type||'annual')==='sick' ? '#391c57' : 'var(--teal)';
     // Half-day flag: working_days === 0.5 on a single-date row. The string
     // shows "(half day)" inline next to the date range to stay compact.
     var isHalf = (parseFloat(r.working_days) === 0.5);
-    var halfTag = isHalf ? ' <span style="font-size:11px;color:#8B5CF6;font-weight:600">(half day)</span>' : '';
+    var halfTag = isHalf ? ' <span style="font-size:11px;color:#391c57;font-weight:600">(half day)</span>' : '';
 
     // Determine if the employee can still cancel this request. Mirrors the
     // server-side rule applied by cancelLeaveRequest: pending / needs_review
@@ -419,7 +419,7 @@ async function renderLeaveHistory() {
     // cancelled    (grey):   "cancellation details"
     var banner = '';
     if (r.status === 'needs_review') {
-      banner = '<div style="background:#FFFBEB;color:#92400E;border-left:3px solid var(--gold);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+      banner = '<div style="background:#FFFBEB;color:#793400;border-left:3px solid var(--gold);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
         '💬 <strong>Pending discussion with manager:</strong> ' + esc2(r.manager_comment || '(no comment)') +
         '</div>';
     } else if (r.status === 'rejected' && r.manager_comment) {
@@ -428,7 +428,7 @@ async function renderLeaveHistory() {
         '</div>';
     } else if (r.status === 'cancelled') {
       var who = r.cancelled_by ? (r.cancelled_by === r.employee ? 'you' : esc2(r.cancelled_by)) : 'someone';
-      banner = '<div style="background:#F1F5F9;color:#475569;border-left:3px solid #94A3B8;padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+      banner = '<div style="background:#f6f5f4;color:#475569;border-left:3px solid #94A3B8;padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
         '🚫 Cancelled ' + (r.cancelled_at ? relativeTime(r.cancelled_at) : '') + ' by ' + who +
         (r.effective_end_date ? ' · counted through ' + fmtDate(r.effective_end_date) : '') +
         (r.manager_comment ? ' · ' + esc2(r.manager_comment) : '') +
@@ -439,7 +439,7 @@ async function renderLeaveHistory() {
     return '<div class="request-card '+r.status+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;flex-wrap:wrap">'+
       '<div><strong>'+r.employee+'</strong> <span style="font-size:11px;font-weight:600;color:'+ltColor+'">'+ltIcon+'</span><br>'+
-      '<span style="font-family:DM Mono,monospace;font-size:13px">'+fmtDate(r.start_date)+(r.start_date===r.end_date?'':' to '+fmtDate(r.end_date))+halfTag+'</span><br>'+
+      '<span style="font-variant-numeric:tabular-nums;font-size:13px">'+fmtDate(r.start_date)+(r.start_date===r.end_date?'':' to '+fmtDate(r.end_date))+halfTag+'</span><br>'+
       '<span style="font-size:12px;color:var(--muted)">'+r.working_days+' working day'+(parseFloat(r.working_days)===1?'':'s')+(r.reason?' | '+r.reason:'')+'</span></div>'+
       '<div style="display:flex;align-items:center;flex-wrap:wrap"><span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+statusLabel+'</span>'+cancelBtn+'</div></div>'+
       // Show manager_comment inline only for rejected/needs_review where we
@@ -514,13 +514,13 @@ async function renderLeaveTeam() {
     var approvedCell = approvedRanges.length ? approvedRanges.join('') : '<span class="dim">—</span>';
     return '<tr>'+
       '<td><strong>'+emp+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(KSA_EMP.includes(emp)?'KSA — Fri/Sat':'UAE — Sat/Sun')+'</span></td>'+
-      '<td style="font-family:DM Mono,monospace">'+approvedCell+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+fmtNumber(annualUsed,1)+' / '+LEAVE_ALLOWANCE+aUpcomingHint+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:'+aColor+'">'+fmtNumber(annualRem,1)+'</td>'+
-      '<td><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+aPct+'%;background:'+aColor+';border-radius:4px"></div></div><div style="font-size:11px;color:var(--muted);margin-top:3px">'+fmtPct(aPct)+' used</div></td>'+
+      '<td style="font-variant-numeric:tabular-nums">'+approvedCell+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(annualUsed,1)+' / '+LEAVE_ALLOWANCE+aUpcomingHint+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:'+aColor+'">'+fmtNumber(annualRem,1)+'</td>'+
+      '<td><div style="height:8px;background:#f6f5f4;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+aPct+'%;background:'+aColor+';border-radius:4px"></div></div><div style="font-size:11px;color:var(--muted);margin-top:3px">'+fmtPct(aPct)+' used</div></td>'+
       '<td>'+aBadge+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal)">'+fmtNumber(sickUsed,1)+' / '+SICK_ALLOWANCE+sUpcomingHint+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:'+sColor+'">'+fmtNumber(sickRem,1)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(sickUsed,1)+' / '+SICK_ALLOWANCE+sUpcomingHint+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:'+sColor+'">'+fmtNumber(sickRem,1)+'</td>'+
       '<td>'+sBadge+'</td>'+
       '</tr>';
   }).join('');
@@ -564,16 +564,16 @@ async function renderTeamOTSummary() {
     // Render them in a muted color so the manager can see the hours exist
     // without being misled into thinking they contribute to comp-off.
     return '<tr><td><strong>'+emp+'</strong></td>'+
-      '<td style="font-family:\'DM Mono\',monospace">'+s.sessions+'</td>'+
-      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+r2(s.eveCred)+'</td>'+
-      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+r2(s.earlyCred)+'</td>'+
-      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace;color:#9CA3AF" title="Mid 1:1 (<4h) — tracked but does not earn CO">'+r2(s.mid11)+'</td>'+
-      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+r2(s.mid12)+'</td>'+
-      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace" title="Weekend 1:1 — earns CO at 8h = 1 day">'+r2(s.wk11)+'</td>'+
-      '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+r2(s.wk12)+'</td>'+
-      '<td><strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+fmtNumber(s.totalCO,2)+'</strong></td>'+
-      '<td style="font-family:\'DM Mono\',monospace">'+fmtNumber(s.used,2)+'</td>'+
-      '<td><strong style="font-family:\'DM Mono\',monospace;color:'+bc+'">'+fmtNumber(s.balance,2)+'</strong></td></tr>';
+      '<td style="font-variant-numeric:tabular-nums">'+s.sessions+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums">'+r2(s.eveCred)+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums">'+r2(s.earlyCred)+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;color:#a39e98" title="Mid 1:1 (<4h) — tracked but does not earn CO">'+r2(s.mid11)+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums">'+r2(s.mid12)+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums" title="Weekend 1:1 — earns CO at 8h = 1 day">'+r2(s.wk11)+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums">'+r2(s.wk12)+'</td>'+
+      '<td><strong style="font-variant-numeric:tabular-nums;color:var(--navy)">'+fmtNumber(s.totalCO,2)+'</strong></td>'+
+      '<td style="font-variant-numeric:tabular-nums">'+fmtNumber(s.used,2)+'</td>'+
+      '<td><strong style="font-variant-numeric:tabular-nums;color:'+bc+'">'+fmtNumber(s.balance,2)+'</strong></td></tr>';
   }).join('');
   document.getElementById('team-ot-content').innerHTML=
     '<div class="table-wrap"><table><thead><tr>'+
@@ -581,7 +581,7 @@ async function renderTeamOTSummary() {
       '<th>Sessions</th>'+
       '<th class="hide-mobile">Eve Cred</th>'+
       '<th class="hide-mobile">Early Cred</th>'+
-      '<th class="hide-mobile" style="color:#9CA3AF">Mid 1:1</th>'+
+      '<th class="hide-mobile" style="color:#a39e98">Mid 1:1</th>'+
       '<th class="hide-mobile">Mid 1:2</th>'+
       '<th class="hide-mobile">Wknd 1:1</th>'+
       '<th class="hide-mobile">Wknd 1:2</th>'+
@@ -723,7 +723,7 @@ async function renderLeaveApprovals() {
   const others  = rows.filter(function(r){return r.status!=='pending';});
   let html='';
   if (!rows.length) {
-    html += '<div style="padding:14px;background:#f8fafc;border-radius:8px;color:var(--muted);font-size:13px;margin-bottom:14px">No requests match the filters.</div>';
+    html += '<div style="padding:14px;background:#f6f5f4;border-radius:8px;color:var(--muted);font-size:13px;margin-bottom:14px">No requests match the filters.</div>';
   }
   if (pending.length){
     html+='<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">🟡 Pending ('+pending.length+')</h3>';
@@ -765,7 +765,7 @@ async function buildApprovedLeavesSection() {
   }
   var rows = data || [];
   var html = '<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin:28px 0 8px">📒 Approved Leave Records — Legacy ('+rows.length+')</h3>'+
-    '<div style="background:#F1F5F9;color:#475569;border-left:3px solid #94A3B8;padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:10px;line-height:1.5">'+
+    '<div style="background:#f6f5f4;color:#475569;border-left:3px solid #94A3B8;padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:10px;line-height:1.5">'+
       'ℹ️ <strong>Legacy ledger.</strong> As of v81, leave balances are computed day-by-day directly from <code>leave_requests</code>. ' +
       'These rows are kept for historical reference but no longer drive the balance. Edits here have no effect on what an employee has &quot;used&quot;.'+
     '</div>';
@@ -789,10 +789,10 @@ async function buildApprovedLeavesSection() {
     rows.map(function(r){
       return '<tr>'+
         '<td><strong>'+esc2(r.employee||'')+'</strong></td>'+
-        '<td><span class="badge" style="background:#f0f4ff;color:var(--navy)">'+esc2(r.leave_type||'')+'</span></td>'+
-        '<td style="font-family:DM Mono,monospace">'+fmtDate(r.start_date)+'</td>'+
-        '<td style="font-family:DM Mono,monospace">'+fmtDate(r.end_date)+'</td>'+
-        '<td style="font-family:DM Mono,monospace;font-weight:700">'+r.working_days+'</td>'+
+        '<td><span class="badge" style="background:#f6f5f4;color:var(--navy)">'+esc2(r.leave_type||'')+'</span></td>'+
+        '<td style="font-variant-numeric:tabular-nums">'+fmtDate(r.start_date)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums">'+fmtDate(r.end_date)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums;font-weight:700">'+r.working_days+'</td>'+
         '<td style="font-size:11px;color:var(--muted)"'+(r.created_at?' title="'+relativeTimeTitle(r.created_at)+'"':'')+'>'+(r.created_at?relativeTime(r.created_at):'')+'</td>'+
         '</tr>';
     }).join('')+
@@ -921,7 +921,7 @@ function approvalCard(r,type) {
     var detail = r._overlaps.map(function(o){
       return o.employee + ' (' + (o.status||'?') + ', ' + fmtDate(o.start_date) + '–' + fmtDate(o.end_date) + ')';
     }).join('; ');
-    overlapHtml = '<div style="background:#FEF3C7;color:#92400E;border-left:3px solid #F59E0B;padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+    overlapHtml = '<div style="background:#FEF3C7;color:#793400;border-left:3px solid #dd5b00;padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
       '⚠️ <strong>Overlap caution:</strong> '+r._overlaps.length+' other request'+(r._overlaps.length===1?'':'s')+' on these dates — '+detail+
       '</div>';
   }

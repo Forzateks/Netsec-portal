@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v160-notion-design-system",
+      "version": "v160",
+      "category": "app",
+      "title": "A new look for the whole app",
+      "body": "NetSec Portal has been rebuilt on a calmer, document-like design: a warm paper background instead of grey, white cards defined by thin hairlines instead of heavy shadows, and one clear blue reserved for buttons and links so it's always obvious what's clickable. Everything is now set in Inter, and the navy header is a slim white bar. Nothing moved — every screen, button and report is exactly where it was.",
+      "link": null
+    },
+    {
       "id": "v159-tracker-quoted-phase",
       "version": "v159",
       "category": "new",

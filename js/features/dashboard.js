@@ -65,7 +65,7 @@ function relDate(dateStr) {
 // no per-member fan-out), so the two views never disagree.
 
 var DASH_TOP_N = 8;
-var DASH_PIE_COLORS = ['#0A1F5C','#00A0D2','#C8A832','#3B82F6','#10B981','#8B5CF6','#F59E0B','#EF4444','#6B7280'];
+var DASH_PIE_COLORS = ['#0d0d0d','#0075de','#dd5b00','#2a9d99','#1aae39','#391c57','#dd5b00','#d93025','#615d59'];
 
 // Group rows by keyField, sum total_hours, return top-N + "Other (rest)"
 // bucket. Rows with empty/null key are skipped (per spec).
@@ -1037,11 +1037,11 @@ async function renderManagerDashboard() {
 
   // === PENDING APPROVALS HERO CARD ===
   if (teamPending > 0) {
-    html += '<div class="card" style="background:linear-gradient(135deg,#0A1F5C 0%,#1E3A8A 100%);color:#fff;margin-bottom:16px">'+
+    html += '<div class="card" style="background:linear-gradient(135deg,#0d0d0d 0%,#1E3A8A 100%);color:#fff;margin-bottom:16px">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">'+
         '<div>'+
           '<div style="font-size:13px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;font-weight:600">Pending Approvals</div>'+
-          '<div style="font-size:36px;font-weight:700;font-family:DM Mono,monospace;line-height:1.1;margin-top:4px"><span data-counter="'+teamPending+'">'+teamPending+'</span></div>'+
+          '<div style="font-size:36px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:4px"><span data-counter="'+teamPending+'">'+teamPending+'</span></div>'+
           '<div style="font-size:13px;opacity:.85;margin-top:4px">'+
             (otPending>0?otPending+' OT &middot; ':'')+
             (coPending>0?coPending+' Comp Off &middot; ':'')+

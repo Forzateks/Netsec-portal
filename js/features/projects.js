@@ -905,17 +905,17 @@ async function renderManageProjects() {
   // <i data-lucide> so the badge picks up an SVG glyph after lucide.createIcons().
   const STATUS_COLORS = {
     'active':    {bg:'#DCFCE7',color:'#166534',icon:'circle',         label:'Active'},
-    'sign-off':        {bg:'#FEF3C7',color:'#92400E',icon:'pen-tool',       label:'Sign-off'},
+    'sign-off':        {bg:'#FEF3C7',color:'#793400',icon:'pen-tool',       label:'Sign-off'},
     'payment-pending': {bg:'#FEF9C3',color:'#854D0E',icon:'wallet',         label:'Payment Pending'},
     'closed':          {bg:'#E0F2FE',color:'#075985',icon:'check-circle-2', label:'Closed'},
     'on-hold':   {bg:'#FED7AA',color:'#9A3412',icon:'pause-circle',   label:'On Hold'},
-    'dormant':   {bg:'#F3F4F6',color:'#4B5563',icon:'moon',           label:'Dormant'},
+    'dormant':   {bg:'#f6f5f4',color:'#4B5563',icon:'moon',           label:'Dormant'},
     'cancelled': {bg:'#FEE2E2',color:'#991B1B',icon:'x-circle',       label:'Cancelled'},
   };
   const TYPE_BADGES = {
-    'project':  {bg:'#EFF6FF',color:'#2563EB',label:'PROJECT'},
+    'project':  {bg:'#e8f2fd',color:'#2563EB',label:'PROJECT'},
     'poc':      {bg:'#F5F3FF',color:'#7C3AED',label:'POC'},
-    'amc':      {bg:'#FFFBEB',color:'#B45309',label:'AMC'},
+    'amc':      {bg:'#FFFBEB',color:'#793400',label:'AMC'},
     'support':  {bg:'#FFF1F2',color:'#9F1239',label:'SUPPORT'},
     'presales': {bg:'#FDF2F8',color:'#BE185D',label:'PRE-SALES-TASK'},
   };
@@ -926,7 +926,7 @@ async function renderManageProjects() {
     '<tbody>'+
     rows.map(function(p,i){
       var sc = STATUS_COLORS[p.status] || STATUS_COLORS['active'];
-      var tb = TYPE_BADGES[p.type] || {bg:'#F3F4F6',color:'#6B7280',label:(p.type||'-').toUpperCase()};
+      var tb = TYPE_BADGES[p.type] || {bg:'#f6f5f4',color:'#615d59',label:(p.type||'-').toUpperCase()};
       var custName = custById[p.customer_id] || PROJECT_CUSTOMER[p.name] || '-';
       var safeCust = String(custName).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       var custCell = (custName && custName !== '-')
@@ -1326,13 +1326,13 @@ function initProjectTab() {
       cb.type = 'checkbox'; cb.value = emp; cb.name = 'pj-team';
       cb.style.accentColor = 'var(--teal)';
       cb.onchange = function() {
-        label.style.background = cb.checked ? '#E0F7FF' : 'white';
+        label.style.background = cb.checked ? '#e8f2fd' : 'white';
         label.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
       };
       // Auto-check current user
       if (emp === currentUser) {
         cb.checked = true;
-        label.style.background = '#E0F7FF';
+        label.style.background = '#e8f2fd';
         label.style.borderColor = 'var(--teal)';
       }
       label.appendChild(cb);
@@ -1486,16 +1486,16 @@ async function renderPjEmployeeSummary() {
       .join(', ');
     return '<tr>'+
       '<td><strong>'+emp+'</strong></td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:13px">'+fmtCount(d.sessions)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:16px">'+fmtHours(d.total)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.project)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.poc)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.amc)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.support)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.presales)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.customer_testing)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(d.internal)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+fmtDays(d.total/8)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:13px">'+fmtCount(d.sessions)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal);font-size:16px">'+fmtHours(d.total)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(d.project)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(d.poc)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(d.amc)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(d.support)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(d.presales)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(d.customer_testing)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(d.internal)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted)">'+fmtDays(d.total/8)+'</td>'+
       '<td style="font-size:11px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(topEngs)+'">'+(topEngs||'-')+'</td>'+
     '</tr>';
   }).join('');
@@ -1521,10 +1521,10 @@ async function renderPjEmployeeSummary() {
       '<th><span class="pj-th-ico"><i data-lucide="cog"></i>Internal</span></th>'+
       '<th>Working Days</th><th>Top Engagements</th></tr></thead>'+
     '<tbody>'+tableRows+
-    '<tr style="background:#f8fafc;font-weight:600"><td>TOTAL</td><td>-</td>'+
-    '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+fmtHours(totalHours)+'</td>'+
+    '<tr style="background:#f6f5f4;font-weight:600"><td>TOTAL</td><td>-</td>'+
+    '<td style="font-variant-numeric:tabular-nums;color:var(--navy);font-size:16px">'+fmtHours(totalHours)+'</td>'+
     '<td colspan="7">-</td>'+
-    '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+fmtDays(totalHours/8)+'</td><td>-</td></tr>'+
+    '<td style="font-variant-numeric:tabular-nums;color:var(--muted)">'+fmtDays(totalHours/8)+'</td><td>-</td></tr>'+
     '</tbody></table></div>'+
     '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Year: '+(year==='all'?'All Years':year)+' | Working days = hours / 8 | Hours are credited to every team member on a session (so a 4h session with 3 members shows 4h on each row, summing to 12h in TOTAL).</div>';
   if (typeof renderIcons === 'function') renderIcons();
@@ -1647,17 +1647,17 @@ async function renderPjCustomerSummary() {
   const tableRows = aggRows.map(function(r){
     return '<tr>'+
       '<td><strong>'+esc2(r.customer)+'</strong></td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:13px">'+fmtCount(r.sessions)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-weight:700;color:var(--teal);font-size:16px">'+fmtHours(r.total)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:13px;color:var(--muted)">'+fmtDays(r.days)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:13px">'+fmtCount(r.engagements)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.project)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.poc)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.amc)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.support)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.presales)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.customer_testing)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(r.internal)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:13px">'+fmtCount(r.sessions)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal);font-size:16px">'+fmtHours(r.total)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted)">'+fmtDays(r.days)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:13px">'+fmtCount(r.engagements)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(r.project)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(r.poc)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(r.amc)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(r.support)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(r.presales)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(r.customer_testing)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(r.internal)+'</td>'+
       '<td style="font-size:12px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(r.top_engagement)+'">'+esc2(r.top_engagement)+'</td>'+
     '</tr>';
   }).join('');
@@ -1695,19 +1695,19 @@ async function renderPjCustomerSummary() {
       '<th>Top Engagement</th>'+
     '</tr></thead>'+
     '<tbody>'+tableRows+
-      '<tr style="background:#f8fafc;font-weight:600">'+
+      '<tr style="background:#f6f5f4;font-weight:600">'+
         '<td>TOTAL ('+aggRows.length+' customer'+(aggRows.length===1?'':'s')+')</td>'+
-        '<td style="font-family:DM Mono,monospace">'+fmtCount(totals.sessions)+'</td>'+
-        '<td style="font-family:DM Mono,monospace;color:var(--navy);font-size:16px">'+fmtHours(totals.total)+'</td>'+
-        '<td style="font-family:DM Mono,monospace;color:var(--muted)">'+fmtDays(totals.total/8)+'</td>'+
-        '<td style="font-family:DM Mono,monospace">'+fmtCount(totals.engagements)+'</td>'+
-        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.project)+'</td>'+
-        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.poc)+'</td>'+
-        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.amc)+'</td>'+
-        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.support)+'</td>'+
-        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.presales)+'</td>'+
-        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.customer_testing)+'</td>'+
-        '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtHours(totals.internal)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums">'+fmtCount(totals.sessions)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums;color:var(--navy);font-size:16px">'+fmtHours(totals.total)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums;color:var(--muted)">'+fmtDays(totals.total/8)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums">'+fmtCount(totals.engagements)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(totals.project)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(totals.poc)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(totals.amc)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(totals.support)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(totals.presales)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(totals.customer_testing)+'</td>'+
+        '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtHours(totals.internal)+'</td>'+
         '<td>-</td>'+
       '</tr>'+
     '</tbody></table></div>'+
@@ -1858,14 +1858,14 @@ function empShortName(emp) {
 
 function empColor(emp) {
   var colors = {
-    'Ahmed Ali':      '#3B82F6',
-    'Venkatesan':     '#0A1F5C',
-    'Prasanth':       '#10B981',
-    'Salman Aziz':    '#F59E0B',
-    'Mohammed Afsal': '#8B5CF6',
-    'Mohammed Nasif': '#00A0D2',
+    'Ahmed Ali':      '#2a9d99',
+    'Venkatesan':     '#0d0d0d',
+    'Prasanth':       '#1aae39',
+    'Salman Aziz':    '#dd5b00',
+    'Mohammed Afsal': '#391c57',
+    'Mohammed Nasif': '#0075de',
   };
-  return colors[emp] || '#6B7280';
+  return colors[emp] || '#615d59';
 }
 
 function buildPieChart(data, unit) {
@@ -1904,7 +1904,7 @@ function buildPieChart(data, unit) {
     var ly = cy + (r*0.65) * Math.sin(midAngle);
     var pct = Math.round(d.value/total*100);
     if (pct >= 5) {
-      html += '<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="11" font-weight="bold" font-family="DM Sans,Arial">'+pct+'%</text>';
+      html += '<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="11" font-weight="bold" font-family="Inter,sans-serif">'+pct+'%</text>';
     }
     startAngle = endAngle;
   });
@@ -2000,10 +2000,10 @@ async function renderActivityMatrix() {
     var sorted = Object.keys(acts).sort(function(a,b){ return acts[b]-acts[a]; });
     var rowId = 'matrix-emp-'+idx;
     html += '<div class="matrix-emp-row" onclick="var x=document.getElementById(\''+rowId+'\');x.style.display=x.style.display===\'none\'?\'block\':\'none\'" '+
-      'style="cursor:pointer;padding:12px 14px;border:1px solid var(--border,#E5E7EB);border-radius:8px;margin-bottom:8px">'+
+      'style="cursor:pointer;padding:12px 14px;border:1px solid var(--border,#e6e6e6);border-radius:8px;margin-bottom:8px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<strong>'+esc2(label)+'</strong>'+
-        '<span style="font-family:DM Mono,monospace;color:var(--teal);font-weight:700">'+(empTotal[e]||0).toFixed(1)+'h</span>'+
+        '<span style="font-variant-numeric:tabular-nums;color:var(--teal);font-weight:700">'+(empTotal[e]||0).toFixed(1)+'h</span>'+
       '</div>'+
       '<div id="'+rowId+'" style="display:none;margin-top:10px">';
     // Bars, scaled to the employee's own max
@@ -2012,10 +2012,10 @@ async function renderActivityMatrix() {
       var pct = Math.round((acts[a]/max)*100);
       html += '<div style="display:flex;align-items:center;gap:10px;margin:4px 0">'+
         '<span style="flex:0 0 180px;font-size:12px">'+esc2(a)+'</span>'+
-        '<span style="flex:1;background:#f0f4ff;border-radius:4px;height:14px;position:relative">'+
+        '<span style="flex:1;background:#f6f5f4;border-radius:4px;height:14px;position:relative">'+
           '<span style="position:absolute;left:0;top:0;bottom:0;width:'+pct+'%;background:var(--teal);border-radius:4px"></span>'+
         '</span>'+
-        '<span style="flex:0 0 56px;text-align:right;font-family:DM Mono,monospace;font-size:12px">'+acts[a].toFixed(1)+'h</span>'+
+        '<span style="flex:0 0 56px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px">'+acts[a].toFixed(1)+'h</span>'+
       '</div>';
     });
     html += '</div></div>';

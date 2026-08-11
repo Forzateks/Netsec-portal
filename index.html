@@ -7,7 +7,7 @@
 
 <!-- PWA -->
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0A1F5C">
+<meta name="theme-color" content="#ffffff">
 <meta name="application-name" content="NetSec Portal">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="NetSec">
@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v159',
+    release: 'netsec-portal@v160',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -213,7 +213,7 @@
          fires from the modal's "Update now" button (or directly if there
          are no versioned notes — see showUpdateNotes for the empty-skip path). -->
     <button id="update-available-btn" onclick="showUpdateNotes()" title="A new version is available — click to see what's new"
-      style="display:none;align-items:center;gap:6px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:14px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;margin-right:10px">
+      style="display:none;align-items:center;gap:6px;background:#FEF3C7;color:#793400;border:1px solid #FCD34D;border-radius:14px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;margin-right:10px">
       <span class="update-dot"></span>Update
     </button>
     <!-- v124 a11y: aria-label + haspopup + expanded so SRs announce the bell as
@@ -448,9 +448,9 @@
       </div>
       <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1.5px solid #bae6fd;border-radius:10px;padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
         <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Leave Type</div><div style="font-size:16px;font-weight:700;color:var(--navy)" id="lv-prev-type">—</div></div>
-        <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">This Request</div><div style="font-size:22px;font-weight:700;color:var(--navy);font-family:DM Mono,monospace" id="lv-prev-days">—</div></div>
-        <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Used This Year</div><div style="font-size:22px;font-weight:700;color:var(--navy);font-family:DM Mono,monospace" id="lv-prev-used">—</div></div>
-        <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Balance After</div><div style="font-size:22px;font-weight:700;font-family:DM Mono,monospace" id="lv-prev-bal">—</div></div>
+        <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">This Request</div><div style="font-size:22px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums" id="lv-prev-days">—</div></div>
+        <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Used This Year</div><div style="font-size:22px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums" id="lv-prev-used">—</div></div>
+        <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Balance After</div><div style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums" id="lv-prev-bal">—</div></div>
       </div>
       <button class="btn btn-primary btn-block" id="lv-save-btn" onclick="submitLeaveRequest()"><i data-lucide="send" class="btn-icon"></i>Submit Request</button>
     </div>
@@ -573,11 +573,11 @@
       <div style="background:linear-gradient(135deg,#f8faff,#eef4ff);border:1.5px solid #c7d7f5;border-radius:10px;padding:16px;margin-top:16px">
         <div style="display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px;align-items:center">
           <div style="color:var(--muted);font-weight:600;display:inline-flex;align-items:center;gap:8px"><i data-lucide="clock-3" style="width:14px;height:14px;stroke-width:2"></i>Total</div>
-          <div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--navy)" id="us-preview-total">—</div>
+          <div style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--navy)" id="us-preview-total">—</div>
           <div style="color:var(--muted);font-weight:600;display:inline-flex;align-items:center;gap:8px"><i data-lucide="building-2" style="width:14px;height:14px;stroke-width:2"></i>Office</div>
-          <div style="font-family:'DM Mono',monospace;font-weight:700" id="us-preview-office">—</div>
+          <div style="font-variant-numeric:tabular-nums;font-weight:700" id="us-preview-office">—</div>
           <div style="color:var(--muted);font-weight:600;display:inline-flex;align-items:center;gap:8px"><i data-lucide="timer" style="width:14px;height:14px;stroke-width:2"></i>OT detected</div>
-          <div id="us-preview-ot" style="font-family:'DM Mono',monospace;font-weight:700;color:var(--gold)">—</div>
+          <div id="us-preview-ot" style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--gold)">—</div>
         </div>
       </div>
       <div style="margin-top:20px">
@@ -649,7 +649,7 @@
           <button class="btn btn-sm btn-ghost" onclick="exportEngagementSummaryCsv()" title="Export current view to CSV"><i data-lucide="download" class="btn-icon"></i>Export CSV</button>
         </div>
       </div>
-      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f6f5f4;border-radius:8px">
         <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">Type:</label>
         <select id="pj-eng-type" onchange="renderEngagementSummary()" style="width:auto;padding:6px 10px;font-size:13px">
           <option value="all">All Types</option>
@@ -704,7 +704,7 @@
           <button class="btn btn-sm btn-ghost" onclick="exportEmployeeSummaryCsv()" title="Export current view to CSV"><i data-lucide="download" class="btn-icon"></i>Export CSV</button>
         </div>
       </div>
-      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f6f5f4;border-radius:8px">
         <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
         <input type="date" id="pj-emp-from" onchange="renderPjEmployeeSummary()" style="width:auto;padding:6px 8px;font-size:13px">
         <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
@@ -825,7 +825,7 @@
         <div class="card-title" style="margin-bottom:0">OT Sessions</div>
         <button class="btn btn-sm btn-ghost" onclick="exportCSV()"><i data-lucide="download" class="btn-icon"></i>Export CSV</button>
       </div>
-      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+      <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f6f5f4;border-radius:8px">
         <span class="manager-only-el" style="display:flex;align-items:center;gap:6px">
           <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">Employee:</label>
           <select id="sessions-emp-filter" onchange="renderSessions()" style="width:auto;padding:6px 10px;font-size:13px">
@@ -861,7 +861,7 @@
   <!-- SUMMARY -->
   <div id="pjtab-otsummary" style="display:none">
     <div class="emp-filter" id="summary-emp-filter"></div>
-    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:10px;background:#f6f5f4;border-radius:8px">
       <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">From:</label>
       <input type="date" id="summary-date-from" onchange="renderCurrentSummary()" style="width:auto;padding:6px 8px;font-size:13px">
       <label style="font-size:12px;color:var(--muted);font-weight:600;margin:0">To:</label>
@@ -917,7 +917,7 @@
       <div id="recompute-result" style="margin-top:14px;display:none;font-size:13px"></div>
     </div>
 
-    <div class="card" style="margin-bottom:16px;border-left:3px solid #F59E0B;background:#FFFBEB">
+    <div class="card" style="margin-bottom:16px;border-left:3px solid #dd5b00;background:#FFFBEB">
       <div class="card-title" style="margin-bottom:6px">📦 Archive Policy Violators</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
         Marks OT sessions whose start time falls in the now-blocked weekday window
@@ -936,7 +936,7 @@
       <div id="violations-result" style="margin-top:14px;display:none;font-size:13px"></div>
     </div>
 
-    <div class="card" style="margin-bottom:16px;border-left:3px solid #00A0D2;background:#F0F9FF">
+    <div class="card" style="margin-bottom:16px;border-left:3px solid #0075de;background:#F0F9FF">
       <div class="card-title" style="margin-bottom:6px">🔄 Re-evaluate Archived Sessions</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
         Sweeps archived sessions and un-archives any that now qualify for partial credit
@@ -951,7 +951,7 @@
       <div id="reeval-result" style="margin-top:14px;display:none;font-size:13px"></div>
     </div>
 
-    <div class="card" style="margin-bottom:16px;border-left:3px solid #EF4444;background:#FEF2F2">
+    <div class="card" style="margin-bottom:16px;border-left:3px solid #d93025;background:#FEF2F2">
       <div class="card-title" style="margin-bottom:6px">🗑️ Purge Old Archived/Rejected Sessions (DESTRUCTIVE)</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
         Permanently deletes any archived or rejected OT session older than <strong>1 year</strong>.
@@ -968,18 +968,18 @@
   <div id="pjtab-otpolicy" style="display:none">
     <div class="card">
       <div class="card-title">OT Policy Reference</div>
-      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#EFF6FF"><div style="width:10px;height:10px;border-radius:50%;background:var(--eve);margin-top:2px;flex-shrink:0"></div><div><strong>Eve (weekday session ending after 6:30PM UAE / 7:00PM KSA, no midnight cross):</strong> 1:1 always. 8 credited hrs = 1 Comp Off day.</div></div>
+      <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#e8f2fd"><div style="width:10px;height:10px;border-radius:50%;background:var(--eve);margin-top:2px;flex-shrink:0"></div><div><strong>Eve (weekday session ending after 6:30PM UAE / 7:00PM KSA, no midnight cross):</strong> 1:1 always. 8 credited hrs = 1 Comp Off day.</div></div>
       <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#FFFBEB;border-left:3px solid var(--gold)"><div style="width:10px;height:10px;border-radius:50%;background:var(--gold);margin-top:2px;flex-shrink:0"></div><div><strong>Eve/Split (starts 6:30PM+, crosses midnight):</strong> Eve portion at 1:1 + Midnight portion doubled at 1:2. Cap 8hrs total.</div></div>
       <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#ECFDF5"><div style="width:10px;height:10px;border-radius:50%;background:var(--early);margin-top:2px;flex-shrink:0"></div><div><strong>Early Morning (start 5:00 AM–7:29 AM UAE / 5:00 AM–7:59 AM KSA):</strong> 1:1 always. Credit is capped at the regular-hours boundary (UAE 7:30 AM / KSA 8:00 AM) — only the time before regular working hours counts as OT. 8 credited hrs = 1 Comp Off day (pools with Eve hours).</div></div>
       <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#F5F3FF"><div style="width:10px;height:10px;border-radius:50%;background:var(--mid);margin-top:2px;flex-shrink:0"></div><div><strong>Midnight (crosses midnight before 6:30 PM, or starts before 5 AM):</strong> &lt;4hrs raw = 1:1, ≥4hrs raw = 1:2 (qualifies for CO). Credit capped at morning block start (UAE 7:30 AM / KSA 8:00 AM) — time after that is regular hours. 8 credited hrs = 1 Comp Off day.</div></div>
       <div class="policy-item" style="display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;background:#FFFBEB"><div style="width:10px;height:10px;border-radius:50%;background:var(--wknd);margin-top:2px;flex-shrink:0"></div><div><strong>Weekend — UAE (Sat/Sun) or KSA (Fri/Sat):</strong> 1:1 always. Credited = actual hours worked (no cap). 8 credited hrs = 1 Comp Off day.</div></div>
-      <div style="margin-top:16px;padding:14px;background:#FEF2F2;border-radius:8px;font-size:13px;border-left:3px solid #EF4444">
+      <div style="margin-top:16px;padding:14px;background:#FEF2F2;border-radius:8px;font-size:13px;border-left:3px solid #d93025">
         <strong>⚠️ Weekday OT submission rule:</strong><br>
         <span style="display:inline-block;margin-top:4px"><strong>UAE employees:</strong> OT cannot start between <strong>7:30 AM and 6:30 PM</strong>. Eve band starts at 6:30 PM.</span><br>
         <span style="display:inline-block;margin-top:2px"><strong>KSA employees (Salman Aziz, Mohammed Afsal):</strong> OT cannot start between <strong>8:00 AM and 7:00 PM</strong>. Eve band starts at 7:00 PM.</span><br>
         <span style="display:inline-block;margin-top:4px;color:var(--muted)">Does not apply to weekends.</span>
       </div>
-      <div style="margin-top:10px;padding:14px;background:#f8fafc;border-radius:8px;font-size:13px">
+      <div style="margin-top:10px;padding:14px;background:#f6f5f4;border-radius:8px;font-size:13px">
         <strong>Comp Off rules:</strong> Full Day=1 day, Half Day=0.5. Submit request → Manager approves → appears in balance.<br>
         <strong>Annual Leave:</strong> 22 working days per year. <strong>Sick Leave:</strong> 12 days per year. Submit request → Manager approves → deducted from balance.
       </div>
@@ -1259,7 +1259,7 @@
 <!-- ══ APPROVALS SCREEN (manager only) ══ -->
 <div class="screen" id="screen-approvals">
   <div id="apptab-leave">
-    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px">
+    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f6f5f4;border-radius:8px">
       <label style="font-size:12px;color:var(--muted);font-weight:600">Employee:</label>
       <select id="lv-app-emp" onchange="renderLeaveApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
         <option value="">All</option>
@@ -1294,7 +1294,7 @@
     <div id="lv-approvals-content"></div>
   </div>
   <div id="apptab-ot" style="display:none">
-    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px">
+    <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f6f5f4;border-radius:8px">
       <label style="font-size:12px;color:var(--muted);font-weight:600">Employee:</label>
       <select id="ot-app-emp" onchange="renderOTApprovals()" style="width:auto;padding:6px 10px;font-size:13px">
         <option value="">All</option>
@@ -2191,7 +2191,7 @@
 <!-- EDIT DEVICE MODAL -->
 <div class="modal-overlay" id="inv-edit-modal">
   <div class="modal" style="max-width:560px">
-    <div class="modal-title">✏️ Edit Device — <span id="inv-edit-serial" style="font-family:'DM Mono',monospace;font-size:14px;color:var(--teal)"></span></div>
+    <div class="modal-title">✏️ Edit Device — <span id="inv-edit-serial" style="font-variant-numeric:tabular-nums;font-size:14px;color:var(--teal)"></span></div>
     <div class="form-grid">
       <div class="form-group">
         <label>Model No.</label>
@@ -2258,7 +2258,7 @@
       </div>
       <div class="form-group">
         <label>Last Updated</label>
-        <input type="text" id="inv-edit-lastupdated" readonly style="background:#f0f4ff;font-size:12px;font-family:'DM Mono',monospace">
+        <input type="text" id="inv-edit-lastupdated" readonly style="background:#f6f5f4;font-size:12px;font-variant-numeric:tabular-nums">
       </div>
       <div class="form-group">
         <label>Audit Date</label>
@@ -2470,7 +2470,7 @@
     <div class="form-grid">
       <div class="form-group">
         <label>Employee</label>
-        <input type="text" id="edit-lv-emp" readonly style="background:#f0f4ff">
+        <input type="text" id="edit-lv-emp" readonly style="background:#f6f5f4">
       </div>
       <div class="form-group">
         <label>Type</label>
@@ -2532,7 +2532,7 @@
     <div class="form-grid">
       <div class="form-group">
         <label>Employee</label>
-        <input type="text" id="edit-al-emp" readonly style="background:#f0f4ff">
+        <input type="text" id="edit-al-emp" readonly style="background:#f6f5f4">
       </div>
       <div class="form-group">
         <label>Type</label>
@@ -2567,7 +2567,7 @@
   <div class="modal" style="max-width:420px">
     <div class="modal-title">🔑 Change Password</div>
     <div id="change-password-error" style="display:none;background:#FEE2E2;color:#B91C1C;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
-    <div id="change-password-success" style="display:none;background:#ECFDF5;color:#059669;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
+    <div id="change-password-success" style="display:none;background:#ECFDF5;color:#1aae39;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
     <div class="form-group" style="margin-bottom:12px">
       <label>New Password</label>
       <input type="password" id="cp-new" placeholder="At least 8 characters" autocomplete="new-password">

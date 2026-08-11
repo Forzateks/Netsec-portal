@@ -386,16 +386,16 @@ async function renderSessions() {
     var stBadge='<span class="badge '+badgeClass+'" style="font-size:10px" title="'+(esc2(s.manager_comment||'')||'')+'">'+icon+' '+label+'</span>';
     var infoIcon = '<button type="button" class="ot-info-btn" onclick="showOTExplainPopover(this,'+s.id+')" aria-label="Calculation details">i</button>';
     var driftMark = creditDriftMarker(s);
-    var creditedDisplay = (st==='approved' ? '<strong style="font-family:\'DM Mono\',monospace;color:var(--navy)">'+fmtHours(s.credited_hours)+'</strong>' : '<span style="color:var(--muted);font-size:12px;text-decoration:line-through">'+fmtHours(s.credited_hours)+'</span>') + driftMark + infoIcon;
+    var creditedDisplay = (st==='approved' ? '<strong style="font-variant-numeric:tabular-nums;color:var(--navy)">'+fmtHours(s.credited_hours)+'</strong>' : '<span style="color:var(--muted);font-size:12px;text-decoration:line-through">'+fmtHours(s.credited_hours)+'</span>') + driftMark + infoIcon;
     var rowOpacity = (st==='rejected'||st==='archived') ? 'opacity:0.55' : '';
     return '<tr style="'+rowOpacity+'" title="'+(st==='archived'||st==='rejected'?(esc2(s.manager_comment||'')):'')+'">'+
-    '<td style="color:var(--muted);font-family:\'DM Mono\',monospace">'+(i+1)+'</td>'+
+    '<td style="color:var(--muted);font-variant-numeric:tabular-nums">'+(i+1)+'</td>'+
     '<td><strong>'+s.employee+'</strong></td>'+
     '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+s.activity+'">'+s.activity+'</td>'+
-    '<td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fmtDate(s.ot_date)+'<br><span style="font-size:11px;color:var(--muted)">'+(s.day_name||'')+'</span></td>'+
-    '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+fmtTime(s.start_time)+'</td>'+
-    '<td class="hide-mobile" style="font-family:\'DM Mono\',monospace">'+fmtTime(s.end_time)+'</td>'+
-    '<td style="font-family:\'DM Mono\',monospace">'+fmtHours(s.duration_hours)+'</td>'+
+    '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtDate(s.ot_date)+'<br><span style="font-size:11px;color:var(--muted)">'+(s.day_name||'')+'</span></td>'+
+    '<td class="hide-mobile" style="font-variant-numeric:tabular-nums">'+fmtTime(s.start_time)+'</td>'+
+    '<td class="hide-mobile" style="font-variant-numeric:tabular-nums">'+fmtTime(s.end_time)+'</td>'+
+    '<td style="font-variant-numeric:tabular-nums">'+fmtHours(s.duration_hours)+'</td>'+
     '<td>'+bandBadge(s)+'</td>'+
     '<td><span class="badge '+(s.rate==='1:2'?'badge-12':'badge-11')+'">'+s.rate+'</span></td>'+
     '<td>'+creditedDisplay+'</td>'+
@@ -523,7 +523,7 @@ async function recomputeAllOT(mode) {
       var fieldList = Object.keys(d.fields).map(function(k){
         return '<span style="font-size:11px"><strong>'+k+'</strong>: '+d.fields[k].from+' → '+d.fields[k].to+'</span>';
       }).join(' &nbsp;|&nbsp; ');
-      return '<tr><td style="font-size:12px">'+d.employee+'</td><td style="font-size:12px;font-family:DM Mono,monospace">'+d.date+'</td><td style="font-size:12px;font-family:DM Mono,monospace">'+d.start+'–'+d.end+'</td><td>'+fieldList+'</td></tr>';
+      return '<tr><td style="font-size:12px">'+d.employee+'</td><td style="font-size:12px;font-variant-numeric:tabular-nums">'+d.date+'</td><td style="font-size:12px;font-variant-numeric:tabular-nums">'+d.start+'–'+d.end+'</td><td>'+fieldList+'</td></tr>';
     }).join('');
     resultEl.innerHTML =
       '<div style="padding:10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px"><strong>'+diffs.length+' sessions will change.</strong> '+summary+(diffs.length>50?' &nbsp;(showing first 50)':'')+'</div>'+
@@ -650,12 +650,12 @@ async function previewViolations() {
     rowsHtml +=
       '<tr>'+
       '<td style="font-weight:600">'+emp+'</td>'+
-      '<td style="font-family:DM Mono,monospace">'+d.violators.length+'</td>'+
-      '<td style="font-family:DM Mono,monospace;color:var(--danger);font-weight:700">'+d.recommendation.del.length+'</td>'+
-      '<td style="font-family:DM Mono,monospace;color:var(--gold)">'+d.recommendation.keep.length+'</td>'+
-      '<td style="font-family:DM Mono,monospace">'+fmtDays(d.used_days)+'</td>'+
-      '<td style="font-family:DM Mono,monospace">'+fmtHours(d.valid_credit)+'</td>'+
-      '<td style="font-family:DM Mono,monospace;color:'+(newBalance<0?'var(--danger)':'var(--success)')+'">'+fmtDays(newBalance)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums">'+d.violators.length+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;color:var(--danger);font-weight:700">'+d.recommendation.del.length+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;color:var(--gold)">'+d.recommendation.keep.length+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums">'+fmtDays(d.used_days)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums">'+fmtHours(d.valid_credit)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;color:'+(newBalance<0?'var(--danger)':'var(--success)')+'">'+fmtDays(newBalance)+'</td>'+
       '</tr>';
   });
 
@@ -754,9 +754,9 @@ async function previewReevalArchived() {
   var rowsHtml = changes.slice(0, 50).map(function(c){
     var s = c.row, r = c.newRes;
     return '<tr><td>'+s.employee+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+s.ot_date+'</td>'+
-      '<td style="font-family:DM Mono,monospace;font-size:12px">'+fmtTime(s.start_time)+' to '+fmtTime(s.end_time)+'</td>'+
-      '<td style="font-family:DM Mono,monospace">'+fmtHours(s.credited_hours)+' -> <strong>'+fmtHours(r.credited)+'</strong></td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+s.ot_date+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtTime(s.start_time)+' to '+fmtTime(s.end_time)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums">'+fmtHours(s.credited_hours)+' -> <strong>'+fmtHours(r.credited)+'</strong></td>'+
       '<td>'+bandBadge({band:r.band,start_time:s.start_time,end_time:s.end_time,employee:s.employee})+'</td>'+
       '</tr>';
   }).join('');
