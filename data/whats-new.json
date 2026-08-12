@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v162-dashboard-polish",
+      "version": "v162",
+      "category": "fixed",
+      "title": "Dashboard tidy-up",
+      "body": "The What's New panel was still a pale blue box left over from the old look — it's now the same clean white card as everything else, with the coloured tag as the only accent. The summary tiles lost their glossy gradient for the same flat finish, and the purple used for Mid overtime was so dark it read as black next to Day; it's now clearly purple, in the badges and the charts.",
+      "link": null
+    },
+    {
       "id": "v161-header-screen-name",
       "version": "v161",
       "category": "new",

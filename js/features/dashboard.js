@@ -65,7 +65,7 @@ function relDate(dateStr) {
 // no per-member fan-out), so the two views never disagree.
 
 var DASH_TOP_N = 8;
-var DASH_PIE_COLORS = ['#0d0d0d','#0075de','#dd5b00','#2a9d99','#1aae39','#391c57','#dd5b00','#d93025','#615d59'];
+var DASH_PIE_COLORS = ['#0d0d0d','#0075de','#dd5b00','#2a9d99','#1aae39','#6b3fa0','#dd5b00','#d93025','#615d59'];
 
 // Group rows by keyField, sum total_hours, return top-N + "Other (rest)"
 // bucket. Rows with empty/null key are skipped (per spec).

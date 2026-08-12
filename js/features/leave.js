@@ -395,11 +395,11 @@ async function renderLeaveHistory() {
         '</div>';
     }
     var ltIcon  = (r.leave_type||'annual')==='sick' ? 'Sick Leave' : 'Annual Leave';
-    var ltColor = (r.leave_type||'annual')==='sick' ? '#391c57' : 'var(--teal)';
+    var ltColor = (r.leave_type||'annual')==='sick' ? '#6b3fa0' : 'var(--teal)';
     // Half-day flag: working_days === 0.5 on a single-date row. The string
     // shows "(half day)" inline next to the date range to stay compact.
     var isHalf = (parseFloat(r.working_days) === 0.5);
-    var halfTag = isHalf ? ' <span style="font-size:11px;color:#391c57;font-weight:600">(half day)</span>' : '';
+    var halfTag = isHalf ? ' <span style="font-size:11px;color:#6b3fa0;font-weight:600">(half day)</span>' : '';
 
     // Determine if the employee can still cancel this request. Mirrors the
     // server-side rule applied by cancelLeaveRequest: pending / needs_review

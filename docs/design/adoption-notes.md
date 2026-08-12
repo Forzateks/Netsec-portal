@@ -56,13 +56,20 @@ structural fill uses a sticker colour**. But we *do* use the sticker palette for
 |---|---|---|
 | `--early` | `#1aae39` | green |
 | `--eve` | `#2a9d99` | teal |
-| `--mid` | `#391c57` | deep purple |
+| `--mid` | `#6b3fa0` | purple (see note) |
 | `--wknd` | `#dd5b00` | orange |
 | `--day` | `#615d59` | stone |
 
 Values were chosen from the sticker family but shifted toward the readable end —
 the raw palette (e.g. `#d6b6f6` purple, `#62aef0` sky) is tuned for illustration
 fills and fails contrast as badge text.
+
+> **v162 correction.** `--mid` originally used sticker deep-purple `#391c57`.
+> At badge size that reads as black, indistinguishable from the Day badge, and in
+> chart palettes it collided with ink `#0d0d0d` as a second near-black. It is now
+> `--nx-purple-mid` `#6b3fa0`, a mid tone that keeps the hue legible. The same
+> swap was applied to the six hardcoded `#391c57` uses in dashboard/leave/
+> projects/unified-sessions (chart palettes, sick-leave text, per-person series).
 
 ### 2.3 Pale status-pill pairs survive
 Status chips (`#fee2e2`/`#b91c1c` red, `#ecfdf5` green, `#fffbeb`/`#793400` amber)

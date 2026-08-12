@@ -1862,7 +1862,7 @@ function empColor(emp) {
     'Venkatesan':     '#0d0d0d',
     'Prasanth':       '#1aae39',
     'Salman Aziz':    '#dd5b00',
-    'Mohammed Afsal': '#391c57',
+    'Mohammed Afsal': '#6b3fa0',
     'Mohammed Nasif': '#0075de',
   };
   return colors[emp] || '#615d59';

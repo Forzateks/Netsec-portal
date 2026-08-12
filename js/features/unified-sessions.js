@@ -1524,7 +1524,7 @@ async function renderEngagementSummary() {
     '</tr>';
   }).join('');
 
-  var PIE_COLORS = ['#0d0d0d','#0075de','#dd5b00','#2a9d99','#1aae39','#391c57','#dd5b00','#d93025'];
+  var PIE_COLORS = ['#0d0d0d','#0075de','#dd5b00','#2a9d99','#1aae39','#6b3fa0','#dd5b00','#d93025'];
   var pieData = sorted.slice(0,8).map(function(name,i){
     var clean = name.replace(/ · (Project|POC|AMC|Support|Pre-Sales-Task)$/, '');
     return { label: clean, value: byEng[name].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
@@ -1716,7 +1716,7 @@ async function renderUnifiedTypeSummary(typeKey) {
     '</tr>';
   }).join('');
 
-  var PIE_COLORS = ['#0d0d0d','#0075de','#dd5b00','#2a9d99','#1aae39','#391c57','#dd5b00','#d93025'];
+  var PIE_COLORS = ['#0d0d0d','#0075de','#dd5b00','#2a9d99','#1aae39','#6b3fa0','#dd5b00','#d93025'];
   var pieData = sorted.slice(0,8).map(function(name,i){
     return { label: name, value: byEng[name].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
   });
