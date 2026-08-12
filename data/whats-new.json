@@ -422,6 +422,24 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v164-leave-overview-compoff",
+      "version": "v164",
+      "category": "new",
+      "title": "Comp off now shows in Leave Overview",
+      "body": "Leave → Overview lists CO Earned, CO Used and CO Balance next to your annual and sick figures, so all three leave types are readable in one place instead of comp off living only on the manager's OT card. Earned comes straight from your approved overtime at 8 credited hours = 1 day.",
+      "link": "leave",
+      "link_text": "Open Leave"
+    },
+    {
+      "id": "v164-filter-toolbars",
+      "version": "v164",
+      "category": "fixed",
+      "title": "Filter bars and headings tidied up",
+      "body": "On screens like My Sessions the heading was being squashed into a sliver beside the filters and wrapped onto two lines. Headings now sit on their own line with the filters grouped into a proper toolbar underneath, on all 11 screens that have one. Card headings lost their little coloured bar, and the table scrollbars are grey again instead of bright blue.",
+      "link": "my-sessions",
+      "link_text": "Open My Sessions"
+    },
+    {
       "id": "v163-flatten-remaining-panels",
       "version": "v163",
       "category": "fixed",

@@ -458,11 +458,21 @@ async function renderLeaveTeam() {
   // Switched from annual_leave (at-approval-time) to leave_requests so the
   // day-by-day rule applies. Pull every leave_request that started in the
   // year — computeLeaveUsedDays decides which days actually count today.
-  const {data}=await sb.from('leave_requests')
-    .select('employee,start_date,end_date,working_days,leave_type,status,effective_end_date')
-    .gte('start_date',year+'-01-01').lte('start_date',year+'-12-31');
+  // v164: comp-off joins annual + sick in this table, so pull the two CO
+  // sources alongside the leave requests. ot_sessions can exceed the 1000-row
+  // Supabase cap, so it goes through fetchAllRows; leave_requests (one year)
+  // and comp_off_register are far below it.
+  const [{data}, otRes, coRes] = await Promise.all([
+    sb.from('leave_requests')
+      .select('employee,start_date,end_date,working_days,leave_type,status,effective_end_date')
+      .gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
+    fetchAllRows(function(){ return sb.from('ot_sessions').select('employee,status,band,rate,credited_hours'); }),
+    sb.from('comp_off_register').select('employee,days')
+  ]);
   document.getElementById('lv-team-load').style.display='none';
   const records=data||[];
+  const otRows=(otRes&&otRes.data)||[];
+  const coRows=(coRes&&coRes.data)||[];
   const todayISO = _leaveTodayISO();
 
   // Employees only see their own row; manager sees all
@@ -488,6 +498,11 @@ async function renderLeaveTeam() {
     const sickRem    = SICK_ALLOWANCE  - sickUsed;
     const aColor = annualRem<=0?'var(--danger)':annualRem<=5?'var(--gold)':'var(--success)';
     const sColor = sickRem<=0?'var(--danger)':sickRem<=3?'var(--gold)':'var(--success)';
+    // v164: comp-off. Unlike annual/sick there's no fixed allowance — the
+    // balance is earned OT credit minus days taken, so calcSummary() is the
+    // single source of truth (same call the manager OT summary card uses).
+    const co       = calcSummary(otRows, coRows, emp);
+    const coColor  = co.balance>0?'var(--success)':co.balance<0?'var(--danger)':'var(--muted)';
     const aPct   = Math.min((annualUsed/LEAVE_ALLOWANCE)*100,100);
     const aBadge = annualRem<=0?'<span class="badge badge-rejected">No balance</span>':annualRem<=5?'<span class="badge badge-pending">Low</span>':'<span class="badge badge-approved">OK</span>';
     const sBadge = sickRem<=0?'<span class="badge badge-rejected">No balance</span>':sickRem<=3?'<span class="badge badge-pending">Low</span>':'<span class="badge badge-approved">OK</span>';
@@ -522,6 +537,9 @@ async function renderLeaveTeam() {
       '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(sickUsed,1)+' / '+SICK_ALLOWANCE+sUpcomingHint+'</td>'+
       '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:'+sColor+'">'+fmtNumber(sickRem,1)+'</td>'+
       '<td>'+sBadge+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(co.totalCO,2)+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(co.used,2)+'</td>'+
+      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:'+coColor+'">'+fmtNumber(co.balance,2)+'</td>'+
       '</tr>';
   }).join('');
 
@@ -532,8 +550,9 @@ async function renderLeaveTeam() {
     '<th>Upcoming Leave (dates)</th>'+
     '<th>Annual Used</th><th>Annual Rem.</th><th>Usage</th><th>Status</th>'+
     '<th>Sick Used</th><th>Sick Rem.</th><th>Status</th>'+
+    '<th class="hide-mobile">CO Earned</th><th class="hide-mobile">CO Used</th><th>CO Balance</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Annual: '+fmtDays(LEAVE_ALLOWANCE)+'/yr &nbsp;|&nbsp; Sick: '+fmtDays(SICK_ALLOWANCE)+'/yr</div>'+
+    '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Annual: '+fmtDays(LEAVE_ALLOWANCE)+'/yr &nbsp;|&nbsp; Sick: '+fmtDays(SICK_ALLOWANCE)+'/yr &nbsp;|&nbsp; Comp off: earned from approved OT (8 credited hours = 1 day), no yearly cap</div>'+
     '</div>';
 
   // v102: manager-only OT/Comp Off summary card sits alongside the leave

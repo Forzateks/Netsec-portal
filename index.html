@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v163',
+    release: 'netsec-portal@v164',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -450,7 +450,7 @@
           <input type="text" id="lv-reason" placeholder="e.g. Family vacation / Medical appointment / LMG migration OT">
         </div>
       </div>
-      <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1.5px solid #bae6fd;border-radius:10px;padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      <div style="background:var(--nx-canvas);border:1px solid var(--nx-hairline);border-radius:var(--radius-md);padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
         <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Leave Type</div><div style="font-size:16px;font-weight:700;color:var(--navy)" id="lv-prev-type">—</div></div>
         <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">This Request</div><div style="font-size:22px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums" id="lv-prev-days">—</div></div>
         <div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Used This Year</div><div style="font-size:22px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums" id="lv-prev-used">—</div></div>
@@ -574,7 +574,7 @@
           <input type="text" id="us-remarks" placeholder="Optional notes">
         </div>
       </div>
-      <div style="background:linear-gradient(135deg,#f8faff,#eef4ff);border:1.5px solid #c7d7f5;border-radius:10px;padding:16px;margin-top:16px">
+      <div style="background:var(--nx-canvas);border:1px solid var(--nx-hairline);border-radius:var(--radius-md);padding:16px;margin-top:16px">
         <div style="display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px;align-items:center">
           <div style="color:var(--muted);font-weight:600;display:inline-flex;align-items:center;gap:8px"><i data-lucide="clock-3" style="width:14px;height:14px;stroke-width:2"></i>Total</div>
           <div style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--navy)" id="us-preview-total">—</div>
