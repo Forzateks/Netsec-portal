@@ -2046,6 +2046,9 @@ function showProjectTab(tab) {
       sub.style.cssText='padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap';
     }
   });
+  // v161: the header names the current screen; `projects` has no single
+  // screen-level name, so its sub-tab supplies the title.
+  if (typeof _setTopBarScreen === 'function') _setTopBarScreen('projects', tab);
   if (tab==='uslog')      { initProjectTab(); initUSLogForm(); }
   if (tab==='ussess')     { initProjectTab(); populateUSFilters(); renderUSSessions(); }
   if (tab==='otsessions') { renderSessions(); }

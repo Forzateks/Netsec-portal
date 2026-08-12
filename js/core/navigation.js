@@ -6,6 +6,70 @@
 // #screen-dashboard as `active` even though no loader has fired yet.
 var _shownScreens = {};
 
+// == TOP-BAR SCREEN TITLE (v161) ===================================
+// The header used to repeat the "NetSec Portal" wordmark, which in the
+// installed PWA sat directly under the OS title bar showing the very same
+// text. It now names the screen you're on instead.
+//
+// Wording is copied verbatim from the sidebar so the header and the nav
+// always agree. `projects` is the one screen that hosts unrelated sub-tabs
+// (Log Session, OT Summary, Customers, Admin Tools …) and has no meaningful
+// screen-level name, so it resolves via its sub-tab instead.
+var TOP_BAR_LABELS = {
+  dashboard:    'Dashboard',
+  leave:        'Leave',
+  tasks:        'Tasks',
+  approvals:    'Approvals',
+  tracker:      'Project Tracker',
+  amc:          'AMC Contracts',
+  psdeals:      'Professional Services',
+  inventory:    'Inventory',
+  certificates: 'Certificates',
+  skills:       'Team Skills',
+  kb:           'Knowledge Base',
+  team:         'Team Portfolio'
+};
+var TOP_BAR_SUB_LABELS = {
+  uslog:      'Log Session',
+  ussess:     'My Sessions',
+  otsessions: 'OT Sessions',
+  otsummary:  'OT Summary',
+  engagement: 'Engagement Summary',
+  customer:   'Customer Summary',
+  employee:   'Employee Summary',
+  matrix:     'Activity Matrix',
+  custmgr:    'Customers',
+  manage:     'Engagements',
+  vendors:    'Vendors & Products',
+  otmanager:  'Admin Tools',
+  otpolicy:   'OT Policy'
+};
+
+// screen = screen id without the 'screen-' prefix; subTab is optional and
+// only consulted for the multi-purpose `projects` screen.
+function _setTopBarScreen(screen, subTab) {
+  var el = document.getElementById('top-bar-screen');
+  if (!el) return;
+  var label;
+  if (screen === 'projects') {
+    label = TOP_BAR_SUB_LABELS[subTab] || TOP_BAR_SUB_LABELS[_projectsActiveTab()] || 'Sessions';
+  } else {
+    label = TOP_BAR_LABELS[screen];
+  }
+  if (label) el.textContent = label;
+}
+
+// Best-effort read of which `projects` sub-tab is currently visible, so a
+// bare showScreen('projects') (no sub-tab argument) still titles correctly.
+function _projectsActiveTab() {
+  var keys = Object.keys(TOP_BAR_SUB_LABELS);
+  for (var i = 0; i < keys.length; i++) {
+    var el = document.getElementById('pjtab-' + keys[i]);
+    if (el && el.style.display !== 'none') return keys[i];
+  }
+  return null;
+}
+
 function showLeaveTab(tab) {
   ['log','history','team'].forEach(function(t) {
     const el=document.getElementById('ltab-'+t);
@@ -80,6 +144,10 @@ function showScreen(name) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     } catch (e) { /* ignore */ }
   }
+
+  // v161: keep the top-bar title in step with the screen. showProjectTab()
+  // re-sets it with the resolved sub-tab for the `projects` screen.
+  _setTopBarScreen(name);
 
   // For the projects screen, the active sub-tab decides which accordion to
   // open. showScreen called bare (no sub-tab) defaults to Sessions.

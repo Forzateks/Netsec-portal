@@ -616,9 +616,26 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 /* Brand — logo + "NetSec Portal" wordmark. Clickable to navigate home. */
 .top-bar-brand{display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 8px;margin-left:-8px;border-radius:var(--radius-md);transition:background .15s;flex-shrink:0}
 .top-bar-brand:hover{background:rgba(0,0,0,.04)}
-.top-bar-logo{width:32px;height:32px;border-radius:var(--radius-md);object-fit:contain;box-shadow:none;flex-shrink:0}
-.top-bar-brand-text{font-size:17px;font-weight:700;color:var(--nx-ink);letter-spacing:var(--track-title);white-space:nowrap}
-.top-bar-brand-text span{color:var(--teal)}
+/* v161: logo.jpg is a WIDE white-on-black mark. Squeezing it into a 32x32
+   box with object-fit:contain letterboxed it down to an illegible dark
+   blob on the white nav. Give it its natural aspect at 26px tall and a
+   rounded dark chip, so it reads as an intentional app-icon sticker. */
+.top-bar-logo{height:26px;width:auto;max-width:112px;border-radius:var(--radius-sm);object-fit:contain;background:#000;box-shadow:none;flex-shrink:0;display:block}
+/* v161: replaces the old .top-bar-brand-text wordmark. Names the CURRENT
+   SCREEN — in the installed PWA the OS title bar already says "NetSec
+   Portal" directly above, so repeating it here was pure duplication. */
+.top-bar-screen{font-size:17px;font-weight:700;color:var(--nx-ink);letter-spacing:var(--track-title);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+@media(max-width:640px){
+  /* Below 640px the hamburger already owns the left slot and the right
+     cluster takes ~110px, leaving too little for a long screen name —
+     "Professional Services" truncated to "Professio…". Knowing where you
+     are beats branding on a phone, so the logo chip steps aside and the
+     title gets the full run. The app icon / tab title still carry the
+     brand. .top-bar-brand keeps its tap target as the Home affordance. */
+  .top-bar-screen{font-size:15px}
+  .top-bar-logo{display:none}
+  .top-bar-brand{display:none}
+}
 
 /* Flex spacer between brand and right controls. */
 .top-bar-spacer{flex:1;min-width:0}
@@ -1125,8 +1142,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
      center the ☰ glyph inside the 44×44 box. */
   .hamburger{display:inline-flex}
   .sidebar-close{display:inline-block}
-  /* Hide the brand text on small viewports — just keep hamburger + logo. */
-  .top-bar-brand-text{display:none}
+  /* v161: this used to hide the "NetSec Portal" wordmark here. The slot now
+     carries the current screen name, which is MORE useful on a small
+     viewport (the sidebar is collapsed behind the hamburger), so it stays —
+     just smaller, see the .top-bar-screen mobile rule above. */
 }
 /* Drop the name + role badge on small screens; the avatar + caret alone
    are enough identity once the brand text is gone (<900px). Threshold

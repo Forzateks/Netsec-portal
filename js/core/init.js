@@ -10,7 +10,7 @@
 // CACHE_VERSION in sw.js and the Sentry release in index.html. It drives
 // the user-menu version label and the "what's new" filter; it is NOT part
 // of the registration URL.
-var APP_VERSION = 'v160';
+var APP_VERSION = 'v161';
 
 // v157: the registration URL is deliberately STABLE (no ?v= cache-buster).
 // It used to carry the version, which caused a phantom update prompt on the
@@ -686,6 +686,8 @@ window.addEventListener('hashchange', function() {
 // login flow when they want internal access.
 function showPublicTeamMode() {
   if (typeof TEAM_PUBLIC_MODE !== 'undefined') TEAM_PUBLIC_MODE = true;
+  // v161: public mode never runs showScreen(), so title the header directly.
+  if (typeof _setTopBarScreen === 'function') _setTopBarScreen('team');
   document.getElementById('login-screen').style.display = 'none';
   var app = document.getElementById('app');
   if (app) {

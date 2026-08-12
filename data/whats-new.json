@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v161-header-screen-name",
+      "version": "v161",
+      "category": "new",
+      "title": "The header now tells you where you are",
+      "body": "The top bar used to repeat \"NetSec Portal\" — which, in the installed app, sat directly under the window title saying exactly the same thing. It now shows the name of the screen you're on instead, so you always know where you are, and it's especially handy on a phone where the sidebar is tucked away. The Gulf IT logo stays on the left and still takes you Home.",
+      "link": null
+    },
+    {
       "id": "v160-notion-design-system",
       "version": "v160",
       "category": "app",
