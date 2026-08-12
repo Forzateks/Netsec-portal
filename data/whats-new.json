@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v163-flatten-remaining-panels",
+      "version": "v163",
+      "category": "fixed",
+      "title": "The last of the old styling is gone",
+      "body": "A few panels were still wearing the previous look — the pale blue boxes on Project Tracker milestones, the Regional BUs note on Team, the selected row in Vendors & Products, and the glossy modal and progress-bar fills. They all match the rest of the app now, so the styling is consistent on every screen.",
+      "link": null
+    },
+    {
       "id": "v162-dashboard-polish",
       "version": "v162",
       "category": "fixed",

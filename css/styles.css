@@ -811,7 +811,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 
 /* Empty-state Lucide icon — replaces the big emoji glyphs in empty cards. */
 .empty-icon-svg{width:48px;height:48px;stroke-width:1.5;display:inline-block;color:#94A3B8;margin-bottom:16px}
 input[readonly]{background:#f9fafb;color:var(--muted)}
-.preview-box{background:linear-gradient(135deg,#f8faff,#eef4ff);border:1.5px solid #c7d7f5;border-radius:var(--radius-md);padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.preview-box{background:var(--nx-canvas);border:1px solid var(--nx-hairline);border-radius:var(--radius-md);padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
 .preview-item{text-align:center}
 .preview-label{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase}
 .preview-value{font-size:18px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}
@@ -840,8 +840,8 @@ input[readonly]{background:#f9fafb;color:var(--muted)}
   box-shadow:none;
 }
 .btn-primary:disabled{
-  background:linear-gradient(180deg,#cbd5e1,#94a3b8);
-  border-color:#94a3b8;
+  background:var(--nx-hairline);
+  border-color:var(--nx-hairline);
   text-shadow:none;
   cursor:not-allowed;transform:none;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -1px 0 rgba(0,0,0,.06)
@@ -873,8 +873,8 @@ input[readonly]{background:#f9fafb;color:var(--muted)}
    taller so it's easy to grab. */
 .table-wrap::-webkit-scrollbar{height:12px}
 .table-wrap::-webkit-scrollbar-track{background:#eef2f7;border-radius:var(--radius-md);margin:0 4px}
-.table-wrap::-webkit-scrollbar-thumb{background:linear-gradient(90deg,var(--teal),#5ad1ff);border-radius:var(--radius-md);border:2px solid #eef2f7;background-clip:content-box}
-.table-wrap::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#0089b4,var(--teal));background-clip:content-box;border:2px solid #eef2f7}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--nx-primary);border-radius:var(--radius-md);border:2px solid #eef2f7;background-clip:content-box}
+.table-wrap::-webkit-scrollbar-thumb:hover{background:var(--nx-primary-active);background-clip:content-box;border:2px solid #eef2f7}
 
 /* Top mirror scrollbar — synced via JS to the table below it so users
    don't have to scroll to the bottom of a long table to find the
@@ -882,8 +882,8 @@ input[readonly]{background:#f9fafb;color:var(--muted)}
 .table-wrap-top-scroll{overflow-x:auto;overflow-y:hidden;margin-bottom:4px}
 .table-wrap-top-scroll::-webkit-scrollbar{height:12px}
 .table-wrap-top-scroll::-webkit-scrollbar-track{background:#eef2f7;border-radius:var(--radius-md);margin:0 4px}
-.table-wrap-top-scroll::-webkit-scrollbar-thumb{background:linear-gradient(90deg,var(--teal),#5ad1ff);border-radius:var(--radius-md);border:2px solid #eef2f7;background-clip:content-box}
-.table-wrap-top-scroll::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#0089b4,var(--teal));background-clip:content-box;border:2px solid #eef2f7}
+.table-wrap-top-scroll::-webkit-scrollbar-thumb{background:var(--nx-primary);border-radius:var(--radius-md);border:2px solid #eef2f7;background-clip:content-box}
+.table-wrap-top-scroll::-webkit-scrollbar-thumb:hover{background:var(--nx-primary-active);background-clip:content-box;border:2px solid #eef2f7}
 .table-wrap-top-scroll-spacer{height:1px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 /* Sticky header so the column labels stay visible while scrolling long tables. */
@@ -936,7 +936,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 .stat-card:hover{
   transform:translateY(-2px);
-  background:linear-gradient(180deg, #ffffff 0%, #f0f6fd 100%);
+  background:var(--nx-canvas);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.95),
     0 10px 24px rgba(0,0,0,.10),
@@ -974,7 +974,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    sheet feels rooted, plus a glass top reflection inside. */
 .modal{
   position:relative;
-  background:linear-gradient(180deg, #ffffff 0%, #fafbfd 100%);
+  background:var(--nx-surface);
   border-radius:var(--radius-xl);
   padding:28px;
   width:90%;max-width:480px;max-height:90vh;
@@ -1009,7 +1009,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .dash-hero{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
 .dash-hero-text h2{font-size:24px;font-weight:700;color:var(--navy);letter-spacing:-.3px;line-height:1.2;margin-bottom:2px}
 .dash-hero-date{font-size:13px;color:var(--muted);font-weight:500}
-.dash-hero-pill{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1px solid #FDE68A;color:#92400E;padding:8px 14px;border-radius:var(--radius-full);font-size:13px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .2s;font-family:var(--font-ui)}
+.dash-hero-pill{display:inline-flex;align-items:center;gap:8px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:8px 14px;border-radius:var(--radius-full);font-size:13px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .2s;font-family:var(--font-ui)}
 .dash-hero-pill:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(245,158,11,.28)}
 .dash-hero-pill-num{background:var(--gold);color:white;font-weight:700;font-size:12px;border-radius:var(--radius-full);padding:2px 8px;min-width:22px;text-align:center;line-height:1.4}
 .dash-hero-pill-arrow{transition:transform .2s;font-weight:700}
@@ -1018,7 +1018,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .dash-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
 .stat-unit{font-size:14px;font-weight:500;color:var(--muted);margin-left:2px;font-family:var(--font-ui)}
 .stat-bar{height:4px;background:#f1f5f9;border-radius:2px;overflow:hidden;margin:10px 0 6px}
-.stat-bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),#5ad1ff);border-radius:2px;transition:width .4s ease}
+.stat-bar-fill{height:100%;background:var(--nx-primary);border-radius:2px;transition:width .4s ease}
 
 .stat-trend{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:var(--radius-full);font-variant-numeric:tabular-nums;margin-left:6px;line-height:1.4}
 .stat-trend.up{background:#ECFDF5;color:#047857}
@@ -1120,7 +1120,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ot-popover.show{opacity:1;transform:translateY(0);pointer-events:auto}
 .ot-popover.flip-up{transform:translateY(4px)}
 .ot-popover.flip-up.show{transform:translateY(0)}
-.ot-popover-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--navy);background:linear-gradient(180deg,#fbfcfe 0%,#f4f6fb 100%);border-radius:var(--radius-lg) 12px 0 0}
+.ot-popover-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--navy);background:var(--nx-canvas);border-radius:var(--radius-lg) 12px 0 0}
 .ot-popover-close{background:transparent;border:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0 4px;border-radius:4px;transition:color .15s,background .15s}
 .ot-popover-close:hover{color:var(--navy);background:rgba(0,0,0,.06)}
 .ot-popover-body{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
@@ -1129,7 +1129,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ot-popover-kv span:last-child{color:var(--text);text-align:right;font-variant-numeric:tabular-nums;font-size:12px}
 .ot-popover-line{font-size:12.5px;color:var(--text);line-height:1.5}
 .ot-popover-gap{height:4px}
-.ot-popover-credit{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#ecfeff,#f0f9ff);border:1px solid #bae6fd;border-radius:var(--radius-md);padding:10px 12px;margin-top:8px}
+.ot-popover-credit{display:flex;align-items:center;justify-content:space-between;background:var(--nx-canvas);border:1px solid var(--nx-hairline);border-radius:var(--radius-md);padding:10px 12px;margin-top:8px}
 .ot-popover-credit span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
 .ot-popover-credit strong{font-variant-numeric:tabular-nums;font-size:18px;font-weight:700;color:var(--teal)}
 .ot-popover-drift{margin-top:8px;padding:8px 10px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:var(--radius-md);font-size:11.5px;line-height:1.45}
@@ -1214,7 +1214,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
        because the modal's box (and thus its bg) is the scrolling viewport. */
     background:
       linear-gradient(90deg, transparent calc(50% - 20px), #D1D5DB calc(50% - 20px), #D1D5DB calc(50% + 20px), transparent calc(50% + 20px)) 0 10px / 100% 4px no-repeat,
-      linear-gradient(180deg, #ffffff 0%, #fafbfd 100%) !important;
+      var(--nx-surface) !important;
   }
   .modal-title{font-size:15px;margin-bottom:14px}
   /* Hide the desktop navy top-stripe — replaced by the drag-handle layer above. */
@@ -1223,7 +1223,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
      without scrolling to the end of long forms. */
   .modal-actions{
     position:sticky;bottom:0;
-    background:linear-gradient(180deg, rgba(250,251,253,0) 0%, #fafbfd 20%, #fafbfd 100%);
+    background:var(--nx-surface);
     margin:20px -16px 0;padding:12px 16px 18px;
     box-shadow:0 -1px 0 var(--border);
     z-index:3;
@@ -1549,7 +1549,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    state (active vendors / active lines / disabled). Mirrors the
    dash-stats look but compact. */
 .vendor-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
-.vendor-stat{background:linear-gradient(180deg,#fff 0%,#F8FAFC 100%);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.vendor-stat{background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;display:flex;flex-direction:column;gap:4px}
 .vendor-stat-num{font-variant-numeric:tabular-nums;font-size:24px;font-weight:700;color:var(--navy);letter-spacing:-.5px;line-height:1}
 .vendor-stat-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 
@@ -1557,7 +1557,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    on the right. Each panel is its own card with a sticky-ish header. */
 .vendor-mgmt-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:20px}
 .vendor-panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 0 rgba(0,0,0,.02)}
-.vendor-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#FAFBFD 0%,#F4F6FA 100%);flex-wrap:wrap}
+.vendor-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--nx-canvas);flex-wrap:wrap}
 .vendor-panel-title{font-weight:600;font-size:14px;color:var(--navy);letter-spacing:-.1px;display:inline-flex;align-items:center;gap:8px}
 
 /* Scrollable list inside each panel. Slight padding so rows don't kiss the edge. */
@@ -1569,8 +1569,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .vendor-row{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:13px;background:#fff;border-radius:var(--radius-md);border:1px solid #EEF1F5;transition:background .12s,border-color .12s,box-shadow .12s}
 .vendor-row[onclick]{cursor:pointer}
 .vendor-row:hover{background:#F8FAFC;border-color:#E2E8F0}
-.vendor-row-active{background:linear-gradient(180deg,#F0F9FF 0%,#E0F2FE 100%);border-color:#7DD3FC;box-shadow:inset 3px 0 0 var(--teal)}
-.vendor-row-active:hover{background:#E0F2FE}
+.vendor-row-active{background:var(--nx-canvas);border-color:var(--nx-hairline);box-shadow:inset 3px 0 0 var(--nx-primary)}
+.vendor-row-active:hover{background:var(--nx-canvas)}
 .vendor-row-disabled{opacity:.55}
 .vendor-row-disabled .vendor-row-name{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.3)}
 .vendor-row-fallback{background:#FFFBEB;border-color:#FDE68A;border-style:dashed}
@@ -1938,8 +1938,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* License expiry banner (manager dashboard) */
 .lic-banner{border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:16px;border:1px solid;box-shadow:0 1px 3px rgba(15,23,42,.04)}
-.lic-banner-expired{background:linear-gradient(135deg,#FEF2F2,#FEE2E2);border-color:#FCA5A5}
-.lic-banner-soon{background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-color:#FCD34D}
+.lic-banner-expired{background:#FEF2F2;border-color:#FCA5A5}
+.lic-banner-soon{background:#FFFBEB;border-color:#FCD34D}
 .lic-banner-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
 .lic-banner-icon{width:24px;height:24px;stroke-width:2;flex-shrink:0}
 .lic-banner-expired .lic-banner-icon{color:#B91C1C}
@@ -1974,10 +1974,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 /* Milestones */
-.trk-ms-progress{padding:12px 14px;background:linear-gradient(135deg,#F0F9FF,#E0F2FE);border:1px solid #BAE6FD;border-radius:var(--radius-md);margin-bottom:14px}
+.trk-ms-progress{padding:12px 14px;background:var(--nx-canvas);border:1px solid var(--nx-hairline);border-radius:var(--radius-md);margin-bottom:14px}
 .trk-ms-progress-text{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px}
-.trk-ms-progress-bar{height:8px;background:rgba(255,255,255,.6);border-radius:4px;overflow:hidden}
-.trk-ms-progress-fill{height:100%;background:linear-gradient(90deg,var(--teal),#5ad1ff);border-radius:4px;transition:width .3s ease-out}
+.trk-ms-progress-bar{height:8px;background:var(--nx-hairline);border-radius:4px;overflow:hidden}
+.trk-ms-progress-fill{height:100%;background:var(--nx-primary);border-radius:4px;transition:width .3s ease-out}
 
 .trk-ms-card{padding:14px 16px;background:white;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;transition:border-color .15s,box-shadow .15s}
 .trk-ms-card:hover{border-color:#CBD5E1;box-shadow:0 1px 4px rgba(15,23,42,.06)}
@@ -1999,7 +1999,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-ms-count{margin:8px 0}
 .trk-ms-count-text{font-size:12px;color:#1F2937;font-weight:500;margin-bottom:4px}
 .trk-ms-count-bar{height:6px;background:#F1F5F9;border-radius:3px;overflow:hidden}
-.trk-ms-count-fill{height:100%;background:linear-gradient(90deg,var(--teal),#5ad1ff);border-radius:3px;transition:width .3s ease-out}
+.trk-ms-count-fill{height:100%;background:var(--nx-primary);border-radius:3px;transition:width .3s ease-out}
 
 .trk-ms-notes{margin-top:6px;padding:8px 10px;background:#F8FAFC;border-left:3px solid #CBD5E1;border-radius:4px;font-size:12px;color:#1F2937;white-space:pre-wrap;line-height:1.5}
 
@@ -2087,7 +2087,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .us-draft-banner{
   display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   padding:12px 14px;
-  background:linear-gradient(180deg,#FEF3C7 0%,#FDE68A 100%);
+  background:#FFFBEB;
   border:1px solid #FCD34D;
   border-radius:var(--radius-md);
   margin-bottom:16px;
@@ -2458,8 +2458,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    Meet the Team. Subtle teal/navy tint to read as "info, not action". */
 .team-regional-bu{
   display:flex;align-items:center;gap:14px;
-  background:linear-gradient(135deg,#F0F9FF,#E0F2FE);
-  border:1px solid #BAE6FD;
+  background:var(--nx-canvas);
+  border:1px solid var(--nx-hairline);
   border-radius:var(--radius-md);
   padding:14px 18px;margin-bottom:28px;
   max-width:520px;
