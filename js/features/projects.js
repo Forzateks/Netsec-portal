@@ -1868,65 +1868,56 @@ function empColor(emp) {
   return colors[emp] || '#615d59';
 }
 
-function buildPieChart(data, unit) {
-  if (!data.length) return '<div style="text-align:center;color:var(--muted);padding:20px">No data</div>';
+// == RANKED BAR CHART (v165) ======================================
+// Replaces the old pie/legend pair. A pie was the wrong form here on four
+// counts: 9 segments (part-to-whole is only readable at a glance up to ~6),
+// >7 colour classes carrying meaning, a rank-assigned palette (so filtering
+// repainted the survivors), and a 62% wedge in pure ink — a text token used
+// as a fill. Engagement/customer/vendor names are NOMINAL, so the data's job
+// is magnitude comparison, which is a horizontal bar; and a single series
+// gets ONE hue, because colouring nominal bars by their value spends the
+// identity channel re-encoding what bar length already shows.
+//
+// One series → no legend box; the card title names what's plotted, and each
+// bar carries its own label and value, so nothing is gated behind hover.
+// Going horizontal (label above its bar) is what lets names like
+// "MASHREQ-HK-RECONFIGURATION-Local-BO" render in full at any width.
+//
+// `unit` is 'h' for hours, '' for counts. `data[].color` is accepted for
+// backwards compatibility but deliberately IGNORED — see above.
+function buildBarChart(data, unit) {
+  if (!data || !data.length) return '<div class="rankbar-empty">No data</div>';
   var total = data.reduce(function(s,d){ return s+d.value; }, 0);
-  if (total === 0) return '<div style="text-align:center;color:var(--muted);padding:20px">No data</div>';
+  if (total === 0) return '<div class="rankbar-empty">No data</div>';
 
-  var cx=120, cy=120, r=100, html='';
-  var startAngle = -Math.PI/2; // Start from top
+  // Scale bars against the LARGEST value, not the total, so the smaller rows
+  // stay visible instead of collapsing into slivers against a dominant one.
+  var max = data.reduce(function(m,d){ return d.value > m ? d.value : m; }, 0) || 1;
 
-  // SVG slices
-  html += '<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">';
-  html += '<svg viewBox="0 0 240 240" style="width:200px;height:200px;flex-shrink:0">';
-
+  var html = '<div class="rankbar">';
   data.forEach(function(d) {
-    var slice = (d.value / total) * 2 * Math.PI;
-    var endAngle = startAngle + slice;
-    var x1 = cx + r * Math.cos(startAngle);
-    var y1 = cy + r * Math.sin(startAngle);
-    var x2 = cx + r * Math.cos(endAngle);
-    var y2 = cy + r * Math.sin(endAngle);
-    var largeArc = slice > Math.PI ? 1 : 0;
-
-    if (data.length === 1) {
-      // Full circle
-      html += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+d.color+'"/>';
-    } else {
-      html += '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+
-              ' A'+r+','+r+' 0 '+largeArc+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+
-              ' Z" fill="'+d.color+'" stroke="white" stroke-width="2"/>';
-    }
-
-    // Percentage label inside slice
-    var midAngle = startAngle + slice/2;
-    var lx = cx + (r*0.65) * Math.cos(midAngle);
-    var ly = cy + (r*0.65) * Math.sin(midAngle);
-    var pct = Math.round(d.value/total*100);
-    if (pct >= 5) {
-      html += '<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="11" font-weight="bold" font-family="Inter,sans-serif">'+pct+'%</text>';
-    }
-    startAngle = endAngle;
-  });
-
-  html += '</svg>';
-
-  // Legend. v101: each row gets min-width:0 so the flex child's min-content
-  // can be smaller than its (potentially unbreakable) label. word-break:
-  // break-word ensures hyphenated names like "MASHREQ - DC/DR - UAE BRANCHES"
-  // wrap on narrow screens instead of pushing the card past viewport.
-  html += '<div style="display:flex;flex-direction:column;gap:8px;min-width:0">';
-  data.forEach(function(d) {
-    var pct = Math.round(d.value/total*100);
-    html += '<div style="display:flex;align-items:center;gap:8px;min-width:0">'+
-      '<div style="width:12px;height:12px;border-radius:3px;background:'+d.color+';flex-shrink:0"></div>'+
-      '<div style="font-size:12px;min-width:0;word-break:break-word"><span style="font-weight:600">'+d.label+'</span> '+
-      '<span style="color:var(--muted)">'+(unit==='h' ? fmtHours(d.value) : (fmtNumber(d.value,1)+(unit||'')))+' ('+pct+'%)</span></div>'+
+    var pct   = Math.round(d.value/total*100);
+    var width = Math.max((d.value/max)*100, 1.5);  // floor so a tiny bar is still a mark
+    var val   = (unit === 'h') ? fmtHours(d.value) : (fmtNumber(d.value,1) + (unit||''));
+    // The aggregated tail row is context, not a peer — mute it.
+    var isOther = /^Other\b/.test(String(d.label||''));
+    var label   = esc2(String(d.label == null ? '' : d.label));
+    html +=
+      '<div class="rankbar-row'+(isOther?' rankbar-row-other':'')+'" title="'+label+' — '+val+' ('+pct+'%)">'+
+        '<div class="rankbar-head">'+
+          '<span class="rankbar-label">'+label+'</span>'+
+          '<span class="rankbar-value">'+val+' <span class="rankbar-pct">'+pct+'%</span></span>'+
+        '</div>'+
+        '<div class="rankbar-track"><div class="rankbar-fill" style="width:'+width.toFixed(1)+'%"></div></div>'+
       '</div>';
   });
-  html += '</div></div>';
+  html += '</div>';
   return html;
 }
+
+// Back-compat shim: 11 call sites still say buildPieChart. The form changed,
+// the contract didn't — same (data, unit) in, chart HTML out.
+function buildPieChart(data, unit) { return buildBarChart(data, unit); }
 
 // == ACTIVITY MATRIX (v109b) ======================================
 // Manager-only Reports sub-tab. Hours per employee per activity_type

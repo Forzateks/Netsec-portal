@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v165-charts-ranked-bars",
+      "version": "v165",
+      "category": "new",
+      "title": "Charts are readable now",
+      "body": "The Hours by Engagement and Hours by Customer pies have become ranked bar lists. Long names like MASHREQ-HK-RECONFIGURATION-Local-BO now print in full instead of being squeezed into a colour key, every row shows its hours and share, and the ordering is obvious at a glance. The same change applies to the vendor, product-line and per-employee charts.",
+      "link": null
+    },
+    {
       "id": "v164-leave-overview-compoff",
       "version": "v164",
       "category": "new",

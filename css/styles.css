@@ -1375,6 +1375,53 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   }
 }
 
+/* ── RANKED BAR CHART (v165) ─────────────────────────────────────
+   Replaces the pie+legend pair (see buildBarChart in js/features/projects.js
+   for why the form changed). Specs from the dataviz method: thin marks, a
+   4px rounded data-end that stays square at the baseline, hairline recessive
+   track, and text in TEXT tokens — never the data colour. Single series, so
+   one hue and no legend box. */
+.rankbar{display:flex;flex-direction:column;gap:14px}
+.rankbar-empty{text-align:center;color:var(--nx-ink-muted);font-size:13px;padding:24px 0}
+.rankbar-row{min-width:0}
+.rankbar-head{
+  display:flex;align-items:baseline;justify-content:space-between;
+  gap:12px;margin-bottom:5px;min-width:0;
+}
+/* Long engagement names wrap rather than truncate — the whole reason for
+   going horizontal is that these names are unreadable in a pie legend. */
+.rankbar-label{
+  font-size:12.5px;font-weight:600;color:var(--nx-ink);
+  min-width:0;word-break:break-word;line-height:1.35;
+}
+.rankbar-value{
+  font-size:12px;font-weight:600;color:var(--nx-ink-2);
+  white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;
+}
+.rankbar-pct{color:var(--nx-ink-faint);font-weight:500}
+/* Track is one step off the surface — recessive, hairline weight. */
+.rankbar-track{
+  height:8px;background:var(--nx-canvas);
+  border:1px solid var(--nx-hairline);border-radius:var(--radius-xs);
+  overflow:hidden;
+}
+.rankbar-fill{
+  height:100%;background:var(--nx-primary);
+  /* square at the baseline, 4px rounded at the data-end */
+  border-radius:0 4px 4px 0;
+  min-width:2px;
+  transition:width .35s cubic-bezier(.2,.7,.2,1);
+}
+/* The aggregated tail ("Other (24)") is context, not a peer. */
+.rankbar-row-other .rankbar-label{font-weight:500;color:var(--nx-ink-muted)}
+.rankbar-row-other .rankbar-fill{background:var(--nx-ink-faint)}
+@media(prefers-reduced-motion:reduce){ .rankbar-fill{transition:none} }
+@media(max-width:640px){
+  .rankbar{gap:12px}
+  .rankbar-label{font-size:12px}
+  .rankbar-value{font-size:11.5px}
+}
+
 /* ══ MOBILE — comprehensive polish (additive to 640px block above) ══ */
 @media(max-width:640px){
   /* Prevent iOS auto-zoom on input focus (must be 16px) */
