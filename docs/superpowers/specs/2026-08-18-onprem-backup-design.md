@@ -1,7 +1,8 @@
 # On-Prem Backup of Supabase — Design
 
 **Date:** 2026-08-18
-**Status:** Design approved. Open item 4 resolved 2026-08-18. Pending implementation plan.
+**Status:** Design approved. Open items 1 and 4 resolved and verified against the live
+database 2026-08-18. Pending implementation plan.
 **Audience:** Mohammed Nasif (primary), Venkatesan. Written for someone who has
 not administered a Linux server before.
 
@@ -234,7 +235,9 @@ application*.
 
 ## 10. Open items to resolve during implementation
 
-1. Supabase server PostgreSQL version — determines the client version to install.
+1. ~~Supabase server PostgreSQL version.~~ **RESOLVED — PostgreSQL 17.6.**
+   Verified live: `select version()` returns `PostgreSQL 17.6 on aarch64-unknown-linux-gnu`.
+   So `postgresql-client-17` (or newer) is required, as specified in section 3.
 2. The service identity email for `backup_log.taken_by_email`.
 3. Whether disk encryption is done at the VMware layer or with LUKS in the guest.
 4. ~~Whether RLS permits the `backup_log` insert for the key the script uses.~~
@@ -257,8 +260,10 @@ application*.
    This removes a whole credential from the design — no anon key, no service-role
    key, no new policy, nothing extra to store or rotate on the VM.
 
-   **Verify before coding** (read-only, Supabase SQL Editor). `rls_forced` must be
-   `false`:
+   **Verified live 2026-08-18:** `rls_forced = false` on `backup_log`, and zero
+   tables in the `public` schema set `FORCE ROW LEVEL SECURITY`. The connection
+   reports `current_user = postgres`. The approach is confirmed against the real
+   database. To re-check later (read-only):
 
    ```sql
    select relrowsecurity as rls_enabled, relforcerowsecurity as rls_forced
