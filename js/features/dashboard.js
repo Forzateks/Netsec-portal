@@ -388,7 +388,7 @@ async function renderEmployeeDashboard() {
     // Switched from annual_leave to leave_requests in v81 — used days are
     // now computed day-by-day via computeLeaveUsedDays (in leave.js).
     sb.from('leave_requests')
-      .select('start_date,end_date,working_days,leave_type,status,employee,effective_end_date')
+      .select('start_date,end_date,working_days,leave_type,status,employee,effective_end_date,cancelled_at,reviewed_at')
       .eq('employee',currentUser)
       .gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
     sb.from('unified_sessions').select('total_hours,team_members,employee,session_date').gte('session_date',prevMonth+'-01').lte('session_date',monthEnd),

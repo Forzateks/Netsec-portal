@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v166-cancelled-leave-balance",
+      "version": "v166",
+      "category": "fixed",
+      "title": "Cancelled leave no longer eats your balance",
+      "body": "A leave you cancelled before it started was correctly showing 0 days used — right up until its start date arrived, at which point it quietly began counting against your balance day by day, reaching the full amount once the end date passed. Cancelled leave now always counts zero unless you were genuinely off work partway through it. Withdrawing a request that was still awaiting approval also counts zero, and leave taken during a shifted-weekend rotation is now counted against the right days off.",
+      "link": "leave",
+      "link_text": "Open Leave"
+    },
+    {
       "id": "v165-charts-ranked-bars",
       "version": "v165",
       "category": "new",

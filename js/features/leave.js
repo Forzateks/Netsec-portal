@@ -6,7 +6,13 @@ function calcWorkingDays(startStr,endStr,employee) {
   let count=0; const cur=new Date(start);
   while (cur<=end) {
     const wd=cur.getDay();
-    if (!isWeekend(wd,employee)) count++;
+    // v166: pass the DATE too. isWeekend() only consults WEEKEND_OVERRIDES
+    // (dated onsite rotations, e.g. a Thu+Fri weekend) when it is given a
+    // date string — without it every leave day was counted against the
+    // employee's DEFAULT region weekend, so a rotation's real days off were
+    // charged as leave and its real working days were not counted at all.
+    const iso = cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+    if (!isWeekend(wd,employee,iso)) count++;
     cur.setDate(cur.getDate()+1);
   }
   return count;
@@ -29,13 +35,57 @@ function computeLeaveUsedDays(leave, todayISO) {
   if (leave.status !== 'approved' && leave.status !== 'cancelled') return 0;
   var start = leave.start_date;
   if (!start || start > todayISO) return 0;
-  var effEnd = (leave.status === 'cancelled' && leave.effective_end_date)
-    ? leave.effective_end_date
-    : leave.end_date;
+
+  var effEnd;
+  if (leave.status === 'cancelled') {
+    // v166 FIX. A cancellation only ever leaves days counted when it happened
+    // DURING the leave — which is exactly when cancelLeaveRequest() writes
+    // effective_end_date. The old code fell back to end_date when that column
+    // was null, which silently re-counted the ENTIRE leave as taken the moment
+    // the calendar reached start_date. Because cancelling a future leave never
+    // sets effective_end_date, every leave cancelled in advance looked fine at
+    // cancel time and then quietly started consuming the balance on its own
+    // start date — a time-bomb, not an immediate error.
+    //
+    // Order of evidence: the explicit column, then the cancellation timestamp
+    // (so rows written before effective_end_date existed are still judged on
+    // fact, not assumption), then nothing.
+    if (leave.effective_end_date) {
+      effEnd = leave.effective_end_date;
+    } else if (leave.cancelled_at) {
+      // A leave that never cleared manager review was never actually taken —
+      // cancelLeaveRequest() also accepts 'pending' and 'needs_review', so a
+      // withdrawn request lands here with a cancelled_at that must NOT be read
+      // as "days off work". reviewed_at is written by the only two paths that
+      // set an approve/reject decision, so null means it was never approved.
+      if (!leave.reviewed_at) return 0;
+      var cancelDay = String(leave.cancelled_at).slice(0, 10);
+      if (cancelDay <= start) return 0;   // cancelled before it ever began
+      effEnd = _isoDayBefore(cancelDay);  // cancelling takes effect same-day
+      // Never let a late cancellation stretch past the leave itself.
+      if (leave.end_date && effEnd > leave.end_date) effEnd = leave.end_date;
+    } else {
+      return 0;                           // no evidence any day was taken
+    }
+  } else {
+    effEnd = leave.end_date;
+  }
+
   if (!effEnd || effEnd < start) return 0;
   var lastDay = effEnd < todayISO ? effEnd : todayISO;
   if (parseFloat(leave.working_days) === 0.5 && start === effEnd) return 0.5;
   return calcWorkingDays(start, lastDay, leave.employee);
+}
+
+// 'YYYY-MM-DD' one calendar day earlier. Pure UTC arithmetic — never reads the
+// browser timezone, matching how the rest of this file treats date strings as
+// plain calendar values.
+function _isoDayBefore(iso) {
+  var p = String(iso).split('-').map(Number);
+  var d = new Date(Date.UTC(p[0], p[1] - 1, p[2] - 1));
+  return d.getUTCFullYear() + '-' +
+         String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+         String(d.getUTCDate()).padStart(2, '0');
 }
 
 // Approved working days still in the future — total minus already-taken.
@@ -68,7 +118,7 @@ async function getLeaveDaysUsed(employee, year, leaveType) {
   // legacy annual_leave table is no longer the source of truth — its
   // existing rows stay in place but are not read for computation.
   var res = await sb.from('leave_requests')
-    .select('start_date,end_date,working_days,leave_type,status,employee,effective_end_date')
+    .select('start_date,end_date,working_days,leave_type,status,employee,effective_end_date,cancelled_at,reviewed_at')
     .eq('employee', employee)
     .gte('start_date', year+'-01-01').lte('start_date', year+'-12-31');
   if (res.error) { console.warn('getLeaveDaysUsed:', res.error.message); return 0; }
@@ -464,7 +514,7 @@ async function renderLeaveTeam() {
   // and comp_off_register are far below it.
   const [{data}, otRes, coRes] = await Promise.all([
     sb.from('leave_requests')
-      .select('employee,start_date,end_date,working_days,leave_type,status,effective_end_date')
+      .select('employee,start_date,end_date,working_days,leave_type,status,effective_end_date,cancelled_at,reviewed_at')
       .gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
     fetchAllRows(function(){ return sb.from('ot_sessions').select('employee,status,band,rate,credited_hours'); }),
     sb.from('comp_off_register').select('employee,days')
