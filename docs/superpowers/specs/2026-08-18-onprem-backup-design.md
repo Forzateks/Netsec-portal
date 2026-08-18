@@ -1,7 +1,7 @@
 # On-Prem Backup of Supabase — Design
 
 **Date:** 2026-08-18
-**Status:** Design approved, pending implementation plan
+**Status:** Design approved. Open item 4 resolved 2026-08-18. Pending implementation plan.
 **Audience:** Mohammed Nasif (primary), Venkatesan. Written for someone who has
 not administered a Linux server before.
 
@@ -237,7 +237,37 @@ application*.
 1. Supabase server PostgreSQL version — determines the client version to install.
 2. The service identity email for `backup_log.taken_by_email`.
 3. Whether disk encryption is done at the VMware layer or with LUKS in the guest.
-4. **Whether RLS permits the `backup_log` insert for the key the script uses.**
-   Must be checked before coding — the entire failure signal depends on that
-   insert succeeding. If the anon key cannot insert, options are a service-role
-   key held only on the VM, or a dedicated RLS policy.
+4. ~~Whether RLS permits the `backup_log` insert for the key the script uses.~~
+   **RESOLVED — no key is needed at all.**
+
+   The anon key definitively cannot insert: both policies are `TO authenticated`,
+   and `backup_log_insert_backup_responsible` further requires the JWT email to
+   match a `user_profiles` row with `is_backup_responsible = true`. An anon key is
+   neither authenticated nor carries an email claim, so it would fail with `42501`.
+
+   But the script does not need a key. It already holds a direct Postgres
+   connection for `pg_dump`, as the `postgres` role — and the table owner bypasses
+   RLS unless `FORCE ROW LEVEL SECURITY` is set, which it is not anywhere in this
+   schema. So step 5 is simply another `psql` statement down the same connection:
+
+   ```bash
+   psql "$CONN" -c "INSERT INTO backup_log (taken_by, taken_by_email,      file_size_bytes, table_count, row_count, notes) VALUES (...)"
+   ```
+
+   This removes a whole credential from the design — no anon key, no service-role
+   key, no new policy, nothing extra to store or rotate on the VM.
+
+   **Verify before coding** (read-only, Supabase SQL Editor). `rls_forced` must be
+   `false`:
+
+   ```sql
+   select relrowsecurity as rls_enabled, relforcerowsecurity as rls_forced
+   from pg_class where oid = 'public.backup_log'::regclass;
+   ```
+
+   **Verify on the VM** with a rolled-back transaction, which proves the permission
+   without writing a row or disturbing the dashboard banner:
+
+   ```bash
+   psql "$CONN" -c "begin; insert into backup_log (taken_by, taken_by_email, notes)      values ('Automated (on-prem)','backup@gulfitd.com','permission test'); rollback;"
+   ```
