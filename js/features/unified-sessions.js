@@ -122,13 +122,13 @@ function confirmLongSession(dateStr, startStr, endStr) {
 // Support = reactive one-off troubleshooting (life-buoy)
 // Visually distinct so summaries can tell them apart at a glance.
 const SESSION_TYPE_BADGES = {
-  project:          { bg: '#e8f2fd', color: '#2563EB', label: '📁 Project' },
-  poc:              { bg: '#F5F3FF', color: '#7C3AED', label: '🎯 POC' },
-  amc:              { bg: '#FFFBEB', color: '#793400', label: '🛠️ AMC' },
-  support:          { bg: '#FFF1F2', color: '#9F1239', label: '🚨 Support' },
-  presales:         { bg: '#FDF2F8', color: '#BE185D', label: '💼 Pre-Sales-Task' },
-  customer_testing: { bg: '#ECFEFF', color: '#0E7490', label: '🧪 Customer Testing' },
-  internal:         { bg: '#f6f5f4', color: '#615d59', label: '🔧 Internal' },
+  project:          { bg: 'var(--pill-info-bg)', color: 'var(--pill-info-fg)', label: '📁 Project' },
+  poc:              { bg: 'var(--pill-purple-bg)', color: 'var(--pill-purple-fg)', label: '🎯 POC' },
+  amc:              { bg: 'var(--pill-warn-bg)', color: 'var(--nx-orange-deep)', label: '🛠️ AMC' },
+  support:          { bg: 'var(--pill-danger-bg)', color: 'var(--pill-danger-fg)', label: '🚨 Support' },
+  presales:         { bg: 'var(--pill-pink-bg)', color: 'var(--pill-pink-fg)', label: '💼 Pre-Sales-Task' },
+  customer_testing: { bg: 'var(--pill-info-bg)', color: 'var(--pill-info-fg)', label: '🧪 Customer Testing' },
+  internal:         { bg: 'var(--nx-canvas)', color: 'var(--nx-ink-muted)', label: '🔧 Internal' },
 };
 
 // Split a session's raw duration into office_hours vs ot_hours using the
@@ -333,12 +333,12 @@ function _buildUSTeamCheckboxesInto(boxId, name, seedCurrentUser) {
     cb.type = 'checkbox'; cb.value = emp; cb.name = name;
     cb.style.accentColor = 'var(--teal)';
     cb.onchange = function(){
-      label.style.background = cb.checked ? '#e8f2fd' : 'white';
+      label.style.background = cb.checked ? 'var(--pill-info-bg)' : 'white';
       label.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
     };
     if (seedCurrentUser && emp === currentUser) {
       cb.checked = true;
-      label.style.background = '#e8f2fd';
+      label.style.background = 'var(--pill-info-bg)';
       label.style.borderColor = 'var(--teal)';
     }
     label.appendChild(cb);
@@ -371,7 +371,7 @@ function seedEditUSTeamFromCsv(csv) {
     cb.checked = on;
     var lbl = cb.parentNode;
     if (lbl) {
-      lbl.style.background  = on ? '#e8f2fd' : 'white';
+      lbl.style.background  = on ? 'var(--pill-info-bg)' : 'white';
       lbl.style.borderColor = on ? 'var(--teal)' : 'var(--border)';
     }
   });
@@ -503,7 +503,7 @@ function _usDraftResume() {
       cb.checked = d.team.indexOf(cb.value) !== -1;
       var lbl = cb.parentElement;
       if (lbl) {
-        lbl.style.background = cb.checked ? '#e8f2fd' : 'white';
+        lbl.style.background = cb.checked ? 'var(--pill-info-bg)' : 'white';
         lbl.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
       }
     });
@@ -865,7 +865,7 @@ async function saveUnifiedSession() {
   document.querySelectorAll('#us-team-checkboxes input').forEach(function(cb){
     cb.checked = cb.value === currentUser;
     var lbl = cb.parentElement;
-    lbl.style.background = cb.checked ? '#e8f2fd' : 'white';
+    lbl.style.background = cb.checked ? 'var(--pill-info-bg)' : 'white';
     lbl.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
   });
 
@@ -932,7 +932,7 @@ async function renderUSSessions() {
   var cardsHtml = '';
   rows.forEach(function(r,i){
     var canEdit = isManager || (r.employee === currentUser);
-    var t = SESSION_TYPE_BADGES[r.session_type] || {bg:'#f6f5f4',color:'#615d59',label:r.session_type||'-'};
+    var t = SESSION_TYPE_BADGES[r.session_type] || {bg:'var(--nx-canvas)',color:'var(--nx-ink-muted)',label:r.session_type||'-'};
     var actions = canEdit
       ? '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openEditUS('+r.id+')" title="Edit" style="margin-right:4px"><i data-lucide="pencil"></i></button>'+
         '<button class="btn btn-sm btn-danger btn-icon-only" onclick="deleteUS('+r.id+')" title="Delete"><i data-lucide="trash-2"></i></button>'
@@ -975,7 +975,7 @@ async function renderUSSessions() {
     // in KSA or UAE local time — eyeballing the times alone is ambiguous
     // (e.g. an 09:00-12:00 KSA session reads the same as a UAE one).
     var region   = KSA_EMP.indexOf(r.employee) !== -1 ? 'KSA' : 'UAE';
-    var regionTag = '<span style="display:inline-block;margin-left:6px;padding:1px 5px;border-radius:3px;background:#f6f5f4;color:var(--nx-ink-muted);font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:0.5px;vertical-align:1px">'+region+'</span>';
+    var regionTag = '<span style="display:inline-block;margin-left:6px;padding:1px 5px;border-radius:3px;background:var(--nx-canvas);color:var(--nx-ink-muted);font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:0.5px;vertical-align:1px">'+region+'</span>';
     tbodyHtml += '<tr>'+
       '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
       '<td><span class="badge" style="background:'+t.bg+';color:'+t.color+'">'+esc2(t.label)+'</span></td>'+
@@ -984,7 +984,7 @@ async function renderUSSessions() {
       '<td style="font-variant-numeric:tabular-nums;font-size:12px">'+fmtDate(r.session_date)+'</td>'+
       '<td style="font-variant-numeric:tabular-nums;font-size:12px;white-space:nowrap">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+regionTag+'</td>'+
       '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtHours(r.total_hours)+'</td>'+
-      '<td><span class="badge" style="background:#f6f5f4;color:var(--navy);font-size:11px">'+esc2(actType)+'</span></td>'+
+      '<td><span class="badge" style="background:var(--nx-canvas);color:var(--navy);font-size:11px">'+esc2(actType)+'</span></td>'+
       '<td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc2(info)+'">'+esc2(info||'-')+'</td>'+
       '<td style="font-size:12px;color:var(--muted)">'+empCell+'</td>'+
       '<td style="white-space:nowrap">'+actions+'</td>'+
@@ -1002,7 +1002,7 @@ async function renderUSSessions() {
         '<span class="num">'+fmtTime(r.start_time)+'-'+fmtTime(r.end_time)+'</span>'+regionTag+
       '</div>'+
       '<div class="us-card-row">'+
-        '<span class="badge" style="background:#f6f5f4;color:var(--navy);font-size:11px">'+esc2(actType)+'</span>'+
+        '<span class="badge" style="background:var(--nx-canvas);color:var(--navy);font-size:11px">'+esc2(actType)+'</span>'+
         '<span class="us-card-emp">'+empCell+'</span>'+
       '</div>'+
       (info?'<div class="us-card-info" title="'+esc2(info)+'">'+esc2(info)+'</div>':'')+
@@ -1480,12 +1480,12 @@ async function renderEngagementSummary() {
   var sortedCust = Object.keys(byCust).sort(function(a,b){ return byCust[b].hours - byCust[a].hours; });
 
   var TYPE_BADGE = {
-    project:  '<span class="badge" style="background:#e8f2fd;color:#2563EB">PROJECT</span>',
-    poc:      '<span class="badge" style="background:#F5F3FF;color:#7C3AED">POC</span>',
-    amc:      '<span class="badge" style="background:#FFFBEB;color:#793400">AMC</span>',
-    support:  '<span class="badge" style="background:#FFF1F2;color:#9F1239">SUPPORT</span>',
-    presales: '<span class="badge" style="background:#FDF2F8;color:#BE185D">PRE-SALES-TASK</span>',
-    other:    '<span class="badge" style="background:#f6f5f4;color:#475569">OTHER</span>'
+    project:  '<span class="badge" style="background:var(--pill-info-bg);color:var(--pill-info-fg)">PROJECT</span>',
+    poc:      '<span class="badge" style="background:var(--pill-purple-bg);color:var(--pill-purple-fg)">POC</span>',
+    amc:      '<span class="badge" style="background:var(--pill-warn-bg);color:var(--nx-orange-deep)">AMC</span>',
+    support:  '<span class="badge" style="background:var(--pill-danger-bg);color:var(--pill-danger-fg)">SUPPORT</span>',
+    presales: '<span class="badge" style="background:var(--pill-pink-bg);color:var(--pill-pink-fg)">PRE-SALES-TASK</span>',
+    other:    '<span class="badge" style="background:var(--nx-canvas);color:var(--nx-ink-2)">OTHER</span>'
   };
 
   // v126: cache the aggregated rows so exportEngagementSummaryCsv can write
@@ -1511,7 +1511,7 @@ async function renderEngagementSummary() {
     var cleanName = name.replace(/ · (Project|POC|AMC|Support|Pre-Sales-Task)$/, '');
     var memberBreakdown = Object.keys(d.members).map(function(m){
       var label = (typeof empShortName === 'function') ? empShortName(m) : m.split(' ')[0];
-      return '<span class="badge" style="background:#f6f5f4;color:var(--navy);margin:1px">'+label+': '+fmtHours(d.members[m])+'</span>';
+      return '<span class="badge" style="background:var(--nx-canvas);color:var(--navy);margin:1px">'+label+': '+fmtHours(d.members[m])+'</span>';
     }).join(' ');
     var typeBadge = (typeKey==='all') ? (TYPE_BADGE[d.sessionType]||'') : '';
     return '<tr>'+
@@ -1524,7 +1524,7 @@ async function renderEngagementSummary() {
     '</tr>';
   }).join('');
 
-  var PIE_COLORS = ['#0d0d0d','#0075de','#dd5b00','#2a9d99','#1aae39','#6b3fa0','#dd5b00','#d93025'];
+  var PIE_COLORS = ['var(--nx-ink)','var(--nx-primary)','var(--nx-orange)','var(--nx-teal)','var(--nx-green)','var(--nx-purple-mid)','var(--nx-orange)','var(--danger)'];
   var pieData = sorted.slice(0,8).map(function(name,i){
     var clean = name.replace(/ · (Project|POC|AMC|Support|Pre-Sales-Task)$/, '');
     return { label: clean, value: byEng[name].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
@@ -1577,19 +1577,19 @@ async function renderEngagementSummary() {
       };
       typeMixHtml =
         '<div class="card" style="margin-bottom:20px"><div class="card-title">Time Mix Across Types</div>'+
-          '<div style="display:flex;height:28px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f6f5f4">'+
-            seg('project',  '#2563EB','Project')+
-            seg('poc',      '#7C3AED','POC')+
-            seg('amc',      '#793400','AMC')+
-            seg('support',  '#9F1239','Support')+
-            seg('presales', '#BE185D','Pre-Sales-Task')+
+          '<div style="display:flex;height:28px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--nx-canvas)">'+
+            seg('project',  'var(--pill-info-fg)','Project')+
+            seg('poc',      'var(--pill-purple-fg)','POC')+
+            seg('amc',      'var(--nx-orange-deep)','AMC')+
+            seg('support',  'var(--pill-danger-fg)','Support')+
+            seg('presales', 'var(--pill-pink-fg)','Pre-Sales-Task')+
           '</div>'+
           '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--muted)">'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#2563EB;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Project '+fmtHours(byType.project)+'</span>'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#7C3AED;border-radius:2px;margin-right:6px;vertical-align:middle"></span>POC '+fmtHours(byType.poc)+'</span>'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#793400;border-radius:2px;margin-right:6px;vertical-align:middle"></span>AMC '+fmtHours(byType.amc)+'</span>'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#9F1239;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Support '+fmtHours(byType.support)+'</span>'+
-            '<span><span style="display:inline-block;width:10px;height:10px;background:#BE185D;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Pre-Sales-Task '+fmtHours(byType.presales)+'</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:var(--pill-info-fg);border-radius:2px;margin-right:6px;vertical-align:middle"></span>Project '+fmtHours(byType.project)+'</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:var(--pill-purple-fg);border-radius:2px;margin-right:6px;vertical-align:middle"></span>POC '+fmtHours(byType.poc)+'</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:var(--nx-orange-deep);border-radius:2px;margin-right:6px;vertical-align:middle"></span>AMC '+fmtHours(byType.amc)+'</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:var(--pill-danger-fg);border-radius:2px;margin-right:6px;vertical-align:middle"></span>Support '+fmtHours(byType.support)+'</span>'+
+            '<span><span style="display:inline-block;width:10px;height:10px;background:var(--pill-pink-fg);border-radius:2px;margin-right:6px;vertical-align:middle"></span>Pre-Sales-Task '+fmtHours(byType.presales)+'</span>'+
           '</div>'+
         '</div>';
     }
@@ -1704,7 +1704,7 @@ async function renderUnifiedTypeSummary(typeKey) {
     var d = byEng[name];
     var memberBreakdown = Object.keys(d.members).map(function(m){
       var label = (typeof empShortName === 'function') ? empShortName(m) : m.split(' ')[0];
-      return '<span class="badge" style="background:#f6f5f4;color:var(--navy);margin:1px">'+label+': '+fmtHours(d.members[m])+'</span>';
+      return '<span class="badge" style="background:var(--nx-canvas);color:var(--navy);margin:1px">'+label+': '+fmtHours(d.members[m])+'</span>';
     }).join(' ');
     return '<tr>'+
       '<td><strong>'+esc2(name)+'</strong></td>'+
@@ -1716,7 +1716,7 @@ async function renderUnifiedTypeSummary(typeKey) {
     '</tr>';
   }).join('');
 
-  var PIE_COLORS = ['#0d0d0d','#0075de','#dd5b00','#2a9d99','#1aae39','#6b3fa0','#dd5b00','#d93025'];
+  var PIE_COLORS = ['var(--nx-ink)','var(--nx-primary)','var(--nx-orange)','var(--nx-teal)','var(--nx-green)','var(--nx-purple-mid)','var(--nx-orange)','var(--danger)'];
   var pieData = sorted.slice(0,8).map(function(name,i){
     return { label: name, value: byEng[name].hours, color: PIE_COLORS[i%PIE_COLORS.length] };
   });

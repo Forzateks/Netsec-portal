@@ -193,10 +193,10 @@ async function renderRolloutOverview() {
     var byC = {};
     extraDone.forEach(function(r){ byC[r.country] = (byC[r.country]||0)+1; });
     var parts = Object.keys(byC).sort().map(function(c){ return esc2(c)+' '+byC[c]; });
-    h += '<div class="card" style="border-color:#FCD34D;background:#FFFBEB">'+
-      '<div style="font-weight:700;color:#793400;margin-bottom:4px">'+
+    h += '<div class="card" style="border-color:var(--pill-warn-bd);background:var(--pill-warn-bg)">'+
+      '<div style="font-weight:700;color:var(--nx-orange-deep);margin-bottom:4px">'+
       fmtCount(extraDone.length)+' site'+(extraDone.length===1?'':'s')+' completed outside the SOW</div>'+
-      '<div style="font-size:13px;color:#793400">'+parts.join(' &middot; ')+
+      '<div style="font-size:13px;color:var(--nx-orange-deep)">'+parts.join(' &middot; ')+
       '. These are done but were never scoped, so they are excluded from the '+
       'progress figures above. Mark them in-SOW if the scope was extended.</div></div>';
   }

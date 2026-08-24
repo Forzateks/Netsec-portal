@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v169-night-mode",
+      "version": "v169",
+      "category": "new",
+      "title": "Night mode",
+      "body": "Open the account menu and pick Light, Dark or Auto — Auto follows whatever your phone or laptop is already set to, and your choice is remembered on that device. Text, cards and tables all flip, while blue stays blue and red stays red so approved, pending and rejected still read the way you expect.",
+      "link": null
+    },
+    {
       "id": "v168-stale-version-warning",
       "version": "v168",
       "category": "new",

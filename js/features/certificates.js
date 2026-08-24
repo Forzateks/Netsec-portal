@@ -198,8 +198,8 @@ function renderCertList() {
       '<td><button type="button" class="cert-name-btn" onclick="previewCertificate('+c.id+')" title="Click to preview">'+esc2(c.name)+'</button>'+relBadge+'</td>'+
       '<td class="hide-mobile num">'+fmtDate(c.issue_date)+'</td>'+
       '<td class="num">'+fmtDate(c.expiry_date)+
-        (st.key==='soon' ? '<div style="font-size:11px;color:#793400;margin-top:2px">'+st.days+'d left</div>' : '')+
-        (st.key==='expired' ? '<div style="font-size:11px;color:#B91C1C;margin-top:2px">'+Math.abs(st.days)+'d ago</div>' : '')+
+        (st.key==='soon' ? '<div style="font-size:11px;color:var(--nx-orange-deep);margin-top:2px">'+st.days+'d left</div>' : '')+
+        (st.key==='expired' ? '<div style="font-size:11px;color:var(--pill-danger-fg);margin-top:2px">'+Math.abs(st.days)+'d ago</div>' : '')+
       '</td>'+
       '<td><span class="badge cert-status '+st.cls+'">'+esc2(st.label)+'</span></td>'+
       '<td class="hide-mobile" style="font-size:12px;color:var(--muted)">'+esc2(fileLabel)+'</td>'+

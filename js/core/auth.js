@@ -8,7 +8,7 @@
 function showLoginError(msg) {
   const e = document.getElementById('login-error');
   e.textContent = '❌ ' + msg;
-  e.style.display = 'block'; e.style.background='#FEE2E2'; e.style.color='#B91C1C';
+  e.style.display = 'block'; e.style.background='var(--pill-danger-bg)'; e.style.color='var(--pill-danger-fg)';
   e.style.padding='10px'; e.style.borderRadius='8px'; e.style.fontSize='13px';
   e.style.marginBottom='12px'; e.style.textAlign='center';
 }

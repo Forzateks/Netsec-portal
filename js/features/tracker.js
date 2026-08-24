@@ -339,7 +339,7 @@ function _trkTopStatusKey(raw) {
 function trkTopStatusBadge(raw, phase) {
   var key = _trkTopStatusKey(raw);
   var def = TRK_TOP_STATUS_MAP[key];
-  if (!def) return '<span class="badge" style="background:#f6f5f4;color:#615d59">'+esc2(raw||'—')+'</span>';
+  if (!def) return '<span class="badge" style="background:var(--nx-canvas);color:var(--nx-ink-muted)">'+esc2(raw||'—')+'</span>';
   var phaseLbl = (phase && String(phase).trim()) ? String(phase).trim() : '';
   // Drop the literal placeholder some forms send instead of NULL.
   if (phaseLbl === '— None —' || phaseLbl === '-- None --' || phaseLbl === 'None') phaseLbl = '';
@@ -367,7 +367,7 @@ function trkConvertedBadge(row) {
 // distinguish on-demand vs standard PoCs at a glance without opening each.
 function trkOnDemandBadge(row) {
   if (!row || row.type !== 'poc' || !row.is_on_demand) return '';
-  return '<span class="badge" style="background:#EDE9FE;color:#5B21B6;font-size:10px;margin-left:4px">On Demand</span>';
+  return '<span class="badge" style="background:var(--pill-purple-bg);color:var(--pill-purple-fg);font-size:10px;margin-left:4px">On Demand</span>';
 }
 
 function trkTypeBadge(t) {
@@ -386,7 +386,7 @@ function trkLicenseCell(d) {
   var days  = Math.floor((exp - today) / 86400000);
   var label = fmtDate(d);
   if (days < 0)        return '<span class="num" style="color:var(--danger);font-weight:600">'+label+' (expired)</span>';
-  if (days <= 30)      return '<span class="num" style="color:#D97706;font-weight:600">'+label+' ('+days+'d)</span>';
+  if (days <= 30)      return '<span class="num" style="color:var(--pill-warn-fg);font-weight:600">'+label+' ('+days+'d)</span>';
   return '<span class="num">'+label+'</span>';
 }
 
@@ -409,13 +409,13 @@ function renderTrackerStatRow() {
   };
   // Mirror the badge palette so the strip reads as a colour key for the table.
   var THEME = {
-    'active':          {bg:'#DCFCE7', fg:'#166534'},
-    'sign-off':        {bg:'#FEF3C7', fg:'#793400'},
-    'payment-pending': {bg:'#FEF9C3', fg:'#854D0E'},
-    'closed':          {bg:'#E0F2FE', fg:'#075985'},
-    'on-hold':         {bg:'#FED7AA', fg:'#9A3412'},
-    'dormant':         {bg:'#f6f5f4', fg:'#4B5563'},
-    'cancelled':       {bg:'#FEE2E2', fg:'#991B1B'}
+    'active':          {bg:'var(--pill-ok-bg)', fg:'var(--pill-ok-fg)'},
+    'sign-off':        {bg:'var(--pill-warn-bg)', fg:'var(--nx-orange-deep)'},
+    'payment-pending': {bg:'var(--pill-warn-bg)', fg:'var(--pill-warn-fg)'},
+    'closed':          {bg:'var(--pill-info-bg)', fg:'var(--pill-info-fg)'},
+    'on-hold':         {bg:'var(--pill-warn-bg)', fg:'var(--pill-warn-fg)'},
+    'dormant':         {bg:'var(--nx-canvas)', fg:'var(--nx-ink-2)'},
+    'cancelled':       {bg:'var(--pill-danger-bg)', fg:'var(--pill-danger-fg)'}
   };
   // Multi-select highlight — any segment whose key is in the current filter
   // array reads as selected. Empty array = no filter; every segment subtle.
@@ -429,7 +429,7 @@ function renderTrackerStatRow() {
     // Unselected: muted neutral pill so selected ones pop visually.
     var style = isSel
       ? 'background:'+th.bg+';color:'+th.fg+';border:2px solid '+th.fg+';padding:3px 9px'
-      : 'background:#f6f5f4;color:#615d59;border:1px solid transparent';
+      : 'background:var(--nx-canvas);color:var(--nx-ink-muted);border:1px solid transparent';
     var checkIcon = isSel
       ? '<i data-lucide="check" class="trk-strip-check"></i>'
       : '';
@@ -774,7 +774,7 @@ function openTrackerDetail(id) {
     var cls = f.mono ? ' num' : '';
     var flagCss = '';
     if (f.flag === 'expired') flagCss = 'color:var(--danger);font-weight:600';
-    else if (f.flag === 'soon') flagCss = 'color:#D97706;font-weight:600';
+    else if (f.flag === 'soon') flagCss = 'color:var(--pill-warn-fg);font-weight:600';
     var hint = f.hint ? '<div class="trk-field-hint">'+esc2(f.hint)+'</div>' : '';
     var titleAttr = f.titleAttr ? ' title="'+esc2(f.titleAttr)+'"' : '';
     return '<div class="trk-field"><div class="trk-field-label">'+esc2(f.label)+'</div>'+
@@ -784,7 +784,7 @@ function openTrackerDetail(id) {
   var remarks = (r.tracker_remarks||'').trim();
   var remarksHtml = remarks
     ? '<div class="trk-remarks-block"><div class="trk-field-label" style="margin-bottom:6px">Remarks</div>'+
-      '<div style="font-size:13px;line-height:1.6;color:#1F2937;white-space:pre-wrap">'+trkRemarksHtml(remarks, false)+'</div></div>'
+      '<div style="font-size:13px;line-height:1.6;color:var(--nx-ink);white-space:pre-wrap">'+trkRemarksHtml(remarks, false)+'</div></div>'
     : '';
 
   // Manager-only: surface Professional Services deals linked to this engagement so commercial

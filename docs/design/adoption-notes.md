@@ -132,6 +132,69 @@ the modal cap bar were removed outright.
   illustrated stickers and colour-blocked tiles. None were added — the app has no
   illustration assets.
 
+## 6. Night mode (v169)
+
+Dark mode inverts **lightness, not hue**. A true mathematical inversion would
+turn the brand blue orange, danger cyan and success pink — destroying both the
+brand and the meaning of every status colour. So each token keeps its hue and
+moves along the lightness axis:
+
+| Role | Light | Dark |
+|---|---|---|
+| canvas | `#f6f5f4` | `#191919` |
+| surface | `#ffffff` | `#232323` |
+| hairline | `#e6e6e6` | `#383838` |
+| ink | `#0d0d0d` | `#ededec` |
+| primary | `#0075de` | `#4a9eff` |
+| danger | `#d93025` | `#f28b82` |
+
+**Never pure black.** `#000` under near-white text causes halation and smears
+for astigmatic readers; the canvas sits at `#191919`, as Notion's own dark mode
+does.
+
+**Surfaces get lighter as they come forward** — canvas → card — the opposite of
+light mode, because on a dark ground elevation reads as light, not as shadow.
+`--shadow-1/2` are near-transparent black and effectively invisible on dark, so
+separation there comes from the hairline.
+
+`--color-on-primary` flips to a near-black (`#101418`): the dark-mode primary is
+a *light* blue, so text sitting on it must be dark. Any rule that had
+`color:white` on a coloured fill now uses this token — `background:var(--navy);
+color:white` would otherwise be white-on-near-white in dark mode.
+
+### Three states, not two
+```css
+:root { /* light */ }
+:root[data-theme="dark"] { /* explicit choice */ }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { /* auto */ } }
+```
+`:root:not([data-theme="light"])` **must** stay inside the media query — on its
+own it matches when no theme is set and would force dark on everyone.
+
+The theme is applied by an inline script in `<head>`, before the stylesheet. Run
+any later (init.js loads last) and a night-mode user gets a white flash on every
+load.
+
+### What this forced
+Dark mode only works if colour is tokenised, and it was not. This release
+converted **264 hardcoded colours in JS/HTML** and **523 in `css/styles.css`** —
+the v160 sweep had only ever covered JS and HTML, so the stylesheet was still
+carrying pre-Notion Tailwind greys (`#f8fafc` ×43, `#f1f5f9` ×40) in *light*
+mode. Six status-pill families became paired tokens
+(`--pill-*-bg` / `-fg` / `-bd`) so a pale-fill badge has a dark-mode counterpart.
+
+Only one literal remains outside the token blocks: `#05102e`, the login video
+scrim, which is meant to stay dark in both themes.
+
+### Contrast is machine-checked
+19 token pairs are asserted in both themes (4.5:1 for text, 3:1 for marks). That
+check found two **pre-existing** light-mode failures inherited from the Notion
+palette: `--nx-ink-faint` at 2.66:1 and `--nx-green` at 2.93:1, both used for
+text here. They are now `#736e69` and `#118029`, and dark-mode `--nx-ink-faint`
+was lifted to `#8f8983` to clear 4.5:1 rather than only the 3:1 large-text bar.
+
+---
+
 ## 5. Provenance
 
 This is an external design system adapted for internal use. NetSec Portal is not a

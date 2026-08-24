@@ -445,11 +445,11 @@ async function renderLeaveHistory() {
         '</div>';
     }
     var ltIcon  = (r.leave_type||'annual')==='sick' ? 'Sick Leave' : 'Annual Leave';
-    var ltColor = (r.leave_type||'annual')==='sick' ? '#6b3fa0' : 'var(--teal)';
+    var ltColor = (r.leave_type||'annual')==='sick' ? 'var(--nx-purple-mid)' : 'var(--teal)';
     // Half-day flag: working_days === 0.5 on a single-date row. The string
     // shows "(half day)" inline next to the date range to stay compact.
     var isHalf = (parseFloat(r.working_days) === 0.5);
-    var halfTag = isHalf ? ' <span style="font-size:11px;color:#6b3fa0;font-weight:600">(half day)</span>' : '';
+    var halfTag = isHalf ? ' <span style="font-size:11px;color:var(--nx-purple-mid);font-weight:600">(half day)</span>' : '';
 
     // Determine if the employee can still cancel this request. Mirrors the
     // server-side rule applied by cancelLeaveRequest: pending / needs_review
@@ -469,16 +469,16 @@ async function renderLeaveHistory() {
     // cancelled    (grey):   "cancellation details"
     var banner = '';
     if (r.status === 'needs_review') {
-      banner = '<div style="background:#FFFBEB;color:#793400;border-left:3px solid var(--gold);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+      banner = '<div style="background:var(--pill-warn-bg);color:var(--nx-orange-deep);border-left:3px solid var(--gold);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
         '💬 <strong>Pending discussion with manager:</strong> ' + esc2(r.manager_comment || '(no comment)') +
         '</div>';
     } else if (r.status === 'rejected' && r.manager_comment) {
-      banner = '<div style="background:#FEF2F2;color:#991B1B;border-left:3px solid var(--danger);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+      banner = '<div style="background:var(--pill-danger-bg);color:var(--pill-danger-fg);border-left:3px solid var(--danger);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
         '🚫 <strong>Rejection reason:</strong> ' + esc2(r.manager_comment) +
         '</div>';
     } else if (r.status === 'cancelled') {
       var who = r.cancelled_by ? (r.cancelled_by === r.employee ? 'you' : esc2(r.cancelled_by)) : 'someone';
-      banner = '<div style="background:#f6f5f4;color:#475569;border-left:3px solid #94A3B8;padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+      banner = '<div style="background:var(--nx-canvas);color:var(--nx-ink-2);border-left:3px solid var(--nx-ink-faint);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
         '🚫 Cancelled ' + (r.cancelled_at ? relativeTime(r.cancelled_at) : '') + ' by ' + who +
         (r.effective_end_date ? ' · counted through ' + fmtDate(r.effective_end_date) : '') +
         (r.manager_comment ? ' · ' + esc2(r.manager_comment) : '') +
@@ -582,7 +582,7 @@ async function renderLeaveTeam() {
       '<td style="font-variant-numeric:tabular-nums">'+approvedCell+'</td>'+
       '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(annualUsed,1)+' / '+LEAVE_ALLOWANCE+aUpcomingHint+'</td>'+
       '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:'+aColor+'">'+fmtNumber(annualRem,1)+'</td>'+
-      '<td><div style="height:8px;background:#f6f5f4;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+aPct+'%;background:'+aColor+';border-radius:4px"></div></div><div style="font-size:11px;color:var(--muted);margin-top:3px">'+fmtPct(aPct)+' used</div></td>'+
+      '<td><div style="height:8px;background:var(--nx-canvas);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+aPct+'%;background:'+aColor+';border-radius:4px"></div></div><div style="font-size:11px;color:var(--muted);margin-top:3px">'+fmtPct(aPct)+' used</div></td>'+
       '<td>'+aBadge+'</td>'+
       '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(sickUsed,1)+' / '+SICK_ALLOWANCE+sUpcomingHint+'</td>'+
       '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:'+sColor+'">'+fmtNumber(sickRem,1)+'</td>'+
@@ -636,7 +636,7 @@ async function renderTeamOTSummary() {
       '<td style="font-variant-numeric:tabular-nums">'+s.sessions+'</td>'+
       '<td class="hide-mobile" style="font-variant-numeric:tabular-nums">'+r2(s.eveCred)+'</td>'+
       '<td class="hide-mobile" style="font-variant-numeric:tabular-nums">'+r2(s.earlyCred)+'</td>'+
-      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;color:#a39e98" title="Mid 1:1 (<4h) — tracked but does not earn CO">'+r2(s.mid11)+'</td>'+
+      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;color:var(--nx-ink-faint)" title="Mid 1:1 (<4h) — tracked but does not earn CO">'+r2(s.mid11)+'</td>'+
       '<td class="hide-mobile" style="font-variant-numeric:tabular-nums">'+r2(s.mid12)+'</td>'+
       '<td class="hide-mobile" style="font-variant-numeric:tabular-nums" title="Weekend 1:1 — earns CO at 8h = 1 day">'+r2(s.wk11)+'</td>'+
       '<td class="hide-mobile" style="font-variant-numeric:tabular-nums">'+r2(s.wk12)+'</td>'+
@@ -650,7 +650,7 @@ async function renderTeamOTSummary() {
       '<th>Sessions</th>'+
       '<th class="hide-mobile">Eve Cred</th>'+
       '<th class="hide-mobile">Early Cred</th>'+
-      '<th class="hide-mobile" style="color:#a39e98">Mid 1:1</th>'+
+      '<th class="hide-mobile" style="color:var(--nx-ink-faint)">Mid 1:1</th>'+
       '<th class="hide-mobile">Mid 1:2</th>'+
       '<th class="hide-mobile">Wknd 1:1</th>'+
       '<th class="hide-mobile">Wknd 1:2</th>'+
@@ -792,7 +792,7 @@ async function renderLeaveApprovals() {
   const others  = rows.filter(function(r){return r.status!=='pending';});
   let html='';
   if (!rows.length) {
-    html += '<div style="padding:14px;background:#f6f5f4;border-radius:8px;color:var(--muted);font-size:13px;margin-bottom:14px">No requests match the filters.</div>';
+    html += '<div style="padding:14px;background:var(--nx-canvas);border-radius:8px;color:var(--muted);font-size:13px;margin-bottom:14px">No requests match the filters.</div>';
   }
   if (pending.length){
     html+='<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">🟡 Pending ('+pending.length+')</h3>';
@@ -834,7 +834,7 @@ async function buildApprovedLeavesSection() {
   }
   var rows = data || [];
   var html = '<h3 style="font-size:14px;font-weight:600;color:var(--navy);margin:28px 0 8px">📒 Approved Leave Records — Legacy ('+rows.length+')</h3>'+
-    '<div style="background:#f6f5f4;color:#475569;border-left:3px solid #94A3B8;padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:10px;line-height:1.5">'+
+    '<div style="background:var(--nx-canvas);color:var(--nx-ink-2);border-left:3px solid var(--nx-ink-faint);padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:10px;line-height:1.5">'+
       'ℹ️ <strong>Legacy ledger.</strong> As of v81, leave balances are computed day-by-day directly from <code>leave_requests</code>. ' +
       'These rows are kept for historical reference but no longer drive the balance. Edits here have no effect on what an employee has &quot;used&quot;.'+
     '</div>';
@@ -858,7 +858,7 @@ async function buildApprovedLeavesSection() {
     rows.map(function(r){
       return '<tr>'+
         '<td><strong>'+esc2(r.employee||'')+'</strong></td>'+
-        '<td><span class="badge" style="background:#f6f5f4;color:var(--navy)">'+esc2(r.leave_type||'')+'</span></td>'+
+        '<td><span class="badge" style="background:var(--nx-canvas);color:var(--navy)">'+esc2(r.leave_type||'')+'</span></td>'+
         '<td style="font-variant-numeric:tabular-nums">'+fmtDate(r.start_date)+'</td>'+
         '<td style="font-variant-numeric:tabular-nums">'+fmtDate(r.end_date)+'</td>'+
         '<td style="font-variant-numeric:tabular-nums;font-weight:700">'+r.working_days+'</td>'+
@@ -978,7 +978,7 @@ function approvalCard(r,type) {
   if (type==='compoff') info='<strong>'+r.employee+'</strong> — '+r.type+' on '+fmtDate(r.request_date)+(r.related_activity?' ('+r.related_activity+')':'');
   else {
     var isHalf = (parseFloat(r.working_days) === 0.5);
-    var halfBadge = isHalf ? ' <span class="badge" style="background:#EDE9FE;color:#5B21B6;font-size:10px">Half day</span>' : '';
+    var halfBadge = isHalf ? ' <span class="badge" style="background:var(--pill-purple-bg);color:var(--pill-purple-fg);font-size:10px">Half day</span>' : '';
     var dateLabel = r.start_date===r.end_date ? fmtDate(r.start_date) : fmtDateRange(r.start_date, r.end_date);
     info='<strong>'+r.employee+'</strong> — '+dateLabel+halfBadge+' ('+fmtDays(r.working_days)+')'+(r.reason?' | '+r.reason:'');
   }
@@ -990,7 +990,7 @@ function approvalCard(r,type) {
     var detail = r._overlaps.map(function(o){
       return o.employee + ' (' + (o.status||'?') + ', ' + fmtDate(o.start_date) + '–' + fmtDate(o.end_date) + ')';
     }).join('; ');
-    overlapHtml = '<div style="background:#FEF3C7;color:#793400;border-left:3px solid #dd5b00;padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
+    overlapHtml = '<div style="background:var(--pill-warn-bg);color:var(--nx-orange-deep);border-left:3px solid var(--nx-orange);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
       '⚠️ <strong>Overlap caution:</strong> '+r._overlaps.length+' other request'+(r._overlaps.length===1?'':'s')+' on these dates — '+detail+
       '</div>';
   }

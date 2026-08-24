@@ -11,12 +11,12 @@
   --nx-primary:#0075de; --nx-primary-active:#005bab; --nx-secondary:#213183;
   --nx-canvas:#f6f5f4;  --nx-surface:#ffffff;        --nx-hairline:#e6e6e6;
   --nx-ink:#0d0d0d;     --nx-ink-2:#31302e;          --nx-ink-muted:#615d59;
-  --nx-ink-faint:#a39e98;
+  --nx-ink-faint:#736e69;
   /* Sticker palette — decoration and DATA CATEGORIES only (band badges,
      status dots). Never a CTA or structural fill. */
   --nx-sky:#62aef0;     --nx-purple:#d6b6f6;         --nx-purple-deep:#391c57;
   --nx-pink:#ff64c8;    --nx-orange:#dd5b00;         --nx-orange-deep:#793400;
-  --nx-teal:#2a9d99;    --nx-green:#1aae39;          --nx-brown:#523410;
+  --nx-teal:#2a9d99;    --nx-green:#118029;          --nx-brown:#523410;
   /* v162: the sticker purples are an illustration fill (#d6b6f6) and a
      near-black (#391c57). Neither works as badge TEXT — deep purple read
      as black next to the Day badge. This mid tone keeps the hue legible. */
@@ -54,6 +54,16 @@
   --color-text-muted:     var(--nx-ink-muted);
   --color-text-subtle:    var(--nx-ink-faint);
   --color-on-primary:     #ffffff;
+
+  /* Status pill pairs (v169). These were 6 families of hardcoded pale-fill /
+     dark-text hexes scattered through the JS. As literals they could never
+     follow a theme; as pairs they get their own dark values below. */
+  --pill-danger-bg:#fee2e2; --pill-danger-fg:#b91c1c; --pill-danger-bd:#fecaca;
+  --pill-warn-bg:  #fffbeb; --pill-warn-fg:  #793400; --pill-warn-bd:  #fcd34d;
+  --pill-ok-bg:    #ecfdf5; --pill-ok-fg:    #166534; --pill-ok-bd:    #a7f3d0;
+  --pill-info-bg:  #e8f2fd; --pill-info-fg:  #2563eb; --pill-info-bd:  #bae6fd;
+  --pill-purple-bg:#f5f3ff; --pill-purple-fg:#7c3aed; --pill-purple-bd:#ede9fe;
+  --pill-pink-bg:  #fdf2f8; --pill-pink-fg:  #be185d; --pill-pink-bd:  #fbcfe8;
 
   /* Spacing — Notion's 8px base. --space-ms (12px) added to match the
      spec's {spacing.sm}; the other steps already lined up. */
@@ -106,6 +116,92 @@
   --track-h2:     -0.25px;
   --track-title: -0.125px;
 }
+/* ══════════════════════════════════════════════════════════════════
+   NIGHT MODE (v169)
+   Lightness inverts, hue does NOT. Blue stays blue, red stays red — a true
+   mathematical inversion would turn the brand blue orange, danger cyan and
+   success pink, destroying both the brand and the meaning of every status
+   colour. Surfaces get LIGHTER as they come forward (canvas -> card), the
+   opposite of light mode, because on a dark ground elevation reads as light.
+   ══════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] {
+  --nx-canvas:#191919; --nx-surface:#232323; --nx-hairline:#383838;
+  --nx-ink:#ededec;    --nx-ink-2:#cfccc8;   --nx-ink-muted:#9d9892;
+  --nx-ink-faint:#8f8983;
+
+  --nx-primary:#4a9eff; --nx-primary-active:#7ab8ff; --nx-secondary:#4053c4;
+
+  /* Sticker palette lifted so it reads on a dark ground. */
+  --nx-sky:#8cc5f5;        --nx-purple:#d6b6f6;      --nx-purple-deep:#cbb0f5;
+  --nx-purple-mid:#b492f0; --nx-pink:#ff9bd6;        --nx-orange:#ff9d5c;
+  --nx-orange-deep:#ffb787;--nx-teal:#4ecdc8;        --nx-green:#5ec97a;
+  --nx-brown:#c49a6c;
+
+  --danger:#f28b82;
+  --color-border-strong:#4a4a4a;
+  /* The primary is now a LIGHT blue, so text sitting on it must be dark. */
+  --color-on-primary:#101418;
+
+  --pill-danger-bg:#3a1e1c; --pill-danger-fg:#f28b82; --pill-danger-bd:#5c2f2b;
+  --pill-warn-bg:  #33280f; --pill-warn-fg:  #ffc078; --pill-warn-bd:  #5c4a1f;
+  --pill-ok-bg:    #15301e; --pill-ok-fg:    #6fd98a; --pill-ok-bd:    #26492f;
+  --pill-info-bg:  #14263c; --pill-info-fg:  #6cb6ff; --pill-info-bd:  #26456b;
+  --pill-purple-bg:#241d38; --pill-purple-fg:#c0a3f5; --pill-purple-bd:#3d3159;
+  --pill-pink-bg:  #351a2b; --pill-pink-fg:  #ff9bd6; --pill-pink-bd:  #562a44;
+
+  /* Near-transparent black is invisible on a dark ground, so dark mode
+     leans on the hairline for separation and keeps shadow only for real
+     overlays (modals, dropdowns). */
+  --shadow-1: rgba(0,0,0,0.30) 0 1px 3px, rgba(0,0,0,0.22) 0 4px 12px;
+  --shadow-2: rgba(0,0,0,0.40) 0 4px 12px, rgba(0,0,0,0.34) 0 16px 40px;
+}
+/* "Auto": no explicit choice, device asks for dark. Kept as a separate rule
+   because :root:not([data-theme="light"]) on its own matches when NO theme
+   is set, which would force dark on everyone regardless of their device. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  --nx-canvas:#191919; --nx-surface:#232323; --nx-hairline:#383838;
+  --nx-ink:#ededec;    --nx-ink-2:#cfccc8;   --nx-ink-muted:#9d9892;
+  --nx-ink-faint:#8f8983;
+
+  --nx-primary:#4a9eff; --nx-primary-active:#7ab8ff; --nx-secondary:#4053c4;
+
+  /* Sticker palette lifted so it reads on a dark ground. */
+  --nx-sky:#8cc5f5;        --nx-purple:#d6b6f6;      --nx-purple-deep:#cbb0f5;
+  --nx-purple-mid:#b492f0; --nx-pink:#ff9bd6;        --nx-orange:#ff9d5c;
+  --nx-orange-deep:#ffb787;--nx-teal:#4ecdc8;        --nx-green:#5ec97a;
+  --nx-brown:#c49a6c;
+
+  --danger:#f28b82;
+  --color-border-strong:#4a4a4a;
+  /* The primary is now a LIGHT blue, so text sitting on it must be dark. */
+  --color-on-primary:#101418;
+
+  --pill-danger-bg:#3a1e1c; --pill-danger-fg:#f28b82; --pill-danger-bd:#5c2f2b;
+  --pill-warn-bg:  #33280f; --pill-warn-fg:  #ffc078; --pill-warn-bd:  #5c4a1f;
+  --pill-ok-bg:    #15301e; --pill-ok-fg:    #6fd98a; --pill-ok-bd:    #26492f;
+  --pill-info-bg:  #14263c; --pill-info-fg:  #6cb6ff; --pill-info-bd:  #26456b;
+  --pill-purple-bg:#241d38; --pill-purple-fg:#c0a3f5; --pill-purple-bd:#3d3159;
+  --pill-pink-bg:  #351a2b; --pill-pink-fg:  #ff9bd6; --pill-pink-bd:  #562a44;
+
+  /* Near-transparent black is invisible on a dark ground, so dark mode
+     leans on the hairline for separation and keeps shadow only for real
+     overlays (modals, dropdowns). */
+  --shadow-1: rgba(0,0,0,0.30) 0 1px 3px, rgba(0,0,0,0.22) 0 4px 12px;
+  --shadow-2: rgba(0,0,0,0.40) 0 4px 12px, rgba(0,0,0,0.34) 0 16px 40px;
+}
+}
+
+/* An explicit Light choice must beat the device preference. */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark;  }
+
+/* Native form controls, scrollbars and focus rings follow this. */
+:root { color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark; }
+}
+
 *{box-sizing:border-box;margin:0;padding:0}
 /* v160 Notion: the shell is daylight now. html carries the warm paper
    canvas so the 1-2px PWA title-bar strip blends into the page instead
@@ -162,7 +258,7 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 @keyframes screenIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── SHIMMER SKELETON LOADER ── */
-.skeleton{position:relative;overflow:hidden;background:#eef1f6;border-radius:var(--radius-sm);color:transparent;pointer-events:none}
+.skeleton{position:relative;overflow:hidden;background:var(--nx-canvas);border-radius:var(--radius-sm);color:transparent;pointer-events:none}
 .skeleton::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.55) 50%,transparent 100%);animation:shimmer 1.3s ease-in-out infinite}
 @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 .skel-line{height:12px;border-radius:var(--radius-sm);margin-bottom:8px}
@@ -170,7 +266,7 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .skel-line.lg{height:30px}
 .skel-line.short{width:40%}
 .skel-line.med{width:65%}
-.skel-stat{background:white;border:1px solid var(--border);border-radius:var(--radius-md);padding:18px 16px;display:flex;flex-direction:column;gap:10px;min-height:120px}
+.skel-stat{background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:18px 16px;display:flex;flex-direction:column;gap:10px;min-height:120px}
 
 /* ── LOGIN SCREEN ── */
 .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#05102e;position:relative;overflow:hidden;padding:24px}
@@ -233,11 +329,11 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .login-sub{font-size:13.5px;color:var(--muted);margin-bottom:24px;line-height:1.5}
 
 .login-field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
-.login-field label{font-size:12px;font-weight:500;color:#4B5563;text-transform:none;letter-spacing:normal}
-.login-field input{width:100%;padding:12px 14px;border:1px solid var(--color-border-strong);border-radius:var(--radius-xs);font-size:14px;font-family:var(--font-ui);color:var(--text);background:#fafbfc;transition:border-color .15s,background .15s,box-shadow .15s;outline:none}
-.login-field input::placeholder{color:#9ca3af}
-.login-field input:hover{background:white;border-color:#cbd5e1}
-.login-field input:focus{background:white;border-color:var(--teal);box-shadow:0 0 0 4px rgba(0,117,222,.12)}
+.login-field label{font-size:12px;font-weight:500;color:var(--nx-ink-2);text-transform:none;letter-spacing:normal}
+.login-field input{width:100%;padding:12px 14px;border:1px solid var(--color-border-strong);border-radius:var(--radius-xs);font-size:14px;font-family:var(--font-ui);color:var(--text);background:var(--nx-canvas);transition:border-color .15s,background .15s,box-shadow .15s;outline:none}
+.login-field input::placeholder{color:var(--nx-ink-faint)}
+.login-field input:hover{background:var(--nx-surface);border-color:var(--color-border-strong)}
+.login-field input:focus{background:var(--nx-surface);border-color:var(--teal);box-shadow:0 0 0 4px rgba(0,117,222,.12)}
 
 .login-row{display:flex;justify-content:space-between;align-items:center;margin:6px 0 18px;font-size:13px}
 .login-check{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--navy);font-weight:500;user-select:none}
@@ -254,13 +350,13 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .login-btn:disabled:hover,.login-btn.is-loading:hover{transform:none;filter:saturate(.65)}
 .login-btn-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:white;border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0;vertical-align:middle}
 .login-btn-secondary{width:100%;padding:11px 16px;background:var(--nx-surface);color:var(--nx-ink);border:1px solid var(--nx-hairline);border-radius:var(--radius-full);font-size:13.5px;font-weight:600;cursor:pointer;font-family:var(--font-ui);transition:all .15s;margin-top:10px}
-.login-btn-secondary:hover{border-color:var(--navy);color:var(--navy);background:#fafbfc}
+.login-btn-secondary:hover{border-color:var(--navy);color:var(--navy);background:var(--nx-canvas)}
 
 .login-helper{font-size:12.5px;color:var(--muted);line-height:1.55;margin:4px 0 18px}
 .login-foot{font-size:11px;color:var(--muted);text-align:center;margin-top:24px;padding-top:18px;border-top:1px solid rgba(0,0,0,.06);letter-spacing:.2px}
 
-.login-error{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;border-radius:var(--radius-md);padding:11px 14px;font-size:13px;margin-bottom:14px;display:none;line-height:1.5}
-.login-success{background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;border-radius:var(--radius-md);padding:11px 14px;font-size:13px;margin-bottom:14px;line-height:1.5}
+.login-error{background:var(--pill-danger-bg);color:var(--pill-danger-fg);border:1px solid var(--pill-danger-bd);border-radius:var(--radius-md);padding:11px 14px;font-size:13px;margin-bottom:14px;display:none;line-height:1.5}
+.login-success{background:var(--pill-ok-bg);color:var(--nx-green);border:1px solid var(--pill-ok-bd);border-radius:var(--radius-md);padding:11px 14px;font-size:13px;margin-bottom:14px;line-height:1.5}
 
 /* Mobile: stack hero above card, soften */
 @media(max-width:880px){
@@ -291,7 +387,7 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .sidebar-close:hover{background:rgba(0,0,0,.04);color:var(--navy)}
 /* Sidebar brand removed — the logo + brand text now live in the unified
    .top-bar at the top of the page. */
-.sidebar-section-label{font-size:11px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:18px 20px 6px}
+.sidebar-section-label{font-size:11px;color:var(--nx-ink-faint);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:18px 20px 6px}
 .sidebar-section-label:first-of-type{padding-top:14px}
 
 /* Footer cluster (Settings + user actions). margin-top:auto pushes the
@@ -302,7 +398,7 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .sidebar-footer .sidebar-item-sm{font-size:13px;padding:7px 20px 7px 17px;font-weight:500;color:var(--muted)}
 .sidebar-footer .sidebar-item-sm:hover{color:var(--text)}
 .sidebar-footer .sidebar-item-sm .sidebar-icon{width:14px;height:14px;stroke-width:2}
-.sidebar-footer-actions{margin-top:6px;padding-top:6px;border-top:1px solid #F1F5F9}
+.sidebar-footer-actions{margin-top:6px;padding-top:6px;border-top:1px solid var(--nx-canvas)}
 
 /* ── LONG-SESSION GUARDRAIL ────────────────────────────────────── */
 /* Inline duration readout under the time fields in Log Session +
@@ -313,23 +409,23 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
   padding:4px 0;line-height:1.4;
 }
 .duration-line.duration-warn{
-  color:#92400E;font-weight:600;font-family:var(--font-ui);font-size:13px;
+  color:var(--pill-warn-fg);font-weight:600;font-family:var(--font-ui);font-size:13px;
 }
 
 /* Confirmation modal body rows (start/end stacked, big total line, note). */
 #long-session-body .long-sess-row{
-  display:flex;gap:10px;font-size:14px;color:#374151;margin-bottom:6px;line-height:1.5;
+  display:flex;gap:10px;font-size:14px;color:var(--nx-ink-2);margin-bottom:6px;line-height:1.5;
 }
 #long-session-body .long-sess-label{
   width:48px;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding-top:2px;flex-shrink:0;
 }
 #long-session-body .long-sess-val{flex:1;color:var(--navy);font-weight:500}
 #long-session-body .long-sess-total{
-  margin-top:14px;padding:10px 12px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:var(--radius-md);
-  color:#92400E;font-size:15px;
+  margin-top:14px;padding:10px 12px;background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd);border-radius:var(--radius-md);
+  color:var(--pill-warn-fg);font-size:15px;
 }
 #long-session-body .long-sess-note{
-  margin-top:14px;font-size:13px;color:#374151;line-height:1.5;
+  margin-top:14px;font-size:13px;color:var(--nx-ink-2);line-height:1.5;
 }
 
 /* ── NEEDS YOUR ATTENTION (manager dashboard) ───────────────────── */
@@ -344,13 +440,13 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
   transition:background .12s,border-color .12s;
 }
 .attn-row:hover, .attn-row:focus{
-  background:#F8FAFC;border-color:#E2E8F0;outline:none;
+  background:var(--nx-canvas);border-color:var(--nx-hairline);outline:none;
 }
 .attn-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center;line-height:1}
 .attn-text{flex:1;min-width:0}
 .attn-subject{font-weight:600;color:var(--navy);font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .attn-body{font-size:12px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.attn-chevron{width:14px;height:14px;color:#94A3B8;flex-shrink:0}
+.attn-chevron{width:14px;height:14px;color:var(--nx-ink-faint);flex-shrink:0}
 /* Inline snooze button on snoozable alert rows. Sits between the body text
    and the chevron; stops propagation so clicking it doesn't fire the row's
    main onclick. 44x36 hit target keeps it tap-friendly on mobile. */
@@ -358,25 +454,25 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
   display:inline-flex;align-items:center;justify-content:center;
   width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;
   background:transparent;border:1px solid transparent;
-  color:#94A3B8;cursor:pointer;padding:0;
+  color:var(--nx-ink-faint);cursor:pointer;padding:0;
   transition:background .12s,border-color .12s,color .12s;
 }
 .attn-snooze-btn:hover,.attn-snooze-btn:focus{
-  background:#fff;border-color:var(--gold);color:var(--gold);outline:none;
+  background:var(--nx-surface);border-color:var(--gold);color:var(--gold);outline:none;
 }
 .attn-snooze-ico{width:15px;height:15px;stroke-width:2}
 /* Snooze count chip in the section subtitle — small, muted, parenthetical. */
-.attn-snooze-count{color:#94A3B8;font-weight:500;font-size:11.5px;margin-left:4px}
+.attn-snooze-count{color:var(--nx-ink-faint);font-weight:500;font-size:11.5px;margin-left:4px}
 .attn-empty{
   text-align:center;color:var(--muted);font-size:13px;
-  padding:24px 12px;background:#F8FAFC;border-radius:var(--radius-md);
+  padding:24px 12px;background:var(--nx-canvas);border-radius:var(--radius-md);
 }
 .attn-more{
   display:block;width:100%;margin-top:8px;padding:8px 12px;
   background:transparent;border:1px dashed var(--border);border-radius:var(--radius-md);
   color:var(--navy);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
 }
-.attn-more:hover{background:#F8FAFC;border-color:#94A3B8}
+.attn-more:hover{background:var(--nx-canvas);border-color:var(--nx-ink-faint)}
 @media(max-width:640px){
   .attn-row{padding:10px 8px}
   .attn-subject,.attn-body{white-space:normal}
@@ -396,9 +492,9 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 /* Manager Approvals queue: tiny amber pill on OT rows where credited > 12h. */
 .long-sess-flag{
   display:inline-block;padding:1px 7px;margin-left:6px;
-  background:#FEF3C7;color:#92400E;
+  background:var(--pill-warn-bg);color:var(--pill-warn-fg);
   font-size:10px;font-weight:700;letter-spacing:.3px;
-  border-radius:var(--radius-full);border:1px solid #FDE68A;font-family:var(--font-ui);
+  border-radius:var(--radius-full);border:1px solid var(--pill-warn-bd);font-family:var(--font-ui);
   cursor:help;vertical-align:1px;
 }
 
@@ -416,12 +512,12 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 
 /* Total AMC Value card — sits above the chip row, recalculates with
    every filter change. Mirrors the dashboard KPI tile pattern. */
-.amc-total-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.amc-total-card{background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .amc-total-label{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:4px}
 .amc-total-value{font-variant-numeric:tabular-nums;font-size:24px;font-weight:700;color:var(--navy);line-height:1.1}
 .amc-total-aed{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);margin-top:2px}
 .amc-total-sub{font-size:12px;color:var(--muted);margin-top:6px}
-.amc-total-foot{font-size:11px;color:#92400E;margin-top:4px;font-style:italic}
+.amc-total-foot{font-size:11px;color:var(--pill-warn-fg);margin-top:4px;font-style:italic}
 
 /* v149: "Expired AMC Contracts (60+ days)" section — sits below the main
    table/cards, separated by a dashed rule rather than its own card so it
@@ -429,48 +525,48 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .amc-expired-section{margin-top:22px;padding-top:18px;border-top:1px dashed var(--border)}
 .amc-expired-section-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px}
 .amc-expired-section-sub{font-size:12px;color:var(--muted);margin-bottom:10px;font-variant-numeric:tabular-nums}
-.amc-expired-section-foot{font-family:var(--font-ui);font-style:italic;color:#92400E}
+.amc-expired-section-foot{font-family:var(--font-ui);font-style:italic;color:var(--pill-warn-fg)}
 
 /* Status chip strip above the filter bar — same idea as the Tracker
    strip but visually simpler (no count gradient). */
 .amc-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-.amc-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-full);background:white;color:var(--navy);font-size:13px;font-weight:600;cursor:pointer;transition:all .12s;font-family:inherit}
-.amc-chip:hover{border-color:#94A3B8;background:#F8FAFC}
-.amc-chip-active{border-color:var(--teal);background:#E0F7FF;color:var(--navy);box-shadow:0 1px 2px rgba(0,117,222,.18)}
-.amc-chip-count{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);background:#F1F5F9;padding:1px 7px;border-radius:var(--radius-md);font-weight:700}
-.amc-chip-active .amc-chip-count{background:#fff;color:var(--navy)}
+.amc-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-full);background:var(--nx-surface);color:var(--navy);font-size:13px;font-weight:600;cursor:pointer;transition:all .12s;font-family:inherit}
+.amc-chip:hover{border-color:var(--nx-ink-faint);background:var(--nx-canvas)}
+.amc-chip-active{border-color:var(--teal);background:var(--pill-info-bg);color:var(--navy);box-shadow:0 1px 2px rgba(0,117,222,.18)}
+.amc-chip-count{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);background:var(--nx-canvas);padding:1px 7px;border-radius:var(--radius-md);font-weight:700}
+.amc-chip-active .amc-chip-count{background:var(--nx-surface);color:var(--navy)}
 
 /* Status badges (table + detail view). Active/Expiring/Expired share
    shape; colour scheme follows the existing app palette. */
 .amc-badge{display:inline-block;padding:2px 9px;border-radius:var(--radius-full);font-size:11px;font-weight:700;letter-spacing:.2px;font-family:var(--font-ui);white-space:nowrap}
-.amc-badge-active{background:#DCFCE7;color:#166534}
-.amc-badge-expiring{background:#FEF3C7;color:#92400E}
-.amc-badge-expired{background:#FEE2E2;color:#991B1B}
-.amc-badge-unknown{background:#F1F5F9;color:#64748B}
+.amc-badge-active{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+.amc-badge-expiring{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.amc-badge-expired{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
+.amc-badge-unknown{background:var(--nx-canvas);color:var(--nx-ink-muted)}
 
 .amc-table{width:100%;border-collapse:collapse;font-size:13px}
-.amc-table thead th{background:#F8FAFC;border-bottom:1px solid var(--border);padding:10px 12px;font-weight:600;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:left}
-.amc-table td{padding:10px 12px;border-bottom:1px solid #EEF1F5;vertical-align:middle}
+.amc-table thead th{background:var(--nx-canvas);border-bottom:1px solid var(--border);padding:10px 12px;font-weight:600;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:left}
+.amc-table td{padding:10px 12px;border-bottom:1px solid var(--nx-canvas);vertical-align:middle}
 .amc-row{cursor:pointer;transition:background .12s}
-.amc-row:hover{background:#F8FAFC}
+.amc-row:hover{background:var(--nx-canvas)}
 
 /* Mobile cards — same data, vertical stack. Whole card is the tap
    target into the detail modal. */
 .amc-cards{display:flex;flex-direction:column;gap:10px}
-.amc-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
-.amc-card:hover{border-color:#94A3B8;box-shadow:0 2px 6px rgba(15,23,42,.06)}
+.amc-card{background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.amc-card:hover{border-color:var(--nx-ink-faint);box-shadow:0 2px 6px rgba(15,23,42,.06)}
 .amc-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
 .amc-card-customer{font-weight:700;color:var(--navy);font-size:14px}
 .amc-card-meta{font-size:12px;color:var(--muted);margin-bottom:6px}
 .amc-card-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--navy);font-weight:500}
 .amc-card-row.dim{color:var(--muted);font-weight:400;margin-top:4px}
-.amc-card-sep{color:#CBD5E1}
+.amc-card-sep{color:var(--color-border-strong)}
 .amc-card-actions{display:flex;gap:4px;justify-content:flex-end;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
 
 /* Linked engagements picker inside the add/edit modal. */
-.amc-linked-wrap{max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-md);padding:6px;background:#FAFBFD;display:flex;flex-direction:column;gap:2px}
+.amc-linked-wrap{max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-md);padding:6px;background:var(--nx-canvas);display:flex;flex-direction:column;gap:2px}
 .amc-linked-row{display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:13px;border-radius:var(--radius-sm);cursor:pointer;transition:background .1s}
-.amc-linked-row:hover{background:#F1F5F9}
+.amc-linked-row:hover{background:var(--nx-canvas)}
 .amc-linked-cb{accent-color:var(--teal);width:14px;height:14px;flex-shrink:0}
 .amc-linked-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .amc-linked-empty{padding:14px;color:var(--muted);font-size:13px;text-align:center}
@@ -482,21 +578,21 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .amc-detail-meta{font-size:13px;color:var(--muted);margin-top:2px}
 .amc-detail-status{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .amc-detail-days{font-size:11px;color:var(--muted);margin-top:4px}
-.amc-detail-days-active{color:#166534}
-.amc-detail-days-expired{color:#991B1B;font-weight:600}
+.amc-detail-days-active{color:var(--pill-ok-fg)}
+.amc-detail-days-expired{color:var(--pill-danger-fg);font-weight:600}
 .amc-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;margin-bottom:14px}
 .amc-detail-field{display:flex;flex-direction:column;gap:2px}
 .amc-detail-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
 .amc-detail-value{font-size:14px;color:var(--navy);font-weight:500}
 .amc-detail-value.num{font-variant-numeric:tabular-nums}
-.amc-detail-notes{background:#F8FAFC;border-radius:var(--radius-md);padding:10px 12px;margin-bottom:14px;font-size:13px;line-height:1.5;color:var(--navy);white-space:pre-wrap}
+.amc-detail-notes{background:var(--nx-canvas);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:14px;font-size:13px;line-height:1.5;color:var(--navy);white-space:pre-wrap}
 .amc-detail-section-title{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px}
 .amc-detail-engs{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
-.amc-detail-eng-row{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#FAFBFD;border-radius:var(--radius-sm);border:1px solid #EEF1F5}
+.amc-detail-eng-row{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--nx-canvas);border-radius:var(--radius-sm);border:1px solid var(--nx-canvas)}
 .amc-detail-eng-name{font-weight:600;color:var(--navy);font-size:13px}
 .amc-detail-eng-sub{font-size:11px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
 .amc-detail-eng-hours{font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal);font-size:14px}
-.amc-detail-empty{padding:14px;color:var(--muted);font-size:13px;text-align:center;background:#FAFBFD;border-radius:var(--radius-md)}
+.amc-detail-empty{padding:14px;color:var(--muted);font-size:13px;text-align:center;background:var(--nx-canvas);border-radius:var(--radius-md)}
 
 @media(max-width:640px){
   .amc-detail-grid{grid-template-columns:1fr}
@@ -513,7 +609,7 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .sidebar-item:hover{background:rgba(0,0,0,.04);color:var(--navy)}
 .sidebar-item.active{background:rgba(0,117,222,.07);color:var(--nx-primary);border-left-color:var(--nx-primary);font-weight:600}
 .sidebar-item .sidebar-icon{width:18px;height:18px;flex-shrink:0;stroke-width:2;color:currentColor;display:inline-block;vertical-align:middle}
-.sidebar-subicon{width:15px;height:15px;flex-shrink:0;stroke-width:2;color:#94a3b8;transition:color .15s;display:inline-block}
+.sidebar-subicon{width:15px;height:15px;flex-shrink:0;stroke-width:2;color:var(--nx-ink-faint);transition:color .15s;display:inline-block}
 .sidebar-subitem:hover .sidebar-subicon{color:var(--navy)}
 .sidebar-subitem.active .sidebar-subicon{color:var(--nx-primary)}
 .sidebar-item-logout{margin-top:auto;color:var(--danger);border-top:1px solid var(--border);padding-top:12px;padding-bottom:12px;margin-top:auto}
@@ -650,8 +746,8 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 /* Db status — JUST the dot. The "Connected" text moved into the user
    menu dropdown. Hover gives a tooltip via title=. */
 .db-status{display:flex;align-items:center;cursor:default;width:14px;height:14px;justify-content:center}
-.db-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.5)}
-.db-dot.connected{background:#10b981;box-shadow:0 0 0 0 rgba(16,185,129,.5);animation:db-dot-pulse 2.4s ease-in-out infinite}
+.db-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 0 rgba(239,68,68,.5)}
+.db-dot.connected{background:var(--nx-green);box-shadow:0 0 0 0 rgba(16,185,129,.5);animation:db-dot-pulse 2.4s ease-in-out infinite}
 @keyframes db-dot-pulse{
   0%   { box-shadow:0 0 0 0   rgba(16,185,129,.55); }
   60%  { box-shadow:0 0 0 6px rgba(16,185,129,0);   }
@@ -663,7 +759,7 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
    reveals it when a new SW is waiting. The dot pulses to draw the eye
    without being aggressive — matches db-dot's understated approach. */
 .update-dot{
-  width:7px; height:7px; border-radius:50%; background:#D97706;
+  width:7px; height:7px; border-radius:50%; background:var(--pill-warn-fg);
   display:inline-block;
   animation: updatePulse 1.2s ease-in-out infinite;
 }
@@ -679,11 +775,11 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .top-bar-bell{background:transparent;border:none;color:var(--nx-ink-muted);cursor:pointer;padding:0;width:36px;height:36px;border-radius:var(--radius-md);display:inline-flex;align-items:center;justify-content:center;position:relative;transition:background .15s,color .15s;-webkit-tap-highlight-color:rgba(255,255,255,.18);touch-action:manipulation}
 .top-bar-bell i{width:18px;height:18px;stroke-width:2}
 .top-bar-bell:hover{background:rgba(0,0,0,.04);color:var(--nx-ink)}
-.notif-pill{position:absolute;top:2px;right:2px;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:var(--radius-md);padding:1px 5px;min-width:16px;text-align:center;line-height:1.2;border:1.5px solid var(--nx-surface)}
+.notif-pill{position:absolute;top:2px;right:2px;background:var(--danger);color:var(--color-on-primary);font-size:10px;font-weight:700;border-radius:var(--radius-md);padding:1px 5px;min-width:16px;text-align:center;line-height:1.2;border:1.5px solid var(--nx-surface)}
 /* v125: notif dropdown styles extracted from inline. Desktop anchors to
    the right edge of the bell; mobile fills the available width between
    gutters so the dropdown doesn't clip off-screen on narrow viewports. */
-.notif-dropdown{position:absolute;top:calc(100% + 6px);right:140px;width:340px;max-height:420px;overflow-y:auto;background:white;border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:300}
+.notif-dropdown{position:absolute;top:calc(100% + 6px);right:140px;width:340px;max-height:420px;overflow-y:auto;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:300}
 .notif-dropdown-header{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--navy)}
 @media(max-width:640px){
   .notif-dropdown{right:8px;left:8px;width:auto;max-width:none}
@@ -708,19 +804,19 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .role-badge.employee{background:var(--nx-canvas);color:var(--nx-ink-muted);border:1px solid var(--nx-hairline)}
 
 /* User menu dropdown */
-.user-menu{display:none;position:absolute;top:calc(100% + 8px);right:0;width:240px;background:white;border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 10px 30px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.04);padding:6px;z-index:200;animation:userMenuFade .14s ease-out both}
+.user-menu{display:none;position:absolute;top:calc(100% + 8px);right:0;width:240px;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 10px 30px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.04);padding:6px;z-index:200;animation:userMenuFade .14s ease-out both}
 .user-menu-wrap.open .user-menu{display:block}
 @keyframes userMenuFade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .user-menu-status{display:flex;align-items:center;gap:9px;padding:10px 12px;font-size:12px;color:var(--muted);font-weight:500}
 .user-menu-divider{height:1px;background:var(--border);margin:4px 0}
 .user-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;background:transparent;border:none;border-radius:var(--radius-md);cursor:pointer;font-size:13px;font-weight:500;color:var(--text);text-align:left;font-family:var(--font-ui);transition:background .12s,color .12s}
 .user-menu-item i{width:16px;height:16px;stroke-width:2;color:var(--muted);flex-shrink:0;transition:color .12s}
-.user-menu-item:hover{background:#F1F5F9;color:var(--navy)}
+.user-menu-item:hover{background:var(--nx-canvas);color:var(--navy)}
 .user-menu-item:hover i{color:var(--navy)}
 .user-menu-item-danger{color:var(--danger)}
 .user-menu-item-danger i{color:var(--danger)}
-.user-menu-item-danger:hover{background:#FEF2F2;color:#991B1B}
-.user-menu-item-danger:hover i{color:#991B1B}
+.user-menu-item-danger:hover{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
+.user-menu-item-danger:hover i{color:var(--pill-danger-fg)}
 /* v116: small version label at the bottom of the user menu. Intentionally
    muted (not a button); a one-click reveal for "what version am I on?"
    without adding always-on header chrome. Populated at startup from
@@ -730,7 +826,7 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
   font-variant-numeric:tabular-nums;letter-spacing:.4px;text-align:center;opacity:.7;
 }
 
-.notif-badge{margin-left:auto;background:var(--danger);color:white;font-size:10px;font-weight:700;border-radius:var(--radius-md);padding:1px 6px;min-width:18px;text-align:center}
+.notif-badge{margin-left:auto;background:var(--danger);color:var(--color-on-primary);font-size:10px;font-weight:700;border-radius:var(--radius-md);padding:1px 6px;min-width:18px;text-align:center}
 
 /* ── MAIN ── */
 /* Default cap (1200px) keeps comfortable reading-line widths on laptops.
@@ -786,13 +882,13 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
 .form-group{display:flex;flex-direction:column;gap:6px}
 .form-group.full{grid-column:1/-1}
 /* Form labels: subtle and legible. Was uppercase 11/600 muted; now sentence
-   case 12/500 in #4B5563 so the field input is the visual anchor, not the
+   case 12/500 in var(--nx-ink-2) so the field input is the visual anchor, not the
    label. Required indicator: wrap a <span class="req">•</span> after the
    label text where the field is required. */
-label{font-size:12px;font-weight:500;color:#4B5563;text-transform:none;letter-spacing:normal}
-.req{color:#EF4444;margin-left:3px}
-input,select,textarea{border:1px solid var(--color-border-strong);border-radius:var(--radius-xs);padding:10px 12px;font-size:14px;font-family:var(--font-ui);color:var(--text);background:white;transition:border-color .15s ease,box-shadow .18s ease,background .15s ease;outline:none;width:100%}
-input:hover,select:hover,textarea:hover{border-color:#cbd5e1}
+label{font-size:12px;font-weight:500;color:var(--nx-ink-2);text-transform:none;letter-spacing:normal}
+.req{color:var(--danger);margin-left:3px}
+input,select,textarea{border:1px solid var(--color-border-strong);border-radius:var(--radius-xs);padding:10px 12px;font-size:14px;font-family:var(--font-ui);color:var(--text);background:var(--nx-surface);transition:border-color .15s ease,box-shadow .18s ease,background .15s ease;outline:none;width:100%}
+input:hover,select:hover,textarea:hover{border-color:var(--color-border-strong)}
 input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,117,222,.1)}
 /* Full-width primary button helper for single-action forms (Request Leave,
    Submit Article, Log Session). Add class="btn btn-primary btn-block" to
@@ -811,8 +907,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 
 .pj-th-ico{display:inline-flex;align-items:center;gap:5px}
 .pj-th-ico [data-lucide]{width:13px;height:13px;stroke-width:2}
 /* Empty-state Lucide icon — replaces the big emoji glyphs in empty cards. */
-.empty-icon-svg{width:48px;height:48px;stroke-width:1.5;display:inline-block;color:#94A3B8;margin-bottom:16px}
-input[readonly]{background:#f9fafb;color:var(--muted)}
+.empty-icon-svg{width:48px;height:48px;stroke-width:1.5;display:inline-block;color:var(--nx-ink-faint);margin-bottom:16px}
+input[readonly]{background:var(--nx-canvas);color:var(--muted)}
 .preview-box{background:var(--nx-canvas);border:1px solid var(--nx-hairline);border-radius:var(--radius-md);padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
 .preview-item{text-align:center}
 .preview-label{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase}
@@ -848,22 +944,22 @@ input[readonly]{background:#f9fafb;color:var(--muted)}
   cursor:not-allowed;transform:none;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -1px 0 rgba(0,0,0,.06)
 }
-.btn-success{background:var(--success);color:white}.btn-success:hover{background:#047857}
-.btn-danger-solid{background:var(--danger);color:white}.btn-danger-solid:hover{background:#dc2626}
+.btn-success{background:var(--success);color:var(--color-on-primary)}.btn-success:hover{background:var(--pill-ok-fg)}
+.btn-danger-solid{background:var(--danger);color:var(--color-on-primary)}.btn-danger-solid:hover{background:var(--pill-danger-fg)}
 .btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border)}
 .btn-ghost:hover{border-color:var(--navy);color:var(--navy)}
-.btn-danger{background:#FEF2F2;color:var(--danger);border:1.5px solid #fecaca}
+.btn-danger{background:var(--pill-danger-bg);color:var(--danger);border:1.5px solid var(--pill-danger-bd)}
 .btn-sm{padding:6px 12px;font-size:12px}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 
 /* ── SCROLLBAR POLISH ───────────────────────────────────────────── */
 /* Firefox */
-*{scrollbar-color:#cbd5e1 transparent;scrollbar-width:thin}
+*{scrollbar-color:var(--color-border-strong) transparent;scrollbar-width:thin}
 /* WebKit / Blink — global slim scrollbar */
 ::-webkit-scrollbar{width:10px;height:10px;background:transparent}
 ::-webkit-scrollbar-track{background:transparent;border-radius:var(--radius-md)}
-::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:var(--radius-md);border:2px solid transparent;background-clip:content-box}
-::-webkit-scrollbar-thumb:hover{background:#94a3b8;background-clip:content-box;border:2px solid transparent}
+::-webkit-scrollbar-thumb{background:var(--color-border-strong);border-radius:var(--radius-md);border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--nx-ink-faint);background-clip:content-box;border:2px solid transparent}
 ::-webkit-scrollbar-corner{background:transparent}
 
 /* Sidebar: hide the scrollbar entirely. Wheel + touch still scroll the
@@ -875,7 +971,7 @@ input[readonly]{background:#f9fafb;color:var(--muted)}
    reserves for actions — a scrollbar is chrome, not a call to action. */
 .table-wrap::-webkit-scrollbar{height:12px}
 .table-wrap::-webkit-scrollbar-track{background:var(--nx-canvas);border-radius:var(--radius-md);margin:0 4px}
-.table-wrap::-webkit-scrollbar-thumb{background:#d8d5d2;border-radius:var(--radius-md);border:2px solid var(--nx-canvas);background-clip:content-box}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--color-border-strong);border-radius:var(--radius-md);border:2px solid var(--nx-canvas);background-clip:content-box}
 .table-wrap::-webkit-scrollbar-thumb:hover{background:var(--nx-ink-faint);background-clip:content-box;border:2px solid var(--nx-canvas)}
 
 /* Top mirror scrollbar — synced via JS to the table below it so users
@@ -884,34 +980,34 @@ input[readonly]{background:#f9fafb;color:var(--muted)}
 .table-wrap-top-scroll{overflow-x:auto;overflow-y:hidden;margin-bottom:4px}
 .table-wrap-top-scroll::-webkit-scrollbar{height:12px}
 .table-wrap-top-scroll::-webkit-scrollbar-track{background:var(--nx-canvas);border-radius:var(--radius-md);margin:0 4px}
-.table-wrap-top-scroll::-webkit-scrollbar-thumb{background:#d8d5d2;border-radius:var(--radius-md);border:2px solid var(--nx-canvas);background-clip:content-box}
+.table-wrap-top-scroll::-webkit-scrollbar-thumb{background:var(--color-border-strong);border-radius:var(--radius-md);border:2px solid var(--nx-canvas);background-clip:content-box}
 .table-wrap-top-scroll::-webkit-scrollbar-thumb:hover{background:var(--nx-ink-faint);background-clip:content-box;border:2px solid var(--nx-canvas)}
 .table-wrap-top-scroll-spacer{height:1px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 /* Sticky header so the column labels stay visible while scrolling long tables. */
 thead{position:sticky;top:0;z-index:2}
-th{background:#f8fafc;padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:10px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
-tr:hover td{background:#F8FAFC;cursor:default}tr:last-child td{border-bottom:none}
+th{background:var(--nx-canvas);padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--nx-canvas);vertical-align:middle}
+tr:hover td{background:var(--nx-canvas);cursor:default}tr:last-child td{border-bottom:none}
 /* Numeric / right-aligned cells — pair .num on td and th for consistent edge. */
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Muted placeholder for empty values rendered as "—" or "-". */
-.dim{color:#9CA3AF}
+.dim{color:var(--nx-ink-faint)}
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
 /* Status badges keep the pill shape — they read as notifications, not categories. */
 .badge-pending,.badge-approved,.badge-rejected,.badge-needs_review,.badge-cancelled{border-radius:var(--radius-xl);padding:3px 8px}
-.badge-Eve{background:#EFF6FF;color:var(--eve)}.badge-Early{background:#ECFDF5;color:var(--early)}
-.badge-Mid{background:#F5F3FF;color:var(--mid)}.badge-Wknd{background:#FFFBEB;color:var(--wknd)}
-.badge-Day{background:#F9FAFB;color:var(--day)}.badge-12{background:#FFFBEB;color:var(--gold)}
-.badge-11{background:#F9FAFB;color:var(--muted)}
-.badge-pending{background:#FEF3C7;color:#92400E}
-.badge-approved{background:#D1FAE5;color:#065F46}
-.badge-rejected{background:#FEE2E2;color:#991B1B}
+.badge-Eve{background:var(--pill-info-bg);color:var(--eve)}.badge-Early{background:var(--pill-ok-bg);color:var(--early)}
+.badge-Mid{background:var(--pill-purple-bg);color:var(--mid)}.badge-Wknd{background:var(--pill-warn-bg);color:var(--wknd)}
+.badge-Day{background:var(--nx-canvas);color:var(--day)}.badge-12{background:var(--pill-warn-bg);color:var(--gold)}
+.badge-11{background:var(--nx-canvas);color:var(--muted)}
+.badge-pending{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.badge-approved{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+.badge-rejected{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
 /* needs_review = "manager wants to discuss" — same yellow family as pending
    but with the gold accent so it reads as "active discussion required" not
    "waiting on manager". cancelled = neutral grey, terminal state. */
-.badge-needs_review{background:#FFFBEB;color:#92400E;border:1px dashed var(--gold)}
-.badge-cancelled{background:#F1F5F9;color:#475569}
+.badge-needs_review{background:var(--pill-warn-bg);color:var(--pill-warn-fg);border:1px dashed var(--gold)}
+.badge-cancelled{background:var(--nx-canvas);color:var(--nx-ink-2)}
 .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
 /* Stat card — hero element. Soft top reflection, gradient lift, hover
    floats the card and rings it in cyan. Color stripe sits on ::before
@@ -943,7 +1039,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     inset 0 1px 0 rgba(255,255,255,.95),
     0 10px 24px rgba(0,0,0,.10),
     0 0 0 1px rgba(0,117,222,.14);
-  border-color:#c8d4ed
+  border-color:var(--nx-hairline)
 }
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;z-index:1;opacity:.85}
 .stat-card.navy::before{background:var(--navy)}.stat-card.teal::before{background:var(--teal)}
@@ -954,20 +1050,20 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .stat-value{font-size:26px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1}
 .stat-sub{font-size:12px;color:var(--muted);margin-top:4px}
 .emp-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
-.emp-chip{padding:6px 14px;border-radius:var(--radius-xl);font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:white;color:var(--muted);transition:all .15s}
-.emp-chip:hover{border-color:var(--teal);color:var(--teal)}.emp-chip.active{background:var(--navy);border-color:var(--navy);color:white}
+.emp-chip{padding:6px 14px;border-radius:var(--radius-xl);font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--nx-surface);color:var(--muted);transition:all .15s}
+.emp-chip:hover{border-color:var(--teal);color:var(--teal)}.emp-chip.active{background:var(--navy);border-color:var(--navy);color:var(--color-on-primary)}
 .alert{padding:12px 16px;border-radius:var(--radius-md);font-size:13px;font-weight:500;margin-bottom:16px;display:none;align-items:center;gap:8px}
 .alert.show{display:flex}
-.alert-success{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0}
-.alert-error{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA}
+.alert-success{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border:1px solid var(--pill-ok-bd)}
+.alert-error{background:var(--pill-danger-bg);color:var(--pill-danger-fg);border:1px solid var(--pill-danger-bd)}
 /* Empty-state — friendly icon + heading + descriptive subtext + optional CTA.
    Used everywhere a list / table / card could be empty. The pattern is
    built via renderEmptyState() in helpers.js or inlined with these
    class names directly. */
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 24px;color:var(--color-text-muted)}
 .empty-icon{font-size:40px;margin-bottom:16px}
-.empty-title{font-size:16px;font-weight:600;color:#1F2937;margin-bottom:8px;line-height:1.3}
-.empty-sub{font-size:14px;color:#6B7280;line-height:1.5;max-width:360px;margin:0 auto}
+.empty-title{font-size:16px;font-weight:600;color:var(--nx-ink);margin-bottom:8px;line-height:1.3}
+.empty-sub{font-size:14px;color:var(--nx-ink-muted);line-height:1.5;max-width:360px;margin:0 auto}
 .empty-state .btn{margin-top:24px}
 .modal-overlay{position:fixed;inset:0;background:rgba(10,16,40,.45);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:200;display:none;align-items:center;justify-content:center;animation:modalBg .18s ease-out both}
 .modal-overlay.show{display:flex}
@@ -1011,21 +1107,21 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .dash-hero{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
 .dash-hero-text h2{font-size:24px;font-weight:700;color:var(--navy);letter-spacing:-.3px;line-height:1.2;margin-bottom:2px}
 .dash-hero-date{font-size:13px;color:var(--muted);font-weight:500}
-.dash-hero-pill{display:inline-flex;align-items:center;gap:8px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:8px 14px;border-radius:var(--radius-full);font-size:13px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .2s;font-family:var(--font-ui)}
+.dash-hero-pill{display:inline-flex;align-items:center;gap:8px;background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd);color:var(--pill-warn-fg);padding:8px 14px;border-radius:var(--radius-full);font-size:13px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .2s;font-family:var(--font-ui)}
 .dash-hero-pill:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(245,158,11,.28)}
-.dash-hero-pill-num{background:var(--gold);color:white;font-weight:700;font-size:12px;border-radius:var(--radius-full);padding:2px 8px;min-width:22px;text-align:center;line-height:1.4}
+.dash-hero-pill-num{background:var(--gold);color:var(--color-on-primary);font-weight:700;font-size:12px;border-radius:var(--radius-full);padding:2px 8px;min-width:22px;text-align:center;line-height:1.4}
 .dash-hero-pill-arrow{transition:transform .2s;font-weight:700}
 .dash-hero-pill:hover .dash-hero-pill-arrow{transform:translateX(2px)}
 
 .dash-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
 .stat-unit{font-size:14px;font-weight:500;color:var(--muted);margin-left:2px;font-family:var(--font-ui)}
-.stat-bar{height:4px;background:#f1f5f9;border-radius:2px;overflow:hidden;margin:10px 0 6px}
+.stat-bar{height:4px;background:var(--nx-canvas);border-radius:2px;overflow:hidden;margin:10px 0 6px}
 .stat-bar-fill{height:100%;background:var(--nx-primary);border-radius:2px;transition:width .4s ease}
 
 .stat-trend{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:var(--radius-full);font-variant-numeric:tabular-nums;margin-left:6px;line-height:1.4}
-.stat-trend.up{background:#ECFDF5;color:#047857}
-.stat-trend.down{background:#FEF2F2;color:#B91C1C}
-.stat-trend.flat{background:#F3F4F6;color:#6B7280}
+.stat-trend.up{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+.stat-trend.down{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
+.stat-trend.flat{background:var(--nx-canvas);color:var(--nx-ink-muted)}
 
 .dash-empty{padding:32px 20px;text-align:center;color:var(--muted)}
 .dash-empty-icon{font-size:32px;margin-bottom:10px;opacity:.55}
@@ -1114,11 +1210,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 /* ── OT info button + click popover ── */
-.ot-info-btn{cursor:pointer;color:var(--teal);background:white;font-size:11px;font-weight:700;line-height:1;margin-left:6px;border:1px solid var(--teal);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;padding:0;font-family:var(--font-ui);vertical-align:middle;transition:background .15s,color .15s,transform .15s}
-.ot-info-btn:hover{background:var(--teal);color:white;transform:scale(1.1)}
+.ot-info-btn{cursor:pointer;color:var(--teal);background:var(--nx-surface);font-size:11px;font-weight:700;line-height:1;margin-left:6px;border:1px solid var(--teal);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;padding:0;font-family:var(--font-ui);vertical-align:middle;transition:background .15s,color .15s,transform .15s}
+.ot-info-btn:hover{background:var(--teal);color:var(--color-on-primary);transform:scale(1.1)}
 .ot-info-btn:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 
-.ot-popover{position:absolute;top:0;left:0;z-index:300;background:white;border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 16px 40px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.04);width:340px;max-width:calc(100vw - 16px);font-size:13px;color:var(--text);opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .15s ease,transform .15s ease}
+.ot-popover{position:absolute;top:0;left:0;z-index:300;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 16px 40px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.04);width:340px;max-width:calc(100vw - 16px);font-size:13px;color:var(--text);opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .15s ease,transform .15s ease}
 .ot-popover.show{opacity:1;transform:translateY(0);pointer-events:auto}
 .ot-popover.flip-up{transform:translateY(4px)}
 .ot-popover.flip-up.show{transform:translateY(0)}
@@ -1134,15 +1230,15 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ot-popover-credit{display:flex;align-items:center;justify-content:space-between;background:var(--nx-canvas);border:1px solid var(--nx-hairline);border-radius:var(--radius-md);padding:10px 12px;margin-top:8px}
 .ot-popover-credit span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
 .ot-popover-credit strong{font-variant-numeric:tabular-nums;font-size:18px;font-weight:700;color:var(--teal)}
-.ot-popover-drift{margin-top:8px;padding:8px 10px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:var(--radius-md);font-size:11.5px;line-height:1.45}
+.ot-popover-drift{margin-top:8px;padding:8px 10px;background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd);color:var(--pill-warn-fg);border-radius:var(--radius-md);font-size:11.5px;line-height:1.45}
 
-.request-card{border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;margin-bottom:12px;background:white;transition:box-shadow .18s ease,transform .15s ease}
+.request-card{border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;margin-bottom:12px;background:var(--nx-surface);transition:box-shadow .18s ease,transform .15s ease}
 .request-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.06)}
 .request-card.pending{border-left:4px solid var(--gold)}
 .request-card.approved{border-left:4px solid var(--success)}
 .request-card.rejected{border-left:4px solid var(--danger)}
-.request-card.needs_review{border-left:4px dashed var(--gold);background:#FFFBEB}
-.request-card.cancelled{border-left:4px solid #94A3B8;background:#F8FAFC;opacity:.85}
+.request-card.needs_review{border-left:4px dashed var(--gold);background:var(--pill-warn-bg)}
+.request-card.cancelled{border-left:4px solid var(--nx-ink-faint);background:var(--nx-canvas);opacity:.85}
 /* ── SIDEBAR mobile collapse (≤900px) ── */
 @media(max-width:900px){
   /* Sidebar becomes a left drawer that slides over the page. Covers the
@@ -1215,7 +1311,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
        standard modal gradient. Stays visible while the modal body scrolls
        because the modal's box (and thus its bg) is the scrolling viewport. */
     background:
-      linear-gradient(90deg, transparent calc(50% - 20px), #D1D5DB calc(50% - 20px), #D1D5DB calc(50% + 20px), transparent calc(50% + 20px)) 0 10px / 100% 4px no-repeat,
+      linear-gradient(90deg, transparent calc(50% - 20px), var(--color-border-strong) calc(50% - 20px), var(--color-border-strong) calc(50% + 20px), transparent calc(50% + 20px)) 0 10px / 100% 4px no-repeat,
       var(--nx-surface) !important;
   }
   .modal-title{font-size:15px;margin-bottom:14px}
@@ -1267,38 +1363,38 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 /* ── INVENTORY ── */
-.inv-status-available{background:#ECFDF5;color:#065F46}
-.inv-status-unavailable{background:#FEF2F2;color:#991B1B}
-.inv-status-locked{background:#FEF3C7;color:#92400E}
-.inv-status-default{background:#F9FAFB;color:#6B7280}
+.inv-status-available{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+.inv-status-unavailable{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
+.inv-status-locked{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.inv-status-default{background:var(--nx-canvas);color:var(--nx-ink-muted)}
 /* v132: inline copy button on serial-number cells. Muted by default,
    teal on hover, green while showing the post-copy checkmark. */
 .inv-copy-btn{background:transparent;border:none;cursor:pointer;padding:2px;border-radius:4px;color:var(--muted);display:inline-flex;align-items:center;line-height:1;transition:background .12s,color .12s;flex-shrink:0}
 .inv-copy-btn i{width:13px;height:13px}
-.inv-copy-btn:hover{background:#F1F5F9;color:var(--teal)}
+.inv-copy-btn:hover{background:var(--nx-canvas);color:var(--teal)}
 .inv-copy-btn.inv-copy-done{color:var(--success)}
 .inv-copy-btn:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
-.inv-filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:16px;background:white;border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px}
+.inv-filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:16px;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px}
 .inv-filter-bar .form-group{flex:1;min-width:140px;margin:0}
-.inv-log-row{padding:12px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+.inv-log-row{padding:12px 0;border-bottom:1px solid var(--nx-canvas);font-size:13px}
 .inv-log-row:last-child{border-bottom:none}
 
 /* ── KNOWLEDGE BASE ── */
 .kb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:4px}
-.kb-card{background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .2s ease,transform .15s ease,border-color .15s ease;cursor:pointer}
-.kb-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.1);transform:translateY(-2px);border-color:#dbe4f3}
+.kb-card{background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .2s ease,transform .15s ease,border-color .15s ease;cursor:pointer}
+.kb-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.1);transform:translateY(-2px);border-color:var(--nx-hairline)}
 .kb-card-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .kb-title{font-size:15px;font-weight:700;color:var(--navy);line-height:1.3}
 .kb-excerpt{font-size:13px;color:var(--muted);line-height:1.6;flex:1}
 .kb-tags{display:flex;flex-wrap:wrap;gap:6px}
-.kb-tag{background:#f0f4ff;color:var(--navy);border-radius:var(--radius-xl);padding:2px 10px;font-size:11px;font-weight:600}
+.kb-tag{background:var(--pill-info-bg);color:var(--navy);border-radius:var(--radius-xl);padding:2px 10px;font-size:11px;font-weight:600}
 .kb-author{font-size:12px;color:var(--muted)}
-.kb-cat-Network{background:#EFF6FF;color:var(--eve)}
-.kb-cat-Security{background:#FEF2F2;color:var(--danger)}
-.kb-cat-Configuration{background:#ECFDF5;color:var(--success)}
-.kb-cat-Troubleshooting{background:#FFFBEB;color:var(--gold)}
-.kb-cat-General{background:#F9FAFB;color:var(--muted)}
-.kb-filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:16px;background:white;border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px}
+.kb-cat-Network{background:var(--pill-info-bg);color:var(--eve)}
+.kb-cat-Security{background:var(--pill-danger-bg);color:var(--danger)}
+.kb-cat-Configuration{background:var(--pill-ok-bg);color:var(--success)}
+.kb-cat-Troubleshooting{background:var(--pill-warn-bg);color:var(--gold)}
+.kb-cat-General{background:var(--nx-canvas);color:var(--muted)}
+.kb-filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:16px;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px}
 .kb-filter-bar .form-group{flex:1;min-width:140px;margin:0}
 
 /* ── KB ARTICLE MODAL ── */
@@ -1422,6 +1518,31 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .rankbar-value{font-size:11.5px}
 }
 
+/* ── APPEARANCE CONTROL (v169) ────────────────────────────────────
+   A three-way segmented control in the user menu. Auto is the default and
+   follows the device; picking Light or Dark overrides it for this device. */
+.user-menu-appearance{padding:8px 12px 10px}
+.user-menu-appearance-label{
+  font-size:11px;font-weight:600;color:var(--nx-ink-faint);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;
+}
+.theme-seg{
+  display:flex;gap:2px;padding:2px;background:var(--nx-canvas);
+  border:1px solid var(--nx-hairline);border-radius:var(--radius-md);
+}
+.theme-seg-btn{
+  flex:1;padding:5px 0;font-size:12px;font-weight:600;
+  color:var(--nx-ink-muted);background:transparent;border:none;
+  border-radius:var(--radius-sm);cursor:pointer;
+  font-family:var(--font-ui);transition:background .15s,color .15s;
+}
+.theme-seg-btn:hover{color:var(--nx-ink)}
+.theme-seg-btn.active{
+  background:var(--nx-surface);color:var(--nx-ink);
+  box-shadow:var(--shadow-1);
+}
+@media(prefers-reduced-motion:reduce){ .theme-seg-btn{transition:none} }
+
 /* ══ MOBILE — comprehensive polish (additive to 640px block above) ══ */
 @media(max-width:640px){
   /* Prevent iOS auto-zoom on input focus (must be 16px) */
@@ -1472,7 +1593,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
   /* Sessions / Project Sessions tables: hide more low-priority columns */
   .table-wrap th:nth-last-child(-n+1),
-  .table-wrap td:nth-last-child(-n+1){position:sticky;right:0;background:white}
+  .table-wrap td:nth-last-child(-n+1){position:sticky;right:0;background:var(--nx-surface)}
 
   /* Modal action buttons: split the sticky bar evenly on small screens.
      v125: was flex-direction:column-reverse, which stacked the buttons
@@ -1512,7 +1633,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Thin horizontal status strip — replaces the old 7-card grid. Single row,
    colour-coded segments separated by dots. Scrolls horizontally on small
    screens so the strip never wraps awkwardly. */
-.trk-status-strip{display:flex;align-items:center;gap:8px;padding:10px 14px;background:white;border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+.trk-status-strip{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
 .trk-strip-total{font-size:13px;color:var(--navy);font-weight:600;display:inline-flex;align-items:baseline;gap:6px;padding:4px 8px}
 .trk-strip-total .num{font-size:16px;font-variant-numeric:tabular-nums}
 .trk-strip-dot{color:var(--border);font-weight:700;user-select:none}
@@ -1531,7 +1652,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Unselected segment: hover lifts the neutral fill slightly to hint
    "this is clickable." Selected segments don't need extra hover — the
    2px border already reads as the affordance. */
-.trk-strip-seg:not(.is-selected):hover{background:#E5E7EB !important;color:#374151 !important}
+.trk-strip-seg:not(.is-selected):hover{background:var(--nx-hairline) !important;color:var(--nx-ink-2) !important}
 .trk-strip-seg:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .trk-strip-num{font-variant-numeric:tabular-nums;font-size:13px}
 .trk-strip-lbl{font-weight:500}
@@ -1539,14 +1660,14 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Search row — search input grows, filter button collapses panel. */
 .trk-search-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .trk-search-input{flex:1;position:relative;min-width:0}
-.trk-search-input input{width:100%;padding:9px 12px 9px 36px;border:1px solid var(--border);border-radius:var(--radius-md);background:white;font-size:13px;font-family:inherit}
+.trk-search-input input{width:100%;padding:9px 12px 9px 36px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--nx-surface);font-size:13px;font-family:inherit}
 .trk-search-input input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,117,222,.12)}
 .trk-search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted);pointer-events:none}
 .trk-filter-toggle.is-open{background:rgba(0,117,222,.1);color:var(--teal)}
 
 /* Active filter chips — visible only when filters are applied. */
 .trk-active-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
-.trk-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 4px 4px 10px;background:#EFF6FF;border:1px solid #DBEAFE;border-radius:var(--radius-full);font-size:12px;color:var(--navy);font-weight:500}
+.trk-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 4px 4px 10px;background:var(--pill-info-bg);border:1px solid var(--pill-info-bg);border-radius:var(--radius-full);font-size:12px;color:var(--navy);font-weight:500}
 .trk-chip-group{color:var(--muted);font-weight:600}
 .trk-chip-x{background:rgba(0,0,0,.08);border:none;color:var(--navy);width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0;font-family:inherit}
 .trk-chip-x:hover{background:rgba(0,0,0,.18)}
@@ -1554,7 +1675,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-chip-clear:hover{text-decoration:underline}
 
 /* Collapsible filter panel — keeps the dropdowns but tucks them away. */
-.trk-filter-panel{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px}
+.trk-filter-panel{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 16px;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px}
 .trk-filter-panel .form-group{margin:0}
 
 /* Row cell styles — type label sits above engagement name; country below customer. */
@@ -1568,12 +1689,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Two-line clamp — CSS handles truncation now (no JS slice). Multi-line
    remarks wrap naturally, then the line-clamp cuts at the second line with
    a browser-rendered ellipsis. Hover tooltip (title attr) carries full text. */
-.trk-cell-remarks{font-size:12px;color:#6B7280;margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-wrap:break-word;overflow-wrap:anywhere}
+.trk-cell-remarks{font-size:12px;color:var(--nx-ink-muted);margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-wrap:break-word;overflow-wrap:anywhere}
 
 /* Visual hierarchy — concluded engagements fade so live work pops first. */
-.trk-row-muted td{color:#6B7280}
+.trk-row-muted td{color:var(--nx-ink-muted)}
 .trk-row-muted .trk-cell-name,
-.trk-row-muted .trk-cell-type{color:#9CA3AF}
+.trk-row-muted .trk-cell-type{color:var(--nx-ink-faint)}
 
 /* Sessions: dual-format list. Table on desktop (≥768px), cards on mobile.
    Both formats live in the DOM; CSS toggles which is visible. */
@@ -1582,11 +1703,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .us-table-only{display:none !important}
   .us-cards-only{display:flex !important;flex-direction:column;gap:10px}
 }
-.us-card{position:relative;background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;display:flex;flex-direction:column;gap:4px;-webkit-tap-highlight-color:rgba(0,117,222,.12)}
+.us-card{position:relative;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;display:flex;flex-direction:column;gap:4px;-webkit-tap-highlight-color:rgba(0,117,222,.12)}
 .us-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
 .us-card-hours{font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal);font-size:14px}
 .us-card-name{font-weight:600;color:var(--navy);font-size:14px;line-height:1.3}
-.us-card-meta{font-size:12px;color:#6B7280;line-height:1.4}
+.us-card-meta{font-size:12px;color:var(--nx-ink-muted);line-height:1.4}
 .us-card-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:4px;flex-wrap:wrap}
 .us-card-sep{color:var(--border)}
 .us-card-emp{font-size:12px;color:var(--muted);margin-left:auto}
@@ -1604,52 +1725,52 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   margin-left: 4px;
   white-space: nowrap;
 }
-.us-card-info{font-size:12px;color:#6B7280;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-wrap:break-word}
-.us-card-actions{margin-top:6px;display:flex;gap:6px;justify-content:flex-end;border-top:1px solid #F1F5F9;padding-top:8px}
+.us-card-info{font-size:12px;color:var(--nx-ink-muted);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-wrap:break-word}
+.us-card-actions{margin-top:6px;display:flex;gap:6px;justify-content:flex-end;border-top:1px solid var(--nx-canvas);padding-top:8px}
 
 /* Mobile card layout — desktop renders a table, mobile (<768px) renders the
    same rows as vertically-stacked tappable cards. Whole card is the target
    (no separate View button), matching iOS / Material list patterns. */
 .trk-cards{display:flex;flex-direction:column;gap:10px}
-.trk-card{position:relative;background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:transform 150ms ease,box-shadow 150ms ease,border-color 150ms ease;-webkit-tap-highlight-color:rgba(0,117,222,.12)}
+.trk-card{position:relative;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:transform 150ms ease,box-shadow 150ms ease,border-color 150ms ease;-webkit-tap-highlight-color:rgba(0,117,222,.12)}
 .trk-card:active{transform:scale(.995)}
 .trk-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .trk-card-type{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
 .trk-card-type [data-lucide]{width:11px;height:11px;stroke-width:2.25}
 .trk-card-name{font-weight:600;color:var(--navy);font-size:15px;line-height:1.3;margin-bottom:4px}
-.trk-card-meta{font-size:12px;color:#6B7280;line-height:1.4;margin-bottom:2px}
-.trk-card-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #F1F5F9}
+.trk-card-meta{font-size:12px;color:var(--nx-ink-muted);line-height:1.4;margin-bottom:2px}
+.trk-card-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--nx-canvas)}
 .trk-card-date{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .trk-card .trk-cell-remarks{margin-top:8px}
 /* Muted styling on concluded cards — text fades so live cards pop. */
-.trk-card.trk-row-muted{background:#FAFBFC}
-.trk-card.trk-row-muted .trk-card-name{color:#6B7280}
-.trk-card.trk-row-muted .trk-card-meta{color:#9CA3AF}
+.trk-card.trk-row-muted{background:var(--nx-canvas)}
+.trk-card.trk-row-muted .trk-card-name{color:var(--nx-ink-muted)}
+.trk-card.trk-row-muted .trk-card-meta{color:var(--nx-ink-faint)}
 
 .trk-tab-bar{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
 .trk-tab{background:none;border:none;padding:9px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 .trk-tab:hover{color:var(--navy)}
 .trk-tab.active{color:var(--navy);font-weight:600;border-bottom-color:var(--teal)}
-.trk-tab-count{background:#F1F5F9;color:var(--muted);font-size:11px;padding:1px 7px;border-radius:var(--radius-md);font-weight:600;font-variant-numeric:tabular-nums}
-.trk-tab.active .trk-tab-count{background:var(--teal);color:white}
+.trk-tab-count{background:var(--nx-canvas);color:var(--muted);font-size:11px;padding:1px 7px;border-radius:var(--radius-md);font-weight:600;font-variant-numeric:tabular-nums}
+.trk-tab.active .trk-tab-count{background:var(--teal);color:var(--color-on-primary)}
 
 .trk-table{width:100%;border-collapse:collapse}
-.trk-table thead th{background:#F8FAFC;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;position:sticky;top:0;z-index:1}
-.trk-table tbody td{padding:11px 12px;border-bottom:1px solid #F1F5F9;font-size:13px;vertical-align:middle}
+.trk-table thead th{background:var(--nx-canvas);font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;position:sticky;top:0;z-index:1}
+.trk-table tbody td{padding:11px 12px;border-bottom:1px solid var(--nx-canvas);font-size:13px;vertical-align:middle}
 .trk-row{cursor:pointer;transition:background-color .12s}
-/* Clickable row hover — tinted accent (#F0F9FF) reads as "this opens
-   something" vs. the neutral #F8FAFC used on non-clickable tr:hover. */
-.trk-row:hover td{background:#F0F9FF}
+/* Clickable row hover — tinted accent (var(--pill-info-bg)) reads as "this opens
+   something" vs. the neutral var(--nx-canvas) used on non-clickable tr:hover. */
+.trk-row:hover td{background:var(--pill-info-bg)}
 
 .badge.trk-type{font-size:10px;letter-spacing:.4px;text-transform:uppercase;padding:3px 8px;border-radius:4px}
-.trk-type-poc{background:#FEF3C7;color:#92400E}
-.trk-type-project{background:#DBEAFE;color:#1E3A8A}
-.trk-type-amc{background:#FFFBEB;color:#B45309}
-.trk-type-support{background:#FFF1F2;color:#9F1239}
+.trk-type-poc{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.trk-type-project{background:var(--pill-info-bg);color:var(--pill-info-fg)}
+.trk-type-amc{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.trk-type-support{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
 /* v128: 'other' engagement type — neutral grey to signal "doesn't fit a
    standard workflow". Falls back to project waterfall in the tracker
    phase dropdown and the default delivery list in activityTypesForSession. */
-.trk-type-other{background:#F1F5F9;color:#475569}
+.trk-type-other{background:var(--nx-canvas);color:var(--nx-ink-2)}
 
 /* ── VENDORS & PRODUCT LINES MANAGE ─────────────────────────────── */
 /* Stats row across the top — three pill cards summarising the catalog
@@ -1663,7 +1784,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Two-column grid: vendors on the left, selected vendor's product lines
    on the right. Each panel is its own card with a sticky-ish header. */
 .vendor-mgmt-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:20px}
-.vendor-panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+.vendor-panel{background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 0 rgba(0,0,0,.02)}
 .vendor-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--nx-canvas);flex-wrap:wrap}
 .vendor-panel-title{font-weight:600;font-size:14px;color:var(--navy);letter-spacing:-.1px;display:inline-flex;align-items:center;gap:8px}
 
@@ -1673,15 +1794,15 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* Row layout: icon · main (name + sub) · actions. Subtle border that
    lights up navy on the active row. */
-.vendor-row{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:13px;background:#fff;border-radius:var(--radius-md);border:1px solid #EEF1F5;transition:background .12s,border-color .12s,box-shadow .12s}
+.vendor-row{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:13px;background:var(--nx-surface);border-radius:var(--radius-md);border:1px solid var(--nx-canvas);transition:background .12s,border-color .12s,box-shadow .12s}
 .vendor-row[onclick]{cursor:pointer}
-.vendor-row:hover{background:#F8FAFC;border-color:#E2E8F0}
+.vendor-row:hover{background:var(--nx-canvas);border-color:var(--nx-hairline)}
 .vendor-row-active{background:var(--nx-canvas);border-color:var(--nx-hairline);box-shadow:inset 3px 0 0 var(--nx-primary)}
 .vendor-row-active:hover{background:var(--nx-canvas)}
 .vendor-row-disabled{opacity:.55}
 .vendor-row-disabled .vendor-row-name{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.3)}
-.vendor-row-fallback{background:#FFFBEB;border-color:#FDE68A;border-style:dashed}
-.vendor-row-fallback:hover{background:#FEF3C7}
+.vendor-row-fallback{background:var(--pill-warn-bg);border-color:var(--pill-warn-bd);border-style:dashed}
+.vendor-row-fallback:hover{background:var(--pill-warn-bg)}
 
 .vendor-row-icon{width:18px;height:18px;color:var(--navy);flex-shrink:0;opacity:.7}
 .vendor-row-active .vendor-row-icon{color:var(--teal);opacity:1}
@@ -1691,14 +1812,14 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .vendor-row-sub{font-size:11px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
 
 .vendor-row-actions{display:flex;gap:2px;flex-shrink:0}
-.vendor-row-locked{display:inline-flex;align-items:center;color:#94A3B8;padding:0 8px}
+.vendor-row-locked{display:inline-flex;align-items:center;color:var(--nx-ink-faint);padding:0 8px}
 .vendor-row-locked i{width:14px;height:14px}
 
 /* Pills used in vendor/product rows. Smaller than .badge so they sit
    beside the name without dominating. */
 .vendor-pill{display:inline-block;padding:1px 7px;border-radius:var(--radius-full);font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;font-family:var(--font-ui)}
-.vendor-pill-muted{background:#F1F5F9;color:#64748B}
-.vendor-pill-fallback{background:#FEF3C7;color:#92400E}
+.vendor-pill-muted{background:var(--nx-canvas);color:var(--nx-ink-muted)}
+.vendor-pill-fallback{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
 
 @media(max-width:640px){
   .vendor-stats{grid-template-columns:1fr 1fr 1fr;gap:8px}
@@ -1709,26 +1830,26 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 .badge.trk-status{font-size:11px;padding:3px 9px;border-radius:var(--radius-lg);text-transform:none;letter-spacing:0}
-.trk-status-yet-to-start{background:#F1F5F9;color:#475569}
-.trk-status-initial-phase{background:#E0F2FE;color:#075985}
-.trk-status-ongoing{background:#D1FAE5;color:#065F46}
-.trk-status-onhold{background:#FEF3C7;color:#92400E}
-.trk-status-completed{background:#EDE9FE;color:#5B21B6}
-.trk-status-on-demand-request{background:#F3F4F6;color:#374151}
-.trk-status-pilot{background:#FFE4E6;color:#9F1239}
-.trk-status-budgetary-phase{background:#FFEDD5;color:#9A3412}
-.trk-status-kick-off{background:#FEF9C3;color:#854D0E}
-.trk-status-hld-discussion,.trk-status-hld-documentation{background:#E0E7FF;color:#3730A3}
-.trk-status-lld-discussion,.trk-status-lld-documentation{background:#DDD6FE;color:#5B21B6}
-.trk-status-initial-configuration{background:#CCFBF1;color:#115E59}
-.trk-status-pilot-sites-rollout{background:#FFE4E6;color:#9F1239}
-.trk-status-migration{background:#BFDBFE;color:#1E3A8A}
-.trk-status-kt-training{background:#FED7AA;color:#9A3412}
-.trk-status-as-built-documentation{background:#FEF3C7;color:#92400E}
-.trk-status-troubleshooting{background:#FECACA;color:#991B1B}
-.trk-status-ended{background:#E5E7EB;color:#1F2937}
-.trk-status-cancelled{background:#FEE2E2;color:#991B1B}
-.trk-status-lost{background:#FFE4E6;color:#831843}
+.trk-status-yet-to-start{background:var(--nx-canvas);color:var(--nx-ink-2)}
+.trk-status-initial-phase{background:var(--pill-info-bg);color:var(--pill-info-fg)}
+.trk-status-ongoing{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+.trk-status-onhold{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.trk-status-completed{background:var(--pill-purple-bg);color:var(--pill-purple-fg)}
+.trk-status-on-demand-request{background:var(--nx-canvas);color:var(--nx-ink-2)}
+.trk-status-pilot{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
+.trk-status-budgetary-phase{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.trk-status-kick-off{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.trk-status-hld-discussion,.trk-status-hld-documentation{background:var(--pill-purple-bg);color:var(--pill-purple-fg)}
+.trk-status-lld-discussion,.trk-status-lld-documentation{background:var(--pill-purple-bg);color:var(--pill-purple-fg)}
+.trk-status-initial-configuration{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+.trk-status-pilot-sites-rollout{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
+.trk-status-migration{background:var(--pill-info-bd);color:var(--pill-info-fg)}
+.trk-status-kt-training{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.trk-status-as-built-documentation{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.trk-status-troubleshooting{background:var(--pill-danger-bd);color:var(--pill-danger-fg)}
+.trk-status-ended{background:var(--nx-hairline);color:var(--nx-ink)}
+.trk-status-cancelled{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
+.trk-status-lost{background:var(--pill-danger-bg);color:var(--pill-pink-fg)}
 
 /* ── Top-level engagement.status badges (8 values) ──
    Used by the Tracker list "Status" column and the Manage Engagements
@@ -1736,21 +1857,21 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .badge.trk-st-active,.badge.trk-st-signoff,.badge.trk-st-paypending,
 .badge.trk-st-closed,.badge.trk-st-onhold,.badge.trk-st-dormant,
 .badge.trk-st-cancelled{font-size:11px;padding:3px 9px;border-radius:var(--radius-lg);letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;gap:4px}
-.trk-st-active    { background:#DCFCE7; color:#166534 }
-.trk-st-signoff   { background:#FEF3C7; color:#92400E }
-.trk-st-paypending{ background:#FEF9C3; color:#854D0E }
-.trk-st-closed    { background:#E0F2FE; color:#075985 }
-.trk-st-onhold    { background:#FED7AA; color:#9A3412 }
-.trk-st-dormant   { background:#F3F4F6; color:#4B5563 }
-.trk-st-cancelled { background:#FEE2E2; color:#991B1B }
+.trk-st-active    { background:var(--pill-ok-bg); color:var(--pill-ok-fg) }
+.trk-st-signoff   { background:var(--pill-warn-bg); color:var(--pill-warn-fg) }
+.trk-st-paypending{ background:var(--pill-warn-bg); color:var(--pill-warn-fg) }
+.trk-st-closed    { background:var(--pill-info-bg); color:var(--pill-info-fg) }
+.trk-st-onhold    { background:var(--pill-warn-bg); color:var(--pill-warn-fg) }
+.trk-st-dormant   { background:var(--nx-canvas); color:var(--nx-ink-2) }
+.trk-st-cancelled { background:var(--pill-danger-bg); color:var(--pill-danger-fg) }
 
 /* ── POC conversion outcome badge (v56) ──
    Sits next to the status pill on closed POCs only. Communicates whether the
    POC converted into a paid engagement (won) or not (lost / non-converted).
    For active/dormant POCs the outcome is undefined and the badge is hidden. */
 .badge.trk-conv{font-size:11px;padding:3px 9px;border-radius:var(--radius-lg);letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;gap:4px;margin-left:6px}
-.trk-conv-won { background:#DCFCE7; color:#166534 }
-.trk-conv-none{ background:#F3F4F6; color:#6B7280 }
+.trk-conv-won { background:var(--pill-ok-bg); color:var(--pill-ok-fg) }
+.trk-conv-none{ background:var(--nx-canvas); color:var(--nx-ink-muted) }
 /* Status-badge inner icon (Lucide SVG). Inherits text colour via
    stroke="currentColor" so each status renders in its own accent shade. */
 .trk-st-icon{width:13px;height:13px;stroke-width:2;flex-shrink:0;vertical-align:-2px}
@@ -1762,7 +1883,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-st-phase{font-weight:500;opacity:.85;font-size:10.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:-1px}
 /* Active-status badge gets a filled dot rather than an outlined glyph so
    the "green dot" reads at a glance. */
-.trk-st-active .trk-st-icon{fill:#166534;color:#166534}
+.trk-st-active .trk-st-icon{fill:var(--pill-ok-fg);color:var(--pill-ok-fg)}
 
 /* Helper hint under a detail-field value (e.g. Current Phase explainer). */
 .trk-field-hint{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.35;font-weight:500}
@@ -1772,8 +1893,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    and consistent across inputs/selects/dates. */
 .trk-locked,
 .trk-locked:focus{
-  background:#F3F4F6 !important;
-  color:#6B7280 !important;
+  background:var(--nx-canvas) !important;
+  color:var(--nx-ink-muted) !important;
   cursor:not-allowed !important;
   border:1px solid var(--color-border) !important;
   box-shadow:none !important;
@@ -1783,7 +1904,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   display:inline-block;
   width:11px;height:11px;
   stroke-width:2.25;
-  color:#9CA3AF;
+  color:var(--nx-ink-faint);
   margin-left:6px;
   vertical-align:-1px;
 }
@@ -1801,10 +1922,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 .trk-detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 18px}
-.trk-field{padding:10px 12px;background:#F8FAFC;border-radius:var(--radius-md);border:1px solid #EEF2F7}
+.trk-field{padding:10px 12px;background:var(--nx-canvas);border-radius:var(--radius-md);border:1px solid var(--nx-canvas)}
 .trk-field-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
-.trk-field-value{font-size:13px;color:#1F2937;font-weight:500;word-break:break-word}
-.trk-remarks-block{margin-top:14px;padding:14px;background:#FFFBEB;border-left:3px solid var(--gold);border-radius:var(--radius-sm)}
+.trk-field-value{font-size:13px;color:var(--nx-ink);font-weight:500;word-break:break-word}
+.trk-remarks-block{margin-top:14px;padding:14px;background:var(--pill-warn-bg);border-left:3px solid var(--gold);border-radius:var(--radius-sm)}
 
 /* Half-day checkbox in the Request Time Off form. Inline label + box; the
    helper text below explains *why* the checkbox is disabled (multi-day range
@@ -1820,9 +1941,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .cert-header-text{flex:1;min-width:200px}
 
 .cert-table{width:100%;border-collapse:collapse}
-.cert-table thead th{background:#F8FAFC;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left}
-.cert-table tbody td{padding:11px 12px;border-bottom:1px solid #F1F5F9;font-size:13px;vertical-align:middle}
-.cert-table tbody tr:hover{background:#F8FAFC}
+.cert-table thead th{background:var(--nx-canvas);font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left}
+.cert-table tbody td{padding:11px 12px;border-bottom:1px solid var(--nx-canvas);font-size:13px;vertical-align:middle}
+.cert-table tbody tr:hover{background:var(--nx-canvas)}
 /* Cert-name button — looks like a link, behaves like a button. Used as the
    clickable target that opens the file inline in a new tab. Keyboard-focusable
    for accessibility. */
@@ -1836,8 +1957,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    manager can toggle the underlying flag. */
 .cert-gulfit-badge{
   display:inline-block;font-size:10px;font-weight:700;letter-spacing:.3px;
-  text-transform:uppercase;color:#166534;background:#DCFCE7;
-  border:1px solid #86EFAC;padding:1px 6px;border-radius:var(--radius-md);
+  text-transform:uppercase;color:var(--pill-ok-fg);background:var(--pill-ok-bg);
+  border:1px solid var(--pill-ok-bd);padding:1px 6px;border-radius:var(--radius-md);
   margin-left:6px;vertical-align:1px;
 }
 /* Counterpart to .cert-gulfit-badge — shown when is_gulfit_relevant
@@ -1846,8 +1967,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    legible at a glance. */
 .cert-general-badge{
   display:inline-block;font-size:10px;font-weight:600;letter-spacing:.3px;
-  text-transform:uppercase;color:#6B7280;background:#F3F4F6;
-  border:1px solid #E5E7EB;padding:1px 6px;border-radius:var(--radius-md);
+  text-transform:uppercase;color:var(--nx-ink-muted);background:var(--nx-canvas);
+  border:1px solid var(--nx-hairline);padding:1px 6px;border-radius:var(--radius-md);
   margin-left:6px;vertical-align:1px;
 }
 /* Manager-only checkbox row inside the cert edit modal. */
@@ -1858,17 +1979,17 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* 3-state chip variants — reuse the AMC chip base styles, tint the
    Gulfit chip green to match the badge. */
-.amc-chip.cert-gulfit-chip-gulfit.amc-chip-active{background:#DCFCE7;border-color:#86EFAC;color:#166534}
-.amc-chip.cert-gulfit-chip-other.amc-chip-active{background:#F3F4F6;border-color:#9CA3AF;color:#374151}
+.amc-chip.cert-gulfit-chip-gulfit.amc-chip-active{background:var(--pill-ok-bg);border-color:var(--pill-ok-bd);color:var(--pill-ok-fg)}
+.amc-chip.cert-gulfit-chip-other.amc-chip-active{background:var(--nx-canvas);border-color:var(--nx-ink-faint);color:var(--nx-ink-2)}
 
 .cert-status{font-size:11px;padding:3px 9px;border-radius:var(--radius-lg);font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
-.cert-st-active{background:#D1FAE5;color:#065F46}
-.cert-st-active::before{content:'●';color:#10B981;font-size:10px}
-.cert-st-soon{background:#FEF3C7;color:#92400E}
-.cert-st-soon::before{content:'●';color:#F59E0B;font-size:10px}
-.cert-st-expired{background:#FEE2E2;color:#991B1B}
-.cert-st-expired::before{content:'●';color:#EF4444;font-size:10px}
-.cert-st-unknown{background:#F1F5F9;color:var(--muted)}
+.cert-st-active{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+.cert-st-active::before{content:'●';color:var(--nx-green);font-size:10px}
+.cert-st-soon{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.cert-st-soon::before{content:'●';color:var(--nx-orange);font-size:10px}
+.cert-st-expired{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
+.cert-st-expired::before{content:'●';color:var(--danger);font-size:10px}
+.cert-st-unknown{background:var(--nx-canvas);color:var(--muted)}
 
 @media(max-width:640px){
   .cert-header-card{padding:14px;gap:10px}
@@ -1885,7 +2006,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   display:inline-flex;align-items:center;gap:10px;
   padding:8px 14px;border-radius:var(--radius-md);
   border:1px solid var(--color-border);
-  background:white;color:var(--color-text);
+  background:var(--nx-surface);color:var(--color-text);
   font-size:14px;font-weight:500;line-height:1.2;
   cursor:pointer;font-family:inherit;
   box-shadow:0 1px 2px rgba(0,0,0,.04);
@@ -1907,12 +2028,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 /* Active / success state — solid green, white glowing dot. */
 .glow-button.active{
-  background:#10B981;border-color:#10B981;color:white;
+  background:var(--nx-green);border-color:var(--nx-green);color:var(--color-on-primary);
   box-shadow:0 4px 12px rgba(16,185,129,.25);
   transform:translateY(-1px);
 }
 .glow-button.active .dot{
-  background:white;
+  background:var(--nx-surface);
   box-shadow:0 0 18px rgba(255,255,255,.9);
 }
 .glow-button.active .glow-subtle{
@@ -1944,14 +2065,14 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Manage Customers — compact table replacing the legacy chip wall. */
 .cust-tbl-search{
   padding:8px 12px;border:1px solid var(--color-border);border-radius:var(--radius-md);
-  font-size:13px;font-family:inherit;background:white;min-width:220px;outline:none;
+  font-size:13px;font-family:inherit;background:var(--nx-surface);min-width:220px;outline:none;
   transition:border-color .15s,box-shadow .15s;
 }
 .cust-tbl-search:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,117,222,.12)}
 
 .cust-mgr-table{width:100%;border-collapse:collapse}
 .cust-mgr-table thead th{
-  background:#F8FAFC;border-bottom:1px solid var(--color-border);
+  background:var(--nx-canvas);border-bottom:1px solid var(--color-border);
   padding:0;font-weight:600;font-size:12px;color:var(--muted);
   text-transform:uppercase;letter-spacing:.4px;
 }
@@ -1968,9 +2089,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Tighten row density on both manager pages — was loose enough to add
    noticeable vertical scroll. Padding shrunk from ~16px to ~10px, row
    height target ~36-40px. Font size unchanged. */
-.cust-mgr-table tbody td{padding:8px 12px;font-size:13px;border-bottom:1px solid #F1F5F9}
+.cust-mgr-table tbody td{padding:8px 12px;font-size:13px;border-bottom:1px solid var(--nx-canvas)}
 .cust-mgr-table tbody tr.cust-mgr-row{transition:background .12s}
-.cust-mgr-table tbody tr.cust-mgr-row:hover{background:#F8FAFC}
+.cust-mgr-table tbody tr.cust-mgr-row:hover{background:var(--nx-canvas)}
 .cust-mgr-table tbody td .btn-icon-only{width:24px;height:24px;padding:0}
 .cust-mgr-table tbody td .btn-icon-only i{width:14px;height:14px}
 
@@ -1986,9 +2107,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* Manage Engagements table — same density tightening as customers. */
 .pj-manage-table{width:100%;border-collapse:collapse;font-size:13px}
-.pj-manage-table thead th{background:#F8FAFC;border-bottom:1px solid var(--border);padding:9px 12px;font-weight:600;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:left}
-.pj-manage-table tbody td{padding:8px 12px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
-.pj-manage-table tbody tr:hover{background:#F8FAFC}
+.pj-manage-table thead th{background:var(--nx-canvas);border-bottom:1px solid var(--border);padding:9px 12px;font-weight:600;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:left}
+.pj-manage-table tbody td{padding:8px 12px;border-bottom:1px solid var(--nx-canvas);vertical-align:middle}
+.pj-manage-table tbody tr:hover{background:var(--nx-canvas)}
 .pj-manage-table .btn-icon-only{width:24px;height:24px;padding:0}
 .pj-manage-table .btn-icon-only i{width:14px;height:14px}
 
@@ -2005,14 +2126,14 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .pj-filter-banner{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   margin-bottom:14px;padding:9px 14px;
-  background:#E0F7FF;border:1px solid #BAE6FD;border-radius:var(--radius-md);
-  font-size:13px;color:#075985;font-weight:500;
+  background:var(--pill-info-bg);border:1px solid var(--pill-info-bd);border-radius:var(--radius-md);
+  font-size:13px;color:var(--pill-info-fg);font-weight:500;
 }
 
 /* Highlight pulse when arriving via "view this customer" deep-link. */
 @keyframes pj-row-pulse{
   0%,100%{ background:transparent; }
-  20%,60%{ background:#FEF3C7; }
+  20%,60%{ background:var(--pill-warn-bg); }
 }
 .cust-row-highlight{animation:pj-row-pulse 1.5s ease-out}
 
@@ -2024,54 +2145,54 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* Reusable multi-select dropdown (filter bars) */
 .ms{position:relative;font-size:13px}
-.ms-btn{width:100%;padding:8px 10px;border:1px solid #E5E7EB;border-radius:var(--radius-sm);background:white;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#1F2937;line-height:1.3}
-.ms-btn:hover{border-color:#94A3B8}
+.ms-btn{width:100%;padding:8px 10px;border:1px solid var(--nx-hairline);border-radius:var(--radius-sm);background:var(--nx-surface);text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--nx-ink);line-height:1.3}
+.ms-btn:hover{border-color:var(--nx-ink-faint)}
 .ms.open .ms-btn{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,117,222,.1)}
 .ms-label{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ms-caret{margin-left:6px;color:var(--muted);font-size:10px;flex-shrink:0}
-.ms-pop{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;min-width:220px;max-height:300px;background:white;border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 24px rgba(15,23,42,.14);z-index:120;flex-direction:column;overflow:hidden}
+.ms-pop{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;min-width:220px;max-height:300px;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 24px rgba(15,23,42,.14);z-index:120;flex-direction:column;overflow:hidden}
 .ms.open .ms-pop{display:flex}
-.ms-pop-head{display:flex;gap:6px;padding:8px;border-bottom:1px solid var(--border);background:#F8FAFC}
-.ms-search{flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:white;outline:none;color:#1F2937}
+.ms-pop-head{display:flex;gap:6px;padding:8px;border-bottom:1px solid var(--border);background:var(--nx-canvas)}
+.ms-search{flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--nx-surface);outline:none;color:var(--nx-ink)}
 .ms-search:focus{border-color:var(--teal);box-shadow:0 0 0 2px rgba(0,117,222,.12)}
-.ms-clear{padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:white;color:var(--muted);font-size:11px;cursor:pointer;font-weight:500}
+.ms-clear{padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:var(--nx-surface);color:var(--muted);font-size:11px;cursor:pointer;font-weight:500}
 .ms-clear:hover{color:var(--navy);border-color:var(--navy)}
 .ms-list{flex:1;overflow-y:auto;padding:4px 0}
-.ms-opt{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:13px;cursor:pointer;color:#1F2937;line-height:1.3;border-radius:0}
-.ms-opt:hover{background:#F8FAFC}
+.ms-opt{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:13px;cursor:pointer;color:var(--nx-ink);line-height:1.3;border-radius:0}
+.ms-opt:hover{background:var(--nx-canvas)}
 .ms-opt input{margin:0;cursor:pointer;accent-color:var(--teal);width:14px;height:14px;flex-shrink:0}
 .ms-opt span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ms-empty{padding:14px;text-align:center;color:var(--muted);font-size:12px}
 
 /* License expiry banner (manager dashboard) */
 .lic-banner{border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:16px;border:1px solid;box-shadow:0 1px 3px rgba(15,23,42,.04)}
-.lic-banner-expired{background:#FEF2F2;border-color:#FCA5A5}
-.lic-banner-soon{background:#FFFBEB;border-color:#FCD34D}
+.lic-banner-expired{background:var(--pill-danger-bg);border-color:var(--pill-danger-bd)}
+.lic-banner-soon{background:var(--pill-warn-bg);border-color:var(--pill-warn-bd)}
 .lic-banner-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
 .lic-banner-icon{width:24px;height:24px;stroke-width:2;flex-shrink:0}
-.lic-banner-expired .lic-banner-icon{color:#B91C1C}
-.lic-banner-soon .lic-banner-icon{color:#B45309}
+.lic-banner-expired .lic-banner-icon{color:var(--pill-danger-fg)}
+.lic-banner-soon .lic-banner-icon{color:var(--pill-warn-fg)}
 .lic-banner-text{flex:1;min-width:0}
 .lic-banner-title{font-size:14px;font-weight:700;color:var(--navy);line-height:1.2}
 .lic-banner-sub{font-size:12px;font-weight:500;margin-top:2px}
-.lic-banner-expired .lic-banner-sub{color:#991B1B}
-.lic-banner-soon .lic-banner-sub{color:#92400E}
+.lic-banner-expired .lic-banner-sub{color:var(--pill-danger-fg)}
+.lic-banner-soon .lic-banner-sub{color:var(--pill-warn-fg)}
 
 .lic-rows{display:flex;flex-direction:column;gap:6px}
 .lic-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(255,255,255,.7);border:1px solid rgba(0,0,0,.06);border-radius:var(--radius-md);cursor:pointer;transition:background .15s,border-color .15s}
-.lic-row:hover{background:#fff;border-color:rgba(0,0,0,.12)}
+.lic-row:hover{background:var(--nx-surface);border-color:rgba(0,0,0,.12)}
 .lic-row-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
 .lic-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:3px 7px;border-radius:4px;white-space:nowrap}
-.lic-type-poc{background:#FEF3C7;color:#92400E}
-.lic-type-project{background:#DBEAFE;color:#1E3A8A}
+.lic-type-poc{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.lic-type-project{background:var(--pill-info-bg);color:var(--pill-info-fg)}
 .lic-row-text{flex:1;min-width:0}
 .lic-row-name{font-size:13px;font-weight:600;color:var(--navy);word-break:break-word}
 .lic-row-cust{font-size:11px;color:var(--muted);margin-top:1px}
 .lic-row-meta{text-align:right;flex-shrink:0}
 .lic-row-days{font-size:12px;font-weight:600;line-height:1.2}
 .lic-row-date{font-size:11px;color:var(--muted);margin-top:2px}
-.lic-expired .lic-row-days{color:#B91C1C}
-.lic-soon .lic-row-days{color:#B45309}
+.lic-expired .lic-row-days{color:var(--pill-danger-fg)}
+.lic-soon .lic-row-days{color:var(--pill-warn-fg)}
 
 @media(max-width:640px){
   .lic-row{padding:8px 10px}
@@ -2086,34 +2207,34 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .trk-ms-progress-bar{height:8px;background:var(--nx-hairline);border-radius:4px;overflow:hidden}
 .trk-ms-progress-fill{height:100%;background:var(--nx-primary);border-radius:4px;transition:width .3s ease-out}
 
-.trk-ms-card{padding:14px 16px;background:white;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;transition:border-color .15s,box-shadow .15s}
-.trk-ms-card:hover{border-color:#CBD5E1;box-shadow:0 1px 4px rgba(15,23,42,.06)}
-.trk-ms-card.is-done{background:#F8FFFB;border-color:#BBF7D0}
+.trk-ms-card{padding:14px 16px;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;transition:border-color .15s,box-shadow .15s}
+.trk-ms-card:hover{border-color:var(--color-border-strong);box-shadow:0 1px 4px rgba(15,23,42,.06)}
+.trk-ms-card.is-done{background:var(--nx-canvas);border-color:var(--pill-ok-bd)}
 .trk-ms-card-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
-.trk-ms-seq{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--navy);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.trk-ms-seq{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--navy);color:var(--color-on-primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
 .trk-ms-card.is-done .trk-ms-seq{background:var(--success)}
 .trk-ms-name{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--navy);word-break:break-word}
 
 .trk-ms-status{font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:3px 9px;border-radius:var(--radius-md);font-weight:600;white-space:nowrap}
-.trk-ms-st-pending{background:#F1F5F9;color:#475569}
-.trk-ms-st-progress{background:#DBEAFE;color:#1E3A8A}
-.trk-ms-st-completed{background:#D1FAE5;color:#065F46}
-.trk-ms-st-blocked{background:#FEE2E2;color:#991B1B}
+.trk-ms-st-pending{background:var(--nx-canvas);color:var(--nx-ink-2)}
+.trk-ms-st-progress{background:var(--pill-info-bg);color:var(--pill-info-fg)}
+.trk-ms-st-completed{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+.trk-ms-st-blocked{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
 
 .trk-ms-meta{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-bottom:6px}
 .trk-ms-meta-icon{width:13px;height:13px;stroke-width:2;display:inline-block;vertical-align:-2px;margin-right:4px}
 
 .trk-ms-count{margin:8px 0}
-.trk-ms-count-text{font-size:12px;color:#1F2937;font-weight:500;margin-bottom:4px}
-.trk-ms-count-bar{height:6px;background:#F1F5F9;border-radius:3px;overflow:hidden}
+.trk-ms-count-text{font-size:12px;color:var(--nx-ink);font-weight:500;margin-bottom:4px}
+.trk-ms-count-bar{height:6px;background:var(--nx-canvas);border-radius:3px;overflow:hidden}
 .trk-ms-count-fill{height:100%;background:var(--nx-primary);border-radius:3px;transition:width .3s ease-out}
 
-.trk-ms-notes{margin-top:6px;padding:8px 10px;background:#F8FAFC;border-left:3px solid #CBD5E1;border-radius:4px;font-size:12px;color:#1F2937;white-space:pre-wrap;line-height:1.5}
+.trk-ms-notes{margin-top:6px;padding:8px 10px;background:var(--nx-canvas);border-left:3px solid var(--color-border-strong);border-radius:4px;font-size:12px;color:var(--nx-ink);white-space:pre-wrap;line-height:1.5}
 
 .trk-ms-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 .trk-ms-actions .btn{padding:6px 9px}
 
-.trk-ms-add-card{margin-top:18px;padding:16px;background:#FAFBFC;border:1px dashed var(--border);border-radius:var(--radius-md)}
+.trk-ms-add-card{margin-top:18px;padding:16px;background:var(--nx-canvas);border:1px dashed var(--border);border-radius:var(--radius-md)}
 
 @media(max-width:900px){
   .trk-filter-panel{grid-template-columns:repeat(2,1fr)}
@@ -2136,8 +2257,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    Single keyframe direction is chosen via animation-name override in
    the mobile breakpoint so we don't have to detect viewport in JS. */
 .toast-container{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:360px;pointer-events:none}
-.toast{background:#10B981;color:#fff;padding:12px 14px;border-radius:var(--radius-md);box-shadow:0 10px 30px rgba(0,0,0,.15),0 2px 8px rgba(0,0,0,.08);display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.4;font-weight:500;pointer-events:auto;animation:toastInRight .2s ease-out both;font-family:var(--font-ui)}
-.toast.toast-error{background:#EF4444}
+.toast{background:var(--nx-green);color:#fff;padding:12px 14px;border-radius:var(--radius-md);box-shadow:0 10px 30px rgba(0,0,0,.15),0 2px 8px rgba(0,0,0,.08);display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.4;font-weight:500;pointer-events:auto;animation:toastInRight .2s ease-out both;font-family:var(--font-ui)}
+.toast.toast-error{background:var(--danger)}
 .toast.toast-leaving{animation:toastOutRight .2s ease-in forwards}
 .toast-msg{flex:1;min-width:0;word-wrap:break-word}
 .toast-close{background:transparent;border:0;color:rgba(255,255,255,.85);font-size:20px;cursor:pointer;padding:0 2px;margin-left:auto;line-height:1;font-family:inherit}
@@ -2165,7 +2286,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   transform:translate(-50%,-60px);
   z-index:9998;
   width:42px;height:42px;
-  background:#fff;
+  background:var(--nx-surface);
   border-radius:50%;
   box-shadow:0 6px 18px rgba(0,0,0,.18),0 2px 6px rgba(0,0,0,.08);
   display:flex;align-items:center;justify-content:center;
@@ -2194,22 +2315,22 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .us-draft-banner{
   display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   padding:12px 14px;
-  background:#FFFBEB;
-  border:1px solid #FCD34D;
+  background:var(--pill-warn-bg);
+  border:1px solid var(--pill-warn-bd);
   border-radius:var(--radius-md);
   margin-bottom:16px;
   box-shadow:0 1px 0 rgba(146,64,14,.05);
 }
-.us-draft-banner .us-draft-msg{flex:1;min-width:200px;font-size:13px;color:#78350F;line-height:1.4}
-.us-draft-banner .us-draft-msg strong{color:#451A03}
+.us-draft-banner .us-draft-msg{flex:1;min-width:200px;font-size:13px;color:var(--pill-warn-fg);line-height:1.4}
+.us-draft-banner .us-draft-msg strong{color:var(--pill-warn-fg)}
 
 /* ── CONFIRM MODAL TYPING INPUT ─────────────────────────────────── */
 .confirm-typing-wrap{margin-top:16px}
 .confirm-typing-label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
-.confirm-typing-target{font-variant-numeric:tabular-nums;color:var(--navy);background:#F1F5F9;padding:1px 6px;border-radius:4px;font-size:12px}
+.confirm-typing-target{font-variant-numeric:tabular-nums;color:var(--navy);background:var(--nx-canvas);padding:1px 6px;border-radius:4px;font-size:12px}
 .confirm-typing-input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-md);font-family:inherit;font-size:14px;outline:none;transition:border-color .12s,box-shadow .12s}
 .confirm-typing-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,117,222,.15)}
-.confirm-body{font-size:14px;color:#374151;line-height:1.6;white-space:pre-wrap;margin-top:-8px}
+.confirm-body{font-size:14px;color:var(--nx-ink-2);line-height:1.6;white-space:pre-wrap;margin-top:-8px}
 
 /* ─── PROFESSIONAL SERVICES DEALS (v60) ───────────────────────────
    Manager-only commercial register. Reuses the AMC page header
@@ -2218,24 +2339,24 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    Professional Services" block. */
 
 .ps-table{width:100%;border-collapse:collapse;font-size:13px}
-.ps-table thead th{background:#F8FAFC;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
-.ps-table tbody td{padding:9px 10px;border-bottom:1px solid #F1F5F9;vertical-align:top}
+.ps-table thead th{background:var(--nx-canvas);font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.ps-table tbody td{padding:9px 10px;border-bottom:1px solid var(--nx-canvas);vertical-align:top}
 .ps-table tbody tr.ps-row{cursor:pointer;transition:background .12s}
-.ps-table tbody tr.ps-row:hover{background:#F8FAFC}
+.ps-table tbody tr.ps-row:hover{background:var(--nx-canvas)}
 .ps-table .num{font-variant-numeric:tabular-nums}
 
 /* Status pills — one per status value, mapped via PS_STATUS_META.cls. */
-.ps-st-quoted    { background:#E5E7EB; color:#374151 }
-.ps-st-won       { background:#DCFCE7; color:#166534 }
-.ps-st-inprog    { background:#DBEAFE; color:#1E40AF }
-.ps-st-done      { background:#CFFAFE; color:#0E7490 }
-.ps-st-lost      { background:#FEE2E2; color:#991B1B }
-.ps-st-cancelled { background:#F3F4F6; color:#4B5563 }
+.ps-st-quoted    { background:var(--nx-hairline); color:var(--nx-ink-2) }
+.ps-st-won       { background:var(--pill-ok-bg); color:var(--pill-ok-fg) }
+.ps-st-inprog    { background:var(--pill-info-bg); color:var(--pill-info-fg) }
+.ps-st-done      { background:var(--pill-info-bg); color:var(--pill-info-fg) }
+.ps-st-lost      { background:var(--pill-danger-bg); color:var(--pill-danger-fg) }
+.ps-st-cancelled { background:var(--nx-canvas); color:var(--nx-ink-2) }
 .ps-table .badge,.ps-card .badge,.ps-linked-row .badge{font-size:11px;padding:3px 9px;border-radius:var(--radius-lg);letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;gap:4px}
 
 /* Mobile card view — same content, vertical stack. */
 .ps-cards{display:grid;grid-template-columns:1fr;gap:10px}
-.ps-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.ps-card{background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
 .ps-card:hover{border-color:var(--teal);box-shadow:0 2px 8px rgba(0,117,222,.08)}
 .ps-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px}
 .ps-card-client{font-weight:600;color:var(--navy);font-size:14px;flex:1}
@@ -2263,10 +2384,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* ── PS Milestones v64 — discrete-phase row ─────────────────────── */
 /* Toolbar above the table: Add + Re-balance + running total. */
 .ps-mile-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
-.ps-mile-total{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500;padding:6px 10px;border-radius:var(--radius-sm);background:#F8FAFC;line-height:1.4;text-align:right}
-.ps-mile-total.ps-mile-total-ok{color:#166534;background:#DCFCE7}
-.ps-mile-total.ps-mile-total-warn{color:#92400E;background:#FEF3C7}
-.ps-mile-total.ps-mile-total-over{color:#991B1B;background:#FEE2E2}
+.ps-mile-total{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500;padding:6px 10px;border-radius:var(--radius-sm);background:var(--nx-canvas);line-height:1.4;text-align:right}
+.ps-mile-total.ps-mile-total-ok{color:var(--pill-ok-fg);background:var(--pill-ok-bg)}
+.ps-mile-total.ps-mile-total-warn{color:var(--pill-warn-fg);background:var(--pill-warn-bg)}
+.ps-mile-total.ps-mile-total-over{color:var(--pill-danger-fg);background:var(--pill-danger-bg)}
 .ps-mile-total-sub{font-size:11px;font-weight:400;color:inherit;opacity:.8;margin-top:1px}
 
 /* Wrapper that holds the milestone rows. The header pseudo-cells are
@@ -2299,7 +2420,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   letter-spacing:.3px;
   text-transform:uppercase;
   color:var(--muted);
-  background:#fff;
+  background:var(--nx-surface);
   border-bottom:1px solid var(--border);
   position:sticky;
   top:0;
@@ -2329,17 +2450,17 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   padding:6px 4px;
   border:1px solid var(--border);
   border-radius:var(--radius-md);
-  background:#fff;
+  background:var(--nx-surface);
 }
-.ps-mile-row-overpaid{border-color:#FBBF24;background:#FFFBEB}
+.ps-mile-row-overpaid{border-color:var(--pill-warn-bd);background:var(--pill-warn-bg)}
 .ps-mile-cell{min-width:0}
 .ps-mile-num{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);text-align:right;padding-right:4px}
-.ps-mile-row input,.ps-mile-row select{padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:inherit;width:100%;box-sizing:border-box;background:#fff}
+.ps-mile-row input,.ps-mile-row select{padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:inherit;width:100%;box-sizing:border-box;background:var(--nx-surface)}
 .ps-mile-aed{font-variant-numeric:tabular-nums;font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* % input cell — small inline suffix and a tinted background so it
    reads as the primary editable axis. */
 .ps-mile-cell-pct{position:relative}
-.ps-mile-pct-input{padding-right:18px !important;background:#F0F9FF !important;font-variant-numeric:tabular-nums !important;font-weight:600 !important;color:var(--navy) !important}
+.ps-mile-pct-input{padding-right:18px !important;background:var(--pill-info-bg) !important;font-variant-numeric:tabular-nums !important;font-weight:600 !important;color:var(--navy) !important}
 .ps-mile-pct-suffix{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted);pointer-events:none}
 /* Read-only Amount cell — looks like a number block but isn't editable. */
 .ps-mile-amount-display{font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;color:var(--navy);padding:6px 4px;border-bottom:1px dashed transparent}
@@ -2369,11 +2490,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 /* Per-milestone status pills — distinct from deal status (.ps-st-*). */
-.ps-msst-notstarted{ background:#F3F4F6; color:#4B5563 }
-.ps-msst-active    { background:#DBEAFE; color:#1E40AF }
-.ps-msst-signoff   { background:#FEF3C7; color:#92400E }
-.ps-msst-payment   { background:#FED7AA; color:#9A3412 }
-.ps-msst-done      { background:#DCFCE7; color:#166534 }
+.ps-msst-notstarted{ background:var(--nx-canvas); color:var(--nx-ink-2) }
+.ps-msst-active    { background:var(--pill-info-bg); color:var(--pill-info-fg) }
+.ps-msst-signoff   { background:var(--pill-warn-bg); color:var(--pill-warn-fg) }
+.ps-msst-payment   { background:var(--pill-warn-bg); color:var(--pill-warn-fg) }
+.ps-msst-done      { background:var(--pill-ok-bg); color:var(--pill-ok-fg) }
 
 /* Progress cell in the deal list view. */
 .ps-table .ps-progress{font-size:11px;line-height:1.4}
@@ -2384,10 +2505,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Tracker detail integration — shows below the field grid + remarks
    when the engagement has at least one linked Professional Services
    deal. Manager-only. */
-.ps-linked-block{margin-top:18px;padding:12px 14px;background:#F8FAFC;border:1px solid var(--border);border-radius:var(--radius-md)}
+.ps-linked-block{margin-top:18px;padding:12px 14px;background:var(--nx-canvas);border:1px solid var(--border);border-radius:var(--radius-md)}
 .ps-linked-head{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;margin-bottom:8px}
 .ps-linked-head .dim{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px}
-.ps-linked-row{display:flex;align-items:center;gap:10px;padding:7px 10px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:5px;cursor:pointer;transition:border-color .12s}
+.ps-linked-row{display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:5px;cursor:pointer;transition:border-color .12s}
 .ps-linked-row:hover{border-color:var(--teal)}
 .ps-linked-row:last-child{margin-bottom:0}
 .ps-linked-client{font-weight:600;color:var(--navy);font-size:13px;flex:1}
@@ -2402,23 +2523,23 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Toolbar toggle button — switches the page between Active and
    Archived views. Neutral grey when inactive; muted-amber when on. */
 .archived-toggle-btn{margin-left:auto;font-size:12px}
-.archived-toggle-btn.archived-toggle-on{background:#FEF3C7;border:1px solid #FBBF24;color:#92400E}
+.archived-toggle-btn.archived-toggle-on{background:var(--pill-warn-bg);border:1px solid var(--pill-warn-bd);color:var(--pill-warn-fg)}
 .archived-toggle-btn .btn-icon{width:13px;height:13px}
 
 /* Archived chip variant — sits inside .amc-chip-row alongside the
    status chips. Neutral grey signals "historical, not workflow." */
-.amc-chip.amc-chip-archived{background:#F9FAFB;color:#4B5563;border-color:#E5E7EB}
-.amc-chip.amc-chip-archived.amc-chip-active{background:#F3F4F6;border-color:#9CA3AF;color:#374151}
+.amc-chip.amc-chip-archived{background:var(--nx-canvas);color:var(--nx-ink-2);border-color:var(--nx-hairline)}
+.amc-chip.amc-chip-archived.amc-chip-active{background:var(--nx-canvas);border-color:var(--nx-ink-faint);color:var(--nx-ink-2)}
 
 /* PS deal row in the Archived view — subtle dim + non-pointer so it
    reads as "historical, not interactive". Action column overrides
    pointer for the row's icon buttons. */
-.ps-row.ps-row-archived{background:#FAFBFD;opacity:.85;cursor:default}
-.ps-row.ps-row-archived:hover{background:#F1F5F9}
+.ps-row.ps-row-archived{background:var(--nx-canvas);opacity:.85;cursor:default}
+.ps-row.ps-row-archived:hover{background:var(--nx-canvas)}
 
 /* "(archived)" badge next to a linked engagement name in PS deal
    rows. Small, italic, mid-grey — signal without shouting. */
-.ps-linked-arch-badge{display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:#92400E;background:#FEF3C7;padding:1px 6px;border-radius:var(--radius-md);margin-left:4px;vertical-align:1px}
+.ps-linked-arch-badge{display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--pill-warn-fg);background:var(--pill-warn-bg);padding:1px 6px;border-radius:var(--radius-md);margin-left:4px;vertical-align:1px}
 
 /* Read-only modal — banner across the top + dimmed/inert form fields.
    pointer-events:none on inputs blocks edits without disabling them
@@ -2426,7 +2547,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    Save buttons are hidden via JS in setModalArchivedBanner; this CSS
    covers the rest. */
 .modal-archived-banner{
-  background:#FEF3C7;color:#92400E;border:1px solid #FBBF24;border-radius:var(--radius-md);
+  background:var(--pill-warn-bg);color:var(--pill-warn-fg);border:1px solid var(--pill-warn-bd);border-radius:var(--radius-md);
   padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:500;line-height:1.4;
 }
 .modal-readonly .form-grid input,
@@ -2437,7 +2558,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .modal-readonly input[type="date"],
 .modal-readonly select,
 .modal-readonly textarea{
-  pointer-events:none;background:#F8FAFC !important;color:var(--muted);opacity:.85;
+  pointer-events:none;background:var(--nx-canvas) !important;color:var(--muted);opacity:.85;
 }
 .modal-readonly .btn:not(.btn-ghost){pointer-events:none;opacity:.5}
 
@@ -2452,16 +2573,16 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* Matrix table */
 .sk-matrix{width:100%;border-collapse:collapse;font-size:13px}
-.sk-matrix thead th{background:#F8FAFC;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
+.sk-matrix thead th{background:var(--nx-canvas);font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
 .sk-matrix thead th.sk-rowhead,.sk-matrix thead th.sk-vendorhead{text-align:left}
-.sk-matrix tbody td{padding:8px 10px;border-bottom:1px solid #F1F5F9;vertical-align:middle;text-align:center}
+.sk-matrix tbody td{padding:8px 10px;border-bottom:1px solid var(--nx-canvas);vertical-align:middle;text-align:center}
 .sk-matrix tbody td.sk-rowhead,.sk-matrix tbody td.sk-vendorhead{text-align:left}
 /* v90: Gulfit Relevant column. Narrow, click-to-toggle; the badge is
    a 🟢/⚪ glyph rather than a real <input> so we don't fight browser
    focus styles inside the table cells. */
 .sk-matrix thead th.sk-gulfithead{width:32px;text-align:center}
 .sk-matrix tbody td.sk-gulfitcell{cursor:pointer;user-select:none;width:32px;font-size:15px;line-height:1;transition:background .12s}
-.sk-matrix tbody td.sk-gulfitcell:hover{background:#FFFBEB}
+.sk-matrix tbody td.sk-gulfitcell:hover{background:var(--pill-warn-bg)}
 .sk-matrix tbody td.sk-gulfitcell-readonly{cursor:default}
 .sk-matrix tbody td.sk-gulfitcell-readonly:hover{background:transparent}
 .sk-gulfit-badge{display:inline-block;line-height:1}
@@ -2469,29 +2590,29 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Small inline "Gulfit" tag next to a product-line name when the
    flag is on. Matches the cert .gulfit-pill tone — teal text on a
    pale teal background. */
-.sk-gulfit-tag{display:inline-block;font-size:10px;font-weight:700;color:#0E7490;background:#ECFEFF;padding:2px 6px;border-radius:var(--radius-full);text-transform:uppercase;letter-spacing:.4px;margin-left:6px;vertical-align:1px}
+.sk-gulfit-tag{display:inline-block;font-size:10px;font-weight:700;color:var(--pill-info-fg);background:var(--pill-info-bg);padding:2px 6px;border-radius:var(--radius-full);text-transform:uppercase;letter-spacing:.4px;margin-left:6px;vertical-align:1px}
 .sk-matrix tbody td.sk-rowhead strong{color:var(--navy)}
 .sk-matrix tbody td.sk-vendorhead{color:var(--muted);font-size:12px}
 .sk-cell{cursor:default;transition:background .12s}
 /* v124 a11y: keyboard focus on the now-focusable matrix cells. */
 .sk-cell:focus-visible{outline:2px solid var(--teal);outline-offset:-2px;position:relative;z-index:1}
 .sk-cell-filled,.sk-cell-empty{cursor:pointer}
-.sk-cell-filled:hover,.sk-cell-empty:hover{background:#F8FAFC}
+.sk-cell-filled:hover,.sk-cell-empty:hover{background:var(--nx-canvas)}
 .sk-cell-add{display:inline-block;width:18px;height:18px;line-height:16px;border:1.5px dashed var(--border);color:var(--muted);border-radius:50%;font-size:13px;font-weight:600;text-align:center;opacity:0;transition:opacity .12s}
 .sk-cell-empty:hover .sk-cell-add{opacity:.7}
 
 /* Level pills */
 .sk-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:var(--radius-lg);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap}
-.sk-pill-beginner    { background:#F3F4F6; color:#4B5563 }
-.sk-pill-intermediate{ background:#DBEAFE; color:#1E40AF }
-.sk-pill-expert      { background:#DCFCE7; color:#166534 }
+.sk-pill-beginner    { background:var(--nx-canvas); color:var(--nx-ink-2) }
+.sk-pill-intermediate{ background:var(--pill-info-bg); color:var(--pill-info-fg) }
+.sk-pill-expert      { background:var(--pill-ok-bg); color:var(--pill-ok-fg) }
 .sk-pill-empty       { background:transparent; color:var(--muted) }
 /* Non-proficiency states (v71) — visually distinct from the three
    real-skill pills so the matrix reads at a glance. N/A is muted to
    sink visually; training states use amber/blue to signal "in motion". */
-.sk-pill-na          { background:#F9FAFB; color:#9CA3AF; opacity:.75; border:1px dashed #E5E7EB }
-.sk-pill-to-train    { background:#FEF3C7; color:#92400E }
-.sk-pill-under-train { background:#DBF4FF; color:#075985 }
+.sk-pill-na          { background:var(--nx-canvas); color:var(--nx-ink-faint); opacity:.75; border:1px dashed var(--nx-hairline) }
+.sk-pill-to-train    { background:var(--pill-warn-bg); color:var(--pill-warn-fg) }
+.sk-pill-under-train { background:var(--pill-info-bg); color:var(--pill-info-fg) }
 
 /* Level radio row in the modal — each option is a clickable pill. */
 .sk-level-row{display:flex;gap:10px;flex-wrap:wrap}
@@ -2509,24 +2630,24 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .sk-rev-section:last-child{margin-bottom:0}
 .sk-rev-head{font-size:12px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
 .sk-rev-names{display:flex;flex-direction:column;gap:4px;padding-left:6px}
-.sk-rev-name{font-size:13px;padding:4px 8px;background:#F8FAFC;border-radius:var(--radius-sm)}
+.sk-rev-name{font-size:13px;padding:4px 8px;background:var(--nx-canvas);border-radius:var(--radius-sm)}
 
 /* "X skilled" badge inside the product line row in Vendors & Products */
-.sk-count-badge{display:inline-flex;align-items:center;gap:4px;background:#E0F7FF;color:#075985;border:1px solid #BAE6FD;border-radius:var(--radius-md);padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;margin-left:8px;transition:background .12s,border-color .12s}
-.sk-count-badge:hover{background:#BAE6FD;border-color:#0EA5E9}
+.sk-count-badge{display:inline-flex;align-items:center;gap:4px;background:var(--pill-info-bg);color:var(--pill-info-fg);border:1px solid var(--pill-info-bd);border-radius:var(--radius-md);padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;margin-left:8px;transition:background .12s,border-color .12s}
+.sk-count-badge:hover{background:var(--pill-info-bd);border-color:var(--pill-info-fg)}
 
 /* Mobile accordion (< 720px) — one section per employee */
 .sk-acc{display:flex;flex-direction:column;gap:8px}
-.sk-acc-emp{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden}
+.sk-acc-emp{background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden}
 .sk-acc-summary{padding:12px 14px;cursor:pointer;font-weight:600;color:var(--navy);font-size:14px;list-style:none;user-select:none;display:flex;align-items:center;justify-content:space-between}
 .sk-acc-summary::-webkit-details-marker{display:none}
 .sk-acc-summary::after{content:'›';font-size:18px;color:var(--muted);transition:transform .15s}
 .sk-acc-emp[open] .sk-acc-summary::after{transform:rotate(90deg)}
-.sk-acc-emp[open] .sk-acc-summary{border-bottom:1px solid var(--border);background:#F8FAFC}
+.sk-acc-emp[open] .sk-acc-summary{border-bottom:1px solid var(--border);background:var(--nx-canvas)}
 .sk-acc-rows{display:flex;flex-direction:column}
-.sk-acc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:1px solid #F1F5F9;cursor:pointer;transition:background .12s}
+.sk-acc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:1px solid var(--nx-canvas);cursor:pointer;transition:background .12s}
 .sk-acc-row:last-child{border-bottom:0}
-.sk-acc-row:hover{background:#F8FAFC}
+.sk-acc-row:hover{background:var(--nx-canvas)}
 .sk-acc-row-name{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
 .sk-acc-row-name strong{color:var(--navy);font-size:13px}
 .sk-acc-row-pill{flex-shrink:0}
@@ -2547,7 +2668,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .team-page-title{font-size:24px;font-weight:700;color:var(--navy);letter-spacing:-.3px;line-height:1.2}
 .team-page-sub{font-size:13px;color:var(--muted);font-weight:500;margin-top:2px}
 .team-signin-link{font-size:13px;color:var(--teal);font-weight:600;text-decoration:none;padding:8px 14px;border:1px solid var(--teal);border-radius:var(--radius-md);transition:background .15s,color .15s}
-.team-signin-link:hover{background:var(--teal);color:white}
+.team-signin-link:hover{background:var(--teal);color:var(--color-on-primary)}
 
 .team-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:24px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .team-tab-btn{
@@ -2559,7 +2680,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .team-tab-btn.active{color:var(--navy);border-bottom-color:var(--teal)}
 
 .team-tab-body{padding:0 8px}
-.team-empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 20px;background:#F8FAFC;border-radius:var(--radius-md)}
+.team-empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 20px;background:var(--nx-canvas);border-radius:var(--radius-md)}
 
 /* v91: Regional BUs info box — static informational card at the top of
    Meet the Team. Subtle teal/navy tint to read as "info, not action". */
@@ -2573,7 +2694,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 .team-regional-bu-ico{width:26px;height:26px;color:var(--navy);flex-shrink:0}
 .team-regional-bu-title{font-size:14px;font-weight:700;color:var(--navy);line-height:1.2}
-.team-regional-bu-sub{font-size:13px;color:#0E7490;margin-top:2px}
+.team-regional-bu-sub{font-size:13px;color:var(--pill-info-fg);margin-top:2px}
 
 /* Category sections with colored accent bar above the heading. v91:
    header is flex so the "+ Add Member" button can sit on the right. */
@@ -2589,7 +2710,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   border-radius:var(--radius-md);padding:6px 12px;cursor:pointer;
   font-family:inherit;transition:background .12s,color .12s;
 }
-.team-add-member-btn:hover{background:var(--teal);color:white}
+.team-add-member-btn:hover{background:var(--teal);color:var(--color-on-primary)}
 .team-add-member-ico{width:14px;height:14px}
 
 /* Member card grid — explicit columns at breakpoints so cards never
@@ -2603,30 +2724,30 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 .team-card{
   width:100%;max-width:320px;
-  background:white;border:1px solid #E5E7EB;border-radius:var(--radius-md);padding:24px;
+  background:var(--nx-surface);border:1px solid var(--nx-hairline);border-radius:var(--radius-md);padding:24px;
   display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;
   transition:box-shadow .15s,transform .12s,border-color .15s;
 }
-.team-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);border-color:#CBD5E1;transform:translateY(-1px)}
+.team-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);border-color:var(--color-border-strong);transform:translateY(-1px)}
 
 .team-card-photo{margin-bottom:10px}
 /* Photo wrap holds the layered initials circle + (optional) img on top.
    The img is absolutely positioned over the initials so a missing JPG
    reveals the initials cleanly via onerror -> display:none on the img. */
 .team-photo-wrap{
-  position:relative;border-radius:50%;overflow:hidden;background:#F8FAFC;
+  position:relative;border-radius:50%;overflow:hidden;background:var(--nx-canvas);
   flex-shrink:0;display:block;
 }
 .team-initials{
   position:absolute;inset:0;border-radius:50%;
-  background:var(--teal);color:white;
+  background:var(--teal);color:var(--color-on-primary);
   display:flex;align-items:center;justify-content:center;
   font-family:var(--font-ui);font-weight:700;letter-spacing:.5px;
   line-height:1;
 }
 .team-photo{
   position:absolute;inset:0;width:100%;height:100%;
-  border-radius:50%;object-fit:cover;background:#F8FAFC;
+  border-radius:50%;object-fit:cover;background:var(--nx-canvas);
   display:block;
 }
 
@@ -2644,7 +2765,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   display:inline-flex;align-items:center;line-height:1;
 }
 .team-card-edit-pencil i{width:13px;height:13px;color:var(--muted)}
-.team-card-edit-pencil:hover{background:#F1F5F9;border-color:#E2E8F0}
+.team-card-edit-pencil:hover{background:var(--nx-canvas);border-color:var(--nx-hairline)}
 .team-card-edit-pencil:hover i{color:var(--teal)}
 .team-card:hover .team-card-edit-pencil{opacity:1}
 /* v124 a11y: pencil also reveals on keyboard focus so non-mouse users can
@@ -2657,7 +2778,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   font:inherit;font-size:16px;font-weight:600;color:var(--navy);
   text-align:center;padding:4px 8px;
   border:1px solid var(--teal);border-radius:var(--radius-sm);outline:none;
-  background:white;width:auto;min-width:160px;max-width:90%;
+  background:var(--nx-surface);width:auto;min-width:160px;max-width:90%;
 }
 .team-card-edit-input:focus{box-shadow:0 0 0 3px rgba(0,117,222,.15)}
 /* "+ Add phone" button — small, manager-only, replaces the absent
@@ -2667,29 +2788,29 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .team-card-add-phone{
   display:inline-flex;align-items:center;gap:4px;
   font-size:12px;color:var(--teal);font-weight:600;
-  background:transparent;border:1px dashed #CBD5E1;border-radius:var(--radius-sm);
+  background:transparent;border:1px dashed var(--color-border-strong);border-radius:var(--radius-sm);
   padding:4px 10px;cursor:pointer;font-family:inherit;
 }
-.team-card-add-phone:hover{border-color:var(--teal);background:#F0F9FF}
+.team-card-add-phone:hover{border-color:var(--teal);background:var(--pill-info-bg)}
 
 /* Email + location share a single tight row at the bottom of the card,
    per the v1 spec. Email left, location badge right; wraps to two rows
    only if email overflows. */
 .team-card-bottom{
-  margin-top:14px;padding-top:12px;border-top:1px solid #F1F5F9;
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--nx-canvas);
   width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
 }
 .team-loc-badge{
   font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:var(--radius-full);
   text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;
 }
-.team-loc-uae{background:#EFF6FF;color:#1E3A8A}
-.team-loc-ksa{background:#FDF2F8;color:#9D174D}
+.team-loc-uae{background:var(--pill-info-bg);color:var(--pill-info-fg)}
+.team-loc-ksa{background:var(--pill-pink-bg);color:var(--pill-pink-fg)}
 
 .team-contact-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);min-width:0}
 .team-contact-row a{color:var(--teal);text-decoration:none;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .team-contact-row a:hover{text-decoration:underline}
-.team-contact-ico{width:13px;height:13px;color:#94A3B8;flex-shrink:0}
+.team-contact-ico{width:13px;height:13px;color:var(--nx-ink-faint);flex-shrink:0}
 
 /* Phone is internal-only; rendered as a small chip BELOW the
    email+location row when present so it doesn't crowd the bottom. */
@@ -2702,21 +2823,21 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .team-portfolio-headtext{flex:1;min-width:0;text-align:left}
 .team-portfolio-handles{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;width:100%}
 .team-portfolio-list{list-style:none;padding:0;margin:0;width:100%;display:flex;flex-direction:column;gap:6px}
-.team-portfolio-list li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;background:#F8FAFC;border-radius:var(--radius-sm);font-size:13px}
+.team-portfolio-list li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;background:var(--nx-canvas);border-radius:var(--radius-sm);font-size:13px}
 .team-portfolio-prod{color:var(--navy);font-weight:600}
 .team-portfolio-cat{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.3px}
 .team-portfolio-empty{font-size:13px;color:var(--muted);padding:8px 10px}
 
 /* ── RFP Process Playbook ── */
 .rfp-layout{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
-.rfp-flow{background:#F8FAFC;border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px}
+.rfp-flow{background:var(--nx-canvas);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px}
 .rfp-flow-inner{display:flex;flex-direction:column;gap:18px;align-items:center}
 
 /* Stage card variants — type drives shape + colour. */
 .rfp-stage{
   position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;
   min-width:240px;max-width:320px;padding:14px 18px;cursor:pointer;
-  background:white;border:2px solid var(--border);border-radius:var(--radius-md);
+  background:var(--nx-surface);border:2px solid var(--border);border-radius:var(--radius-md);
   font-family:inherit;text-align:center;transition:transform .12s,box-shadow .12s,border-color .12s;
 }
 .rfp-stage:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
@@ -2724,13 +2845,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 .rfp-stage-idx{
   position:absolute;top:-10px;left:-10px;
-  width:24px;height:24px;border-radius:50%;background:var(--navy);color:white;
+  width:24px;height:24px;border-radius:50%;background:var(--navy);color:var(--color-on-primary);
   display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
   font-variant-numeric:tabular-nums;
 }
 .rfp-stage-label{font-size:14px;font-weight:600;color:var(--navy);line-height:1.3}
 .rfp-stage-owner{font-size:11.5px;color:var(--muted);font-weight:500}
-.rfp-stage-branches{font-size:11px;color:#94A3B8;margin-top:4px;display:flex;gap:6px;align-items:center}
+.rfp-stage-branches{font-size:11px;color:var(--nx-ink-faint);margin-top:4px;display:flex;gap:6px;align-items:center}
 .rfp-stage-branch{font-style:italic}
 .rfp-stage-branch-sep{opacity:.5}
 
@@ -2742,7 +2863,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    readable. The wrapper holds the rotated background while the
    content stays upright. */
 .rfp-stage.rfp-stage-decision{
-  border-color:var(--gold);background:#FFFBEB;
+  border-color:var(--gold);background:var(--pill-warn-bg);
   border-radius:var(--radius-md);
   /* Soft visual cue without a literal diamond rotation (rotated text
      hurts legibility). The amber tint + dashed border reads as
@@ -2750,14 +2871,14 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   border-style:dashed;
 }
 .rfp-stage.rfp-stage-decision .rfp-stage-idx{background:var(--gold)}
-.rfp-stage.rfp-stage-decision .rfp-stage-label{color:#92400E}
+.rfp-stage.rfp-stage-decision .rfp-stage-label{color:var(--pill-warn-fg)}
 
 /* Terminal = colored variant — green for "submit", grey for "return" */
 .rfp-stage.rfp-stage-terminal{
-  background:#F1F5F9;border-color:#94A3B8;
+  background:var(--nx-canvas);border-color:var(--nx-ink-faint);
 }
-.rfp-stage.rfp-stage-terminal .rfp-stage-idx{background:#475569}
-.rfp-stage.rfp-stage-terminal .rfp-stage-label{color:#334155}
+.rfp-stage.rfp-stage-terminal .rfp-stage-idx{background:var(--nx-ink-2)}
+.rfp-stage.rfp-stage-terminal .rfp-stage-label{color:var(--nx-ink-2)}
 
 /* Down-arrow connector between consecutive stages. CSS pseudo-element
    on the next stage card draws a thin vertical line + arrowhead from
@@ -2769,17 +2890,17 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .rfp-flow-inner .rfp-stage:not(:first-child)::before{
   display:block;
   position:absolute;top:-22px;left:50%;transform:translateX(-50%);
-  width:2px;height:18px;background:#CBD5E1;
+  width:2px;height:18px;background:var(--color-border-strong);
 }
 .rfp-flow-inner .rfp-stage:not(:first-child)::after{
   content:'';display:block;
   position:absolute;top:-8px;left:50%;transform:translateX(-50%) rotate(45deg);
-  width:8px;height:8px;border-right:2px solid #CBD5E1;border-bottom:2px solid #CBD5E1;
+  width:8px;height:8px;border-right:2px solid var(--color-border-strong);border-bottom:2px solid var(--color-border-strong);
 }
 
 /* ── RFP detail panel (right side on desktop, below flow on mobile) ── */
 .rfp-detail{
-  background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;
+  background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;
   position:sticky;top:80px;max-height:calc(100vh - 100px);overflow-y:auto;
 }
 .rfp-detail-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
@@ -2787,12 +2908,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   font-size:10px;font-weight:700;padding:3px 8px;border-radius:var(--radius-full);
   text-transform:uppercase;letter-spacing:.5px;
 }
-.rfp-detail-typebadge-action{background:#E0F2FE;color:#075985}
-.rfp-detail-typebadge-decision{background:#FEF3C7;color:#92400E}
-.rfp-detail-typebadge-terminal{background:#F1F5F9;color:#334155}
+.rfp-detail-typebadge-action{background:var(--pill-info-bg);color:var(--pill-info-fg)}
+.rfp-detail-typebadge-decision{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.rfp-detail-typebadge-terminal{background:var(--nx-canvas);color:var(--nx-ink-2)}
 .rfp-detail-title{font-size:16px;font-weight:700;color:var(--navy);line-height:1.3;margin:0}
 .rfp-detail-desc{font-size:13px;color:var(--text);line-height:1.5;margin:8px 0 16px}
-.rfp-detail-section{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #F1F5F9}
+.rfp-detail-section{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--nx-canvas)}
 .rfp-detail-section:last-child{border-bottom:0;padding-bottom:0;margin-bottom:0}
 .rfp-detail-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .rfp-detail-role{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px}
@@ -2835,26 +2956,26 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .tasks-page-sub{font-size:13px;color:var(--muted);margin-top:2px}
 
 .tasks-table{width:100%;border-collapse:collapse;font-size:13px}
-.tasks-table thead th{background:#F8FAFC;color:var(--navy);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
-.tasks-table tbody td{padding:12px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
-.tasks-table tbody tr:hover{background:#F8FAFC}
+.tasks-table thead th{background:var(--nx-canvas);color:var(--navy);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.tasks-table tbody td{padding:12px;border-bottom:1px solid var(--nx-canvas);vertical-align:middle}
+.tasks-table tbody tr:hover{background:var(--nx-canvas)}
 .tasks-table tbody tr:last-child td{border-bottom:0}
 
-.task-row-archived{opacity:.55;background:#FAFBFC}
+.task-row-archived{opacity:.55;background:var(--nx-canvas)}
 .task-row-archived:hover{opacity:.85}
 
 /* v110: priority as left-edge accent instead of competing badge.
    3px inset bar + small dot in the Priority column; status remains
    the single dominant signal per row. */
-.tasks-table tr.task-pri-high   { box-shadow: inset 3px 0 0 0 #DC2626; }
-.tasks-table tr.task-pri-medium { box-shadow: inset 3px 0 0 0 #2563EB; }
-.tasks-table tr.task-pri-low    { box-shadow: inset 3px 0 0 0 #9CA3AF; }
-.tasks-table tr.task-pri-urgent { box-shadow: inset 3px 0 0 0 #B91C1C; }
+.tasks-table tr.task-pri-high   { box-shadow: inset 3px 0 0 0 var(--pill-danger-fg); }
+.tasks-table tr.task-pri-medium { box-shadow: inset 3px 0 0 0 var(--pill-info-fg); }
+.tasks-table tr.task-pri-low    { box-shadow: inset 3px 0 0 0 var(--nx-ink-faint); }
+.tasks-table tr.task-pri-urgent { box-shadow: inset 3px 0 0 0 var(--pill-danger-fg); }
 .task-pri-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; }
-.task-pri-dot-high   { background:#DC2626; }
-.task-pri-dot-medium { background:#2563EB; }
-.task-pri-dot-low    { background:#9CA3AF; }
-.task-pri-dot-urgent { background:#B91C1C; }
+.task-pri-dot-high   { background:var(--pill-danger-fg); }
+.task-pri-dot-medium { background:var(--pill-info-fg); }
+.task-pri-dot-low    { background:var(--nx-ink-faint); }
+.task-pri-dot-urgent { background:var(--pill-danger-fg); }
 .task-pri-lbl { font-size:11.5px; color:var(--muted); vertical-align:middle; }
 
 /* v110: completed/cancelled rows recede so active work dominates.
@@ -2865,28 +2986,28 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .tasks-table tr.task-row-done:hover { opacity:0.85; }
 
 /* v110: date segments — labelled, compact, no empty slots */
-.task-date-seg { font-variant-numeric:tabular-nums; font-size:11.5px; color:var(--text,#374151); white-space:nowrap; }
+.task-date-seg { font-variant-numeric:tabular-nums; font-size:11.5px; color:var(--text,var(--nx-ink-2)); white-space:nowrap; }
 .task-date-tag { font-family:var(--font-ui); font-size:9px; font-weight:700; letter-spacing:0.4px; color:var(--muted); text-transform:uppercase; }
-.task-date-div { color:var(--border,#D1D5DB); }
+.task-date-div { color:var(--border,var(--color-border-strong)); }
 
 /* Priority badges — keep colour cues consistent with severity */
-.badge.task-pri-low{background:#F1F5F9;color:#475569}
-.badge.task-pri-medium{background:#EFF6FF;color:#1E40AF}
-.badge.task-pri-high{background:#FFF7ED;color:#9A3412}
-.badge.task-pri-urgent{background:#FEE2E2;color:#991B1B}
+.badge.task-pri-low{background:var(--nx-canvas);color:var(--nx-ink-2)}
+.badge.task-pri-medium{background:var(--pill-info-bg);color:var(--pill-info-fg)}
+.badge.task-pri-high{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.badge.task-pri-urgent{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
 
 /* Status badges (used when the row is read-only / archived) */
-.badge.task-st-yts{background:#F1F5F9;color:#475569}
-.badge.task-st-ong{background:#FEF3C7;color:#92400E}
-.badge.task-st-done{background:#D1FAE5;color:#065F46}
-.badge.task-st-cnc{background:#F1F5F9;color:#94A3B8;text-decoration:line-through}
+.badge.task-st-yts{background:var(--nx-canvas);color:var(--nx-ink-2)}
+.badge.task-st-ong{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.badge.task-st-done{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+.badge.task-st-cnc{background:var(--nx-canvas);color:var(--nx-ink-faint);text-decoration:line-through}
 /* v112: pending_approval — amber with dashed border to differentiate from
    the plain amber 'ongoing' status. Mirrors the leave_requests
    needs_review precedent (v81). Locked state: no dropdown counterpart.
-   v124 a11y: contrast bumped (color #92400E → #78350F, border #D97706 →
-   #92400E) so it's distinguishable from .task-st-ong for color-blind users
+   v124 a11y: contrast bumped (color var(--pill-warn-fg) → var(--pill-warn-fg), border var(--pill-warn-fg) →
+   var(--pill-warn-fg)) so it's distinguishable from .task-st-ong for color-blind users
    on top of the clock icon prepended in tasks.js renderTasksList. */
-.badge.task-st-pending{background:#FEF3C7;color:#78350F;border:1px dashed #92400E;padding:2px 6px;display:inline-flex;align-items:center;gap:3px}
+.badge.task-st-pending{background:var(--pill-warn-bg);color:var(--pill-warn-fg);border:1px dashed var(--pill-warn-fg);padding:2px 6px;display:inline-flex;align-items:center;gap:3px}
 
 /* v125: the inline approve-remark input + 2 icon buttons can't fit the
    90px Actions column on phones (140px input alone overflows). Hide the
@@ -2899,24 +3020,24 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* Inline status dropdown — picks up the same colour family as the
    matching badge so the cell still reads as a status at a glance. */
-.task-status-select{padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:11.5px;font-weight:600;cursor:pointer;background:#FFFFFF;color:var(--navy);min-width:120px}
-.task-status-select.task-st-yts{background:#F1F5F9;color:#475569}
-.task-status-select.task-st-ong{background:#FEF3C7;color:#92400E;border-color:#FDE68A}
-.task-status-select.task-st-done{background:#D1FAE5;color:#065F46;border-color:#A7F3D0}
-.task-status-select.task-st-cnc{background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0}
+.task-status-select{padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:11.5px;font-weight:600;cursor:pointer;background:var(--nx-surface);color:var(--navy);min-width:120px}
+.task-status-select.task-st-yts{background:var(--nx-canvas);color:var(--nx-ink-2)}
+.task-status-select.task-st-ong{background:var(--pill-warn-bg);color:var(--pill-warn-fg);border-color:var(--pill-warn-bd)}
+.task-status-select.task-st-done{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
+.task-status-select.task-st-cnc{background:var(--nx-canvas);color:var(--nx-ink-faint);border-color:var(--nx-hairline)}
 .task-status-select:focus{outline:2px solid var(--teal);outline-offset:1px}
 
 /* Assignee picker — checkbox grid in create/edit modal */
-.task-assignees-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;padding:10px;background:#F8FAFC;border:1px solid var(--border);border-radius:var(--radius-md)}
-.task-assignee-chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--navy);cursor:pointer;padding:6px 8px;border-radius:var(--radius-sm);background:#FFFFFF;border:1px solid transparent;transition:border-color .15s}
+.task-assignees-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;padding:10px;background:var(--nx-canvas);border:1px solid var(--border);border-radius:var(--radius-md)}
+.task-assignee-chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--navy);cursor:pointer;padding:6px 8px;border-radius:var(--radius-sm);background:var(--nx-surface);border:1px solid transparent;transition:border-color .15s}
 .task-assignee-chk:hover{border-color:var(--teal)}
 .task-assignee-chk input[type=checkbox]{cursor:pointer;accent-color:var(--teal)}
 .task-assignee-chk input[type=checkbox]:disabled{cursor:not-allowed}
 
 /* Field-level lockdown for non-managers in edit modal. Visually mutes
    the control so the editing user understands they can't change it. */
-.task-modal-readonly{background:#F1F5F9!important;color:#64748B!important;cursor:not-allowed!important;border-color:#E2E8F0!important;opacity:.75}
-#task-modal-assignees.task-modal-readonly{background:#F1F5F9!important}
+.task-modal-readonly{background:var(--nx-canvas)!important;color:var(--nx-ink-muted)!important;cursor:not-allowed!important;border-color:var(--nx-hairline)!important;opacity:.75}
+#task-modal-assignees.task-modal-readonly{background:var(--nx-canvas)!important}
 #task-modal-assignees.task-modal-readonly .task-assignee-chk{cursor:not-allowed;opacity:.7}
 #task-modal-assignees.task-modal-readonly .task-assignee-chk:hover{border-color:transparent}
 
@@ -2942,19 +3063,19 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .tasks-new-btn-wrap{position:relative}
 .tasks-new-btn-split{display:inline-flex;align-items:center;gap:6px}
 .tasks-new-btn-split .btn-icon-trail{margin-left:4px;width:14px;height:14px;opacity:.85}
-.tasks-new-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:220px;background:#FFFFFF;border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;z-index:5000;display:none}
+.tasks-new-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:220px;background:var(--nx-surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;z-index:5000;display:none}
 .tasks-new-menu.show{display:block}
 .tasks-new-menu-item{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:0;padding:8px 12px;font-size:13px;color:var(--navy);text-align:left;cursor:pointer;border-radius:var(--radius-sm)}
-.tasks-new-menu-item:hover{background:#F1F5F9}
+.tasks-new-menu-item:hover{background:var(--nx-canvas)}
 .tasks-new-menu-item i{width:16px;height:16px;color:var(--teal)}
 .tasks-new-menu-divider{height:1px;background:var(--border);margin:4px 0}
 
 /* Period pill — used on recurring tabs in the date-column slot */
-.task-period-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-lg);font-size:11.5px;font-weight:600;background:#EFF6FF;color:#1E40AF;white-space:nowrap}
+.task-period-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-lg);font-size:11.5px;font-weight:600;background:var(--pill-info-bg);color:var(--pill-info-fg);white-space:nowrap}
 
 /* Template modal — frequency badge shown read-only at top */
-.task-template-freq-badge{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#F8FAFC;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:14px;flex-wrap:wrap}
-.task-template-freq-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-lg);font-size:12px;font-weight:700;background:var(--teal);color:#FFFFFF;letter-spacing:.3px}
+.task-template-freq-badge{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--nx-canvas);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:14px;flex-wrap:wrap}
+.task-template-freq-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-lg);font-size:12px;font-weight:700;background:var(--teal);color:var(--nx-surface);letter-spacing:.3px}
 
 @media(max-width:640px){
   .tasks-header-actions{width:100%;justify-content:flex-start}
@@ -2965,8 +3086,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* ──────────────────── BACKUP REMINDER (v95) ──────────────────── */
 .backup-banner{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--radius-md);margin-bottom:16px;border:1px solid;animation:backup-banner-in .25s ease-out}
 @keyframes backup-banner-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-.backup-banner-warn{background:#FFFBEB;border-color:#FDE68A;color:#92400E}
-.backup-banner-danger{background:#FEF2F2;border-color:#FECACA;color:#991B1B}
+.backup-banner-warn{background:var(--pill-warn-bg);border-color:var(--pill-warn-bd);color:var(--pill-warn-fg)}
+.backup-banner-danger{background:var(--pill-danger-bg);border-color:var(--pill-danger-bd);color:var(--pill-danger-fg)}
 .backup-banner-ico{font-size:22px;line-height:1;flex-shrink:0}
 .backup-banner-body{flex:1;min-width:0}
 .backup-banner-title{font-size:14px;font-weight:700;margin-bottom:2px}
@@ -2974,7 +3095,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .backup-banner-cta{flex-shrink:0}
 
 /* Admin Tools — "Last backup" pill beside the Full Backup button */
-.last-backup-pill{display:inline-flex;flex-direction:column;justify-content:center;padding:6px 12px;background:#F8FAFC;border:1px solid var(--border);border-radius:var(--radius-md);font-size:12px;color:var(--navy);min-width:0;flex:1 1 auto;max-width:340px}
+.last-backup-pill{display:inline-flex;flex-direction:column;justify-content:center;padding:6px 12px;background:var(--nx-canvas);border:1px solid var(--border);border-radius:var(--radius-md);font-size:12px;color:var(--navy);min-width:0;flex:1 1 auto;max-width:340px}
 .last-backup-pill-head{font-weight:600}
 .last-backup-pill-meta{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:1px}
 .last-backup-pill-empty{font-size:12px;color:var(--muted);font-style:italic;padding:6px 12px}

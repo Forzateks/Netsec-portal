@@ -904,20 +904,20 @@ async function renderManageProjects() {
   // Lucide icon name + plain label per status. Renderer wraps the icon as
   // <i data-lucide> so the badge picks up an SVG glyph after lucide.createIcons().
   const STATUS_COLORS = {
-    'active':    {bg:'#DCFCE7',color:'#166534',icon:'circle',         label:'Active'},
-    'sign-off':        {bg:'#FEF3C7',color:'#793400',icon:'pen-tool',       label:'Sign-off'},
-    'payment-pending': {bg:'#FEF9C3',color:'#854D0E',icon:'wallet',         label:'Payment Pending'},
-    'closed':          {bg:'#E0F2FE',color:'#075985',icon:'check-circle-2', label:'Closed'},
-    'on-hold':   {bg:'#FED7AA',color:'#9A3412',icon:'pause-circle',   label:'On Hold'},
-    'dormant':   {bg:'#f6f5f4',color:'#4B5563',icon:'moon',           label:'Dormant'},
-    'cancelled': {bg:'#FEE2E2',color:'#991B1B',icon:'x-circle',       label:'Cancelled'},
+    'active':    {bg:'var(--pill-ok-bg)',color:'var(--pill-ok-fg)',icon:'circle',         label:'Active'},
+    'sign-off':        {bg:'var(--pill-warn-bg)',color:'var(--nx-orange-deep)',icon:'pen-tool',       label:'Sign-off'},
+    'payment-pending': {bg:'var(--pill-warn-bg)',color:'var(--pill-warn-fg)',icon:'wallet',         label:'Payment Pending'},
+    'closed':          {bg:'var(--pill-info-bg)',color:'var(--pill-info-fg)',icon:'check-circle-2', label:'Closed'},
+    'on-hold':   {bg:'var(--pill-warn-bg)',color:'var(--pill-warn-fg)',icon:'pause-circle',   label:'On Hold'},
+    'dormant':   {bg:'var(--nx-canvas)',color:'var(--nx-ink-2)',icon:'moon',           label:'Dormant'},
+    'cancelled': {bg:'var(--pill-danger-bg)',color:'var(--pill-danger-fg)',icon:'x-circle',       label:'Cancelled'},
   };
   const TYPE_BADGES = {
-    'project':  {bg:'#e8f2fd',color:'#2563EB',label:'PROJECT'},
-    'poc':      {bg:'#F5F3FF',color:'#7C3AED',label:'POC'},
-    'amc':      {bg:'#FFFBEB',color:'#793400',label:'AMC'},
-    'support':  {bg:'#FFF1F2',color:'#9F1239',label:'SUPPORT'},
-    'presales': {bg:'#FDF2F8',color:'#BE185D',label:'PRE-SALES-TASK'},
+    'project':  {bg:'var(--pill-info-bg)',color:'var(--pill-info-fg)',label:'PROJECT'},
+    'poc':      {bg:'var(--pill-purple-bg)',color:'var(--pill-purple-fg)',label:'POC'},
+    'amc':      {bg:'var(--pill-warn-bg)',color:'var(--nx-orange-deep)',label:'AMC'},
+    'support':  {bg:'var(--pill-danger-bg)',color:'var(--pill-danger-fg)',label:'SUPPORT'},
+    'presales': {bg:'var(--pill-pink-bg)',color:'var(--pill-pink-fg)',label:'PRE-SALES-TASK'},
   };
 
   document.getElementById('pj-manage-content').innerHTML =
@@ -926,7 +926,7 @@ async function renderManageProjects() {
     '<tbody>'+
     rows.map(function(p,i){
       var sc = STATUS_COLORS[p.status] || STATUS_COLORS['active'];
-      var tb = TYPE_BADGES[p.type] || {bg:'#f6f5f4',color:'#615d59',label:(p.type||'-').toUpperCase()};
+      var tb = TYPE_BADGES[p.type] || {bg:'var(--nx-canvas)',color:'var(--nx-ink-muted)',label:(p.type||'-').toUpperCase()};
       var custName = custById[p.customer_id] || PROJECT_CUSTOMER[p.name] || '-';
       var safeCust = String(custName).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       var custCell = (custName && custName !== '-')
@@ -1326,13 +1326,13 @@ function initProjectTab() {
       cb.type = 'checkbox'; cb.value = emp; cb.name = 'pj-team';
       cb.style.accentColor = 'var(--teal)';
       cb.onchange = function() {
-        label.style.background = cb.checked ? '#e8f2fd' : 'white';
+        label.style.background = cb.checked ? 'var(--pill-info-bg)' : 'white';
         label.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
       };
       // Auto-check current user
       if (emp === currentUser) {
         cb.checked = true;
-        label.style.background = '#e8f2fd';
+        label.style.background = 'var(--pill-info-bg)';
         label.style.borderColor = 'var(--teal)';
       }
       label.appendChild(cb);
@@ -1521,7 +1521,7 @@ async function renderPjEmployeeSummary() {
       '<th><span class="pj-th-ico"><i data-lucide="cog"></i>Internal</span></th>'+
       '<th>Working Days</th><th>Top Engagements</th></tr></thead>'+
     '<tbody>'+tableRows+
-    '<tr style="background:#f6f5f4;font-weight:600"><td>TOTAL</td><td>-</td>'+
+    '<tr style="background:var(--nx-canvas);font-weight:600"><td>TOTAL</td><td>-</td>'+
     '<td style="font-variant-numeric:tabular-nums;color:var(--navy);font-size:16px">'+fmtHours(totalHours)+'</td>'+
     '<td colspan="7">-</td>'+
     '<td style="font-variant-numeric:tabular-nums;color:var(--muted)">'+fmtDays(totalHours/8)+'</td><td>-</td></tr>'+
@@ -1695,7 +1695,7 @@ async function renderPjCustomerSummary() {
       '<th>Top Engagement</th>'+
     '</tr></thead>'+
     '<tbody>'+tableRows+
-      '<tr style="background:#f6f5f4;font-weight:600">'+
+      '<tr style="background:var(--nx-canvas);font-weight:600">'+
         '<td>TOTAL ('+aggRows.length+' customer'+(aggRows.length===1?'':'s')+')</td>'+
         '<td style="font-variant-numeric:tabular-nums">'+fmtCount(totals.sessions)+'</td>'+
         '<td style="font-variant-numeric:tabular-nums;color:var(--navy);font-size:16px">'+fmtHours(totals.total)+'</td>'+
@@ -1858,14 +1858,14 @@ function empShortName(emp) {
 
 function empColor(emp) {
   var colors = {
-    'Ahmed Ali':      '#2a9d99',
-    'Venkatesan':     '#0d0d0d',
-    'Prasanth':       '#1aae39',
-    'Salman Aziz':    '#dd5b00',
-    'Mohammed Afsal': '#6b3fa0',
-    'Mohammed Nasif': '#0075de',
+    'Ahmed Ali':      'var(--nx-teal)',
+    'Venkatesan':     'var(--nx-ink)',
+    'Prasanth':       'var(--nx-green)',
+    'Salman Aziz':    'var(--nx-orange)',
+    'Mohammed Afsal': 'var(--nx-purple-mid)',
+    'Mohammed Nasif': 'var(--nx-primary)',
   };
-  return colors[emp] || '#615d59';
+  return colors[emp] || 'var(--nx-ink-muted)';
 }
 
 // == RANKED BAR CHART (v165) ======================================
@@ -1991,7 +1991,7 @@ async function renderActivityMatrix() {
     var sorted = Object.keys(acts).sort(function(a,b){ return acts[b]-acts[a]; });
     var rowId = 'matrix-emp-'+idx;
     html += '<div class="matrix-emp-row" onclick="var x=document.getElementById(\''+rowId+'\');x.style.display=x.style.display===\'none\'?\'block\':\'none\'" '+
-      'style="cursor:pointer;padding:12px 14px;border:1px solid var(--border,#e6e6e6);border-radius:8px;margin-bottom:8px">'+
+      'style="cursor:pointer;padding:12px 14px;border:1px solid var(--border,var(--nx-hairline));border-radius:8px;margin-bottom:8px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<strong>'+esc2(label)+'</strong>'+
         '<span style="font-variant-numeric:tabular-nums;color:var(--teal);font-weight:700">'+(empTotal[e]||0).toFixed(1)+'h</span>'+
@@ -2003,7 +2003,7 @@ async function renderActivityMatrix() {
       var pct = Math.round((acts[a]/max)*100);
       html += '<div style="display:flex;align-items:center;gap:10px;margin:4px 0">'+
         '<span style="flex:0 0 180px;font-size:12px">'+esc2(a)+'</span>'+
-        '<span style="flex:1;background:#f6f5f4;border-radius:4px;height:14px;position:relative">'+
+        '<span style="flex:1;background:var(--nx-canvas);border-radius:4px;height:14px;position:relative">'+
           '<span style="position:absolute;left:0;top:0;bottom:0;width:'+pct+'%;background:var(--teal);border-radius:4px"></span>'+
         '</span>'+
         '<span style="flex:0 0 56px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px">'+acts[a].toFixed(1)+'h</span>'+

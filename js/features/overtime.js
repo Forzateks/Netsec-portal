@@ -512,7 +512,7 @@ async function recomputeAllOT(mode) {
     });
     _recomputeDiff = diffs;
     if (!diffs.length) {
-      resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:#ECFDF5;border-radius:8px">✅ All sessions already match the current policy. Nothing to change.</div>';
+      resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:var(--pill-ok-bg);border-radius:8px">✅ All sessions already match the current policy. Nothing to change.</div>';
       applyBtn.disabled = true;
       return;
     }
@@ -526,7 +526,7 @@ async function recomputeAllOT(mode) {
       return '<tr><td style="font-size:12px">'+d.employee+'</td><td style="font-size:12px;font-variant-numeric:tabular-nums">'+d.date+'</td><td style="font-size:12px;font-variant-numeric:tabular-nums">'+d.start+'–'+d.end+'</td><td>'+fieldList+'</td></tr>';
     }).join('');
     resultEl.innerHTML =
-      '<div style="padding:10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px"><strong>'+diffs.length+' sessions will change.</strong> '+summary+(diffs.length>50?' &nbsp;(showing first 50)':'')+'</div>'+
+      '<div style="padding:10px;background:var(--pill-warn-bg);border-radius:8px;margin-bottom:10px"><strong>'+diffs.length+' sessions will change.</strong> '+summary+(diffs.length>50?' &nbsp;(showing first 50)':'')+'</div>'+
       '<div class="table-wrap" style="max-height:400px;overflow:auto"><table style="width:100%"><thead><tr><th style="font-size:11px">Employee</th><th style="font-size:11px">Date</th><th style="font-size:11px">Time</th><th style="font-size:11px">Changes</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
     applyBtn.disabled = false;
     return;
@@ -555,7 +555,7 @@ async function recomputeAllOT(mode) {
     if (error) fail++; else ok++;
   }
   _recomputeDiff = null;
-  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Done.</strong> '+ok+' updated'+(fail?', '+fail+' failed':'')+'. CO balances will reflect new credit on next reload.</div>';
+  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'var(--pill-danger-bg)':'var(--pill-ok-bg)')+';border-radius:8px"><strong>Done.</strong> '+ok+' updated'+(fail?', '+fail+' failed':'')+'. CO balances will reflect new credit on next reload.</div>';
   applyBtn.disabled = true;
 }
 
@@ -660,13 +660,13 @@ async function previewViolations() {
   });
 
   if (!totalDel && !totalKeep) {
-    resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:#ECFDF5;border-radius:8px">✅ No policy violations found. All sessions match the current weekday block window.</div>';
+    resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:var(--pill-ok-bg);border-radius:8px">✅ No policy violations found. All sessions match the current weekday block window.</div>';
     applyBtn.disabled = true;
     return;
   }
 
   resultEl.innerHTML =
-    '<div style="padding:10px;background:#FEE2E2;border-radius:8px;margin-bottom:10px">'+
+    '<div style="padding:10px;background:var(--pill-danger-bg);border-radius:8px;margin-bottom:10px">'+
     '<strong>'+affectedEmps+' employee(s) affected — '+totalDel+' session(s) will be DELETED</strong>'+
     (totalKeep ? ', '+totalKeep+' kept to preserve already-used CO balance.' : '.')+
     '</div>'+
@@ -715,7 +715,7 @@ async function applyViolationCleanup() {
   }
 
   _violationPlan = null;
-  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Archive done.</strong> '+ok+' marked archived'+(fail?', '+fail+' failed':'')+'. Sessions still visible (dimmed) in employee history. Reload to see updated CO balances.</div>';
+  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'var(--pill-danger-bg)':'var(--pill-ok-bg)')+';border-radius:8px"><strong>Archive done.</strong> '+ok+' marked archived'+(fail?', '+fail+' failed':'')+'. Sessions still visible (dimmed) in employee history. Reload to see updated CO balances.</div>';
 }
 
 // Re-evaluate every archived session under the current calcOT logic.
@@ -746,7 +746,7 @@ async function previewReevalArchived() {
   _reevalPlan = changes;
 
   if (!changes.length) {
-    resultEl.innerHTML = '<div style="padding:10px;background:#ECFDF5;border-radius:8px;color:var(--success)">No archived sessions need re-evaluation. They are all entirely within regular working hours.</div>';
+    resultEl.innerHTML = '<div style="padding:10px;background:var(--pill-ok-bg);border-radius:8px;color:var(--success)">No archived sessions need re-evaluation. They are all entirely within regular working hours.</div>';
     applyBtn.disabled = true;
     return;
   }
@@ -762,7 +762,7 @@ async function previewReevalArchived() {
   }).join('');
 
   resultEl.innerHTML =
-    '<div style="padding:10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px"><strong>'+changes.length+' archived session(s)</strong> qualify for partial credit and will be UN-ARCHIVED (status set to approved) with updated band/rate/credit.'+(changes.length>50?' Showing first 50.':'')+'</div>'+
+    '<div style="padding:10px;background:var(--pill-warn-bg);border-radius:8px;margin-bottom:10px"><strong>'+changes.length+' archived session(s)</strong> qualify for partial credit and will be UN-ARCHIVED (status set to approved) with updated band/rate/credit.'+(changes.length>50?' Showing first 50.':'')+'</div>'+
     '<div class="table-wrap" style="max-height:400px;overflow:auto"><table style="width:100%;font-size:12px"><thead><tr>'+
     '<th>Employee</th><th>Date</th><th>Time</th><th>Credit Δ</th><th>New Band</th>'+
     '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
@@ -800,7 +800,7 @@ async function applyReevalArchived() {
     if (error) fail++; else ok++;
   }
   _reevalPlan = null;
-  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Re-evaluation done.</strong> '+ok+' un-archived'+(fail?', '+fail+' failed':'')+'. Reload to see updated CO balances.</div>';
+  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'var(--pill-danger-bg)':'var(--pill-ok-bg)')+';border-radius:8px"><strong>Re-evaluation done.</strong> '+ok+' un-archived'+(fail?', '+fail+' failed':'')+'. Reload to see updated CO balances.</div>';
 }
 
 // Purge archived/rejected OT sessions older than 1 year. Manager-only,
@@ -827,7 +827,7 @@ async function purgeOldArchived() {
   });
 
   if (!stale.length) {
-    resultEl.innerHTML = '<div style="padding:10px;background:#ECFDF5;border-radius:8px;color:var(--success)">Nothing to purge — no archived/rejected sessions older than 1 year.</div>';
+    resultEl.innerHTML = '<div style="padding:10px;background:var(--pill-ok-bg);border-radius:8px;color:var(--success)">Nothing to purge — no archived/rejected sessions older than 1 year.</div>';
     return;
   }
 
@@ -849,6 +849,6 @@ async function purgeOldArchived() {
     var res = await sb.from('ot_sessions').delete().eq('id', stale[i].id);
     if (res.error) fail++; else ok++;
   }
-  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'#FEE2E2':'#ECFDF5')+';border-radius:8px"><strong>Purge done.</strong> '+ok+' deleted'+(fail?', '+fail+' failed':'')+'.</div>';
+  resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'var(--pill-danger-bg)':'var(--pill-ok-bg)')+';border-radius:8px"><strong>Purge done.</strong> '+ok+' deleted'+(fail?', '+fail+' failed':'')+'.</div>';
 }
 

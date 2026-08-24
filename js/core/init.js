@@ -1,3 +1,66 @@
+// == THEME (v169) ==================================================
+// Three states, matching the CSS: an explicit 'light' or 'dark' sets
+// data-theme and wins over the device; 'auto' removes the attribute so the
+// prefers-color-scheme media query decides. The initial application happens
+// in an inline <head> script - by the time this file runs the page has
+// already painted, so doing it here would flash.
+function setAppTheme(mode) {
+  try {
+    if (mode === 'auto') { localStorage.removeItem('netsec_theme'); }
+    else { localStorage.setItem('netsec_theme', mode); }
+  } catch (e) { /* private mode: the choice just will not persist */ }
+
+  if (mode === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', mode);
+
+  _syncThemeChrome();
+  _syncThemeButtons();
+  if (typeof showToast === 'function') {
+    showToast(mode === 'auto' ? 'Appearance follows your device'
+                              : 'Appearance set to ' + mode);
+  }
+}
+
+function getAppTheme() {
+  try { return localStorage.getItem('netsec_theme') || 'auto'; } catch (e) { return 'auto'; }
+}
+
+function _isDarkNow() {
+  var t = getAppTheme();
+  if (t === 'dark') return true;
+  if (t === 'light') return false;
+  return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+
+// The phone's status bar sits above the app; if it stays white over a dark
+// header the PWA looks broken at the very top of the screen.
+function _syncThemeChrome() {
+  var m = document.getElementById('meta-theme-color');
+  if (m) m.setAttribute('content', _isDarkNow() ? '#232323' : '#ffffff');
+}
+
+function _syncThemeButtons() {
+  var cur = getAppTheme();
+  var btns = document.querySelectorAll('.theme-seg-btn');
+  for (var i = 0; i < btns.length; i++) {
+    var on = btns[i].getAttribute('data-theme-choice') === cur;
+    btns[i].classList.toggle('active', on);
+    btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+}
+
+// While on Auto, follow the device live - no reload needed.
+function initThemeControls() {
+  _syncThemeButtons();
+  _syncThemeChrome();
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onChange = function(){ if (getAppTheme() === 'auto') _syncThemeChrome(); };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+}
+
 // == PWA SERVICE WORKER ============================================
 // Register the service worker and wire up its update lifecycle. iOS PWA
 // standalone is the hardest case — without an explicit reload trigger
@@ -10,7 +73,7 @@
 // CACHE_VERSION in sw.js and the Sentry release in index.html. It drives
 // the user-menu version label and the "what's new" filter; it is NOT part
 // of the registration URL.
-var APP_VERSION = 'v168';
+var APP_VERSION = 'v169';
 
 // v157: the registration URL is deliberately STABLE (no ?v= cache-buster).
 // It used to carry the version, which caused a phantom update prompt on the
@@ -185,22 +248,22 @@ async function showUpdateNotes() {
 }
 
 function _categoryTag(cat) {
-  if (cat === 'fixed') return '<span style="background:#FEF3C7;color:#793400;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">FIXED</span>';
-  if (cat === 'new')   return '<span style="background:rgba(0,160,210,0.12);color:#0073A0;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">NEW</span>';
-  return '<span style="background:#EEF2FF;color:#0d0d0d;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">UPDATE</span>';
+  if (cat === 'fixed') return '<span style="background:var(--pill-warn-bg);color:var(--nx-orange-deep);font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">FIXED</span>';
+  if (cat === 'new')   return '<span style="background:rgba(0,160,210,0.12);color:var(--pill-info-fg);font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">NEW</span>';
+  return '<span style="background:var(--pill-purple-bg);color:var(--nx-ink);font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.4px">UPDATE</span>';
 }
 
 function _renderUpdateModal(items, hiddenOlder) {
   // esc2 is defined in helpers.js — text-only fields below.
   var rows = items.map(function(it){
     var v = it.version ? '<span style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);margin-left:6px">'+esc2(it.version)+'</span>' : '';
-    return '<div style="padding:10px 0;border-bottom:1px solid #f6f5f4">'+
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--nx-canvas)">'+
       '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">'+
         _categoryTag(it.category)+
         '<strong style="font-size:13.5px;color:var(--navy);line-height:1.3">'+esc2(it.title||'')+'</strong>'+
         v+
       '</div>'+
-      (it.body ? '<div style="font-size:12.5px;color:#475569;line-height:1.5">'+esc2(it.body)+'</div>' : '')+
+      (it.body ? '<div style="font-size:12.5px;color:var(--nx-ink-2);line-height:1.5">'+esc2(it.body)+'</div>' : '')+
     '</div>';
   }).join('');
   var more = hiddenOlder
@@ -214,7 +277,7 @@ function _renderUpdateModal(items, hiddenOlder) {
           '<div class="modal-title">What\'s new</div>'+
           '<button class="btn btn-ghost" onclick="closeUpdateNotesModal()" style="font-size:18px;padding:4px 10px" title="Close">×</button>'+
         '</div>'+
-        '<div style="max-height:52vh;overflow-y:auto;border-top:1px solid #f6f5f4">'+rows+'</div>'+
+        '<div style="max-height:52vh;overflow-y:auto;border-top:1px solid var(--nx-canvas)">'+rows+'</div>'+
         more+
         '<div class="modal-actions">'+
           '<button class="btn btn-ghost" onclick="closeUpdateNotesModal()">Later</button>'+
@@ -626,6 +689,7 @@ window.onload = async function() {
   initPullToRefresh();
   initFocusAuthCheck();
   initAppVersionLabel();
+  initThemeControls();
   initSidebarKeyboard();
   initModalA11y();
   // Supabase puts the link type in the URL hash:

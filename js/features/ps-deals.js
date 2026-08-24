@@ -334,15 +334,15 @@ function _psRenderRevenueChart(rows) {
     var usdLabel = fmtUsd(y.usd, false);
     var aedLabel = fmtAed(usdToAed(y.usd), false);
     return '<g>'+
-      '<rect x="'+x+'" y="'+barY+'" width="'+barW+'" height="'+h+'" rx="4" fill="#0075de"/>'+
-      '<text x="'+cx+'" y="'+(barY-24)+'" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="14" fill="#0d0d0d">'+usdLabel+'</text>'+
-      '<text x="'+cx+'" y="'+(barY-8)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#615d59">'+aedLabel+'</text>'+
-      '<text x="'+cx+'" y="'+(padTop+barAreaH+20)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#0d0d0d">'+y.year+'</text>'+
+      '<rect x="'+x+'" y="'+barY+'" width="'+barW+'" height="'+h+'" rx="4" style="fill:var(--nx-primary)"/>'+
+      '<text x="'+cx+'" y="'+(barY-24)+'" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="14" style="fill:var(--nx-ink)">'+usdLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(barY-8)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" style="fill:var(--nx-ink-muted)">'+aedLabel+'</text>'+
+      '<text x="'+cx+'" y="'+(padTop+barAreaH+20)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" style="fill:var(--nx-ink)">'+y.year+'</text>'+
     '</g>';
   }).join('');
 
   var footnote = data.excludedCount > 0
-    ? '<div style="font-size:11px;color:#793400;font-style:italic;margin-top:6px">'+data.excludedCount+' deal'+(data.excludedCount===1?'':'s')+' excluded — no awarded year set</div>'
+    ? '<div style="font-size:11px;color:var(--nx-orange-deep);font-style:italic;margin-top:6px">'+data.excludedCount+' deal'+(data.excludedCount===1?'':'s')+' excluded — no awarded year set</div>'
     : '';
 
   wrap.innerHTML =

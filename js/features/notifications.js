@@ -45,14 +45,14 @@ async function renderNotifications() {
   // least one unread row.
   var unreadCount = rows.filter(function(n){ return !n.read_at; }).length;
   var headerHtml = unreadCount
-    ? '<div style="display:flex;justify-content:flex-end;padding:6px 10px;border-bottom:1px solid var(--border);background:#f6f5f4">'+
+    ? '<div style="display:flex;justify-content:flex-end;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--nx-canvas)">'+
         '<button class="btn btn-sm btn-ghost" style="font-size:11px;padding:3px 8px" onclick="markAllNotificationsRead()">Mark all read</button>'+
       '</div>'
     : '';
   var itemsHtml = rows.map(function(n){
     var icon = typeIcons[n.type] || '🔔';
     var age = n.created_at ? fmtNotifAge(n.created_at) : '';
-    var bg = n.read_at ? 'transparent' : '#FEF3C7';
+    var bg = n.read_at ? 'transparent' : 'var(--pill-warn-bg)';
     var op = n.read_at ? 'opacity:.65;' : '';
     return '<div class="notif-item" data-notif-id="'+n.id+'"'+(n.read_at?' data-read="1"':'')+' '+
       'onclick="markNotificationRead('+n.id+')" '+
