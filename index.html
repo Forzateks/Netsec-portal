@@ -44,7 +44,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v166',
+    release: 'netsec-portal@v167',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -323,6 +323,20 @@
       <div class="sidebar-subitem" id="sbi-tracker-all"      onclick="navigateSub('tracker','all')"><i data-lucide="layers" class="sidebar-subicon"></i>All</div>
       <div class="sidebar-subitem" id="sbi-tracker-projects" onclick="navigateSub('tracker','projects')"><i data-lucide="folder-kanban" class="sidebar-subicon"></i>Projects</div>
       <div class="sidebar-subitem" id="sbi-tracker-pocs"     onclick="navigateSub('tracker','pocs')"><i data-lucide="target" class="sidebar-subicon"></i>POCs</div>
+    </div>
+  </div>
+
+  <!-- v167: Rollout Tracker. Deliberately a SEPARATE group from Project
+       Tracker above: that one tracks engagements through delivery phases,
+       this one tracks physical sites against a customer's scope of work. -->
+  <div class="sidebar-group" id="sbg-rollout">
+    <div class="sidebar-item has-children" id="tab-rollout" onclick="showScreen('rollout');closeSidebarOnMobile()">
+      <i data-lucide="map-pin" class="sidebar-icon"></i>Rollout Tracker<span class="sidebar-chevron">›</span>
+    </div>
+    <div class="sidebar-submenu">
+      <div class="sidebar-subitem" id="sbi-rollout-overview" onclick="navigateSub('rollout','overview')"><i data-lucide="layout-dashboard" class="sidebar-subicon"></i>Landmark</div>
+      <div class="sidebar-subitem" id="sbi-rollout-sites"    onclick="navigateSub('rollout','sites')"><i data-lucide="list" class="sidebar-subicon"></i>Sites</div>
+      <div class="sidebar-subitem" id="sbi-rollout-import"   onclick="navigateSub('rollout','import')"><i data-lucide="upload" class="sidebar-subicon"></i>Import</div>
     </div>
   </div>
   <!-- v93: Tasks. Badge counts open tasks (manager = all open; employee = own open). -->
@@ -1261,6 +1275,47 @@
 </div>
 
 <!-- ══ APPROVALS SCREEN (manager only) ══ -->
+<!-- ══ ROLLOUT TRACKER ══ -->
+<div class="screen" id="screen-rollout">
+  <div id="rotab-overview">
+    <div id="ro-overview-content"></div>
+  </div>
+
+  <div id="rotab-sites" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">Sites</div>
+        <div class="filter-bar-inline" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <select id="ro-flt-country" onchange="renderRolloutSites()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">All Countries</option>
+          </select>
+          <select id="ro-flt-type" onchange="renderRolloutSites()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">All Types</option>
+            <option value="store">Stores</option>
+            <option value="office">Offices</option>
+            <option value="warehouse">Warehouse</option>
+            <option value="interlinked">Interlinked</option>
+            <option value="dc_dr">DC/DR</option>
+            <option value="cloud">Cloud</option>
+          </select>
+          <select id="ro-flt-status" onchange="renderRolloutSites()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="done">Done</option>
+            <option value="mpls">MPLS configured</option>
+          </select>
+          <input type="text" id="ro-flt-search" oninput="renderRolloutSites()" placeholder="Search site or city" style="width:auto;padding:6px 10px;font-size:13px">
+        </div>
+      </div>
+      <div id="ro-sites-content"></div>
+    </div>
+  </div>
+
+  <div id="rotab-import" style="display:none">
+    <div id="ro-import-content"></div>
+  </div>
+</div>
+
 <div class="screen" id="screen-approvals">
   <div id="apptab-leave">
     <div class="filter-bar-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f6f5f4;border-radius:8px">
@@ -3068,6 +3123,7 @@
 <script src="js/features/approvals.js"></script>
 <script src="js/features/knowledge-base.js"></script>
 <script src="js/features/tracker.js"></script>
+<script src="js/features/rollout.js"></script>
 <script src="js/features/certificates.js"></script>
 <script src="js/features/amc-contracts.js"></script>
 <script src="js/features/ps-deals.js"></script>

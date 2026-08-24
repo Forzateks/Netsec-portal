@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v167-rollout-tracker",
+      "version": "v167",
+      "category": "new",
+      "title": "Rollout Tracker for Landmark",
+      "body": "A new Rollout Tracker section tracks every Landmark site against the scope of work. Import your site list once, then tick sites off as they are done — the country and category counts are calculated from the sites themselves, so they can never drift out of step with the totals the way a spreadsheet can. Export the whole report to Excel in the usual format, dated, whenever you need to send it.",
+      "link": null
+    },
+    {
       "id": "v166-cancelled-leave-balance",
       "version": "v166",
       "category": "fixed",

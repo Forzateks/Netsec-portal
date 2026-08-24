@@ -23,6 +23,7 @@ var TOP_BAR_LABELS = {
   tracker:      'Project Tracker',
   amc:          'AMC Contracts',
   psdeals:      'Professional Services',
+  rollout:      'Rollout Tracker',
   inventory:    'Inventory',
   certificates: 'Certificates',
   skills:       'Team Skills',
@@ -198,6 +199,7 @@ function showScreen(name) {
   if (name==='certificates') { if (typeof showCertTab === 'function') showCertTab('mine'); }
   if (name==='amc') { if (typeof showAMCTab === 'function') showAMCTab('contracts'); }
   if (name==='psdeals') { if (typeof showPsDealsTab === 'function') showPsDealsTab('deals'); }
+  if (name==='rollout') { if (typeof showRolloutTab === 'function') showRolloutTab('overview'); }
   if (name==='skills')  { if (typeof loadSkills === 'function')  loadSkills(); }
   if (name==='tasks')   { if (typeof loadTasks === 'function')   loadTasks(); }
 }
@@ -248,6 +250,7 @@ function navigateSub(screen, subTab) {
   else if (screen==='certificates') showCertTab(subTab);
   else if (screen==='amc')       showAMCTab(subTab);
   else if (screen==='psdeals')   showPsDealsTab(subTab);
+  else if (screen==='rollout')   showRolloutTab(subTab);
   closeSidebarOnMobile();
 }
 
