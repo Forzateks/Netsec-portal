@@ -348,11 +348,45 @@ async function ensureAuthValid() {
 // Convenience wrapper for mutation entry points. Returns true if the caller
 // may proceed; if false, the modal is already shown and the caller bails.
 // Usage:  if (!await requireAuth()) return;
+// Newline for modal body text, built from a char code so the literal never
+// has to survive an escape round-trip.
+var NL = String.fromCharCode(10);
+
 async function requireAuth() {
   var res = await ensureAuthValid();
   if (!res.valid) {
     showSessionExpiredModal();
     return false;
+  }
+  // v168: stale-client guard. Every mutation entry point in the app already
+  // calls requireAuth(), so gating here covers all ~80 of them without
+  // touching a single call site.
+  //
+  // Deliberately a WARNING, not a block. v114 made updates user-initiated
+  // because auto-activating yanked the page out from under someone mid-form
+  // and lost their input; a hard block would recreate that, since applying
+  // the update reloads the page and discards whatever they had typed. This
+  // way nobody is ever locked out and no in-progress form is ever lost - but
+  // the warning sits directly in front of the thing they want to do, which
+  // the small header pill did not.
+  if (typeof isUpdateWaiting === 'function' && isUpdateWaiting()) {
+    var proceed = await confirmAction({
+      title: 'A newer version is available',
+      body: 'You are running an older version of the app. Saving from an old '
+          + 'version can record incorrect data - overtime hours and leave days '
+          + 'are calculated by the app, so an out-of-date copy can get them '
+          + 'wrong without anything looking unusual.' + NL + NL
+          + 'Update as soon as you can. If you are in the middle of filling '
+          + 'something in, save it first, then update.',
+      confirmText: 'Save anyway',
+      cancelText:  'Update now',
+      danger: false
+    });
+    if (!proceed) {
+      // They chose to update. applyUpdate() reloads onto the new version.
+      if (typeof applyUpdate === 'function') applyUpdate();
+      return false;
+    }
   }
   return true;
 }

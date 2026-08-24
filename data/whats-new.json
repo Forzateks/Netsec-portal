@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v168-stale-version-warning",
+      "version": "v168",
+      "category": "new",
+      "title": "A nudge when your app is out of date",
+      "body": "If a new version is waiting and you try to save something, the app now says so before it saves. Overtime hours and leave days are worked out by the app itself, so an out-of-date copy can record them incorrectly without anything looking wrong — which is exactly what happened to a few cross-country sessions recently. You can still save, and nothing you have typed is ever lost; it just makes sure you know.",
+      "link": null
+    },
+    {
       "id": "v167-rollout-tracker",
       "version": "v167",
       "category": "new",

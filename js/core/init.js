@@ -10,7 +10,7 @@
 // CACHE_VERSION in sw.js and the Sentry release in index.html. It drives
 // the user-menu version label and the "what's new" filter; it is NOT part
 // of the registration URL.
-var APP_VERSION = 'v167';
+var APP_VERSION = 'v168';
 
 // v157: the registration URL is deliberately STABLE (no ?v= cache-buster).
 // It used to carry the version, which caused a phantom update prompt on the
@@ -100,12 +100,26 @@ function initServiceWorker() {
 // a new SW reaches 'installed'. Clicking the pill calls applyUpdate(),
 // which postMessages SKIP_WAITING to the waiting worker → activate →
 // controllerchange → reload onto the new version.
+// v168: true from the moment a new worker reaches 'installed' until the
+// user applies it. requireAuth() reads this to warn before a save, because a
+// client running old JS does not merely look stale - it WRITES stale results
+// into the shared database. v158's cross-region OT shift was silently absent
+// from three sessions for exactly this reason: the logger's browser had never
+// applied the update, so every cross-region row it wrote was an hour out.
+var _swUpdateWaiting = false;
+
+function isUpdateWaiting() { return _swUpdateWaiting === true; }
+
 function showUpdateIcon() {
+  _swUpdateWaiting = true;
   var b = document.getElementById('update-available-btn');
   if (b) b.style.display = 'inline-flex';
 }
 
 function applyUpdate() {
+  // Clear the guard immediately: the page is about to reload onto the new
+  // version, and leaving it set would warn once more on the way out.
+  _swUpdateWaiting = false;
   navigator.serviceWorker.getRegistration().then(function(reg) {
     if (reg && reg.waiting) {
       reg.waiting.postMessage({ type: 'SKIP_WAITING' });

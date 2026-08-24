@@ -228,6 +228,9 @@ function confirmAction(opts) {
     titleEl.textContent = opts.title || 'Are you sure?';
     bodyEl.textContent  = opts.body || '';
     okBtn.textContent   = opts.confirmText || 'Delete';
+    // v168: cancelText is optional and defaults to 'Cancel', so the ~20
+    // existing callers are unaffected.
+    cancelBtn.textContent = opts.cancelText || 'Cancel';
     var danger = opts.danger !== false;
     okBtn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
 
