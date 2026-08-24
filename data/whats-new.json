@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v170-night-mode-header",
+      "version": "v170",
+      "category": "fixed",
+      "title": "Night mode header fixed, and a one-click switch",
+      "body": "The bar across the top stayed white in night mode, which left the screen name almost unreadable against it. It now darkens with everything else. There is also a sun/moon button next to the notification bell so you can flip between light and dark in one click — the full Light / Dark / Auto choice is still in your account menu.",
+      "link": null
+    },
+    {
       "id": "v169-night-mode",
       "version": "v169",
       "category": "new",

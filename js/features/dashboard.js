@@ -1037,7 +1037,7 @@ async function renderManagerDashboard() {
 
   // === PENDING APPROVALS HERO CARD ===
   if (teamPending > 0) {
-    html += '<div class="card" style="background:var(--nx-secondary);color:#fff;margin-bottom:16px">'+
+    html += '<div class="card" style="background:var(--nx-secondary);color:#ffffff;margin-bottom:16px">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">'+
         '<div>'+
           '<div style="font-size:13px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;font-weight:600">Pending Approvals</div>'+
@@ -1048,7 +1048,7 @@ async function renderManagerDashboard() {
             (lvPending>0?lvPending+' Leave':'')+
           '</div>'+
         '</div>'+
-        '<button class="btn" style="background:#fff;color:var(--navy);font-weight:600" onclick="showScreen(\'approvals\')">Review Approvals &rarr;</button>'+
+        '<button class="btn" style="background:var(--nx-surface);color:var(--nx-ink);font-weight:600" onclick="showScreen(\'approvals\')">Review Approvals &rarr;</button>'+
       '</div>'+
     '</div>';
   } else {

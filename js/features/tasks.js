@@ -602,7 +602,7 @@ async function renderTaskApprovals() {
   host.innerHTML = heading + tasks.map(function(t){
     var owners = (byTask[t.id]||[]).map(function(n){ return esc2(_tasksShortName(n)); }).join(', ') || '—';
     var priMeta = TASK_PRIORITY_META[t.priority] || TASK_PRIORITY_META['medium'];
-    return '<div class="approval-card" style="border:1px solid var(--border,var(--nx-hairline));border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#fff">'+
+    return '<div class="approval-card" style="border:1px solid var(--border,var(--nx-hairline));border-radius:8px;padding:12px 14px;margin-bottom:10px;background:var(--nx-surface)">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">'+
         '<div style="min-width:0;flex:1 1 240px">'+
           '<div style="font-weight:600;font-size:14px">'+esc2(t.title||'(untitled)')+'</div>'+

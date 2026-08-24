@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v169',
+    release: 'netsec-portal@v170',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -239,6 +239,12 @@
     </button>
     <!-- v124 a11y: aria-label + haspopup + expanded so SRs announce the bell as
          a menu button; inner icon is decorative. -->
+    <!-- v170: theme toggle in the header. The three-way control (incl. Auto)
+         stays in the user menu; this is the one-click light/dark flip. -->
+    <button class="top-bar-bell top-bar-theme" id="theme-toggle-btn" onclick="toggleAppTheme()"
+            title="Switch appearance" aria-label="Switch between light and dark mode">
+      <i data-lucide="moon" id="theme-toggle-icon" aria-hidden="true"></i>
+    </button>
     <button class="top-bar-bell" id="notif-bell-wrap" onclick="toggleNotifDropdown()" style="display:none" title="Notifications" aria-label="Notifications" aria-haspopup="true" aria-expanded="false" aria-controls="notif-dropdown">
       <i data-lucide="bell" aria-hidden="true"></i>
       <span class="notif-pill" id="notif-bell-count" style="display:none" aria-label="0 unread">0</span>

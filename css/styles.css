@@ -54,6 +54,10 @@
   --color-text-muted:     var(--nx-ink-muted);
   --color-text-subtle:    var(--nx-ink-faint);
   --color-on-primary:     #ffffff;
+  /* Translucent surfaces. rgba() literals were invisible to the hex sweep,
+     which is how the top bar stayed white in night mode. */
+  --nx-surface-glass: rgba(255,255,255,0.88);
+  --nx-surface-veil:  rgba(255,255,255,0.70);
 
   /* Status pill pairs (v169). These were 6 families of hardcoded pale-fill /
      dark-text hexes scattered through the JS. As literals they could never
@@ -148,6 +152,8 @@
   --pill-info-bg:  #14263c; --pill-info-fg:  #6cb6ff; --pill-info-bd:  #26456b;
   --pill-purple-bg:#241d38; --pill-purple-fg:#c0a3f5; --pill-purple-bd:#3d3159;
   --pill-pink-bg:  #351a2b; --pill-pink-fg:  #ff9bd6; --pill-pink-bd:  #562a44;
+  --nx-surface-glass: rgba(35,35,35,0.88);
+  --nx-surface-veil:  rgba(255,255,255,0.06);
 
   /* Near-transparent black is invisible on a dark ground, so dark mode
      leans on the hairline for separation and keeps shadow only for real
@@ -183,6 +189,8 @@
   --pill-info-bg:  #14263c; --pill-info-fg:  #6cb6ff; --pill-info-bd:  #26456b;
   --pill-purple-bg:#241d38; --pill-purple-fg:#c0a3f5; --pill-purple-bd:#3d3159;
   --pill-pink-bg:  #351a2b; --pill-pink-fg:  #ff9bd6; --pill-pink-bd:  #562a44;
+  --nx-surface-glass: rgba(35,35,35,0.88);
+  --nx-surface-veil:  rgba(255,255,255,0.06);
 
   /* Near-transparent black is invisible on a dark ground, so dark mode
      leans on the hairline for separation and keeps shadow only for real
@@ -641,7 +649,7 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
   /* v160 Notion: a slim white bar separated by a hairline, not a heavy
      coloured slab. Slight translucency + blur keeps a hint of the content
      scrolling underneath without tinting the chrome. */
-  background:rgba(255,255,255,0.88);
+  background:var(--nx-surface-glass);
   backdrop-filter:blur(20px) saturate(180%);
   -webkit-backdrop-filter:blur(20px) saturate(180%);
   border-bottom:1px solid var(--nx-hairline);
@@ -793,7 +801,7 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
    button-utility, not the marketing full pill. */
 .user-chip{display:flex;align-items:center;gap:8px;padding:3px 10px 3px 4px;background:var(--nx-surface);border:1px solid var(--nx-hairline);border-radius:var(--radius-md);cursor:pointer;transition:background .15s,border-color .15s;color:var(--nx-ink);font-family:var(--font-ui);touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.18)}
 .user-chip:hover{background:var(--nx-canvas);border-color:var(--color-border-strong)}
-.user-avatar{width:32px;height:32px;border-radius:var(--radius-full);background:var(--nx-primary);color:#fff;font-size:12px;font-weight:700;letter-spacing:.5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.25)}
+.user-avatar{width:32px;height:32px;border-radius:var(--radius-full);background:var(--nx-primary);color:var(--color-on-primary);font-size:12px;font-weight:700;letter-spacing:.5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.25)}
 .user-chip-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1;min-width:0}
 .user-chip-name{color:var(--nx-ink);font-size:13px;font-weight:500;letter-spacing:.1px;white-space:nowrap}
 .user-chip-caret{width:14px;height:14px;stroke-width:2;color:var(--nx-ink-faint);flex-shrink:0;transition:transform .15s}
@@ -1518,6 +1526,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .rankbar-value{font-size:11.5px}
 }
 
+/* v170: header theme toggle. Inherits .top-bar-bell sizing/hover; only the
+   icon weight differs so it does not read as a notification. */
+.top-bar-theme i, .top-bar-theme svg{width:17px;height:17px;stroke-width:1.9}
+@media(max-width:640px){ .top-bar-theme{display:inline-flex} }
+
 /* ── APPEARANCE CONTROL (v169) ────────────────────────────────────
    A three-way segmented control in the user menu. Auto is the default and
    follows the device; picking Light or Dark overrides it for this device. */
@@ -2051,9 +2064,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    (user-chip uses the same rgba pattern). The dot inside keeps its own
    .db-dot colour transitions via auth.js. */
 .db-status.glow-button{
-  background:rgba(255,255,255,.08);
-  border-color:rgba(255,255,255,.12);
-  color:rgba(255,255,255,.9);
+  /* v170: was white-on-navy from the old header. Now theme-aware. */
+  background:var(--nx-canvas);
+  border-color:var(--nx-hairline);
+  color:var(--nx-ink-2);
   box-shadow:none;
   /* v115: undo the vestigial .db-status{width:14px;height:14px} from the
      pre-pill design — those dimensions were painting a 14x14 inner box
@@ -2179,7 +2193,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .lic-banner-soon .lic-banner-sub{color:var(--pill-warn-fg)}
 
 .lic-rows{display:flex;flex-direction:column;gap:6px}
-.lic-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(255,255,255,.7);border:1px solid rgba(0,0,0,.06);border-radius:var(--radius-md);cursor:pointer;transition:background .15s,border-color .15s}
+.lic-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--nx-surface-veil);border:1px solid rgba(0,0,0,.06);border-radius:var(--radius-md);cursor:pointer;transition:background .15s,border-color .15s}
 .lic-row:hover{background:var(--nx-surface);border-color:rgba(0,0,0,.12)}
 .lic-row-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
 .lic-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:3px 7px;border-radius:4px;white-space:nowrap}
@@ -2257,12 +2271,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    Single keyframe direction is chosen via animation-name override in
    the mobile breakpoint so we don't have to detect viewport in JS. */
 .toast-container{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:360px;pointer-events:none}
-.toast{background:var(--nx-green);color:#fff;padding:12px 14px;border-radius:var(--radius-md);box-shadow:0 10px 30px rgba(0,0,0,.15),0 2px 8px rgba(0,0,0,.08);display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.4;font-weight:500;pointer-events:auto;animation:toastInRight .2s ease-out both;font-family:var(--font-ui)}
+.toast{background:var(--nx-green);color:var(--color-on-primary);padding:12px 14px;border-radius:var(--radius-md);box-shadow:0 10px 30px rgba(0,0,0,.15),0 2px 8px rgba(0,0,0,.08);display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.4;font-weight:500;pointer-events:auto;animation:toastInRight .2s ease-out both;font-family:var(--font-ui)}
 .toast.toast-error{background:var(--danger)}
 .toast.toast-leaving{animation:toastOutRight .2s ease-in forwards}
 .toast-msg{flex:1;min-width:0;word-wrap:break-word}
-.toast-close{background:transparent;border:0;color:rgba(255,255,255,.85);font-size:20px;cursor:pointer;padding:0 2px;margin-left:auto;line-height:1;font-family:inherit}
-.toast-close:hover{color:#fff}
+.toast-close{background:transparent;border:0;color:var(--color-on-primary);opacity:.85;font-size:20px;cursor:pointer;padding:0 2px;margin-left:auto;line-height:1;font-family:inherit}
+.toast-close:hover{color:var(--color-on-primary)}
 @keyframes toastInRight{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes toastOutRight{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}
 @keyframes toastInUp{from{transform:translateY(120%);opacity:0}to{transform:translateY(0);opacity:1}}

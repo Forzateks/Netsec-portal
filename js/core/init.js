@@ -21,6 +21,14 @@ function setAppTheme(mode) {
   }
 }
 
+// One-click flip from the header. Resolves what is on screen RIGHT NOW
+// (which may be Auto following the device) and sets the explicit opposite,
+// so the first click always visibly changes something. The three-way
+// control including Auto stays in the user menu.
+function toggleAppTheme() {
+  setAppTheme(_isDarkNow() ? 'light' : 'dark');
+}
+
 function getAppTheme() {
   try { return localStorage.getItem('netsec_theme') || 'auto'; } catch (e) { return 'auto'; }
 }
@@ -40,6 +48,15 @@ function _syncThemeChrome() {
 }
 
 function _syncThemeButtons() {
+  // Header icon shows the destination, not the current state: a moon means
+  // "go dark". Lucide replaces the <i> with an <svg>, so the element has to
+  // be re-resolved and re-rendered each time.
+  var icon = document.getElementById('theme-toggle-icon');
+  if (icon) {
+    icon.setAttribute('data-lucide', _isDarkNow() ? 'sun' : 'moon');
+    icon.removeAttribute('class');
+    if (typeof renderIcons === 'function') renderIcons();
+  }
   var cur = getAppTheme();
   var btns = document.querySelectorAll('.theme-seg-btn');
   for (var i = 0; i < btns.length; i++) {
@@ -73,7 +90,7 @@ function initThemeControls() {
 // CACHE_VERSION in sw.js and the Sentry release in index.html. It drives
 // the user-menu version label and the "what's new" filter; it is NOT part
 // of the registration URL.
-var APP_VERSION = 'v169';
+var APP_VERSION = 'v170';
 
 // v157: the registration URL is deliberately STABLE (no ?v= cache-buster).
 // It used to carry the version, which caused a phantom update prompt on the
