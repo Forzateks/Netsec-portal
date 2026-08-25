@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v170',
+    release: 'netsec-portal@v171',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -371,6 +371,7 @@
       <div class="sidebar-subitem" id="sbi-rollout-overview" onclick="navigateSub('rollout','overview')"><i data-lucide="layout-dashboard" class="sidebar-subicon"></i>Landmark</div>
       <div class="sidebar-subitem" id="sbi-rollout-sites"    onclick="navigateSub('rollout','sites')"><i data-lucide="list" class="sidebar-subicon"></i>Sites</div>
       <div class="sidebar-subitem" id="sbi-rollout-import"   onclick="navigateSub('rollout','import')"><i data-lucide="upload" class="sidebar-subicon"></i>Import</div>
+      <div class="sidebar-subitem" id="sbi-rollout-log"      onclick="navigateSub('rollout','log')"><i data-lucide="history" class="sidebar-subicon"></i>Activity Log</div>
     </div>
   </div>
   <!-- v93: Tasks. Badge counts open tasks (manager = all open; employee = own open). -->
@@ -1347,6 +1348,16 @@
 
   <div id="rotab-import" style="display:none">
     <div id="ro-import-content"></div>
+  </div>
+
+  <div id="rotab-log" style="display:none">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin-bottom:0">Activity Log</div>
+        <button class="btn btn-sm btn-secondary" onclick="renderRolloutLog()">↻ Refresh</button>
+      </div>
+      <div id="ro-log-content"></div>
+    </div>
   </div>
 </div>
 

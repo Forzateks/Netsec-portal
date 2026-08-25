@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v171-rollout-audit-log",
+      "version": "v171",
+      "category": "new",
+      "title": "Mark rollout sites done — with a full audit trail",
+      "body": "Project Tracker → Rollout now lets you tick off sites as they go live: hit Mark done on a row, or select several and complete them in one go, choosing the date the work actually finished. Every change — completions, reopens, renames and MPLS updates — is recorded in a new Activity Log tab showing who changed what, and when.",
+      "link": null
+    },
+    {
       "id": "v170-night-mode-header",
       "version": "v170",
       "category": "fixed",

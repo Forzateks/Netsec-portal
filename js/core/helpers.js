@@ -297,6 +297,9 @@ function promptInput(opts) {
     if (opts.body) { bodyEl.textContent = opts.body; bodyEl.style.display = ''; }
     else { bodyEl.textContent = ''; bodyEl.style.display = 'none'; }
     labelEl.textContent = opts.label || 'Value';
+    // v171: optional input type (e.g. 'date'). Defaults to text, so the
+    // existing callers are unaffected.
+    input.type = opts.type || 'text';
     input.placeholder = opts.placeholder || '';
     input.value = opts.defaultValue || '';
     errEl.style.display = 'none'; errEl.textContent = '';

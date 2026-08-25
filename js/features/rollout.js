@@ -42,13 +42,14 @@ function _rolloutTypeFromText(s) {
 
 // == TAB SWITCHING =================================================
 function showRolloutTab(tab) {
-  ['overview','sites','import'].forEach(function(t){
+  ['overview','sites','import','log'].forEach(function(t){
     var el = document.getElementById('rotab-'+t);
     if (el) el.style.display = (t === tab) ? 'block' : 'none';
   });
   if (tab === 'overview') renderRolloutOverview();
   if (tab === 'sites')    renderRolloutSites();
   if (tab === 'import')   renderRolloutImport();
+  if (tab === 'log')      renderRolloutLog();
   if (typeof setSidebarSubActive === 'function') setSidebarSubActive('rollout', tab);
 }
 
@@ -244,6 +245,65 @@ function _rolloutTodayISO() {
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
+// == AUDIT TRAIL (v171) ============================================
+// Every change to a site writes one row here. The table is append-only at the
+// database level: it has SELECT and INSERT policies and no UPDATE or DELETE
+// policy at all, so RLS denies both by default - to managers too. changed_by
+// is bound to current_employee_name() inside the INSERT policy, so a caller
+// cannot attribute a change to someone else even by hand-building a REST call.
+//
+// One row PER SITE even in a bulk action: a bulk update shares a timestamp and
+// a person, but "who marked site 31 done" must stay answerable per site.
+async function _rolloutLog(site, action, changes) {
+  var res = await sb.from('rollout_site_activity_log').insert({
+    site_id:    site.id,
+    site_name:  site.site_name,
+    country:    site.country,
+    changed_by: currentUser,
+    action:     action,
+    field_changes: changes || null
+  });
+  // A failed audit write must be visible, not silent - but it must not roll
+  // back the change the user just made and saw succeed.
+  if (res.error) {
+    console.warn('rollout audit log insert failed:', res.error.message);
+    if (typeof reportSilentFail === 'function') {
+      reportSilentFail('rollout_site_activity_log', { op: action, error: res.error.message });
+    }
+  }
+}
+
+// Ids ticked in the Sites list, for the bulk action.
+var _rolloutSel = {};
+function _rolloutSelCount() { return Object.keys(_rolloutSel).length; }
+function toggleRolloutSel(id, on) {
+  if (on) _rolloutSel[id] = 1; else delete _rolloutSel[id];
+  _rolloutSyncBulkBar();
+}
+function _rolloutSyncBulkBar() {
+  var bar = document.getElementById('ro-bulk-bar');
+  var n = _rolloutSelCount();
+  if (!bar) return;
+  bar.style.display = n ? 'flex' : 'none';
+  var lbl = document.getElementById('ro-bulk-count');
+  if (lbl) lbl.textContent = n + (n === 1 ? ' site selected' : ' sites selected');
+}
+function rolloutSelectAllShown(on) {
+  var boxes = document.querySelectorAll('.ro-site-check');
+  for (var i = 0; i < boxes.length; i++) {
+    boxes[i].checked = on;
+    var id = parseInt(boxes[i].getAttribute('data-id'), 10);
+    if (on) _rolloutSel[id] = 1; else delete _rolloutSel[id];
+  }
+  _rolloutSyncBulkBar();
+}
+function rolloutClearSel() {
+  _rolloutSel = {};
+  var boxes = document.querySelectorAll('.ro-site-check');
+  for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
+  _rolloutSyncBulkBar();
+}
+
 // == SITES LIST ====================================================
 async function renderRolloutSites() {
   var host = document.getElementById('ro-sites-content');
@@ -284,17 +344,31 @@ async function renderRolloutSites() {
     });
   }
 
-  var h = '<div style="font-size:12px;color:var(--nx-ink-muted);margin-bottom:10px">'+
+  var h = '<div id="ro-bulk-bar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;'+
+          'background:var(--pill-info-bg);border:1px solid var(--pill-info-bd);'+
+          'border-radius:var(--radius-md);padding:8px 12px;margin-bottom:10px">'+
+          '<span id="ro-bulk-count" style="font-size:13px;font-weight:600;color:var(--pill-info-fg)"></span>'+
+          '<button class="btn btn-sm btn-primary" onclick="markRolloutSelectedDone()">Mark selected done</button>'+
+          '<button class="btn btn-sm btn-secondary" onclick="rolloutClearSel()">Clear</button>'+
+          '</div>';
+  h += '<div style="font-size:12px;color:var(--nx-ink-muted);margin-bottom:10px">'+
           fmtCount(rows.length)+' of '+fmtCount(ROLLOUT_SITES.length)+' sites</div>';
   h += '<div class="table-wrap"><table><thead><tr>'+
+       '<th style="width:34px"><input type="checkbox" onchange="rolloutSelectAllShown(this.checked)" '+
+         'title="Select every row shown" aria-label="Select all shown" style="width:auto"></th>'+
        '<th>Site</th><th>Country</th><th class="hide-mobile">City</th><th>Type</th>'+
        '<th class="hide-mobile">In SOW</th><th>Status</th><th class="hide-mobile">Completed</th>'+
-       '<th class="hide-mobile">MPLS</th></tr></thead><tbody>';
+       '<th class="hide-mobile">MPLS</th>'+(isManager?'<th></th>':'')+'</tr></thead><tbody>';
 
   rows.slice(0, 500).forEach(function(r){
     var isDone = r.status === 'done';
+    var isPlaceholder = (r.notes || '').indexOf('placeholder') === 0;
     h += '<tr>'+
-      '<td style="font-weight:600">'+esc2(r.site_name)+'</td>'+
+      '<td><input type="checkbox" class="ro-site-check" data-id="'+r.id+'" '+
+        (_rolloutSel[r.id]?'checked':'')+' onchange="toggleRolloutSel('+r.id+',this.checked)" '+
+        'aria-label="Select site" style="width:auto"></td>'+
+      '<td style="font-weight:600'+(isPlaceholder?';color:var(--nx-ink-muted);font-style:italic':'')+'">'+
+        esc2(r.site_name)+'</td>'+
       '<td>'+esc2(r.country)+'</td>'+
       '<td class="hide-mobile" style="color:var(--nx-ink-muted)">'+esc2(r.city||'—')+'</td>'+
       '<td><span class="badge" style="background:var(--nx-canvas);color:var(--nx-ink-2)">'+
@@ -306,7 +380,11 @@ async function renderRolloutSites() {
       '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;color:var(--nx-ink-muted)">'+
         (r.completed_on ? fmtDate(r.completed_on) : '—')+'</td>'+
       '<td class="hide-mobile"><input type="checkbox" '+(r.mpls_configured?'checked':'')+
-        ' onchange="toggleRolloutMpls('+r.id+', this.checked)" style="width:auto"></td>'+
+        ' onchange="toggleRolloutMpls('+r.id+', this.checked)" aria-label="MPLS configured" style="width:auto"></td>'+
+      (isManager
+        ? '<td><button class="btn btn-sm btn-secondary" onclick="editRolloutSite('+r.id+')" '+
+          'title="Rename or correct this site">Edit</button></td>'
+        : '')+
       '</tr>';
   });
   h += '</tbody></table></div>';
@@ -315,23 +393,91 @@ async function renderRolloutSites() {
          'Showing the first 500 of '+fmtCount(rows.length)+'. Narrow the filters to see the rest.</div>';
   }
   host.innerHTML = h;
+  // Selections survive a re-render (filters change, list refreshes), so the
+  // bulk bar has to be re-shown to match.
+  _rolloutSyncBulkBar();
 }
 
+// Mark ONE site done / not done. The completion date is editable because
+// people update the tracker days after the work; forcing today would quietly
+// make the completion history wrong. The audit log separately records when the
+// record actually changed, so a backdated completion is still traceable.
 async function toggleRolloutSiteDone(id) {
   if (!await requireAuth()) return;
   var row = ROLLOUT_SITES.filter(function(r){ return r.id === id; })[0];
   if (!row) return;
-  var nowDone = row.status !== 'done';
-  var payload = {
-    status: nowDone ? 'done' : 'pending',
-    completed_on: nowDone ? _rolloutTodayISO() : null,
-    updated_at: new Date().toISOString(),
-    updated_by: currentUser
-  };
-  var res = await sb.from('rollout_sites').update(payload).eq('id', id);
+
+  if (row.status === 'done') {
+    if (!await confirmAction({
+      title: 'Reopen this site?',
+      body: esc2(row.site_name) + ' is marked complete. Reopening clears its completion date '
+          + 'and puts it back into the remaining count.',
+      confirmText: 'Reopen', danger: false
+    })) return;
+    var was = row.completed_on;
+    var up = await sb.from('rollout_sites').update({
+      status:'pending', completed_on:null,
+      updated_at:new Date().toISOString(), updated_by:currentUser
+    }).eq('id', id);
+    if (up.error) { showError('Could not update: ' + up.error.message); return; }
+    row.status='pending'; row.completed_on=null;
+    await _rolloutLog(row, 'reopened', { status:{from:'done',to:'pending'}, completed_on:{from:was,to:null} });
+    showToast('Reopened');
+    renderRolloutSites();
+    return;
+  }
+
+  var date = await promptInput({
+    title: 'Mark site complete',
+    body: esc2(row.site_name) + ' — ' + esc2(row.country),
+    label: 'Completed on', type: 'date',
+    defaultValue: _rolloutTodayISO(), confirmText: 'Mark done',
+    validate: function(v){ return v ? null : 'Pick the date the work was completed.'; }
+  });
+  if (!date) return;
+
+  var res = await sb.from('rollout_sites').update({
+    status:'done', completed_on:date,
+    updated_at:new Date().toISOString(), updated_by:currentUser
+  }).eq('id', id);
   if (res.error) { showError('Could not update: ' + res.error.message); return; }
-  row.status = payload.status; row.completed_on = payload.completed_on;
-  showToast(nowDone ? 'Marked done ✓' : 'Marked pending');
+  row.status='done'; row.completed_on=date;
+  await _rolloutLog(row, 'completed', { status:{from:'pending',to:'done'}, completed_on:{from:null,to:date} });
+  showToast('Marked done ✓');
+  renderRolloutSites();
+}
+
+// Bulk complete. One database update and one log row PER SITE - they share a
+// timestamp and a person, but per-site history stays intact.
+async function markRolloutSelectedDone() {
+  if (!await requireAuth()) return;
+  var ids = Object.keys(_rolloutSel).map(Number);
+  var rows = ROLLOUT_SITES.filter(function(r){ return ids.indexOf(r.id) !== -1 && r.status !== 'done'; });
+  if (!rows.length) { showError('Nothing selected that is still pending.'); return; }
+
+  var date = await promptInput({
+    title: 'Mark ' + rows.length + ' sites complete',
+    body: rows.length + ' pending site' + (rows.length===1?'':'s') + ' will be marked done with this date.',
+    label: 'Completed on', type: 'date',
+    defaultValue: _rolloutTodayISO(), confirmText: 'Mark ' + rows.length + ' done',
+    validate: function(v){ return v ? null : 'Pick the date the work was completed.'; }
+  });
+  if (!date) return;
+
+  var res = await sb.from('rollout_sites').update({
+    status:'done', completed_on:date,
+    updated_at:new Date().toISOString(), updated_by:currentUser
+  }).in('id', rows.map(function(r){ return r.id; }));
+  if (res.error) { showError('Bulk update failed: ' + res.error.message); return; }
+
+  for (var i = 0; i < rows.length; i++) {
+    rows[i].status='done'; rows[i].completed_on=date;
+    await _rolloutLog(rows[i], 'completed', {
+      status:{from:'pending',to:'done'}, completed_on:{from:null,to:date}, bulk:{of:rows.length}
+    });
+  }
+  showToast('Marked ' + rows.length + ' sites done ✓');
+  rolloutClearSel();
   renderRolloutSites();
 }
 
@@ -339,15 +485,48 @@ async function toggleRolloutMpls(id, checked) {
   if (!await requireAuth()) return;
   var row = ROLLOUT_SITES.filter(function(r){ return r.id === id; })[0];
   if (!row) return;
+  var on = !!checked, when = on ? _rolloutTodayISO() : null;
   var res = await sb.from('rollout_sites').update({
-    mpls_configured: !!checked,
-    mpls_on: checked ? _rolloutTodayISO() : null,
-    updated_at: new Date().toISOString(),
-    updated_by: currentUser
+    mpls_configured:on, mpls_on:when,
+    updated_at:new Date().toISOString(), updated_by:currentUser
   }).eq('id', id);
   if (res.error) { showError('Could not update: ' + res.error.message); return; }
-  row.mpls_configured = !!checked;
-  row.mpls_on = checked ? _rolloutTodayISO() : null;
+  var wasOn = row.mpls_configured, wasWhen = row.mpls_on;
+  row.mpls_configured = on; row.mpls_on = when;
+  await _rolloutLog(row, on ? 'mpls_configured' : 'mpls_removed',
+    { mpls_configured:{from:wasOn,to:on}, mpls_on:{from:wasWhen,to:when} });
+}
+
+// Rename a placeholder, or correct a site's details. Manager-only, because
+// this is the SOW baseline - see the design doc. Renaming is the main use:
+// placeholders carry a generated name until the real one is known.
+async function editRolloutSite(id) {
+  if (!await requireAuth()) return;
+  if (!isManager) { showError('Editing sites is manager-only.'); return; }
+  var row = ROLLOUT_SITES.filter(function(r){ return r.id === id; })[0];
+  if (!row) return;
+
+  var name = await promptInput({
+    title: 'Edit site name',
+    body: 'Country: ' + esc2(row.country) + '  ·  Type: '
+        + esc2(ROLLOUT_TYPE_LABEL[row.site_type] || row.site_type),
+    label: 'Site name', defaultValue: row.site_name, confirmText: 'Save',
+    validate: function(v){ return v ? null : 'A site needs a name.'; }
+  });
+  if (!name || name === row.site_name) return;
+
+  var res = await sb.from('rollout_sites').update({
+    site_name: name,
+    // A renamed placeholder is no longer a placeholder.
+    notes: (row.notes === 'placeholder - real site name pending') ? null : row.notes,
+    updated_at:new Date().toISOString(), updated_by:currentUser
+  }).eq('id', id);
+  if (res.error) { showError('Could not rename: ' + res.error.message); return; }
+  var was = row.site_name;
+  row.site_name = name;
+  await _rolloutLog(row, 'renamed', { site_name:{from:was,to:name} });
+  showToast('Renamed ✓');
+  renderRolloutSites();
 }
 
 // == IMPORT ========================================================
@@ -458,6 +637,85 @@ async function rolloutCommitImport() {
   _rolloutImportRows = null;
   await loadRollout(true);
   showRolloutTab('overview');
+}
+
+// == ACTIVITY LOG (v171) ===========================================
+// Read-only view of rollout_site_activity_log. Mirrors the AMC and PS logs:
+// relative "when", exact date/time, who, what, and a before -> after diff.
+var ROLLOUT_ACTION_META = {
+  completed:       { icon:'✅', label:'Completed',      color:'var(--nx-green)' },
+  reopened:        { icon:'↩️', label:'Reopened',       color:'var(--nx-orange)' },
+  mpls_configured: { icon:'🔗', label:'MPLS configured',color:'var(--nx-primary)' },
+  mpls_removed:    { icon:'🔌', label:'MPLS removed',   color:'var(--nx-ink-muted)' },
+  renamed:         { icon:'✏️', label:'Renamed',        color:'var(--nx-primary)' },
+  imported:        { icon:'📥', label:'Imported',       color:'var(--nx-ink-muted)' }
+};
+
+async function renderRolloutLog() {
+  var host = document.getElementById('ro-log-content');
+  if (!host) return;
+  host.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+
+  var res = await sb.from('rollout_site_activity_log')
+    .select('*').order('changed_at', { ascending:false }).limit(300);
+  if (res.error) {
+    host.innerHTML = '<div class="alert alert-error show">Error: '+esc2(res.error.message)+'</div>';
+    return;
+  }
+  var data = res.data || [];
+  if (!data.length) {
+    host.innerHTML = renderEmptyState({
+      icon:'history', heading:'No activity yet',
+      sub:'Marking a site done, renaming one, or changing its MPLS flag is recorded here — who, what and when.'
+    });
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
+
+  var rows = '';
+  data.forEach(function(l){
+    var meta = ROLLOUT_ACTION_META[l.action] ||
+               { icon:'•', label:cap(String(l.action||'').replace(/_/g,' ')), color:'var(--nx-ink-muted)' };
+    var changes = '—';
+    if (l.field_changes && typeof l.field_changes === 'object') {
+      var parts = [];
+      Object.keys(l.field_changes).forEach(function(f){
+        if (f === 'bulk') return;   // rendered as a badge instead
+        var c = l.field_changes[f];
+        if (!c || typeof c !== 'object') return;
+        parts.push('<span style="color:var(--nx-ink-muted)">'+esc2(f.replace(/_/g,' '))+':</span> '+
+          '<span style="color:var(--danger);text-decoration:line-through">'+
+            esc2(String(c.from == null ? '—' : c.from))+'</span> → '+
+          '<span style="color:var(--nx-green)">'+
+            esc2(String(c.to == null ? '—' : c.to))+'</span>');
+      });
+      if (parts.length) changes = parts.join('<br>');
+    }
+    var bulk = (l.field_changes && l.field_changes.bulk)
+      ? ' <span class="badge" style="background:var(--pill-info-bg);color:var(--pill-info-fg)">'+
+        'bulk of '+fmtCount(l.field_changes.bulk.of)+'</span>' : '';
+    rows +=
+      '<tr>'+
+      '<td class="hide-mobile" style="white-space:nowrap;font-size:12px;color:var(--nx-ink-muted)">'+
+        relativeTime(l.changed_at)+'</td>'+
+      '<td style="white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px;color:var(--nx-ink-muted)">'+
+        (l.changed_at ? fmtDateTime(l.changed_at) : '—')+'</td>'+
+      '<td style="font-weight:600">'+esc2(l.site_name||'')+bulk+'</td>'+
+      '<td class="hide-mobile">'+esc2(l.country||'—')+'</td>'+
+      '<td><span style="color:'+meta.color+';font-weight:600">'+meta.icon+' '+esc2(meta.label)+'</span></td>'+
+      '<td>'+esc2(l.changed_by||'')+'</td>'+
+      '<td style="font-size:12px;line-height:1.7">'+changes+'</td>'+
+      '</tr>';
+  });
+
+  host.innerHTML =
+    '<div style="font-size:12px;color:var(--nx-ink-muted);margin-bottom:10px">'+
+      'Showing the '+fmtCount(data.length)+' most recent changes. This log is append-only — '+
+      'entries cannot be edited or deleted by anyone, including managers.</div>'+
+    '<div class="table-wrap"><table><thead><tr>'+
+    '<th class="hide-mobile">When</th><th>Date &amp; Time</th><th>Site</th>'+
+    '<th class="hide-mobile">Country</th><th>Action</th><th>Changed By</th><th>Changes</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 // == EXPORT ========================================================
