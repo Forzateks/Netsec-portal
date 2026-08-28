@@ -30,11 +30,16 @@ function calcWorkingDays(startStr,endStr,employee) {
 //                                          stay counted)
 //   - any other status         → 0
 // Half-day leaves (working_days===0.5, start===end) → 0.5 once start <= today.
-function computeLeaveUsedDays(leave, todayISO) {
-  if (!leave) return 0;
-  if (leave.status !== 'approved' && leave.status !== 'cancelled') return 0;
+// v172: the calendar range a leave actually covered, as {start,end} ISO
+// strings, or null if it covered nothing. Extracted from computeLeaveUsedDays
+// so the OT engine can ask "was this person off on that day?" without
+// duplicating the cancellation rules below — the subtle part is the same
+// either way, and two copies would drift.
+function leaveEffectiveRange(leave) {
+  if (!leave) return null;
+  if (leave.status !== 'approved' && leave.status !== 'cancelled') return null;
   var start = leave.start_date;
-  if (!start || start > todayISO) return 0;
+  if (!start) return null;
 
   var effEnd;
   if (leave.status === 'cancelled') {
@@ -58,23 +63,88 @@ function computeLeaveUsedDays(leave, todayISO) {
       // withdrawn request lands here with a cancelled_at that must NOT be read
       // as "days off work". reviewed_at is written by the only two paths that
       // set an approve/reject decision, so null means it was never approved.
-      if (!leave.reviewed_at) return 0;
+      if (!leave.reviewed_at) return null;
       var cancelDay = String(leave.cancelled_at).slice(0, 10);
-      if (cancelDay <= start) return 0;   // cancelled before it ever began
+      if (cancelDay <= start) return null;   // cancelled before it ever began
       effEnd = _isoDayBefore(cancelDay);  // cancelling takes effect same-day
       // Never let a late cancellation stretch past the leave itself.
       if (leave.end_date && effEnd > leave.end_date) effEnd = leave.end_date;
     } else {
-      return 0;                           // no evidence any day was taken
+      return null;                        // no evidence any day was taken
     }
   } else {
     effEnd = leave.end_date;
   }
 
-  if (!effEnd || effEnd < start) return 0;
-  var lastDay = effEnd < todayISO ? effEnd : todayISO;
-  if (parseFloat(leave.working_days) === 0.5 && start === effEnd) return 0.5;
-  return calcWorkingDays(start, lastDay, leave.employee);
+  if (!effEnd || effEnd < start) return null;
+  return { start: start, end: effEnd };
+}
+
+// 'YYYY-MM-DD' one calendar day later. Mirrors _isoDayBefore — pure UTC
+// arithmetic, never reads the browser timezone.
+function _isoDayAfter(iso) {
+  var p = String(iso).split('-').map(Number);
+  var d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + 1));
+  return d.getUTCFullYear() + '-' +
+         String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+         String(d.getUTCDate()).padStart(2, '0');
+}
+
+// == LEAVE-DAY LOOKUP FOR THE OT ENGINE (v172) ====================
+// Builds LEAVE_DAYS = { 'Employee': { 'YYYY-MM-DD': 'annual' } } from
+// approved ANNUAL leave, so calcOT() can credit a session logged on a
+// holiday under weekend rules. Covers ALL employees, not just the current
+// user — any of them can be a team member on someone else's session.
+//
+// Annual leave ONLY, by policy decision: sick leave is for recovery and
+// comp-off is itself time already paid back out of the OT pool, so neither
+// earns overtime. A row whose leave_type is blank counts as annual — the
+// column defaults to 'annual' and blanks are a data artefact, not a type.
+//
+// Cancelled leave is included only for the stretch it actually covered,
+// via leaveEffectiveRange(), so cancelling a holiday also withdraws the
+// OT treatment for the days that never happened.
+//
+// Returns true on success. On failure the previous map is left in place
+// rather than cleared: a stale map under-credits nobody, an empty one
+// silently drops leave-day OT for everyone.
+async function loadLeaveDays() {
+  var map = {};
+  function mark(emp, iso, type) {
+    if (!emp || !iso) return;
+    if (!map[emp]) map[emp] = {};
+    if (!map[emp][iso]) map[emp][iso] = type;
+  }
+
+  var lr = await fetchAllRows(function(){
+    return sb.from('leave_requests')
+      .select('employee,start_date,end_date,leave_type,status,effective_end_date,cancelled_at,reviewed_at')
+      .in('status', ['approved', 'cancelled']);
+  });
+  if (lr.error) return false;
+
+  (lr.data || []).forEach(function(row){
+    if (row.leave_type === 'sick') return;      // annual leave only
+    var range = leaveEffectiveRange(row);
+    if (!range) return;
+    var day = range.start, guard = 0;
+    while (day <= range.end && guard++ < 400) {
+      mark(row.employee, day, 'annual');
+      day = _isoDayAfter(day);
+    }
+  });
+
+  LEAVE_DAYS = map;
+  return true;
+}
+
+function computeLeaveUsedDays(leave, todayISO) {
+  var range = leaveEffectiveRange(leave);
+  if (!range) return 0;
+  if (range.start > todayISO) return 0;
+  var lastDay = range.end < todayISO ? range.end : todayISO;
+  if (parseFloat(leave.working_days) === 0.5 && range.start === range.end) return 0.5;
+  return calcWorkingDays(range.start, lastDay, leave.employee);
 }
 
 // 'YYYY-MM-DD' one calendar day earlier. Pure UTC arithmetic — never reads the
@@ -1240,6 +1310,9 @@ async function processRequest(decision) {
               : decision === 'needs_review' ? 'Marked for re-review ✓'
               : 'Updated ✓';
   showToast(toastMsg);
+  // v172: the OT engine credits sessions logged on days off, so the
+  // leave-day map has to follow every approval decision immediately.
+  if (typeof loadLeaveDays === 'function') loadLeaveDays();
   renderLeaveApprovals();
 }
 
@@ -1308,6 +1381,9 @@ async function cancelLeaveRequest(id) {
   var up = await sb.from('leave_requests').update(payload).eq('id', id);
   if (up.error) { showError('Error: '+up.error.message); return; }
   showToast('Leave cancelled ✓');
+  // v172: cancelling withdraws the leave-day OT treatment for the days
+  // that never happened.
+  if (typeof loadLeaveDays === 'function') loadLeaveDays();
   updateNotifBadge();
   // Re-render whichever list the user is looking at.
   if (typeof renderLeaveApprovals === 'function' && document.getElementById('lv-approvals-content')) {

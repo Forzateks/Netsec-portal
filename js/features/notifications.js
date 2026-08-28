@@ -6,6 +6,9 @@
 let _notifPollTimer = null;
 
 async function renderNotifications() {
+  // v172: never query without a session. Reached on logout via the focus
+  // listener, which is registered once and outlives the poll timer.
+  if (!currentUser) return;
   var bellWrap = document.getElementById('notif-bell-wrap');
   var listEl   = document.getElementById('notif-dropdown-list');
   var countEl  = document.getElementById('notif-bell-count');
@@ -110,6 +113,14 @@ function toggleNotifDropdown() {
   var bell = document.getElementById('notif-bell-wrap');
   if (bell) bell.setAttribute('aria-expanded', !visible ? 'true' : 'false');
   if (!visible) renderNotifications();
+}
+
+// v172: stop the 60s poll. Called from doLogout() — without it the timer
+// outlived the session and kept querying with an empty currentUser.
+// The focus listener below outlives logout too, so renderNotifications()
+// carries its own no-session guard rather than relying on the timer alone.
+function stopNotifPolling() {
+  if (_notifPollTimer) { clearInterval(_notifPollTimer); _notifPollTimer = null; }
 }
 
 function startNotifPolling() {

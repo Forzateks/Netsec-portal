@@ -154,7 +154,10 @@ function splitSessionHours(dateStr, startStr, endStr, employee) {
   var sf = sp[0] + sp[1]/60;
   var ef = ep[0] + ep[1]/60;
   var rawDur = ef <= sf ? ef + 24 - sf : ef - sf;
-  var isWknd = isWeekend(wd, employee);
+  // v172: a day of approved leave follows weekend rules (all hours count).
+  // dateStr is now passed to isWeekend too, so the preview honours dated
+  // WEEKEND_OVERRIDES the same way calcOT does — they disagreed before.
+  var isWknd = isWeekend(wd, employee, dateStr) || !!isOnLeave(employee, dateStr);
 
   var otHours = 0;
   if (isWknd) {
@@ -328,13 +331,15 @@ function _buildUSTeamCheckboxesInto(boxId, name, seedCurrentUser) {
   if (!box || box.children.length) return;
   EMPLOYEES.forEach(function(emp){
     var label = document.createElement('label');
-    label.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;padding:6px 12px;border:1.5px solid var(--border);border-radius:20px;background:white;transition:all .15s';
+    label.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;padding:6px 12px;border:1.5px solid var(--border);border-radius:20px;background:var(--nx-surface);transition:all .15s';
     var cb = document.createElement('input');
     cb.type = 'checkbox'; cb.value = emp; cb.name = name;
     cb.style.accentColor = 'var(--teal)';
     cb.onchange = function(){
-      label.style.background = cb.checked ? 'var(--pill-info-bg)' : 'white';
+      label.style.background = cb.checked ? 'var(--pill-info-bg)' : 'var(--nx-surface)';
       label.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
+      // v172: the leave warning depends on WHO is on the session.
+      if (boxId === 'us-team-checkboxes' && typeof updateUSPreview === 'function') updateUSPreview();
     };
     if (seedCurrentUser && emp === currentUser) {
       cb.checked = true;
@@ -371,7 +376,7 @@ function seedEditUSTeamFromCsv(csv) {
     cb.checked = on;
     var lbl = cb.parentNode;
     if (lbl) {
-      lbl.style.background  = on ? 'var(--pill-info-bg)' : 'white';
+      lbl.style.background  = on ? 'var(--pill-info-bg)' : 'var(--nx-surface)';
       lbl.style.borderColor = on ? 'var(--teal)' : 'var(--border)';
     }
   });
@@ -503,7 +508,7 @@ function _usDraftResume() {
       cb.checked = d.team.indexOf(cb.value) !== -1;
       var lbl = cb.parentElement;
       if (lbl) {
-        lbl.style.background = cb.checked ? 'var(--pill-info-bg)' : 'white';
+        lbl.style.background = cb.checked ? 'var(--pill-info-bg)' : 'var(--nx-surface)';
         lbl.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
       }
     });
@@ -555,6 +560,40 @@ function updateUSPreview() {
     otEl.textContent = 'none';
     otEl.style.color = 'var(--muted)';
   }
+  _renderLeaveOTNote(date);
+}
+
+// v172: tell the logger, before they save, that somebody on this session is
+// on approved leave that day — their hours are credited under weekend rules
+// (1:1, every hour, no block window). Reads the ticked team boxes so it
+// updates as members are added or removed, and always includes the logger.
+function _renderLeaveOTNote(date) {
+  var el = document.getElementById('us-leave-note');
+  if (!el) return;
+  if (!date) { el.style.display = 'none'; el.innerHTML = ''; return; }
+
+  var names = [];
+  if (currentUser) names.push(currentUser);
+  document.querySelectorAll('#us-team-checkboxes input[type=checkbox]').forEach(function(cb){
+    if (cb.checked && names.indexOf(cb.value) === -1) names.push(cb.value);
+  });
+
+  var hits = [];
+  names.forEach(function(n){
+    var t = isOnLeave(n, date);
+    if (t) hits.push({ name: n, type: t });
+  });
+  if (!hits.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+
+  var lines = hits.map(function(h){
+    return '<li>' + esc2(h.name) + ' is on annual leave</li>';
+  }).join('');
+  el.innerHTML =
+    '<div class="leave-ot-note-head">⚠️ Working on a day off</div>' +
+    '<ul class="leave-ot-note-list">' + lines + '</ul>' +
+    '<div class="leave-ot-note-sub">Every hour is credited at 1:1 with no regular-hours block, ' +
+    'the same as a weekend. The leave day itself is still used — it is not given back.</div>';
+  el.style.display = '';
 }
 
 // ── MULTI-MEMBER OT HELPERS ──────────────────────────────────────
@@ -646,6 +685,7 @@ function _buildMemberOTRow(memberName, loggerName, date, start, end, isEng, cust
     rate:            c.rate,
     duration_hours:  c.duration,
     credited_hours:  c.credited,
+    on_leave:        !!c.onLeave,   // v172: logged on an approved day off
     customer_name:   isEng ? (customer || null) : null,
     project_name:    isEng ? engagementName     : null,
     activity_type:   isEng ? (actType || null)  : null,
@@ -821,7 +861,8 @@ async function saveUnifiedSession() {
       row.source            = 'unified';
       row.source_session_id = unifiedId;
       rowsToInsert.push(row);
-      createdParts.push(name + ' ' + fmtHours(calc.credited) + ' ' + calc.band);
+      createdParts.push(name + ' ' + fmtHours(calc.credited) + ' ' +
+        (calc.onLeave ? 'on leave' : calc.band));
     });
     if (rowsToInsert.length) {
       var insRes = await sb.from('ot_sessions').insert(rowsToInsert);
@@ -865,7 +906,7 @@ async function saveUnifiedSession() {
   document.querySelectorAll('#us-team-checkboxes input').forEach(function(cb){
     cb.checked = cb.value === currentUser;
     var lbl = cb.parentElement;
-    lbl.style.background = cb.checked ? 'var(--pill-info-bg)' : 'white';
+    lbl.style.background = cb.checked ? 'var(--pill-info-bg)' : 'var(--nx-surface)';
     lbl.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
   });
 

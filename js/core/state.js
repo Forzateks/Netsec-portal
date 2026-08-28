@@ -20,6 +20,19 @@ const KSA_EMP   = ['Salman Aziz','Mohammed Afsal'];
 const WEEKEND_OVERRIDES = [
   { employee: 'Ahmed Ali', from: '2025-12-30', to: '2026-02-05', weekendDays: [4, 5] } // Thu + Fri
 ];
+// v172: dates each employee is on approved leave, as
+//   { 'Employee Name': { 'YYYY-MM-DD': 'annual' | 'sick' | 'comp-off' } }
+// Populated by loadLeaveDays() at login and refreshed whenever leave is
+// approved, cancelled or deleted. calcOT() consults it through isOnLeave()
+// so a session logged on a leave day is credited under WEEKEND rules
+// (1:1, every hour, no cap, no block window) — you should not be working
+// at all that day, so every hour counts.
+//
+// Deliberately NOT plumbed through isWeekend(): that helper also drives
+// calcWorkingDays() in leave.js, and making leave days "weekend" there
+// would stop a new request counting days that overlap existing leave.
+let LEAVE_DAYS = {};
+
 const LEAVE_ALLOWANCE = 22;
 const SICK_ALLOWANCE  = 12;
 

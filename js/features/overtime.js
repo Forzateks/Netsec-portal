@@ -14,6 +14,22 @@ function isWeekend(wd, employee, dateStr) {
   return KSA_EMP.includes(employee) ? (wd===5||wd===6) : (wd===0||wd===6);
 }
 
+// v172: was this employee on approved leave on this calendar day?
+// Reads the LEAVE_DAYS map built by loadLeaveDays() (annual, sick and
+// comp-off). Returns the leave type string, or '' when not on leave —
+// truthy/falsy either way, so callers can use it as a plain boolean.
+//
+// dateStr is the employee's OWN local date. _buildMemberOTRow() shifts the
+// date across regions before calling calcOT, so a KSA member on leave is
+// judged against the KSA calendar day, not the logger's.
+function isOnLeave(employee, dateStr) {
+  if (!employee || !dateStr) return '';
+  if (typeof LEAVE_DAYS === 'undefined' || !LEAVE_DAYS) return '';
+  var days = LEAVE_DAYS[employee];
+  if (!days) return '';
+  return days[dateStr] || '';
+}
+
 // Per-region OT thresholds. KSA office hours run later, so block window
 // and Eve band start are pushed 30-60 min later for KSA employees.
 function getOTThresholds(employee) {
@@ -33,6 +49,7 @@ function validateOTStart(dateStr, startStr, employee, endStr) {
   if (!dateStr || !startStr) return null;
   var d = new Date(dateStr); var wd = d.getDay();
   if (isWeekend(wd, employee, dateStr)) return null;
+  if (isOnLeave(employee, dateStr)) return null; // v172: leave days follow weekend rules
   var t = getOTThresholds(employee);
 
   // If we have the end time, check whether ANY portion is OT.
@@ -55,7 +72,11 @@ function calcOT(dateStr, startStr, endStr, employee) {
   employee = employee || '';
   if (!dateStr||!startStr||!endStr) return null;
   const d = new Date(dateStr); const wd = d.getDay();
-  const isWknd = isWeekend(wd, employee, dateStr);
+  // v172: a day of approved leave is credited exactly like a weekend —
+  // 1:1, every hour, no cap and no block window. You should not be working
+  // at all, so the regular-hours window must not swallow the session.
+  const leaveType = isOnLeave(employee, dateStr);
+  const isWknd = isWeekend(wd, employee, dateStr) || !!leaveType;
   const sp=startStr.split(':').map(Number); const sh=sp[0],sm=sp[1];
   const ep=endStr.split(':').map(Number);   const eh=ep[0],em=ep[1];
   const sf=sh+sm/60, ef=eh+em/60;
@@ -107,6 +128,7 @@ function calcOT(dateStr, startStr, endStr, employee) {
   }
 
   return { band, rate, duration:r2(rawDur), credited:r2(cred>0?cred:0),
+    onLeave: !!leaveType, leaveType: leaveType || null,
     dayName:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()] };
 }
 
@@ -127,7 +149,11 @@ function explainOT(session) {
   var region = KSA_EMP.includes(emp) ? 'KSA' : 'UAE';
   var d = new Date(session.ot_date);
   var wd = d.getDay();
-  var isWknd = isWeekend(wd, emp, session.ot_date);
+  var leaveType = (typeof isOnLeave === 'function') ? isOnLeave(emp, session.ot_date) : '';
+  // v172: fall back to the stored flag so an old row still explains itself
+  // even after the leave record is gone.
+  var onLeave = !!leaveType || !!session.on_leave;
+  var isWknd = isWeekend(wd, emp, session.ot_date) || onLeave;
   var sp = session.start_time.split(':').map(Number);
   var ep = session.end_time.split(':').map(Number);
   var sf = sp[0] + sp[1]/60;
@@ -138,11 +164,15 @@ function explainOT(session) {
   var lines = [];
   lines.push('--- How this was calculated ---');
   lines.push('Region: ' + region + (region==='KSA' ? ' (block 8:00 AM - 7:00 PM, Eve from 7:00 PM)' : ' (block 7:30 AM - 6:30 PM, Eve from 6:30 PM)'));
-  lines.push('Day: ' + (session.day_name || '') + (isWknd ? ' (weekend - no block)' : ' (weekday)'));
+  lines.push('Day: ' + (session.day_name || '') +
+    (onLeave ? ' (on leave - no block)' : isWknd ? ' (weekend - no block)' : ' (weekday)'));
   lines.push('Time: ' + fmtTime(session.start_time) + ' to ' + fmtTime(session.end_time) + '  (raw: ' + rawDur.toFixed(2) + 'h)');
   lines.push('');
 
   if (isWknd) {
+    if (onLeave) {
+      lines.push('On leave: this day was approved annual leave, so weekend rules apply.');
+    }
     lines.push('Weekend rule: 1:1 rate, no cap. All hours count.');
     lines.push('Credited: ' + rawDur.toFixed(2) + 'h');
   } else if (crossesMidnight) {
@@ -491,6 +521,9 @@ let _recomputeDiff = null;
 async function recomputeAllOT(mode) {
   if (!await requireAuth()) return;
   if (!isManager) { showError('Manager only.'); return; }
+  // v172: leave days change what counts as OT, so always recompute against
+  // a fresh map — a stale one would strip credit from leave-day sessions.
+  if (typeof loadLeaveDays === 'function') await loadLeaveDays();
   var resultEl = document.getElementById('recompute-result');
   var applyBtn = document.getElementById('recompute-apply-btn');
   resultEl.style.display = 'block';
@@ -508,6 +541,7 @@ async function recomputeAllOT(mode) {
       if (s.rate !== res.rate)              { fields.rate = {from: s.rate, to: res.rate}; changed = true; }
       if (parseFloat(s.duration_hours||0) !== res.duration) { fields.duration = {from: s.duration_hours, to: res.duration}; changed = true; }
       if (parseFloat(s.credited_hours||0) !== res.credited) { fields.credited = {from: s.credited_hours, to: res.credited}; changed = true; }
+      if (!!s.on_leave !== !!res.onLeave)   { fields.on_leave = {from: !!s.on_leave, to: !!res.onLeave}; changed = true; }
       if (changed) diffs.push({ id: s.id, employee: s.employee, date: s.ot_date, start: s.start_time, end: s.end_time, fields: fields, newRes: res });
     });
     _recomputeDiff = diffs;
@@ -550,7 +584,8 @@ async function recomputeAllOT(mode) {
     var d = _recomputeDiff[i];
     var r = d.newRes;
     var {error} = await sb.from('ot_sessions').update({
-      band: r.band, rate: r.rate, duration_hours: r.duration, credited_hours: r.credited, day_name: r.dayName
+      band: r.band, rate: r.rate, duration_hours: r.duration, credited_hours: r.credited, day_name: r.dayName,
+      on_leave: !!r.onLeave
     }).eq('id', d.id);
     if (error) fail++; else ok++;
   }
@@ -624,6 +659,9 @@ async function findPolicyViolators(fromDate) {
 
 async function previewViolations() {
   if (!isManager) { showError('Manager only.'); return; }
+  // v172: leave days change what counts as OT, so always recompute against
+  // a fresh map — a stale one would strip credit from leave-day sessions.
+  if (typeof loadLeaveDays === 'function') await loadLeaveDays();
   var resultEl = document.getElementById('violations-result');
   var applyBtn = document.getElementById('violations-apply-btn');
   var fromEl   = document.getElementById('violations-from');
@@ -727,6 +765,9 @@ let _reevalPlan = null;
 
 async function previewReevalArchived() {
   if (!isManager) { showError('Manager only.'); return; }
+  // v172: an archived block-window session becomes valid if that day turns
+  // out to be leave, so re-evaluate against a fresh leave map too.
+  if (typeof loadLeaveDays === 'function') await loadLeaveDays();
   var resultEl = document.getElementById('reeval-result');
   var applyBtn = document.getElementById('reeval-apply-btn');
   resultEl.style.display = 'block';
@@ -794,6 +835,7 @@ async function applyReevalArchived() {
       status: 'approved',
       band: r.band, rate: r.rate,
       duration_hours: r.duration, credited_hours: r.credited, day_name: r.dayName,
+      on_leave: !!r.onLeave,
       manager_comment: 'Re-evaluated under updated policy: only the off-hours portion is credited.',
       reviewed_by: currentUser, reviewed_at: nowIso
     }).eq('id', c.row.id);

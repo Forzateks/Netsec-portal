@@ -503,6 +503,10 @@ function esc2(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 function bandBadge(s) {
   if (!s) return '';
   var b = s.band || '';
+  // v172: a leave-day session is stored with band 'Wknd' because it follows
+  // weekend rules, which reads as wrong next to a Tuesday. Label it for what
+  // it is instead — the credit maths is identical either way.
+  if (s.on_leave) return '<span class="badge badge-Wknd">On leave</span>';
   if (b !== 'Eve') return '<span class="badge badge-'+b+'">'+b+'</span>';
   if (!s.start_time || !s.end_time) return '<span class="badge badge-Eve">Eve</span>';
   var emp = s.employee || '';

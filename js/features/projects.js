@@ -1321,12 +1321,12 @@ function initProjectTab() {
   if (box && !box.children.length) {
     EMPLOYEES.forEach(function(emp) {
       const label = document.createElement('label');
-      label.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;padding:6px 12px;border:1.5px solid var(--border);border-radius:20px;background:white;transition:all .15s';
+      label.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;padding:6px 12px;border:1.5px solid var(--border);border-radius:20px;background:var(--nx-surface);transition:all .15s';
       const cb = document.createElement('input');
       cb.type = 'checkbox'; cb.value = emp; cb.name = 'pj-team';
       cb.style.accentColor = 'var(--teal)';
       cb.onchange = function() {
-        label.style.background = cb.checked ? 'var(--pill-info-bg)' : 'white';
+        label.style.background = cb.checked ? 'var(--pill-info-bg)' : 'var(--nx-surface)';
         label.style.borderColor = cb.checked ? 'var(--teal)' : 'var(--border)';
       };
       // Auto-check current user

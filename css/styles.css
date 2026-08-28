@@ -3119,3 +3119,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .backup-banner-cta{width:100%;justify-content:center}
   .last-backup-pill{max-width:none;width:100%}
 }
+
+/* ══ LEAVE-DAY OT NOTE (v172) ═══════════════════════════════════════════
+   Shown in the Log Session preview when someone on the session is on
+   approved leave that day. Built entirely from --pill-warn-* tokens, so
+   it inverts correctly in night mode with no extra dark-mode rules. */
+.leave-ot-note{margin-top:12px;padding:10px 12px;border:1px solid var(--pill-warn-bd);background:var(--pill-warn-bg);color:var(--pill-warn-fg);border-radius:var(--radius-md);font-size:12px;line-height:1.5}
+.leave-ot-note-head{font-weight:700;margin-bottom:4px}
+.leave-ot-note-list{margin:0 0 6px;padding-left:18px}
+.leave-ot-note-list li{margin:1px 0}
+.leave-ot-note-sub{opacity:.85}

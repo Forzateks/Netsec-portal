@@ -370,7 +370,8 @@ CREATE TABLE public.ot_sessions (
   project_name text,
   activity_type text,
   source text DEFAULT 'manual'::text,
-  source_session_id bigint
+  source_session_id bigint,
+  on_leave boolean NOT NULL DEFAULT false
 );
 
 CREATE TABLE public.annual_leave (

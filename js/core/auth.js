@@ -96,6 +96,34 @@ function clearLoginBtnLoading(btnId) {
   }
 }
 
+// v172: how long any single step of sign-in may hang before we give up.
+var LOGIN_TIMEOUT_MS = 20000;
+
+// Reject if `promise` hasn't settled within `ms`. Sign-in used to have no
+// timeout at all: doLogin() deliberately leaves the button spinning while
+// it hands off to initAppFromUser(), so anything that never settles left the
+// spinner turning forever with no error and no way out but a manual refresh.
+// That is not hypothetical — on 2026-08-28 a tab stopped executing mid-login,
+// the token request completed at Supabase, and the page never saw the reply.
+// The dashboard has had a watchdog for exactly this since v95; login had none.
+function _loginTimeout(promise, ms) {
+  return new Promise(function(resolve, reject){
+    var settled = false;
+    var timer = setTimeout(function(){
+      if (settled) return;
+      settled = true;
+      reject(new Error('__login_timeout__'));
+    }, ms);
+    Promise.resolve(promise).then(function(v){
+      if (settled) return;
+      settled = true; clearTimeout(timer); resolve(v);
+    }, function(e){
+      if (settled) return;
+      settled = true; clearTimeout(timer); reject(e);
+    });
+  });
+}
+
 async function doLogin() {
   var btn = document.getElementById('login-signin-btn');
   if (btn && btn.disabled) return; // re-entry guard (e.g. Enter pressed while in flight)
@@ -106,7 +134,8 @@ async function doLogin() {
 
   setLoginBtnLoading('login-signin-btn', 'Signing in…');
   try {
-    const {data, error} = await sb.auth.signInWithPassword({ email: email, password: password });
+    const {data, error} = await _loginTimeout(
+      sb.auth.signInWithPassword({ email: email, password: password }), LOGIN_TIMEOUT_MS);
     if (error)               { clearLoginBtnLoading('login-signin-btn'); showLoginError(_friendlyAuthError(error.message)); return; }
     if (!data || !data.user) { clearLoginBtnLoading('login-signin-btn'); showLoginError('Sign in failed.'); return; }
 
@@ -116,10 +145,14 @@ async function doLogin() {
     }
 
     // Keep the button in its loading state — we're transitioning to the app.
-    await initAppFromUser(data.user);
+    await _loginTimeout(initAppFromUser(data.user), LOGIN_TIMEOUT_MS);
   } catch (err) {
     clearLoginBtnLoading('login-signin-btn');
-    showLoginError(_friendlyAuthError(err && err.message));
+    if (err && err.message === '__login_timeout__') {
+      showLoginError('Sign-in timed out. Check your connection and try again.');
+    } else {
+      showLoginError(_friendlyAuthError(err && err.message));
+    }
   }
 }
 
@@ -167,6 +200,11 @@ async function doLogout() {
     await sb.auth.signOut();
   } finally {
     currentUser = ''; currentEmail = ''; isManager = false; isBackupResponsible = false;
+    // v172: the poll timer used to survive logout, so it kept hitting the API
+    // every 60s with an empty currentUser — visible in the edge logs as task
+    // queries with no assigned_to filter, running against a dead session.
+    if (typeof stopNotifPolling === 'function') stopNotifPolling();
+    LEAVE_DAYS = {};
     if (typeof Sentry !== 'undefined') { try { Sentry.setUser(null); } catch (e) {} }
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
@@ -232,6 +270,9 @@ async function initAppFromUser(authUser) {
     loadAllProfiles()
   ]);
   if (!profile) {
+    // v172: this branch never cleared the button, so the spinner kept turning
+    // behind the message and read as "still loading" rather than an error.
+    clearLoginBtnLoading('login-signin-btn');
     showLoginError('Your account is not set up yet. Ask the manager to add your profile.');
     await sb.auth.signOut();
     return;
@@ -310,6 +351,10 @@ async function initApp(user) {
   loadProjects().then(function(){
     if (typeof populateProjectDropdowns === 'function') populateProjectDropdowns();
   });
+  // v172: leave-day map for the OT engine — calcOT() credits a session
+  // logged on a day off under weekend rules. Covers every employee, since
+  // any of them can be a team member on someone else's session.
+  if (typeof loadLeaveDays === 'function') loadLeaveDays();
   if (isManager) updateNotifBadge();
   if (typeof startNotifPolling === 'function') startNotifPolling();
   if (typeof updateTasksBadge === 'function') updateTasksBadge();

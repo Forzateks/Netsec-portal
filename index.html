@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v171',
+    release: 'netsec-portal@v172',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -616,7 +616,7 @@
         </div>
         <div class="form-group full" id="us-team-row">
           <label>Team Members *</label>
-          <div id="us-team-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:white"></div>
+          <div id="us-team-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--nx-surface)"></div>
         </div>
         <div class="form-group full">
           <label>Remarks</label>
@@ -632,6 +632,9 @@
           <div style="color:var(--muted);font-weight:600;display:inline-flex;align-items:center;gap:8px"><i data-lucide="timer" style="width:14px;height:14px;stroke-width:2"></i>OT detected</div>
           <div id="us-preview-ot" style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--gold)">—</div>
         </div>
+        <!-- v172: warns when the date falls on a team member's approved leave.
+             Those members are credited under weekend rules. Hidden by default. -->
+        <div id="us-leave-note" class="leave-ot-note" style="display:none"></div>
       </div>
       <div style="margin-top:20px">
         <button class="btn btn-primary btn-block" id="us-save-btn" onclick="saveUnifiedSession()"><i data-lucide="save" class="btn-icon"></i>Save Session</button>
@@ -2498,7 +2501,7 @@
            in openEditUS; read back in saveEditUS. -->
       <div class="form-group full">
         <label>Team Members</label>
-        <div id="edit-us-team-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:white"></div>
+        <div id="edit-us-team-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--nx-surface)"></div>
       </div>
       <div class="form-group full">
         <label>Stake Holders</label>

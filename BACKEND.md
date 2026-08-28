@@ -36,8 +36,19 @@ Stores individual overtime session logs.
 | customer_name | text | Selected customer (text snapshot) — added 2026-04-27 |
 | project_name | text | Selected project (text snapshot) — added 2026-04-27 |
 | activity_type | text | Standardized activity type — added 2026-04-27 |
+| on_leave | boolean | NOT NULL DEFAULT false. True when the row covers a day the employee was on approved leave — added 2026-08-28 (v172) |
 | created_at | timestamptz | DEFAULT NOW() |
 
+> **SQL already run** (2026-08-28 — v172 leave-day overtime):
+> ```sql
+> ALTER TABLE ot_sessions ADD COLUMN IF NOT EXISTS on_leave BOOLEAN NOT NULL DEFAULT false;
+> ```
+> Set by `calcOT()` via `isOnLeave()`. A session logged on a day of approved
+> ANNUAL leave is credited under WEEKEND rules (band `Wknd`, 1:1, every hour,
+> no block window) and flagged here. Sick leave and comp-off days are
+> excluded by policy. The flag survives
+> Policy Recompute because the recompute reloads `LEAVE_DAYS` first.
+>
 > **SQL already run** (2026-04-17):
 > ```sql
 > ALTER TABLE ot_sessions ADD COLUMN status TEXT DEFAULT 'approved';

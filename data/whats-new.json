@@ -422,6 +422,23 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v172-login-timeout",
+      "version": "v172",
+      "category": "fixed",
+      "title": "Sign-in no longer hangs forever",
+      "body": "If signing in stalled — a sleeping laptop, a dropped connection — the button just kept spinning with no message and no way out except reloading the page. It now gives up after 20 seconds and tells you to check your connection, and the \"account not set up\" message no longer leaves the spinner running behind it.",
+      "link": null
+    },
+    {
+      "id": "v172-leave-day-overtime",
+      "version": "v172",
+      "category": "new",
+      "title": "Working on a day off now counts as overtime",
+      "body": "If you log a session on a day you are on approved annual leave, those hours are now credited under weekend rules — 1:1, every hour, with no regular-hours block. The Log Session screen warns you before saving when anyone on the session is on leave that day, and the record is tagged \"On leave\" so it is clear in approvals and reports. The leave day itself is still used; it is not given back. Sick leave and comp-off days are not affected, and only sessions logged from now on count.",
+      "link": "log-session",
+      "link_text": "Open Log Session"
+    },
+    {
       "id": "v171-rollout-audit-log",
       "version": "v171",
       "category": "new",
