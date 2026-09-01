@@ -529,6 +529,35 @@ window.addEventListener('popstate', function(){
 // Dedicated "+ Add Customer" entry point for the new Manage Customers
 // page. Reuses the same promptInput + addCustomer flow as the inline
 // dropdown sentinel, so duplicate-prevention stays single-sourced.
+// v173: customers that look like near-duplicates of `name`. The DB has a
+// unique index on upper(trim(name)), so exact and case/space collisions are
+// already impossible — this catches the ones it cannot: "ENBD" vs
+// "Emirates NBD", "RTA Dubai" vs "RTA". Two records for one company split
+// it across Customer Summary, and nothing downstream can merge them back.
+//
+// Matches on: one normalised name containing the other (>=3 chars), or a
+// shared word of >=4 chars. Advisory only — the caller warns, never blocks.
+function _similarCustomerNames(name) {
+  var norm = function(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); };
+  var target = norm(name);
+  if (!target) return [];
+  var tWords = target.split(' ').filter(function(w){ return w.length >= 4; });
+  var out = [];
+  (CUSTOMERS||[]).forEach(function(c){
+    var other = norm(c.name);
+    if (!other || other === target) return;   // exact dupes handled by the validator
+    var hit = false;
+    if (target.length >= 3 && other.indexOf(target) !== -1) hit = true;
+    if (other.length  >= 3 && target.indexOf(other)  !== -1) hit = true;
+    if (!hit) {
+      var oWords = other.split(' ');
+      hit = tWords.some(function(w){ return oWords.indexOf(w) !== -1; });
+    }
+    if (hit) out.push(c.name);
+  });
+  return out;
+}
+
 async function addCustomerPrompt() {
   var name = await promptInput({
     title: 'Add Customer',

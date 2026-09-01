@@ -954,9 +954,15 @@ ALTER TABLE public.rollout_site_activity_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY user_profiles_authed ON public.user_profiles FOR ALL
   USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
--- customers
-CREATE POLICY customers_authed ON public.customers FOR ALL
-  USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+-- customers (v173: insert open to any signed-in user so POC work can be
+-- registered from Log Session; update/delete narrowed to managers, closing
+-- the gap where any employee could edit or delete a customer)
+CREATE POLICY customers_select ON public.customers FOR SELECT TO authenticated USING (true);
+CREATE POLICY customers_insert ON public.customers FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY customers_update ON public.customers FOR UPDATE TO authenticated
+  USING (is_manager_user()) WITH CHECK (is_manager_user());
+CREATE POLICY customers_delete ON public.customers FOR DELETE TO authenticated
+  USING (is_manager_user());
 
 -- vendors
 CREATE POLICY vendors_select_authenticated ON public.vendors FOR SELECT TO authenticated USING (true);
@@ -972,7 +978,15 @@ CREATE POLICY product_lines_delete_manager       ON public.product_lines FOR DEL
 
 -- engagements
 CREATE POLICY engagements_select ON public.engagements FOR SELECT USING (auth.role() = 'authenticated');
-CREATE POLICY engagements_insert ON public.engagements FOR INSERT WITH CHECK (is_manager_user());
+-- v173: employees may create POC and Pre-Sales engagements under their own
+-- name so the work can be logged the day it starts. Both types routinely
+-- begin before the customer is registered. Everything else stays
+-- manager-only, and created_by must be the caller's own employee name.
+CREATE POLICY engagements_insert ON public.engagements FOR INSERT TO authenticated
+  WITH CHECK (
+    is_manager_user()
+    OR (type IN ('poc','presales') AND created_by = current_employee_name())
+  );
 CREATE POLICY engagements_update ON public.engagements FOR UPDATE USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY engagements_delete ON public.engagements FOR DELETE USING (is_manager_user());
 

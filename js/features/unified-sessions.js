@@ -286,17 +286,57 @@ function _usPopulateCustomersByType(type) {
     if (e.type === type && e.customer_id) matchIds[e.customer_id] = 1;
   });
   var customers = (CUSTOMERS||[]).filter(function(c){ return matchIds[c.id]; });
+  // v173: POC work often starts before the customer exists in the registry,
+  // so POC sessions get an inline "add" route. Other types still require a
+  // manager to register the engagement first.
+  var addOpt = _usCanQuickAddEng(type)
+    ? '<option value="__add_new__">+ Add new customer…</option>' : '';
   if (!customers.length) {
+    if (addOpt) {
+      // Never disable the control when adding is possible — disabling it is
+      // what made a brand-new customer a dead end.
+      sel.innerHTML = '<option value="">-- No ' + esc2(_usQuickAddTypeLabel(type)) +
+                      ' customers yet --</option>' + addOpt;
+      sel.disabled = false;
+      return;
+    }
     sel.innerHTML = '<option value="">No customers with ' + esc2(type) + ' engagements</option>';
     sel.disabled = true;
     return;
   }
   sel.innerHTML = '<option value="">-- Select Customer --</option>'
-    + customers.map(function(c){ return '<option>' + esc2(c.name) + '</option>'; }).join('');
+    + customers.map(function(c){ return '<option>' + esc2(c.name) + '</option>'; }).join('')
+    + addOpt;
+}
+
+// Quick-add covers the two types that routinely start before the customer
+// is registered: POC and Pre-Sales tasks. It needs a signed-in employee
+// name to stamp created_by with — the engagements RLS policy checks it.
+function _usCanQuickAddEng(type) {
+  return (type === 'poc' || type === 'presales') && !!currentUser;
+}
+
+// How to name this engagement type in prompts and buttons.
+function _usQuickAddTypeLabel(type) {
+  return type === 'presales' ? 'Pre-Sales task' : 'POC';
 }
 
 function onUSCustomerChange() {
+  var sel = document.getElementById('us-customer');
+  if (sel && sel.value === '__add_new__') {
+    sel.value = '';                 // don't leave the sentinel showing
+    _usQuickAddCustomer();
+    return;
+  }
   populateUSEngagementDropdown();
+}
+
+function onUSEngagementChange() {
+  var sel = document.getElementById('us-engagement');
+  if (sel && sel.value === '__add_new__') {
+    sel.value = '';
+    _usQuickAddEngagement((document.getElementById('us-customer')||{}).value || '');
+  }
 }
 
 function populateUSEngagementDropdown() {
@@ -314,8 +354,151 @@ function populateUSEngagementDropdown() {
       && (!customer_id || e.customer_id === customer_id);
   });
   sel.innerHTML = '<option value="">-- Select Engagement --</option>'
-    + options.map(function(e){ return '<option value="'+e.id+'">'+e.name+'</option>'; }).join('');
+    + options.map(function(e){ return '<option value="'+e.id+'">'+e.name+'</option>'; }).join('')
+    + ((_usCanQuickAddEng(type) && customer)
+        ? '<option value="__add_new__">+ Add new ' + esc2(_usQuickAddTypeLabel(type)) +
+          '…</option>' : '');
   if (cur) sel.value = cur;
+}
+
+// == POC / PRE-SALES QUICK-ADD (v173) =============================
+// Register a customer and its engagement without leaving Log Session.
+// Both are required to save (the save path wants a real engagement id),
+// and the customer dropdown only lists customers that already HAVE an
+// engagement of the chosen type — so creating just the customer would
+// leave it invisible. The two steps are therefore one flow.
+//
+// Permissions: customers accept an insert from any signed-in user;
+// engagements accept one from an employee only when the type is 'poc' or
+// 'presales' AND created_by is their own name. A 42501 here means that policy has not
+// been applied yet, so it is translated rather than shown raw.
+function _usQuickAddError(err) {
+  var msg = (err && err.message) || String(err || 'Unknown error');
+  if (/row-level security|42501/i.test(msg)) {
+    return 'You do not have permission to add this. Ask a manager to register the ' +
+           'customer and POC, or to apply the v173 policy update.';
+  }
+  return msg;
+}
+
+// Warn when the typed name looks like a customer that already exists.
+// Returns true to proceed, false to abandon.
+async function _usConfirmNotDuplicate(name) {
+  var near = (typeof _similarCustomerNames === 'function') ? _similarCustomerNames(name) : [];
+  if (!near.length) return true;
+  var NL = String.fromCharCode(10);
+  return await confirmAction({
+    title: 'Similar customer already exists',
+    body: 'These are already registered and look close to "' + name + '":' + NL + NL +
+          near.slice(0, 6).map(function(n){ return '  • ' + n; }).join(NL) + NL + NL +
+          'If it is the same company, cancel and pick the existing one — a second ' +
+          'record splits it across every report and cannot be merged later.',
+    confirmText: 'Create anyway',
+    cancelText: 'Cancel',
+    danger: true
+  });
+}
+
+// Insert the engagement. Returns the new row, or null on failure.
+async function _usCreateEngagement(customerName, engName, type) {
+  var cust = (CUSTOMERS||[]).find(function(c){ return c.name === customerName; });
+  if (!cust) { showError('Customer "'+customerName+'" not found.'); return null; }
+  var res = await sb.from('engagements').insert({
+    customer_id: cust.id,
+    name:        engName,
+    type:        type,
+    status:      'active',
+    created_by:  currentUser      // the RLS policy checks this matches you
+  }).select().single();
+  if (res.error) { showError('Error: ' + _usQuickAddError(res.error)); return null; }
+  _projectsLoaded = false;
+  await loadProjects();
+  return res.data;
+}
+
+// Re-render both dropdowns and land on the freshly created pair.
+function _usSelectAfterQuickAdd(customerName, engagementId, type) {
+  _usPopulateCustomersByType(type);
+  var custEl = document.getElementById('us-customer');
+  if (custEl) custEl.value = customerName;
+  populateUSEngagementDropdown();
+  var engEl = document.getElementById('us-engagement');
+  if (engEl && engagementId != null) engEl.value = String(engagementId);
+  if (typeof updateUSPreview === 'function') updateUSPreview();
+}
+
+// Full flow: new customer -> its first engagement -> both selected.
+async function _usQuickAddCustomer() {
+  if (!await requireAuth()) return;
+  var type  = (document.getElementById('us-type')||{}).value || '';
+  if (!_usCanQuickAddEng(type)) return;
+  var label = _usQuickAddTypeLabel(type);
+  var name = await promptInput({
+    title: 'New ' + label + ' customer',
+    label: 'Customer name',
+    placeholder: 'e.g. Emirates NBD',
+    confirmText: 'Next',
+    validate: function(v){
+      var t = (v||'').trim();
+      if (t.length < 2) return 'Enter the customer name.';
+      var dup = (CUSTOMERS||[]).some(function(c){
+        return c.name.trim().toLowerCase() === t.toLowerCase(); });
+      return dup ? '"'+t+'" already exists — cancel and pick it from the list.' : null;
+    }
+  });
+  if (!name) return;
+  name = name.trim();
+  if (!await _usConfirmNotDuplicate(name)) return;
+
+  var engName = await promptInput({
+    title: 'First ' + label + ' for ' + name,
+    label: label + ' name',
+    placeholder: type === 'presales' ? 'e.g. Firewall sizing study' : 'e.g. SD-WAN proof of concept',
+    confirmText: 'Create both',
+    validate: function(v){ return (v||'').trim().length < 2 ? 'Enter the ' + label + ' name.' : null; }
+  });
+  if (!engName) return;   // abandoned before anything was written
+
+  var created = await addCustomer(name);
+  if (!created) return;
+  var eng = await _usCreateEngagement(name, engName.trim(), type);
+  if (!eng) {
+    // Customer landed but the engagement did not — say so plainly, since
+    // the customer now exists and a retry must not create it twice.
+    showError('Customer "'+name+'" was created, but the '+label+' was not. ' +
+              'Add it from the Engagement dropdown.');
+    _usSelectAfterQuickAdd(name, null, type);
+    return;
+  }
+  _usSelectAfterQuickAdd(name, eng.id, type);
+  showToast(label + ' "' + engName.trim() + '" ready ✓');
+}
+
+// Add another engagement to a customer already in the list.
+async function _usQuickAddEngagement(customerName) {
+  if (!customerName) { showError('Pick a customer first.'); return; }
+  if (!await requireAuth()) return;
+  var type  = (document.getElementById('us-type')||{}).value || '';
+  if (!_usCanQuickAddEng(type)) return;
+  var label = _usQuickAddTypeLabel(type);
+  var engName = await promptInput({
+    title: 'New ' + label + ' for ' + customerName,
+    label: label + ' name',
+    placeholder: type === 'presales' ? 'e.g. Firewall sizing study' : 'e.g. SD-WAN proof of concept',
+    confirmText: 'Create ' + label,
+    validate: function(v){
+      var t = (v||'').trim();
+      if (t.length < 2) return 'Enter the ' + label + ' name.';
+      var dup = (ENGAGEMENTS||[]).some(function(e){
+        return e.type === type && e.name.trim().toLowerCase() === t.toLowerCase(); });
+      return dup ? 'A ' + label + ' called "'+t+'" already exists.' : null;
+    }
+  });
+  if (!engName) return;
+  var eng = await _usCreateEngagement(customerName, engName.trim(), type);
+  if (!eng) return;
+  _usSelectAfterQuickAdd(customerName, eng.id, type);
+  showToast(label + ' "' + engName.trim() + '" ready ✓');
 }
 
 function populateUSCustomerDropdown() {

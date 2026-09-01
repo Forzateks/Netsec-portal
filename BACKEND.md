@@ -39,6 +39,27 @@ Stores individual overtime session logs.
 | on_leave | boolean | NOT NULL DEFAULT false. True when the row covers a day the employee was on approved leave — added 2026-08-28 (v172) |
 | created_at | timestamptz | DEFAULT NOW() |
 
+> **SQL to run** (v173 — POC quick-add from Log Session):
+> ```sql
+> drop policy if exists customers_authed on public.customers;
+> create policy customers_select on public.customers for select to authenticated using (true);
+> create policy customers_insert on public.customers for insert to authenticated with check (true);
+> create policy customers_update on public.customers for update to authenticated
+>   using (is_manager_user()) with check (is_manager_user());
+> create policy customers_delete on public.customers for delete to authenticated
+>   using (is_manager_user());
+>
+> drop policy if exists engagements_insert on public.engagements;
+> create policy engagements_insert on public.engagements for insert to authenticated
+>   with check (
+>     is_manager_user()
+>     or (type in ('poc','presales') and created_by = current_employee_name())
+>   );
+> ```
+> Lets an employee register a POC or Pre-Sales customer + engagement inline
+> while logging a session. Also closes a real gap: `customers` was still on the permissive
+> step-1 `FOR ALL` policy, so any employee could UPDATE or DELETE a customer.
+>
 > **SQL already run** (2026-08-28 — v172 leave-day overtime):
 > ```sql
 > ALTER TABLE ot_sessions ADD COLUMN IF NOT EXISTS on_leave BOOLEAN NOT NULL DEFAULT false;

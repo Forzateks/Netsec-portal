@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v173-poc-quick-add",
+      "version": "v173",
+      "category": "new",
+      "title": "Add a POC or Pre-Sales customer without leaving Log Session",
+      "body": "Logging a POC or Pre-Sales task for a customer that is not in the system yet no longer means asking a manager first. The Customer dropdown on those sessions now has \"+ Add new customer…\", which asks for the customer and the engagement name and creates both, then selects them so you can carry on. There is also an \"+ Add new…\" entry in the Engagement dropdown for a customer already on the list. If the name looks like one already registered, it warns you before creating a second record.",
+      "link": "log-session",
+      "link_text": "Open Log Session"
+    },
+    {
       "id": "v172-login-timeout",
       "version": "v172",
       "category": "fixed",
