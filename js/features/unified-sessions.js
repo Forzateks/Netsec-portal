@@ -304,9 +304,13 @@ function _usPopulateCustomersByType(type) {
     sel.disabled = true;
     return;
   }
+  // v174: the add option goes directly under the placeholder, not at the
+  // end. Appended last it sat below every customer — with a list long
+  // enough to scroll (POC has the most), it was off-screen and read as
+  // "this type doesn't have the option".
   sel.innerHTML = '<option value="">-- Select Customer --</option>'
-    + customers.map(function(c){ return '<option>' + esc2(c.name) + '</option>'; }).join('')
-    + addOpt;
+    + addOpt
+    + customers.map(function(c){ return '<option>' + esc2(c.name) + '</option>'; }).join('');
 }
 
 // Quick-add covers the two types that routinely start before the customer
@@ -354,10 +358,10 @@ function populateUSEngagementDropdown() {
       && (!customer_id || e.customer_id === customer_id);
   });
   sel.innerHTML = '<option value="">-- Select Engagement --</option>'
-    + options.map(function(e){ return '<option value="'+e.id+'">'+e.name+'</option>'; }).join('')
     + ((_usCanQuickAddEng(type) && customer)
         ? '<option value="__add_new__">+ Add new ' + esc2(_usQuickAddTypeLabel(type)) +
-          '…</option>' : '');
+          '…</option>' : '')
+    + options.map(function(e){ return '<option value="'+e.id+'">'+e.name+'</option>'; }).join('');
   if (cur) sel.value = cur;
 }
 
