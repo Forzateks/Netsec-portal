@@ -39,6 +39,37 @@ Stores individual overtime session logs.
 | on_leave | boolean | NOT NULL DEFAULT false. True when the row covers a day the employee was on approved leave — added 2026-08-28 (v172) |
 | created_at | timestamptz | DEFAULT NOW() |
 
+> **Data repair already run** (2026-09-07 — v176 Landmark import dates):
+> The 2026-04-05 Landmark import (542 rows, all sharing
+> `created_at = '2026-04-05 12:19:01.091619+00'`) stored day and month
+> TRANSPOSED on every row whose true day was <= 12. The source spreadsheet
+> held US `M/D/YY` text; the converter re-read those cells as `D/M` and
+> rewrote them as ISO. Cells whose day part was > 12 could not be re-read
+> (month 13+ is invalid) so they stayed as text and survived intact — which
+> is why exactly 187 of 542 rows were wrong.
+>
+> Symptom: rows dated up to 2026-12-03, four of them landing on the current
+> date, which made Log Session raise "Possible duplicate session" against
+> work nobody had done.
+>
+> Verified two ways before applying — weekend rate fell 20.9% -> 7.0%
+> against 5.9% for the untouched rows, and an independent reconstruction
+> from `V1.3-04-04-2026/landmark_import.sql` (still in git) gave the same
+> answer. 187 dates corrected, 4 exact duplicate rows removed (ids 409,
+> 422, 459, 528; lower id of each pair kept). No `ot_sessions` were linked
+> to the batch, so no OT or comp-off recalculated.
+>
+> ⚠️ The swap is its own inverse and a repaired row STILL has day <= 12, so
+> the heuristic cannot tell repaired from unrepaired rows. Never re-run the
+> repair by that rule — it would re-corrupt. The exact id set lives in
+> `_v176_landmark_date_repair`.
+>
+> Rollback tables (safe to DROP once the data is confirmed good):
+> `_v176_landmark_date_repair` (187 id/old/new rows),
+> `_v176_landmark_dupes_removed` (the 4 deleted rows in full).
+> Row 169 is separately wrong — its source date was `2001-03-04`, itself
+> nonsense, and it is not a transposition, so its true date is unrecoverable.
+>
 > **SQL to run** (v173 — POC quick-add from Log Session):
 > ```sql
 > drop policy if exists customers_authed on public.customers;
