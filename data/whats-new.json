@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v175-employee-summary-year",
+      "version": "v175",
+      "category": "fixed",
+      "title": "Employee Summary opens on this year",
+      "body": "Reports → Employee Summary now starts on the current year instead of all years, which is the view usually wanted. All Years is still in the dropdown. The year selector also greys out while a From/To range is set — the range always overrode it, but the dropdown carried on showing its own value, so the report could read \"All Years\" while displaying a single quarter.",
+      "link": "employee-summary",
+      "link_text": "Open Employee Summary"
+    },
+    {
       "id": "v174-add-customer-position",
       "version": "v174",
       "category": "fixed",

@@ -1381,13 +1381,20 @@ function initProjectTab() {
   ['pj-eng-year','pj-cust-year','pj-emp-year'].forEach(function(id) {
     const el = document.getElementById(id);
     if (!el || el.options.length) return;
-    // Add "All Years" as first option (default)
+    // v175: Employee Summary opens on the CURRENT YEAR; the other two keep
+    // "All Years". This report is the one read as a per-person comparison,
+    // and a to-date view is the question actually being asked of it. The
+    // sibling reports are about customers and engagements, where the whole
+    // history is usually the point. All Years stays one click away.
+    const defaultToYear = (id === 'pj-emp-year');
     const allOpt = document.createElement('option');
-    allOpt.value = 'all'; allOpt.textContent = 'All Years'; allOpt.selected = true;
+    allOpt.value = 'all'; allOpt.textContent = 'All Years';
+    allOpt.selected = !defaultToYear;
     el.appendChild(allOpt);
     for (let y = currentYear; y >= 2023; y--) {
       const o = document.createElement('option');
       o.value = y; o.textContent = y;
+      if (defaultToYear && y === currentYear) o.selected = true;
       el.appendChild(o);
     }
   });
@@ -1407,9 +1414,27 @@ function clearEmployeeSummaryFilters() {
 async function renderPjEmployeeSummary() {
   document.getElementById('pj-employee-loading').style.display='flex';
   document.getElementById('pj-employee-content').innerHTML='';
-  const year = document.getElementById('pj-emp-year').value || 'all';
+  const yearEl = document.getElementById('pj-emp-year');
+  // Fallback to the current year if the selector hasn't been populated yet
+  // (possible if this tab is opened before populateProjectDropdowns runs) —
+  // otherwise an empty value silently means "all years", which is the
+  // opposite of the intended default.
+  const year = (yearEl && yearEl.value) || String(new Date().getFullYear());
   const fFrom = (document.getElementById('pj-emp-from')||{}).value || '';
   const fTo   = (document.getElementById('pj-emp-to')||{}).value   || '';
+
+  // v175: a From/To range overrides the year (see the query below), but the
+  // dropdown used to keep showing its own value regardless — so the report
+  // could read "All Years" while displaying a single quarter. Disable it
+  // while a range is active so the header can't contradict the numbers.
+  if (yearEl) {
+    var ranged = !!(fFrom || fTo);
+    yearEl.disabled = ranged;
+    yearEl.title = ranged
+      ? 'Date range is active — clear the dates to filter by year instead'
+      : '';
+    yearEl.style.opacity = ranged ? '.55' : '';
+  }
 
   // Reads unified_sessions (Phase 6 cutover). Aggregates by employee
   // (the `employee` column on the unified row, which is the logger),
