@@ -39,6 +39,20 @@ Stores individual overtime session logs.
 | on_leave | boolean | NOT NULL DEFAULT false. True when the row covers a day the employee was on approved leave — added 2026-08-28 (v172) |
 | created_at | timestamptz | DEFAULT NOW() |
 
+> **SQL already run** (2026-09-10 — v177 add a rollout site):
+> ```sql
+> drop policy if exists rollout_sites_insert_manager on public.rollout_sites;
+> create policy rollout_sites_insert_authenticated on public.rollout_sites
+>   for insert to authenticated with check (true);
+> ```
+> Completing a site and toggling MPLS were already open to every signed-in
+> user (the `rollout_sites` UPDATE policy), so the person who marks a site
+> done could not record one that turned up mid-rollout. Accountability comes
+> from `rollout_site_activity_log`, which is append-only and binds
+> `changed_by` to `current_employee_name()` in its own INSERT policy — a site
+> cannot be added under someone else's name. Renaming and bulk import stay
+> manager-only in the UI; DELETE stays manager-only in RLS.
+>
 > **Data repair already run** (2026-09-07 — v176 Landmark import dates):
 > The 2026-04-05 Landmark import (542 rows, all sharing
 > `created_at = '2026-04-05 12:19:01.091619+00'`) stored day and month

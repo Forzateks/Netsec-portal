@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v175',
+    release: 'netsec-portal@v177',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -1324,6 +1324,7 @@
       <div class="flex-between mb-4">
         <div class="card-title" style="margin-bottom:0">Sites</div>
         <div class="filter-bar-inline" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-sm btn-primary" onclick="openAddRolloutSiteModal()"><i data-lucide="plus" class="btn-icon"></i>Add site</button>
           <select id="ro-flt-country" onchange="renderRolloutSites()" style="width:auto;padding:6px 10px;font-size:13px">
             <option value="">All Countries</option>
           </select>
@@ -2670,6 +2671,63 @@
 </div>
 
 <!-- CHANGE PASSWORD MODAL -->
+<!-- ══ ADD ROLLOUT SITE (v177) ══════════════════════════════════════
+     A site that turns up mid-rollout, or one already finished but never
+     scoped. "Already completed" writes status + completed_on in one go so
+     it lands straight in the Completed till today counts. -->
+<div class="modal-overlay" id="add-rollout-site-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">➕ Add site</div>
+    <div id="ars-error" style="display:none;background:var(--pill-danger-bg);color:var(--pill-danger-fg);padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
+    <div id="ars-warn" style="display:none;background:var(--pill-warn-bg);color:var(--pill-warn-fg);padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:10px"></div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Site name *</label>
+      <input type="text" id="ars-name" placeholder="e.g. Centrepoint Dubai Mall" oninput="_arsCheckDuplicate()">
+    </div>
+    <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="form-group" style="margin-bottom:0">
+        <label>Country *</label>
+        <select id="ars-country"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Type *</label>
+        <select id="ars-type">
+          <option value="store">Stores</option>
+          <option value="office">Offices</option>
+          <option value="warehouse">Warehouse</option>
+          <option value="interlinked">Interlinked</option>
+          <option value="dc_dr">DC/DR</option>
+          <option value="cloud">Cloud</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>City <span style="font-weight:400;color:var(--nx-ink-muted)">(optional — drives the per-city breakdown)</span></label>
+      <input type="text" id="ars-city" placeholder="e.g. Dammam">
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:500;cursor:pointer">
+        <input type="checkbox" id="ars-insow" checked style="width:auto;margin:0">
+        <span>In the SOW <span style="font-weight:400;color:var(--nx-ink-muted)">— untick if the scope never covered this site</span></span>
+      </label>
+    </div>
+    <div class="form-group" style="margin-bottom:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:500;cursor:pointer">
+        <input type="checkbox" id="ars-done" onchange="_arsToggleDone()" style="width:auto;margin:0">
+        <span>Already completed</span>
+      </label>
+    </div>
+    <div class="form-group" id="ars-done-row" style="display:none;margin-bottom:14px">
+      <label>Completed on</label>
+      <input type="date" id="ars-completed-on">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAddRolloutSiteModal()">Cancel</button>
+      <button class="btn btn-primary" id="ars-save-btn" onclick="saveNewRolloutSite()">Add site</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="change-password-modal">
   <div class="modal" style="max-width:420px">
     <div class="modal-title">🔑 Change Password</div>

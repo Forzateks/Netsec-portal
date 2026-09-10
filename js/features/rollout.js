@@ -207,8 +207,13 @@ async function renderRolloutOverview() {
        _rolloutTable(sow, countries) + '</div>';
 
   // Completed
-  h += '<div class="card"><div class="card-title">Completed till today &mdash; '+
-       fmtDate(_rolloutTodayISO()) + '</div>' +
+  h += '<div class="card">'+
+       '<div class="flex-between mb-4">'+
+         '<div class="card-title" style="margin-bottom:0">Completed till today &mdash; '+
+           fmtDate(_rolloutTodayISO()) + '</div>' +
+         '<button class="btn btn-sm btn-primary" onclick="openAddRolloutSiteModal()">'+
+           '<i data-lucide="plus" class="btn-icon"></i>Add site</button>'+
+       '</div>' +
        _rolloutTable(done, countries, [
          { label:'Completed', value:function(c){ return doneBy[c]; },
            total:function(){ return done.length; } },
@@ -500,6 +505,151 @@ async function toggleRolloutMpls(id, checked) {
 // Rename a placeholder, or correct a site's details. Manager-only, because
 // this is the SOW baseline - see the design doc. Renaming is the main use:
 // placeholders carry a generated name until the real one is known.
+// == ADD A SITE (v177) =============================================
+// Sites normally arrive via the Import tab, but one turns up mid-rollout
+// often enough that needing a manager to re-import was the bottleneck.
+// Open to any signed-in user, matching who can already mark a site done;
+// every addition is written to the append-only audit log under their name.
+function openAddRolloutSiteModal() {
+  var m = document.getElementById('add-rollout-site-modal');
+  if (!m) return;
+  // Country list comes from the data, so it cannot drift from what the
+  // report groups by. There is deliberately no free-text country: a typo
+  // would silently create a new row in every table on the overview.
+  var sel = document.getElementById('ars-country');
+  if (sel) {
+    sel.innerHTML = _rolloutCountries(ROLLOUT_SITES).map(function(c){
+      return '<option value="' + esc2(c) + '">' + esc2(c) + '</option>';
+    }).join('');
+  }
+  ['ars-name','ars-city'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var t = document.getElementById('ars-type');         if (t) t.value = 'store';
+  var w = document.getElementById('ars-insow');        if (w) w.checked = true;
+  var d = document.getElementById('ars-done');         if (d) d.checked = false;
+  var c = document.getElementById('ars-completed-on'); if (c) c.value = _rolloutTodayISO();
+  _arsToggleDone();
+  ['ars-error','ars-warn'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  m.classList.add('active');
+  var n = document.getElementById('ars-name'); if (n && n.focus) n.focus();
+}
+
+function closeAddRolloutSiteModal() {
+  var m = document.getElementById('add-rollout-site-modal');
+  if (m) m.classList.remove('active');
+}
+
+function _arsToggleDone() {
+  var on  = (document.getElementById('ars-done') || {}).checked;
+  var row = document.getElementById('ars-done-row');
+  if (row) row.style.display = on ? '' : 'none';
+}
+
+// Advisory near-duplicate check as the name is typed. The rollout carries
+// names like "Centrepoint Dammam 2", so an exact-match test alone would miss
+// the realistic mistake of re-adding a site under a slightly different name.
+function _arsCheckDuplicate() {
+  var el = document.getElementById('ars-warn');
+  if (!el) return;
+  var v = ((document.getElementById('ars-name') || {}).value || '').trim().toLowerCase();
+  if (v.length < 3) { el.style.display = 'none'; return; }
+  var hits = ROLLOUT_SITES.filter(function(r){
+    var n = String(r.site_name || '').toLowerCase();
+    if (!n) return false;
+    return n === v || n.indexOf(v) !== -1 || (n.length >= 3 && v.indexOf(n) !== -1);
+  }).slice(0, 4);
+  if (!hits.length) { el.style.display = 'none'; return; }
+  el.innerHTML = '<strong>Already in the tracker:</strong> ' +
+    hits.map(function(r){
+      return esc2(r.site_name) + ' (' + esc2(r.country) + ', ' +
+             esc2(ROLLOUT_TYPE_LABEL[r.site_type] || r.site_type) +
+             (r.status === 'done' ? ', done' : '') + ')';
+    }).join(' &middot; ');
+  el.style.display = '';
+}
+
+async function saveNewRolloutSite() {
+  if (!await requireAuth()) return;
+  var errEl = document.getElementById('ars-error');
+  function fail(msg) { if (errEl) { errEl.textContent = msg; errEl.style.display = ''; } }
+
+  var name    = ((document.getElementById('ars-name') || {}).value || '').trim();
+  var country = (document.getElementById('ars-country') || {}).value || '';
+  var type    = (document.getElementById('ars-type') || {}).value || '';
+  var city    = ((document.getElementById('ars-city') || {}).value || '').trim();
+  var inSow   = !!(document.getElementById('ars-insow') || {}).checked;
+  var done    = !!(document.getElementById('ars-done') || {}).checked;
+  var onDate  = (document.getElementById('ars-completed-on') || {}).value || '';
+
+  if (!name)    return fail('A site needs a name.');
+  if (!country) return fail('Pick a country.');
+  if (!type)    return fail('Pick a site type.');
+  if (done && !onDate) return fail('Give the date it was completed.');
+  if (done && onDate > _rolloutTodayISO()) return fail('The completion date cannot be in the future.');
+  if (!ROLLOUT_PROJECT_ID) return fail('Rollout project not loaded - reopen the tab and try again.');
+
+  var exact = ROLLOUT_SITES.filter(function(r){
+    return String(r.site_name || '').trim().toLowerCase() === name.toLowerCase() &&
+           r.country === country;
+  })[0];
+  if (exact) {
+    var NL = String.fromCharCode(10);
+    var go = await confirmAction({
+      title: 'That site already exists',
+      body: '"' + name + '" is already listed under ' + country + '.' + NL + NL +
+            'Adding it again creates a second row, which double-counts it in every ' +
+            'total on the report. Cancel and use the existing row unless this really ' +
+            'is a separate site.',
+      confirmText: 'Add anyway', cancelText: 'Cancel', danger: true
+    });
+    if (!go) return;
+  }
+
+  var btn = document.getElementById('ars-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding...'; }
+
+  var res = await sb.from('rollout_sites').insert({
+    project_id:   ROLLOUT_PROJECT_ID,
+    site_name:    name,
+    country:      country,
+    city:         city || null,
+    site_type:    type,
+    in_sow:       inSow,
+    status:       done ? 'done' : 'pending',
+    completed_on: done ? onDate : null,
+    updated_at:   new Date().toISOString(),
+    updated_by:   currentUser
+  }).select().single();
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Add site'; }
+  if (res.error) {
+    return fail(/row-level security|42501/i.test(res.error.message)
+      ? 'You do not have permission to add sites. Ask a manager to apply the v177 policy update.'
+      : 'Could not add: ' + res.error.message);
+  }
+
+  // Record what the site was created AS, so the log answers "who added this
+  // and what did they say it was" without diffing against a previous state.
+  var changes = {
+    site_type: { from: null, to: ROLLOUT_TYPE_LABEL[type] || type },
+    country:   { from: null, to: country },
+    in_sow:    { from: null, to: inSow ? 'yes' : 'no' },
+    status:    { from: null, to: done ? 'done' : 'pending' }
+  };
+  if (done) changes.completed_on = { from: null, to: onDate };
+  if (city) changes.city         = { from: null, to: city };
+  await _rolloutLog(res.data, 'created', changes);
+
+  closeAddRolloutSiteModal();
+  showToast('Added "' + name + '" ' + String.fromCharCode(10003));
+  await loadRollout(true);   // force a refetch so every tab agrees
+  if (typeof renderRolloutSites === 'function')    renderRolloutSites();
+  if (typeof renderRolloutOverview === 'function') renderRolloutOverview();
+}
+
 async function editRolloutSite(id) {
   if (!await requireAuth()) return;
   if (!isManager) { showError('Editing sites is manager-only.'); return; }
@@ -648,7 +798,8 @@ var ROLLOUT_ACTION_META = {
   mpls_configured: { icon:'🔗', label:'MPLS configured',color:'var(--nx-primary)' },
   mpls_removed:    { icon:'🔌', label:'MPLS removed',   color:'var(--nx-ink-muted)' },
   renamed:         { icon:'✏️', label:'Renamed',        color:'var(--nx-primary)' },
-  imported:        { icon:'📥', label:'Imported',       color:'var(--nx-ink-muted)' }
+  imported:        { icon:'📥', label:'Imported',       color:'var(--nx-ink-muted)' },
+  created:         { icon:'➕', label:'Added',          color:'var(--nx-green)' }
 };
 
 async function renderRolloutLog() {

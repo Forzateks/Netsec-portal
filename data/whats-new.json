@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v177-rollout-add-site",
+      "version": "v177",
+      "category": "new",
+      "title": "Add a rollout site yourself",
+      "body": "Rollout Tracker now has an \"Add site\" button on the Sites tab and beside \"Completed till today\". A site that turns up mid-rollout no longer needs a manager to re-import the list. Tick \"Already completed\" and give the date and it goes straight into the completed counts. Every addition is recorded in the Activity Log as ➕ Added, with your name, the site type and the date — and it warns you if the name matches a site already on the list.",
+      "link": null
+    },
+    {
       "id": "v175-employee-summary-year",
       "version": "v175",
       "category": "fixed",

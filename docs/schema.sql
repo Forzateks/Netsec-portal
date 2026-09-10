@@ -1152,7 +1152,13 @@ CREATE POLICY rollout_projects_update_manager       ON public.rollout_projects F
 CREATE POLICY rollout_projects_delete_manager       ON public.rollout_projects FOR DELETE TO authenticated USING (is_manager_user());
 CREATE POLICY rollout_sites_select_authenticated    ON public.rollout_sites    FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
 CREATE POLICY rollout_sites_update_authenticated    ON public.rollout_sites    FOR UPDATE TO authenticated USING (auth.role() = 'authenticated');
-CREATE POLICY rollout_sites_insert_manager          ON public.rollout_sites    FOR INSERT TO authenticated WITH CHECK (is_manager_user());
+-- v177: any signed-in user may ADD a site. Completing a site and toggling MPLS
+-- were already open (see the UPDATE policy below), so the person who marks a
+-- site done could not record one that turned up mid-rollout. Accountability is
+-- the append-only rollout_site_activity_log, whose own INSERT policy binds
+-- changed_by to current_employee_name(). Renaming and import stay manager-only
+-- in the UI; DELETE stays manager-only here.
+CREATE POLICY rollout_sites_insert_authenticated    ON public.rollout_sites    FOR INSERT TO authenticated WITH CHECK (true);
 CREATE POLICY rollout_sites_delete_manager          ON public.rollout_sites    FOR DELETE TO authenticated USING (is_manager_user());
 
 -- rollout_site_activity_log (v171) — append-only. SELECT and INSERT only:
