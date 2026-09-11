@@ -533,13 +533,13 @@ function openAddRolloutSiteModal() {
   ['ars-error','ars-warn'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
-  m.classList.add('active');
+  m.classList.add('show');      // .show is what css/styles.css keys display:flex off
   var n = document.getElementById('ars-name'); if (n && n.focus) n.focus();
 }
 
 function closeAddRolloutSiteModal() {
   var m = document.getElementById('add-rollout-site-modal');
-  if (m) m.classList.remove('active');
+  if (m) m.classList.remove('show');
 }
 
 function _arsToggleDone() {

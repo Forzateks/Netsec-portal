@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v178-add-site-button-fix",
+      "version": "v178",
+      "category": "fixed",
+      "title": "\"Add site\" button now opens",
+      "body": "The Add site button did nothing when clicked — the dialog was being shown with the wrong CSS class, so it stayed hidden with no error. It opens properly now, from both the Sites tab and the Completed till today card, and closes with Escape or Cancel.",
+      "link": null
+    },
+    {
       "id": "v177-rollout-add-site",
       "version": "v177",
       "category": "new",
