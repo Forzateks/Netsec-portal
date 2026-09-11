@@ -422,6 +422,14 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v179-add-site-mpls",
+      "version": "v179",
+      "category": "new",
+      "title": "Add site now asks about MPLS",
+      "body": "The Add site form already asked for the country and the site type; it now also asks whether MPLS is configured, with the date it was done. Tick it and the site appears in the MPLS config breakdown straight away instead of needing a second edit. The date is recorded in the Activity Log alongside who added the site.",
+      "link": null
+    },
+    {
       "id": "v178-add-site-button-fix",
       "version": "v178",
       "category": "fixed",

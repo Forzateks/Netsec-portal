@@ -529,7 +529,10 @@ function openAddRolloutSiteModal() {
   var w = document.getElementById('ars-insow');        if (w) w.checked = true;
   var d = document.getElementById('ars-done');         if (d) d.checked = false;
   var c = document.getElementById('ars-completed-on'); if (c) c.value = _rolloutTodayISO();
+  var mp = document.getElementById('ars-mpls');        if (mp) mp.checked = false;
+  var mo = document.getElementById('ars-mpls-on');     if (mo) mo.value = _rolloutTodayISO();
   _arsToggleDone();
+  _arsToggleMpls();
   ['ars-error','ars-warn'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
@@ -545,6 +548,12 @@ function closeAddRolloutSiteModal() {
 function _arsToggleDone() {
   var on  = (document.getElementById('ars-done') || {}).checked;
   var row = document.getElementById('ars-done-row');
+  if (row) row.style.display = on ? '' : 'none';
+}
+
+function _arsToggleMpls() {
+  var on  = (document.getElementById('ars-mpls') || {}).checked;
+  var row = document.getElementById('ars-mpls-row');
   if (row) row.style.display = on ? '' : 'none';
 }
 
@@ -583,12 +592,16 @@ async function saveNewRolloutSite() {
   var inSow   = !!(document.getElementById('ars-insow') || {}).checked;
   var done    = !!(document.getElementById('ars-done') || {}).checked;
   var onDate  = (document.getElementById('ars-completed-on') || {}).value || '';
+  var mpls    = !!(document.getElementById('ars-mpls') || {}).checked;
+  var mplsOn  = (document.getElementById('ars-mpls-on') || {}).value || '';
 
   if (!name)    return fail('A site needs a name.');
   if (!country) return fail('Pick a country.');
   if (!type)    return fail('Pick a site type.');
   if (done && !onDate) return fail('Give the date it was completed.');
   if (done && onDate > _rolloutTodayISO()) return fail('The completion date cannot be in the future.');
+  if (mpls && !mplsOn) return fail('Give the date MPLS was configured.');
+  if (mpls && mplsOn > _rolloutTodayISO()) return fail('The MPLS date cannot be in the future.');
   if (!ROLLOUT_PROJECT_ID) return fail('Rollout project not loaded - reopen the tab and try again.');
 
   var exact = ROLLOUT_SITES.filter(function(r){
@@ -620,6 +633,8 @@ async function saveNewRolloutSite() {
     in_sow:       inSow,
     status:       done ? 'done' : 'pending',
     completed_on: done ? onDate : null,
+    mpls_configured: mpls,
+    mpls_on:         mpls ? mplsOn : null,
     updated_at:   new Date().toISOString(),
     updated_by:   currentUser
   }).select().single();
@@ -641,6 +656,8 @@ async function saveNewRolloutSite() {
   };
   if (done) changes.completed_on = { from: null, to: onDate };
   if (city) changes.city         = { from: null, to: city };
+  changes.mpls_configured = { from: null, to: mpls ? 'yes' : 'no' };
+  if (mpls) changes.mpls_on = { from: null, to: mplsOn };
   await _rolloutLog(res.data, 'created', changes);
 
   closeAddRolloutSiteModal();
