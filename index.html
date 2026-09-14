@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v180',
+    release: 'netsec-portal@v181',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -1759,6 +1759,10 @@
 
     <div class="ps-section-title">Deal Info</div>
     <div class="form-grid">
+      <div class="form-group full">
+        <label for="ps-git-ref">GIT Ref No</label>
+        <input type="text" id="ps-git-ref" placeholder="e.g. GIT/PS/2026/014" autocomplete="off">
+      </div>
       <div class="form-group full">
         <label>Client *</label>
         <input type="text" id="ps-client" list="ps-client-list" placeholder="Customer / client company name">

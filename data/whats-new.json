@@ -422,6 +422,34 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v181-git-ref-no",
+      "version": "v181",
+      "released_at": "2026-09-14T12:42:44Z",
+      "category": "new",
+      "title": "GIT Ref No on Professional Services",
+      "body": "Deals now have a GIT Ref No, shown in its own column with a copy button beside it and entered at the top of the New/Edit Deal form. It is searchable and included in the CSV export, and you are warned if the number is already on another deal.",
+      "link": null
+    },
+    {
+      "id": "v181-inventory-delete",
+      "version": "v181",
+      "released_at": "2026-09-14T12:42:44Z",
+      "category": "new",
+      "title": "Anyone can delete an inventory device, and it is logged in red",
+      "body": "Employees can now delete devices as well as managers. Before deleting you see the device model, status, location, partner and end user. Every deletion shows up in the Inventory Activity Log as a red row with who deleted it, when, and what the device was.",
+      "link": null
+    },
+    {
+      "id": "v181-leave-overview-colours",
+      "version": "v181",
+      "released_at": "2026-09-14T12:42:44Z",
+      "category": "new",
+      "title": "Leave Overview columns are colour-grouped",
+      "body": "Annual leave, sick leave and comp-off columns in the Leave Overview each have their own light tint, so it is easier to read across a row without mixing them up. Works in both light and dark mode.",
+      "link": "leave",
+      "link_text": "Open Leave"
+    },
+    {
       "id": "v180-forced-update",
       "version": "v180",
       "released_at": "2026-09-14T12:34:23Z",

@@ -144,7 +144,7 @@ function renderInventoryTable(data) {
       '<td>'+
         '<div style="display:flex;gap:6px">'+
         '<button class="btn btn-sm btn-ghost" onclick="openEditDeviceModal('+d.id+')">✏️ Edit</button>'+
-        (isManager ? '<button class="btn btn-sm btn-danger" onclick="deleteDevice('+d.id+',\''+esc2(d.serial_number||'')+'\')">🗑</button>' : '')+
+        '<button class="btn btn-sm btn-danger" title="Delete device" aria-label="Delete device '+esc2(d.serial_number||'')+'" onclick="deleteDevice('+d.id+',\''+esc2(d.serial_number||'')+'\')">🗑</button>'+
         '</div>'+
       '</td>'+
     '</tr>';
@@ -372,26 +372,67 @@ async function saveEditDevice() {
   loadInventory();
 }
 
+// v181: open to employees as well as managers (the inventory RLS policy
+// already allowed it; only the UI hid the button). Because anyone can now
+// delete, the record of a deletion has to stand on its own:
+//   - the warning names the device, so the person sees what they are removing
+//   - the log keeps a snapshot of the device's details, since the row itself
+//     is gone afterwards and a bare serial number says nothing about it
+//   - the log is written only AFTER the delete succeeds. It used to be written
+//     first, so a failed delete still left a "Deleted" entry behind.
+// inventory_activity_log has no UPDATE or DELETE policy, so the entry cannot
+// be edited or removed afterwards.
+var INV_DELETE_SNAPSHOT_FIELDS = [
+  ['model_no','Model'], ['availability_status','Status'], ['current_location','Location'],
+  ['current_partner','Partner'], ['current_end_user','End user'], ['ids_ps','IDS/PS'],
+  ['version','Version'], ['remarks','Remarks']
+];
+
 async function deleteDevice(id, serial) {
   if (!await requireAuth()) return;
-  if (!isManager) return;
-  if (!await confirmAction({
-    title: 'Delete this device?',
-    body: 'Serial: '+serial+'\n\nThis cannot be undone.',
-    confirmText: 'Delete device'
-  })) return;
+  var d = (_invData || []).filter(function(x){ return x.id === id; })[0] || { id:id, serial_number:serial };
+  var NL = String.fromCharCode(10);
 
-  await sb.from('inventory_activity_log').insert({
-    device_id:     id,
-    serial_number: serial,
-    changed_by:    currentUser,
-    action:        'deleted',
-    field_changes: {},
+  var lines = ['Serial: ' + (d.serial_number || serial || '—')];
+  INV_DELETE_SNAPSHOT_FIELDS.slice(0, 5).forEach(function(f){
+    if (d[f[0]]) lines.push(f[1] + ': ' + d[f[0]]);
   });
 
-  var res = await sb.from('inventory').delete().eq('id', id);
-  if (res.error) { showError('Error deleting: ' + res.error.message); return; }
-  showToast('Device deleted ✓');
+  if (!await confirmAction({
+    title: 'Delete this device?',
+    body: lines.join(NL) + NL + NL +
+          'This permanently removes the device from inventory and cannot be undone. ' +
+          'The deletion is recorded in the Activity Log under your name.',
+    confirmText: 'Delete device',
+    cancelText: 'Keep device',
+    danger: true
+  })) return;
+
+  var res = await sb.from('inventory').delete().eq('id', id).select('id');
+  if (res.error) { showError('Could not delete: ' + res.error.message); return; }
+  // RLS can filter a delete down to zero rows without raising an error.
+  if (!res.data || !res.data.length) {
+    showError('The device was not deleted - it may already be gone, or you may not have permission.');
+    loadInventory();
+    return;
+  }
+
+  var snapshot = {};
+  INV_DELETE_SNAPSHOT_FIELDS.forEach(function(f){
+    if (d[f[0]] != null && d[f[0]] !== '') snapshot[f[0]] = { from: d[f[0]], to: null };
+  });
+  var logRes = await sb.from('inventory_activity_log').insert({
+    device_id:     id,
+    serial_number: d.serial_number || serial,
+    changed_by:    currentUser,
+    action:        'deleted',
+    field_changes: snapshot
+  });
+  if (logRes.error && typeof reportSilentFail === 'function') {
+    reportSilentFail('inventory_activity_log', { op: 'deleted', error: logRes.error.message });
+  }
+
+  showToast('Device ' + (d.serial_number || serial) + ' deleted');
   loadInventory();
 }
 
@@ -421,6 +462,18 @@ async function loadActivityLog() {
     var icon  = log.action==='created'?'✅':log.action==='deleted'?'🗑️':'✏️';
     var color = log.action==='created'?'var(--success)':log.action==='deleted'?'var(--danger)':'var(--teal)';
     var changesHtml = '—';
+    var isDelete = log.action === 'deleted';
+    // v181: a deletion lists what the device WAS, since the row no longer exists.
+    if (isDelete && log.field_changes && typeof log.field_changes === 'object') {
+      var gone = [];
+      INV_DELETE_SNAPSHOT_FIELDS.forEach(function(f){
+        var c = log.field_changes[f[0]];
+        if (c && c.from != null && c.from !== '') {
+          gone.push('<span class="inv-log-del-key">'+f[1]+':</span> '+esc2(c.from));
+        }
+      });
+      if (gone.length) changesHtml = gone.join('<br>');
+    }
     if (log.action === 'updated' && log.field_changes && typeof log.field_changes === 'object') {
       var parts = [];
       Object.keys(log.field_changes).forEach(function(f) {
@@ -432,7 +485,7 @@ async function loadActivityLog() {
       changesHtml = parts.join('<br>');
     }
     rows +=
-      '<tr>'+
+      '<tr'+(isDelete ? ' class="inv-log-deleted"' : '')+'>'+
       '<td style="white-space:nowrap;font-size:12px;color:var(--muted)" title="'+relativeTimeTitle(log.changed_at)+'">'+relativeTime(log.changed_at)+'</td>'+
       '<td style="font-variant-numeric:tabular-nums;font-size:12px;font-weight:600">'+esc2(log.serial_number||'')+'</td>'+
       '<td><span style="color:'+color+';font-weight:600">'+icon+' '+cap(log.action)+'</span></td>'+

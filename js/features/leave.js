@@ -665,7 +665,9 @@ async function renderLeaveTeam() {
 
   document.getElementById('lv-team-content').innerHTML=
     '<div class="card"><div class="card-title">'+(isManager?'Team':'My')+' Leave Overview '+year+'</div>'+
-    '<div class="table-wrap"><table><thead><tr>'+
+    // v181: lv-overview-table tints the Annual / Sick / Comp-off column groups
+    // (by position, see css/styles.css) so the three allowances read apart.
+    '<div class="table-wrap"><table class="lv-overview-table"><thead><tr>'+
     '<th>Employee</th>'+
     '<th>Upcoming Leave (dates)</th>'+
     '<th>Annual Used</th><th>Annual Rem.</th><th>Usage</th><th>Status</th>'+

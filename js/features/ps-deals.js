@@ -46,6 +46,7 @@ var PS_STATUS_META = {
 // Matches amc-contracts.js's AMC_LOG_FIELD_LABELS pattern exactly.
 // Milestones are NOT included here — out of scope per the approved spec.
 var PS_LOG_FIELD_LABELS = {
+  git_ref_no:'GIT Ref No',
   client_name:'Client', partner:'Partner', region:'Region', mode:'Mode', vendor:'Vendor',
   quoted_year:'Quoted Year', quoted_month:'Quoted Month', awarded_year:'Awarded Year',
   man_days:'Man Days', ps_quoted_tech_usd:'PS Tech (USD)', ps_quoted_sales_usd:'PS Sales (USD)',
@@ -155,7 +156,7 @@ function _psFilteredDeals() {
   if (year)   rows = rows.filter(function(d){ return String(d.quoted_year) === String(year); });
   if (search) {
     rows = rows.filter(function(d){
-      return [d.client_name, d.partner, d.remarks, d.vendor, d.consulted_with_tech]
+      return [d.git_ref_no, d.client_name, d.partner, d.remarks, d.vendor, d.consulted_with_tech]
         .some(function(f){ return f && String(f).toLowerCase().indexOf(search) !== -1; });
     });
   }
@@ -225,6 +226,47 @@ function _psProgressCell(deal) {
   return '<div class="num" style="font-size:11px;line-height:1.4">'+
     p.done + ' / ' + p.total + ' done · ' + paidLabel +
   '</div>';
+}
+
+// == GIT REF NO (v181) ==============================================
+// The ref is passed through a data attribute rather than inlined into the
+// onclick string, so a ref containing a quote cannot break the handler.
+function _psGitRefCell(ref) {
+  if (!ref) return '<span style="color:var(--muted)">\u2014</span>';
+  return '<span class="ps-gitref">'+
+    '<span class="ps-gitref-val num">'+esc2(ref)+'</span>'+
+    '<button type="button" class="ps-gitref-copy" data-ref="'+esc2(ref)+'" '+
+      'onclick="event.stopPropagation();copyPsGitRef(this)" '+
+      'title="Copy GIT Ref No" aria-label="Copy GIT Ref No '+esc2(ref)+'">'+
+      '<i data-lucide="copy"></i></button>'+
+  '</span>';
+}
+
+async function copyPsGitRef(btn) {
+  var ref = btn && btn.getAttribute('data-ref');
+  if (!ref) return;
+  var ok = false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(ref); ok = true;
+    }
+  } catch (e) { ok = false; }
+  if (!ok) {
+    // Fallback for browsers/contexts without the async clipboard API.
+    var ta = document.createElement('textarea');
+    ta.value = ref; ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+  }
+  if (ok) {
+    showToast('Copied ' + ref);
+    btn.classList.add('copied');
+    setTimeout(function(){ btn.classList.remove('copied'); }, 1200);
+  } else {
+    showError('Could not copy - select the number and copy it manually.');
+  }
 }
 
 function _psUsdCell(usd) {
@@ -417,6 +459,7 @@ function _psRenderTable(rows) {
     var rowClick = archived ? '' : 'onclick="openPsDealModal('+d.id+')"';
     return '<tr class="ps-row'+(archived?' ps-row-archived':'')+'" '+rowClick+'>'+
       '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
+      '<td onclick="event.stopPropagation()">'+_psGitRefCell(d.git_ref_no)+'</td>'+
       '<td><strong style="color:var(--navy)">'+esc2(d.client_name||'—')+'</strong></td>'+
       '<td class="hide-mobile" style="font-size:12px">'+esc2(d.partner||'—')+'</td>'+
       '<td class="hide-mobile" style="font-size:12px">'+esc2(d.region||'—')+'</td>'+
@@ -440,6 +483,7 @@ function _psRenderTable(rows) {
     '<div class="table-wrap"><table class="ps-table">'+
       '<thead><tr>'+
         '<th>#</th>'+
+        '<th>GIT Ref No</th>'+
         '<th>Client</th>'+
         '<th class="hide-mobile">Partner</th>'+
         '<th class="hide-mobile">Region</th>'+
@@ -466,6 +510,7 @@ function _psRenderCards(rows) {
         '<div class="ps-card-client">'+esc2(d.client_name||'—')+'</div>'+
         _psStatusBadge(d.status)+
       '</div>'+
+      (d.git_ref_no ? '<div class="ps-card-meta" onclick="event.stopPropagation()">'+_psGitRefCell(d.git_ref_no)+'</div>' : '')+
       '<div class="ps-card-meta">'+esc2(d.partner||'—')+' · '+esc2(d.region||'—')+' · '+esc2(d.mode||'—')+'</div>'+
       '<div class="ps-card-row">'+
         '<span class="num" style="font-weight:600">'+fmtUsd(d.final_ps_value_usd, false)+'</span>'+
@@ -589,6 +634,7 @@ function _psPopulateLinkedEngagementSelect(currentEngId, clientName) {
 
 function _psSeedForm(d) {
   var cur = new Date().getFullYear();
+  document.getElementById('ps-git-ref').value        = d ? (d.git_ref_no||'') : '';
   document.getElementById('ps-client').value         = d ? (d.client_name||'') : '';
   document.getElementById('ps-partner').value        = d ? (d.partner||'') : '';
   document.getElementById('ps-region').value         = d ? (d.region||'') : '';
@@ -1092,6 +1138,7 @@ async function savePsDeal() {
   var errEl = document.getElementById('ps-modal-error');
   if (errEl) errEl.style.display = 'none';
 
+  var gitRef    = (document.getElementById('ps-git-ref').value||'').trim();
   var client    = (document.getElementById('ps-client').value||'').trim();
   var partner   = (document.getElementById('ps-partner').value||'').trim();
   var region    = document.getElementById('ps-region').value || null;
@@ -1114,6 +1161,24 @@ async function savePsDeal() {
   if (status !== 'quoted' && status !== 'lost' && (finalUsd === '' || isNaN(finalUsd))) {
     _psShowModalError('Final PS Value is required once the deal is past Quoted/Lost.');
     return;
+  }
+
+  // v181: a GIT Ref No shared with another deal is almost always a typo, but
+  // whether numbers can legitimately repeat is undecided - so warn, don't block.
+  if (gitRef) {
+    var editingId = _psEditingId;
+    var clash = (PS_DEALS||[]).filter(function(x){
+      return x.id !== editingId && x.git_ref_no &&
+             String(x.git_ref_no).trim().toLowerCase() === gitRef.toLowerCase();
+    })[0];
+    if (clash) {
+      var goOn = await confirmAction({
+        title: 'GIT Ref No already used',
+        body: gitRef + ' is already on the ' + (clash.client_name || 'another') + ' deal. Save anyway?',
+        confirmText: 'Save anyway', cancelText: 'Go back', danger: true
+      });
+      if (!goOn) return;
+    }
   }
 
   var milestones = _psCollectMilestoneRows();
@@ -1143,6 +1208,7 @@ async function savePsDeal() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:8px"></span>Saving…'; }
 
   var payload = {
+    git_ref_no:           gitRef || null,
     client_name:          client,
     partner:              partner || null,
     region:               region,
@@ -1403,7 +1469,7 @@ function downloadPsDealsCsv() {
   if (!isManager) { showError('Manager access only.'); return; }
   var rows = _psFilteredDeals();
   var header = [
-    'S.No','Client','Partner','Region','Mode','Vendor',
+    'S.No','GIT Ref No','Client','Partner','Region','Mode','Vendor',
     'Quoted Year','Quoted Month','Awarded Year','Man Days',
     'PS Tech USD','PS Sales USD','Final USD',
     'Status','Milestones Done','Total Milestones','Paid USD','Milestones',
@@ -1431,7 +1497,7 @@ function downloadPsDealsCsv() {
     var eng = (ENGAGEMENTS||[]).find(function(e){ return e.id === d.linked_engagement_id; });
     var p = _psDealProgress(d.id);
     lines.push([
-      i+1, d.client_name, d.partner, d.region, d.mode, d.vendor,
+      i+1, d.git_ref_no, d.client_name, d.partner, d.region, d.mode, d.vendor,
       d.quoted_year, d.quoted_month, d.awarded_year, d.man_days,
       d.ps_quoted_tech_usd, d.ps_quoted_sales_usd, d.final_ps_value_usd,
       d.status,
@@ -1441,7 +1507,7 @@ function downloadPsDealsCsv() {
       d.consulted_with_tech, d.remarks
     ].map(esc).join(','));
   });
-  if (rows.length === 0) lines.push(esc('No data') + ',,,,,,,,,,,,,,,,,,,,'); // header + 1 row so the file isn't empty
+  if (rows.length === 0) lines.push(esc('No data') + ',,,,,,,,,,,,,,,,,,,,,'); // 22 columns since v181 (GIT Ref No) // header + 1 row so the file isn't empty
   var blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8' });
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');

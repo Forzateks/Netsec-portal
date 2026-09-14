@@ -256,7 +256,7 @@ against `user_profiles.is_manager`) and `current_employee_name()`. See
 | OT sessions | Own only (view/edit/delete) | All |
 | Leave / Comp-off | Own only | All + approvals |
 | Sessions (unified) | All view; edit/delete own | All |
-| Inventory | Add/edit; **no delete** | Full + delete |
+| Inventory | Add/edit/delete (v181 — deletion is logged with a device snapshot) | Full + delete |
 | `inventory_activity_log` | — | Append-only (no UPDATE/DELETE policy on it) |
 | AMC Contracts | None (manager-only screen) | Full |
 | `amc_contract_activity_log` | Read (screen is manager-only, so moot in practice) | Append-only writes bound to `changed_by = current_employee_name()` — no UPDATE/DELETE policy |

@@ -39,6 +39,14 @@ Stores individual overtime session logs.
 | on_leave | boolean | NOT NULL DEFAULT false. True when the row covers a day the employee was on approved leave — added 2026-08-28 (v172) |
 | created_at | timestamptz | DEFAULT NOW() |
 
+> **SQL already run** (2026-09-14 — v181 GIT Ref No on Professional Services):
+> ```sql
+> alter table public.ps_deals add column if not exists git_ref_no text;
+> ```
+> Optional and deliberately not unique — whether every deal needs one and whether numbers
+> can repeat is still undecided, so the deal form warns on a duplicate instead of blocking.
+> Add a unique index if that is confirmed.
+>
 > **SQL already run** (2026-09-10 — v177 add a rollout site):
 > ```sql
 > drop policy if exists rollout_sites_insert_manager on public.rollout_sites;

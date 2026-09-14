@@ -298,7 +298,9 @@ CREATE TABLE public.ps_deals (
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
   is_archived boolean DEFAULT false NOT NULL,
-  archived_at timestamptz
+  archived_at timestamptz,
+  -- v181: Gulf IT reference number. Optional, not unique (duplicates warned in the UI).
+  git_ref_no text
 );
 
 CREATE TABLE public.ps_milestones (

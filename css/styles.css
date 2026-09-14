@@ -3147,3 +3147,58 @@ html.force-update-active,html.force-update-active body{overflow:hidden}
 .force-update-card p strong{color:var(--text)}
 #force-update-btn{min-width:180px;justify-content:center;border-radius:var(--radius-full)}
 .force-update-note{font-size:12px !important}
+
+/* ══ GIT REF NO (v181) ════════════════════════════════════════════════════ */
+.ps-gitref{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.ps-gitref-val{font-size:12px;font-weight:600;color:var(--text)}
+.ps-gitref-copy{display:inline-grid;place-items:center;width:24px;height:24px;padding:0;border:1px solid var(--nx-hairline);
+  border-radius:var(--radius-sm);background:var(--nx-surface);color:var(--muted);cursor:pointer;
+  transition:color .15s ease,border-color .15s ease,background .15s ease}
+.ps-gitref-copy svg{width:13px;height:13px}
+.ps-gitref-copy:hover{color:var(--nx-primary);border-color:var(--nx-primary)}
+.ps-gitref-copy:focus-visible{outline:2px solid var(--nx-primary);outline-offset:1px}
+.ps-gitref-copy.copied{color:var(--success);border-color:var(--success);background:var(--pill-ok-bg)}
+
+/* ══ INVENTORY: DELETED LOG ROW (v181) ════════════════════════════════════
+   Whole row reads as a deletion. Danger pill tokens flip in dark mode; the
+   inset left bar keeps it identifiable where colour alone is not enough. */
+tr.inv-log-deleted td{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
+tr.inv-log-deleted td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
+tr.inv-log-deleted td span{color:inherit !important}
+tr.inv-log-deleted .inv-log-del-key{opacity:.75;font-weight:600}
+
+/* ══ LEAVE OVERVIEW COLUMN GROUPS (v181) ══════════════════════════════════
+   A light tint per allowance so the three groups read apart at a glance:
+   Annual = columns 3-6, Sick = 7-9, Comp-off = 10-12. Positions are stable -
+   every row renders all 12 cells, and hide-mobile cells stay in the DOM so
+   nth-child still counts them. Tints are translucent so they sit on top of
+   whatever surface is behind them, and each theme gets its own set. */
+:root{
+  --lv-annual-tint:rgba(0,117,222,.055);   --lv-annual-head:rgba(0,117,222,.11);
+  --lv-sick-tint:rgba(139,70,210,.05);     --lv-sick-head:rgba(139,70,210,.10);
+  --lv-co-tint:rgba(26,150,60,.055);       --lv-co-head:rgba(26,150,60,.11);
+  --lv-group-rule:rgba(13,13,13,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --lv-annual-tint:rgba(78,161,255,.075);  --lv-annual-head:rgba(78,161,255,.15);
+    --lv-sick-tint:rgba(190,140,255,.075);   --lv-sick-head:rgba(190,140,255,.15);
+    --lv-co-tint:rgba(111,208,143,.07);      --lv-co-head:rgba(111,208,143,.14);
+    --lv-group-rule:rgba(255,255,255,.08);
+  }
+}
+:root[data-theme="dark"]{
+  --lv-annual-tint:rgba(78,161,255,.075);  --lv-annual-head:rgba(78,161,255,.15);
+  --lv-sick-tint:rgba(190,140,255,.075);   --lv-sick-head:rgba(190,140,255,.15);
+  --lv-co-tint:rgba(111,208,143,.07);      --lv-co-head:rgba(111,208,143,.14);
+  --lv-group-rule:rgba(255,255,255,.08);
+}
+.lv-overview-table td:nth-child(n+3):nth-child(-n+6){background-color:var(--lv-annual-tint)}
+.lv-overview-table td:nth-child(n+7):nth-child(-n+9){background-color:var(--lv-sick-tint)}
+.lv-overview-table td:nth-child(n+10):nth-child(-n+12){background-color:var(--lv-co-tint)}
+.lv-overview-table th:nth-child(n+3):nth-child(-n+6){background-color:var(--lv-annual-head)}
+.lv-overview-table th:nth-child(n+7):nth-child(-n+9){background-color:var(--lv-sick-head)}
+.lv-overview-table th:nth-child(n+10):nth-child(-n+12){background-color:var(--lv-co-head)}
+.lv-overview-table th:nth-child(3),.lv-overview-table td:nth-child(3),
+.lv-overview-table th:nth-child(7),.lv-overview-table td:nth-child(7),
+.lv-overview-table th:nth-child(10),.lv-overview-table td:nth-child(10){box-shadow:inset 1px 0 0 var(--lv-group-rule)}
