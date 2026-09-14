@@ -1,5 +1,5 @@
 {
-  "_comment": "To add a new tip: append a new object to items. Use a unique id (tip-016, tip-017...). category is 'new' | 'tip' | 'app' | 'fixed'. body should be 2-3 sentences max. link is one of the keys in WHATS_NEW_ROUTES inside dashboard.js (currently: customer-summary, engagement-summary, employee-summary, team-skills, team, leave, certificates, knowledge-base, my-sessions, approvals, log-session) — leave null to render no link button. Push the file to deploy; existing users see new items in their next shuffle (the JS detects items added since the last shuffle and reshuffles). Tips older than 3-4 months that were category 'new' should be edited down to 'tip' so the badge accurately reflects 'recently shipped'. v121 NEW FIELD: 'version' (e.g. 'v121') opts an item into the update-pill 'what's new' modal — items WITHOUT this field stay dashboard-tips-only. Every ship from v121 onward should append a versioned entry summarising what changed.",
+  "_comment": "To add a new tip: append a new object to items. Use a unique id (tip-016, tip-017...). category is 'new' | 'tip' | 'app' | 'fixed'. body should be 2-3 sentences max. link is one of the keys in WHATS_NEW_ROUTES inside dashboard.js (currently: customer-summary, engagement-summary, employee-summary, team-skills, team, leave, certificates, knowledge-base, my-sessions, approvals, log-session) — leave null to render no link button. Push the file to deploy; existing users see new items in their next shuffle (the JS detects items added since the last shuffle and reshuffles). Tips older than 3-4 months that were category 'new' should be edited down to 'tip' so the badge accurately reflects 'recently shipped'. v121 NEW FIELD: 'version' (e.g. 'v121') opts an item into the update-pill 'what's new' modal — items WITHOUT this field stay dashboard-tips-only. Every ship from v121 onward should append a versioned entry summarising what changed. v180 NEW FIELD: 'released_at' (ISO 8601 UTC, e.g. '2026-09-14T12:00:00Z') is REQUIRED on every versioned entry from v180 on. The forced-update lock in init.js starts its 24-hour clock from the earliest released_at a client has missed; an entry without one falls back to when each device first noticed, which delays the lock. Set it to the time you push.",
   "items": [
     {
       "id": "tip-001",
@@ -420,6 +420,24 @@
       "body": "When a session was logged with team members in the other region, everyone's OT was worked out from the clock time the logger typed — but KSA is one hour behind UAE, so that was the wrong local time for them. Each member's OT record now uses their own local start and end time, which can be worth up to an hour of credit on early-morning and late-evening sessions. Only sessions saved or edited from now on are affected; existing records are left as they are.",
       "link": "my-sessions",
       "link_text": "Open My Sessions"
+    },
+    {
+      "id": "v180-forced-update",
+      "version": "v180",
+      "released_at": "2026-09-14T12:34:23Z",
+      "category": "app",
+      "title": "Updates are now required after 24 hours",
+      "body": "When a new version comes out you still get the Update pill as usual. If it hasn't been installed 24 hours after release, NetSec Portal now locks with a single Update now button until it is. Older versions can save sessions and overtime using rules that have since changed, so this keeps everyone on the same rules. Anything you were typing in Log Session is kept as a draft.",
+      "link": null
+    },
+    {
+      "id": "v180-purge-3-years",
+      "version": "v180",
+      "released_at": "2026-09-14T12:34:23Z",
+      "category": "app",
+      "title": "Old OT records kept for 3 years",
+      "body": "The Purge tool in Admin Tools now only removes archived or rejected OT sessions older than 3 years, instead of 1 year, so past overtime can still be checked if a question comes up.",
+      "link": null
     },
     {
       "id": "v179-add-site-mpls",

@@ -90,7 +90,7 @@ function initThemeControls() {
 // CACHE_VERSION in sw.js and the Sentry release in index.html. It drives
 // the user-menu version label and the "what's new" filter; it is NOT part
 // of the registration URL.
-var APP_VERSION = 'v179';
+var APP_VERSION = 'v180';
 
 // v157: the registration URL is deliberately STABLE (no ?v= cache-buster).
 // It used to carry the version, which caused a phantom update prompt on the
@@ -194,6 +194,8 @@ function showUpdateIcon() {
   _swUpdateWaiting = true;
   var b = document.getElementById('update-available-btn');
   if (b) b.style.display = 'inline-flex';
+  // v180: a newly detected update may already be over the 24h limit.
+  if (typeof checkForcedUpdate === 'function') checkForcedUpdate();
 }
 
 function applyUpdate() {
@@ -696,8 +698,163 @@ function initModalA11y() {
 }
 
 // == INIT ==========================================================
+// == FORCED UPDATE (v180) ==========================================
+// A client running old JS does not just look stale - it writes stale results
+// into the shared database (v158's cross-region OT shift went missing for
+// exactly this reason). The v168 save warning can be dismissed, and the
+// Update pill can be ignored forever. So once a user has been behind for
+// 24 hours, the app locks behind a single "Update now" button.
+//
+// The clock starts at RELEASE, not when this device noticed: someone who
+// reopens the app after three days away is locked straight away. Release time
+// comes from the `released_at` ISO timestamp on each versioned whats-new.json
+// entry. An entry without one falls back to when this device first saw that
+// it was behind, so a forgotten timestamp delays the lock rather than skipping
+// it.
+//
+// Safety rules, because a wrong lock shuts everyone out:
+//   - Only lock if the DEPLOYED init.js really carries a newer APP_VERSION.
+//     A whats-new entry for a version that never shipped must not lock
+//     anyone, or they would update onto the same version and stay locked.
+//   - Offline, or any fetch/parse failure: never lock. They cannot download
+//     the update anyway.
+//   - "Now" is the server's Date header, so a wrong device clock cannot
+//     trigger or dodge the lock.
+var FORCE_UPDATE_AFTER_MS = 24 * 60 * 60 * 1000;
+var _forceUpdateLocked = false;
+
+// Deployed APP_VERSION, read from the live init.js. The query string makes
+// the service worker's cache miss (it matches on the full URL), so this
+// reaches the network instead of returning the cached copy we are running.
+async function _fetchDeployedVersion() {
+  var resp = await fetch('js/core/init.js?fv=' + Date.now(), { cache: 'no-store' });
+  if (!resp.ok) return null;
+  var text = await resp.text();
+  var m = text.match(/var APP_VERSION = '(v\d+)'/);
+  return m ? m[1] : null;
+}
+
+// When this device first saw it was behind `deployed`, in server time.
+// Keyed by the running version so each update restarts the fallback clock.
+function _behindSinceFallback(serverNow) {
+  var key = 'netsec_behind_since_' + APP_VERSION;
+  try {
+    var stored = parseInt(localStorage.getItem(key), 10);
+    if (!isNaN(stored)) return stored;
+    localStorage.setItem(key, String(serverNow));
+  } catch (e) { /* storage blocked: treat as just now */ }
+  return serverNow;
+}
+
+async function checkForcedUpdate() {
+  if (_forceUpdateLocked) return;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+  try {
+    var current  = _verNum(APP_VERSION);
+    var deployed = await _fetchDeployedVersion();
+    if (!deployed || _verNum(deployed) <= current) return;
+
+    var resp = await fetch('data/whats-new.json', { cache: 'no-store' });
+    if (!resp.ok) return;
+    var serverNow = Date.parse(resp.headers.get('Date')) || Date.now();
+    var all  = await resp.json();
+    var pool = (all && Array.isArray(all.items)) ? all.items : [];
+    var top  = _verNum(deployed);
+
+    // Every release between the running version and what is live.
+    var missed = pool.filter(function(it){
+      var v = _verNum(it.version);
+      return it.version && v > current && v <= top;
+    });
+    var stamps = missed
+      .map(function(it){ return Date.parse(it.released_at); })
+      .filter(function(n){ return !isNaN(n) && n <= serverNow; });
+
+    // Earliest missed release is when this client fell behind.
+    var behindSince = stamps.length ? Math.min.apply(null, stamps)
+                                    : _behindSinceFallback(serverNow);
+    if (serverNow - behindSince < FORCE_UPDATE_AFTER_MS) return;
+
+    showForcedUpdateLock(deployed, behindSince);
+  } catch (e) {
+    /* never lock on an error */
+  }
+}
+
+function showForcedUpdateLock(deployedVersion, behindSince) {
+  var el = document.getElementById('force-update-lock');
+  if (!el) return;
+  _forceUpdateLocked = true;
+  var cur = document.getElementById('fu-current');
+  var nxt = document.getElementById('fu-latest');
+  var when = document.getElementById('fu-since');
+  if (cur) cur.textContent = APP_VERSION;
+  if (nxt) nxt.textContent = deployedVersion;
+  if (when) {
+    var hours = Math.floor((Date.now() - behindSince) / 3600000);
+    when.textContent = hours >= 48 ? Math.floor(hours / 24) + ' days' : hours + ' hours';
+  }
+  el.hidden = false;
+  document.documentElement.classList.add('force-update-active');
+  var btn = document.getElementById('force-update-btn');
+  if (btn && btn.focus) btn.focus();
+}
+
+// Last resort: drop every cached file and reload, so the page is rebuilt from
+// the network. The service worker's asset handler falls through to the
+// network on a cache miss, so this always lands on the live version.
+function _forceHardRefresh() {
+  var done = function(){ window.location.reload(); };
+  if (typeof caches === 'undefined' || !caches.keys) { done(); return; }
+  caches.keys()
+    .then(function(keys){ return Promise.all(keys.map(function(k){ return caches.delete(k); })); })
+    .then(done, done);
+}
+
+async function applyForcedUpdate() {
+  var btn = document.getElementById('force-update-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Updating...'; }
+  _swUpdateWaiting = false;
+  try {
+    if (!('serviceWorker' in navigator)) { _forceHardRefresh(); return; }
+    var reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) { _forceHardRefresh(); return; }
+    try { await reg.update(); } catch (e) { /* ignore */ }
+
+    // Wait up to 10s for the new worker to finish installing.
+    var worker = reg.waiting;
+    if (!worker && reg.installing) {
+      worker = await new Promise(function(resolve){
+        var nw = reg.installing;
+        var t = setTimeout(function(){ resolve(null); }, 10000);
+        nw.addEventListener('statechange', function(){
+          if (nw.state === 'installed') { clearTimeout(t); resolve(reg.waiting || nw); }
+        });
+      });
+    }
+    if (worker) {
+      // controllerchange reloads the page. If it never fires, fall back.
+      worker.postMessage({ type: 'SKIP_WAITING' });
+      setTimeout(_forceHardRefresh, 8000);
+      return;
+    }
+  } catch (e) { /* fall through */ }
+  _forceHardRefresh();
+}
+
+function initForcedUpdateChecks() {
+  checkForcedUpdate();
+  setInterval(checkForcedUpdate, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') checkForcedUpdate();
+  });
+  window.addEventListener('online', checkForcedUpdate);
+}
+
 window.onload = async function() {
   initServiceWorker();
+  // v180: lock the app once this client has been a release behind for 24h.
+  initForcedUpdateChecks();
   initLoginBgVideo();
   renderIcons();
   initSidebarEdgeScroll();

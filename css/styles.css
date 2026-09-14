@@ -3129,3 +3129,21 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .leave-ot-note-list{margin:0 0 6px;padding-left:18px}
 .leave-ot-note-list li{margin:1px 0}
 .leave-ot-note-sub{opacity:.85}
+
+/* ══ FORCED UPDATE LOCK (v180) ═══════════════════════════════════════════
+   Full-screen, above login and every modal (modals sit at z-index 200). Built
+   on theme tokens so it reads correctly in light and dark. */
+.force-update-lock{position:fixed;inset:0;z-index:10000;background:var(--nx-canvas);
+  display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.force-update-lock[hidden]{display:none}
+html.force-update-active,html.force-update-active body{overflow:hidden}
+.force-update-card{max-width:440px;width:100%;background:var(--nx-surface);border:1px solid var(--nx-hairline);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-2);padding:32px 28px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:14px}
+.force-update-icon{width:52px;height:52px;border-radius:50%;background:var(--pill-info-bg);color:var(--nx-primary);
+  display:grid;place-items:center;font-size:26px;font-weight:700}
+.force-update-card h2{margin:0;font-size:20px;color:var(--text)}
+.force-update-card p{margin:0;font-size:14px;line-height:1.55;color:var(--muted)}
+.force-update-card p strong{color:var(--text)}
+#force-update-btn{min-width:180px;justify-content:center;border-radius:var(--radius-full)}
+.force-update-note{font-size:12px !important}

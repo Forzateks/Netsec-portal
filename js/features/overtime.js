@@ -845,8 +845,11 @@ async function applyReevalArchived() {
   resultEl.innerHTML = '<div style="padding:10px;background:'+(fail?'var(--pill-danger-bg)':'var(--pill-ok-bg)')+';border-radius:8px"><strong>Re-evaluation done.</strong> '+ok+' un-archived'+(fail?', '+fail+' failed':'')+'. Reload to see updated CO balances.</div>';
 }
 
-// Purge archived/rejected OT sessions older than 1 year. Manager-only,
+// Purge archived/rejected OT sessions older than 3 years (v180 - was 1 year;
+// kept longer so past OT disputes can still be checked). Manager-only,
 // double-confirm. Hard-delete is irreversible.
+var PURGE_AFTER_YEARS = 3;
+
 async function purgeOldArchived() {
   if (!await requireAuth()) return;
   if (!isManager) { showError('Manager only.'); return; }
@@ -854,7 +857,7 @@ async function purgeOldArchived() {
   resultEl.style.display = 'block';
   resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning...</div>';
 
-  var cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 1);
+  var cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - PURGE_AFTER_YEARS);
   var cutoffIso = cutoff.toISOString();
 
   var {data, error} = await sb.from('ot_sessions')
@@ -862,20 +865,20 @@ async function purgeOldArchived() {
     .in('status', ['archived','rejected']);
   if (error) { resultEl.innerHTML = '<div style="color:var(--danger)">Error: '+error.message+'</div>'; return; }
 
-  // Filter to those older than 1 year (use reviewed_at if present, else created_at)
+  // Filter to those older than PURGE_AFTER_YEARS (use reviewed_at if present, else created_at)
   var stale = (data||[]).filter(function(r){
     var ts = r.reviewed_at || r.created_at;
     return ts && ts < cutoffIso;
   });
 
   if (!stale.length) {
-    resultEl.innerHTML = '<div style="padding:10px;background:var(--pill-ok-bg);border-radius:8px;color:var(--success)">Nothing to purge — no archived/rejected sessions older than 1 year.</div>';
+    resultEl.innerHTML = '<div style="padding:10px;background:var(--pill-ok-bg);border-radius:8px;color:var(--success)">Nothing to purge — no archived/rejected sessions older than '+PURGE_AFTER_YEARS+' years.</div>';
     return;
   }
 
   if (!await confirmAction({
     title: 'Permanently delete '+stale.length+' old session'+(stale.length===1?'':'s')+'?',
-    body: 'This will HARD-DELETE archived/rejected sessions older than 1 year (before '+fmtDate(cutoff.toISOString())+').\n\nThis cannot be undone.',
+    body: 'This will HARD-DELETE archived/rejected sessions older than '+PURGE_AFTER_YEARS+' years (before '+fmtDate(cutoff.toISOString())+').\n\nThis cannot be undone.',
     requireTyping: 'DELETE',
     confirmText: 'Continue'
   })) return;

@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v179',
+    release: 'netsec-portal@v180',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -123,6 +123,24 @@
 <body>
 
 <!-- ══ LOGIN SCREEN ══ -->
+<!-- ══ FORCED UPDATE LOCK (v180) ══
+     Shown once this client has been a release behind for 24 hours. Sits above
+     the login screen and every modal. Deliberately NOT a .modal-overlay: the
+     shared a11y trap closes those on Escape, and this must not be dismissable. -->
+<div id="force-update-lock" class="force-update-lock" role="alertdialog" aria-modal="true"
+     aria-labelledby="fu-title" aria-describedby="fu-body" hidden>
+  <div class="force-update-card">
+    <div class="force-update-icon" aria-hidden="true">&#8635;</div>
+    <h2 id="fu-title">Update required</h2>
+    <p id="fu-body">You're on <strong id="fu-current">&mdash;</strong>, and
+      <strong id="fu-latest">&mdash;</strong> has been out for
+      <span id="fu-since">24 hours</span>. Install it to keep using NetSec Portal &mdash;
+      older versions can save sessions and overtime with outdated rules.</p>
+    <button id="force-update-btn" class="btn btn-primary" onclick="applyForcedUpdate()">Update now</button>
+    <p class="force-update-note">Anything you were typing in Log Session is kept as a draft.</p>
+  </div>
+</div>
+
 <div id="login-screen" class="login-screen">
   <video id="login-bg-video" class="login-bg-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
     <source src="images%26videos/netsecloginbg.mp4" type="video/mp4">
@@ -1010,11 +1028,11 @@
     <div class="card" style="margin-bottom:16px;border-left:3px solid var(--danger);background:var(--pill-danger-bg)">
       <div class="card-title" style="margin-bottom:6px">🗑️ Purge Old Archived/Rejected Sessions (DESTRUCTIVE)</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
-        Permanently deletes any archived or rejected OT session older than <strong>1 year</strong>.
+        Permanently deletes any archived or rejected OT session older than <strong>3 years</strong>.
         Use annually to keep the table tidy. Take a <strong>Full Backup first</strong> (see above).
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-danger-solid" onclick="purgeOldArchived()">🗑 Purge &gt; 1 Year</button>
+        <button class="btn btn-danger-solid" onclick="purgeOldArchived()">🗑 Purge &gt; 3 Years</button>
       </div>
       <div id="purge-result" style="margin-top:14px;display:none;font-size:13px"></div>
     </div>
