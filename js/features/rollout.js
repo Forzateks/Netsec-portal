@@ -211,7 +211,7 @@ async function renderRolloutOverview() {
        '<div class="flex-between mb-4">'+
          '<div class="card-title" style="margin-bottom:0">Completed till today &mdash; '+
            fmtDate(_rolloutTodayISO()) + '</div>' +
-         '<button class="btn btn-sm btn-primary" onclick="openAddRolloutSiteModal()">'+
+         '<button class="btn btn-sm btn-primary" onclick="openAddRolloutSiteModal({completed:true})">'+
            '<i data-lucide="plus" class="btn-icon"></i>Add site</button>'+
        '</div>' +
        _rolloutTable(done, countries, [
@@ -510,7 +510,11 @@ async function toggleRolloutMpls(id, checked) {
 // often enough that needing a manager to re-import was the bottleneck.
 // Open to any signed-in user, matching who can already mark a site done;
 // every addition is written to the append-only audit log under their name.
-function openAddRolloutSiteModal() {
+// opts.completed pre-ticks Already completed. v182: the Completed till today
+// card passes it - a site added from that card is one that is finished, and
+// leaving the box unticked there saved JAFZA as pending, so it never appeared.
+function openAddRolloutSiteModal(opts) {
+  opts = opts || {};
   var m = document.getElementById('add-rollout-site-modal');
   if (!m) return;
   // Country list comes from the data, so it cannot drift from what the
@@ -527,7 +531,7 @@ function openAddRolloutSiteModal() {
   });
   var t = document.getElementById('ars-type');         if (t) t.value = 'store';
   var w = document.getElementById('ars-insow');        if (w) w.checked = true;
-  var d = document.getElementById('ars-done');         if (d) d.checked = false;
+  var d = document.getElementById('ars-done');         if (d) d.checked = !!opts.completed;
   var c = document.getElementById('ars-completed-on'); if (c) c.value = _rolloutTodayISO();
   var mp = document.getElementById('ars-mpls');        if (mp) mp.checked = false;
   var mo = document.getElementById('ars-mpls-on');     if (mo) mo.value = _rolloutTodayISO();
@@ -602,6 +606,23 @@ async function saveNewRolloutSite() {
   if (done && onDate > _rolloutTodayISO()) return fail('The completion date cannot be in the future.');
   if (mpls && !mplsOn) return fail('Give the date MPLS was configured.');
   if (mpls && mplsOn > _rolloutTodayISO()) return fail('The MPLS date cannot be in the future.');
+
+  // v182: MPLS configured but not marked completed is almost always a missed
+  // tick. It is legitimate (MPLS can go live ahead of cut-over) so ask, don't block.
+  if (mpls && !done) {
+    var keepPending = await confirmAction({
+      title: 'Site not marked completed',
+      body: 'MPLS is configured, but Already completed is not ticked, so this site will be saved as pending and will not appear under Completed till today.',
+      confirmText: 'Save as pending',
+      cancelText: 'Go back and tick it',
+      danger: false
+    });
+    if (!keepPending) {
+      var doneBox = document.getElementById('ars-done');
+      if (doneBox && doneBox.focus) doneBox.focus();
+      return;
+    }
+  }
   if (!ROLLOUT_PROJECT_ID) return fail('Rollout project not loaded - reopen the tab and try again.');
 
   var exact = ROLLOUT_SITES.filter(function(r){
@@ -661,7 +682,9 @@ async function saveNewRolloutSite() {
   await _rolloutLog(res.data, 'created', changes);
 
   closeAddRolloutSiteModal();
-  showToast('Added "' + name + '" ' + String.fromCharCode(10003));
+  showToast(done
+    ? 'Added "' + name + '" as completed ' + String.fromCharCode(10003)
+    : 'Added "' + name + '" as pending - mark it done to count it as completed');
   await loadRollout(true);   // force a refetch so every tab agrees
   if (typeof renderRolloutSites === 'function')    renderRolloutSites();
   if (typeof renderRolloutOverview === 'function') renderRolloutOverview();

@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v182-add-site-completed",
+      "version": "v182",
+      "released_at": "2026-09-15T07:56:04Z",
+      "category": "fixed",
+      "title": "Sites added from Completed till today count as completed",
+      "body": "Add site on the Completed till today card now opens with Already completed ticked, so a finished site shows up in the completed counts straight away. If you tick MPLS configured without marking the site completed, you are asked before it saves as pending, and the confirmation message tells you which way it was saved.",
+      "link": null
+    },
+    {
       "id": "v181-git-ref-no",
       "version": "v181",
       "released_at": "2026-09-14T12:42:44Z",
