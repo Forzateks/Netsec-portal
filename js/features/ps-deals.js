@@ -302,38 +302,55 @@ var PS_REVENUE_STATUSES = ['won', 'in_progress', 'completed'];
 // v157: takes rows as an argument (the Graphs tab fetches its own) rather
 // than reading the PS_DEALS global — the chart lives on its own sub-tab now
 // and must not depend on the Deals tab having been visited first.
-// v184: also totals what has actually been COLLECTED against each year.
-// Collected is grouped by the deal's awarded_year, not by when the payment
-// arrived - so each pair of bars answers "of what we won in this year, how
-// much has come in", using the same set of deals for both bars. (Grouping
-// payments by their own date would answer a different question - cash flow
-// per year - and the two bars would no longer be comparable.)
+// v185: two figures per year, on two different clocks - deliberately.
+//   Awarded   - final_ps_value_usd, in the year the deal was AWARDED
+//   Collected - milestone payments, in the year the payment was RECEIVED
+//               (the milestone's actual completion date)
+// A project awarded in 2024 and paid across 2025 and 2026 therefore shows one
+// awarded bar in 2024 and collected bars in 2025 and 2026, which is what the
+// money actually did. The two bars in a year are NOT a ratio of each other.
+//
+// A payment with no actual date cannot be placed in a year; it is counted in
+// undatedPaid and footnoted rather than silently dropped or lumped into a
+// year it may not belong to.
+//
 // milestones === null means the milestone query failed; collected is then
 // unknown and the chart draws awarded only.
 function _psYearlyRevenue(rows, milestones) {
   var byYear = {};
   var excludedCount = 0;
-  var yearOfDeal = {};
+  var countsAsRevenue = {};
+  function bucket(y) {
+    if (!byYear[y]) byYear[y] = { usd: 0, paid: 0 };
+    return byYear[y];
+  }
   (rows||[]).forEach(function(d){
     if (d.is_archived) return;
     if (PS_REVENUE_STATUSES.indexOf(d.status) === -1) return;
+    // Payments still count even when the deal has no awarded year - the money
+    // arrived. Only the awarded bar needs the year.
+    countsAsRevenue[d.id] = true;
     if (!d.awarded_year) { excludedCount++; return; }
-    if (!byYear[d.awarded_year]) byYear[d.awarded_year] = { usd: 0, paid: 0 };
-    byYear[d.awarded_year].usd += (Number(d.final_ps_value_usd) || 0);
-    yearOfDeal[d.id] = d.awarded_year;
+    bucket(d.awarded_year).usd += (Number(d.final_ps_value_usd) || 0);
   });
+
   var havePaid = Array.isArray(milestones);
+  var undatedPaid = 0;
   if (havePaid) {
     milestones.forEach(function(m){
-      var y = yearOfDeal[m.deal_id];   // ignores milestones on excluded deals
-      if (!y) return;
-      byYear[y].paid += (Number(m.payment_received_usd) || 0);
+      if (!countsAsRevenue[m.deal_id]) return;     // archived / not a revenue status
+      var amt = Number(m.payment_received_usd) || 0;
+      if (!amt) return;
+      var y = m.actual_completion_date ? Number(String(m.actual_completion_date).slice(0, 4)) : null;
+      if (!y) { undatedPaid += amt; return; }
+      bucket(y).paid += amt;
     });
   }
+
   var years = Object.keys(byYear)
     .map(function(y){ return { year: Number(y), usd: byYear[y].usd, paid: byYear[y].paid }; })
     .sort(function(a,b){ return a.year - b.year; });
-  return { years: years, excludedCount: excludedCount, havePaid: havePaid };
+  return { years: years, excludedCount: excludedCount, havePaid: havePaid, undatedPaid: undatedPaid };
 }
 
 // ── RENDER ────────────────────────────────────────────────────────
@@ -352,7 +369,7 @@ async function loadPsGraphs() {
   // before it can draw anything.
   var pair = await Promise.all([
     sb.from('ps_deals').select('id,awarded_year,final_ps_value_usd,status,is_archived'),
-    sb.from('ps_milestones').select('deal_id,payment_received_usd')
+    sb.from('ps_milestones').select('deal_id,payment_received_usd,actual_completion_date')
   ]);
   var res = pair[0], msRes = pair[1];
   if (res.error) {
@@ -426,12 +443,11 @@ function _psRenderRevenueChart(rows, milestones) {
     var body = paired
       ? bar(gx, y.usd, 'var(--nx-primary)', true) + bar(gx+barW+barGap, y.paid, 'var(--nx-green)', false)
       : bar(gx, y.usd, 'var(--nx-primary)', true);
-    var pct = (paired && y.usd > 0) ? Math.round((y.paid / y.usd) * 100) : null;
+    // No percentage: the two bars are on different clocks (awarded year vs
+    // payment year), so paid/awarded within a year is not a meaningful ratio.
+
     return '<g>'+ body +
       '<text x="'+cx+'" y="'+(baseY+20)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" style="fill:var(--nx-ink)">'+y.year+'</text>'+
-      (pct !== null
-        ? '<text x="'+cx+'" y="'+(baseY+32)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" style="fill:var(--nx-ink-muted)">'+pct+'% collected</text>'
-        : '')+
     '</g>';
   }).join('');
 
@@ -452,17 +468,26 @@ function _psRenderRevenueChart(rows, milestones) {
 
   var collectedNote = paired
     ? '<div style="font-size:11px;color:var(--nx-ink-muted);margin-top:6px">'+
-        'Collected is milestone payments received, grouped by the year the deal was awarded.'+
+        'Awarded is counted in the year the deal was awarded. Collected is each milestone '+
+        'payment in the year it was received, so a project awarded one year can be collected '+
+        'across later years.'+
       '</div>'
     : '<div style="font-size:11px;color:var(--nx-orange-deep);font-style:italic;margin-top:6px">'+
         'Collected figures unavailable - showing awarded only.'+
       '</div>';
+
+  var undatedNote = (paired && data.undatedPaid > 0)
+    ? '<div style="font-size:11px;color:var(--nx-orange-deep);font-style:italic;margin-top:4px">'+
+        fmtUsd(data.undatedPaid, false)+' received is not shown - those milestones have no actual date set.'+
+      '</div>'
+    : '';
 
   wrap.innerHTML =
     '<div style="overflow-x:auto">'+
     '<svg viewBox="0 0 '+svgW+' '+svgH+'" width="'+svgW+'" height="'+svgH+'" style="display:block">'+legend+bars+'</svg>'+
     '</div>'+
     collectedNote +
+    undatedNote +
     footnote;
 }
 

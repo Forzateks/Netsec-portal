@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v185-collected-by-payment-year",
+      "version": "v185",
+      "released_at": "2026-09-23T11:45:28Z",
+      "category": "fixed",
+      "title": "Collected is now counted in the year the payment arrived",
+      "body": "On the Professional Services revenue chart, the green Collected bar now counts each milestone payment in the year it was actually received, rather than the year the deal was awarded. A project awarded in 2024 and paid across 2025 and 2026 now shows the money in 2025 and 2026. If a milestone has a payment but no actual date, the amount is footnoted under the chart instead of being counted in the wrong year.",
+      "link": null
+    },
+    {
       "id": "v184-awarded-vs-collected",
       "version": "v184",
       "released_at": "2026-09-23T11:39:02Z",
