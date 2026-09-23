@@ -2361,9 +2361,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* Status pills — one per status value, mapped via PS_STATUS_META.cls. */
 .ps-st-quoted    { background:var(--nx-hairline); color:var(--nx-ink-2) }
-.ps-st-won       { background:var(--pill-ok-bg); color:var(--pill-ok-fg) }
+.ps-st-won       { background:var(--pill-warn-bg); color:var(--nx-orange-deep) }
 .ps-st-inprog    { background:var(--pill-info-bg); color:var(--pill-info-fg) }
-.ps-st-done      { background:var(--pill-info-bg); color:var(--pill-info-fg) }
+.ps-st-done      { background:var(--pill-ok-bg); color:var(--pill-ok-fg) }
 .ps-st-lost      { background:var(--pill-danger-bg); color:var(--pill-danger-fg) }
 .ps-st-cancelled { background:var(--nx-canvas); color:var(--nx-ink-2) }
 .ps-table .badge,.ps-card .badge,.ps-linked-row .badge{font-size:11px;padding:3px 9px;border-radius:var(--radius-lg);letter-spacing:0;text-transform:none;display:inline-flex;align-items:center;gap:4px}

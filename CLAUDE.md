@@ -258,6 +258,7 @@ against `user_profiles.is_manager`) and `current_employee_name()`. See
 | Sessions (unified) | All view; edit/delete own | All |
 | Inventory | Add/edit/delete (v181 — deletion is logged with a device snapshot) | Full + delete |
 | `inventory_activity_log` | — | Append-only (no UPDATE/DELETE policy on it) |
+| `engagement_activity_log` | Read + append (tracker edits log themselves) | Same — append-only, no UPDATE/DELETE policy |
 | AMC Contracts | None (manager-only screen) | Full |
 | `amc_contract_activity_log` | Read (screen is manager-only, so moot in practice) | Append-only writes bound to `changed_by = current_employee_name()` — no UPDATE/DELETE policy |
 | KB articles | Submit; edit/delete own | All |
@@ -277,7 +278,7 @@ Current tables (`docs/schema.sql`): `user_profiles`, `customers`, `vendors`,
 `ot_sessions`, `annual_leave`, `leave_requests`, `comp_off_register`,
 `comp_off_requests`, `inventory`, `inventory_activity_log`, `certificates`,
 `employee_skills`, `kb_articles`, `notifications`, `dashboard_alert_snoozes`,
-`team_members`, `tasks`, `task_assignments`, `task_templates`,
+`engagement_activity_log`, `team_members`, `tasks`, `task_assignments`, `task_templates`,
 `task_template_assignees`, `backup_log`.
 
 Key facts:

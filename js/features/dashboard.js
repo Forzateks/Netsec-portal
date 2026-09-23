@@ -1219,7 +1219,8 @@ var BACKUP_TABLES = [
   // v167: Rollout Tracker. FK order - projects before sites.
   { table:'rollout_projects',        sheet:'Rollout Projects',        idCol:'id' },
   { table:'rollout_sites',           sheet:'Rollout Sites',           idCol:'id' },
-  { table:'rollout_site_activity_log', sheet:'Rollout Activity Log', idCol:'id' }
+  { table:'rollout_site_activity_log', sheet:'Rollout Activity Log', idCol:'id' },
+  { table:'engagement_activity_log',   sheet:'Tracker Activity Log', idCol:'id' }
 ];
 
 // Escape a JS value into a SQL literal safe for an INSERT VALUES clause.

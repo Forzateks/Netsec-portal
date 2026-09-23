@@ -53,6 +53,61 @@ var TRK_PHASES_POC = [
   'Commercial Process',
   'Hardware Retrieval'   // v139: close-out — retrieving PoC hardware
 ];
+// == ACTIVITY LOG (v183) ===========================================
+// Column -> display label for the log's field diff. Same pattern as
+// PS_LOG_FIELD_LABELS and AMC_LOG_FIELD_LABELS. Only the fields the tracker
+// edit form can change are listed; anything else is ignored by the diff.
+var TRK_LOG_FIELD_LABELS = {
+  status:'Status', tracker_status:'Phase', owner_employee:'Owner',
+  country:'Country', partner:'Partner', category:'Category',
+  project_order_no:'Project Order No', start_date:'Start Date', end_date:'End Date',
+  license_expiry:'License Expiry', signed_off_on:'Signed Off On',
+  orch_version:'Orchestrator Version', ec_version:'EC Version',
+  tracker_remarks:'Remarks', converted_to_project:'Converted to Project',
+  is_on_demand:'On-demand PoC', is_archived:'Archived'
+};
+
+var TRK_LOG_ACTION_META = {
+  updated:  { icon:'\u270F\uFE0F', label:'Updated',  color:'var(--nx-primary)' },
+  archived: { icon:'\uD83D\uDCE6', label:'Archived', color:'var(--nx-orange)' }
+};
+
+// One row per change. The table is append-only at the database level (SELECT
+// and INSERT policies only, no UPDATE or DELETE), and changed_by is bound to
+// current_employee_name() inside the INSERT policy, so a change cannot be
+// attributed to someone else.
+//
+// A failed log write must never roll back the edit the user already saw
+// succeed - it is reported, not thrown.
+async function _trkLog(eng, action, changes) {
+  if (!changes || !Object.keys(changes).length) return;
+  var res = await sb.from('engagement_activity_log').insert({
+    engagement_id:   eng.id,
+    engagement_name: eng.name || null,
+    changed_by:      currentUser,
+    action:          action,
+    field_changes:   changes
+  });
+  if (res.error && typeof reportSilentFail === 'function') {
+    reportSilentFail('engagement_activity_log', { op: action, id: eng.id, error: res.error.message });
+  }
+}
+
+// Diff two states across the logged fields only. Values are compared as
+// strings so 2026-01-01 vs a Date, or true vs 'true', do not read as changes.
+function _trkDiff(before, after) {
+  var out = {};
+  Object.keys(TRK_LOG_FIELD_LABELS).forEach(function(k){
+    if (!(k in after)) return;
+    var a = before && before[k] != null ? before[k] : '';
+    var b = after[k] != null ? after[k] : '';
+    if (String(a) !== String(b)) {
+      out[TRK_LOG_FIELD_LABELS[k]] = { from: a === '' ? null : a, to: b === '' ? null : b };
+    }
+  });
+  return out;
+}
+
 function _trkPhasesFor(type) { return (type === 'poc') ? TRK_PHASES_POC : TRK_PHASES_PROJECT; }
 // Phase dropdown is only enabled when the top-level status is exactly
 // 'active'. Every other status (sign-off, completed, on-hold, dormant,
@@ -553,6 +608,9 @@ function renderTracker() {
 
   var content = document.getElementById('trk-content');
   if (!content) return;
+  // v183: the Activity Log is a view over the same container, not a filter of
+  // the engagement rows - it renders itself and returns.
+  if (_trkActiveTab === 'log') { renderTrackerLog(); return; }
   var rows = _trkFilteredRows();
 
   // Tab strip (count per tab from full dataset, not filtered)
@@ -573,6 +631,7 @@ function renderTracker() {
     tabBtn('all','All',nAll)+
     tabBtn('projects','Projects',nP)+
     tabBtn('pocs','POCs',nQ)+
+    '<button class="trk-tab'+(_trkActiveTab==='log'?' active':'')+'" onclick="showTrackerTab(\'log\')">Activity Log</button>'+
     (nA ? tabBtn('amc','AMC',nA) : '')+
     (nS ? tabBtn('support','Support',nS) : '')+
   '</div>';
@@ -1226,7 +1285,10 @@ async function saveTrackerEdit() {
 
   // Background write — .select() so an RLS-silent failure (0 rows, no error)
   // is caught and reverted. Not awaited against the UI.
-  sb.from('engagements').update(patch).eq('id', id).select('id').then(function(res){
+  // v183: select('*') rather than select('id') - the stored row is what the
+  // log must record. Employees' manager-only fields are reverted by the DB
+  // trigger, so diffing the patch would log changes that never happened.
+  sb.from('engagements').update(patch).eq('id', id).select('*').then(function(res){
     if (res.error || !res.data || !res.data.length) {
       if (row && snapshot) { Object.assign(row, snapshot); renderTracker(); }
       if (typeof reportSilentFail === 'function') {
@@ -1235,6 +1297,14 @@ async function saveTrackerEdit() {
       showError('Could not save "' + (row ? row.name : 'engagement') + '" — change reverted. Please try again.');
       return;
     }
+    // v183: re-sync the in-memory row from the stored row, so any field the
+    // trigger reverted stops showing the value the user typed.
+    var stored = res.data[0];
+    if (row && stored) Object.assign(row, stored);
+    _trkLog({ id: id, name: (stored && stored.name) || (row && row.name) },
+            'updated', _trkDiff(snapshot, stored || patch));
+    renderTracker();
+
     // Success — refresh the projects cache in the background so engagement
     // dropdowns + Manage Engagements reflect the change. Non-blocking.
     if (typeof _projectsLoaded !== 'undefined') {
@@ -1271,6 +1341,8 @@ async function deleteTrackerEngagement() {
   }).eq('id', id);
   if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="archive" class="btn-icon"></i>Archive Engagement'; if (typeof renderIcons === 'function') renderIcons(); }
   if (error) { showError('Could not archive: '+error.message); return; }
+  await _trkLog({ id: id, name: r.name }, 'archived',
+                { 'Archived': { from: 'no', to: 'yes' } });
   showToast('Archived ✓');
   // Invalidate the projects cache so the deleted engagement disappears from
   // session dropdowns / Manage Engagements / Engagement Summary everywhere.
@@ -1587,4 +1659,73 @@ async function saveMilestoneInline(id) {
   if (error) { showError('Error: '+error.message); return; }
   showToast('Milestone updated ✓');
   await loadMilestones();
+}
+
+
+// == TRACKER ACTIVITY LOG VIEW (v183) ==============================
+// Who changed what on an engagement, and when. Read-only by design: the
+// table has no UPDATE or DELETE policy, so entries cannot be edited or
+// removed - not even by a manager.
+async function renderTrackerLog() {
+  var content = document.getElementById('trk-content');
+  if (!content) return;
+
+  // Keep the tab strip visible while the query runs.
+  var nAll = _trkData.length;
+  var nP = _trkData.filter(function(r){return r.type==='project';}).length;
+  var nQ = _trkData.filter(function(r){return r.type==='poc';}).length;
+  var tab = function(key,label,count){
+    return '<button class="trk-tab'+(_trkActiveTab===key?' active':'')+'" onclick="showTrackerTab(\''+key+'\')">'+
+      label+(count!=null?' <span class="trk-tab-count">'+count+'</span>':'')+'</button>';
+  };
+  var bar = '<div class="trk-tab-bar">'+tab('all','All',nAll)+tab('projects','Projects',nP)+
+            tab('pocs','POCs',nQ)+tab('log','Activity Log',null)+'</div>';
+  content.innerHTML = bar + '<div class="loading"><div class="spinner"></div>Loading...</div>';
+
+  var res = await sb.from('engagement_activity_log')
+    .select('*').order('changed_at', { ascending:false }).limit(300);
+
+  if (res.error) {
+    content.innerHTML = bar +
+      '<div class="alert alert-error show">Could not load the activity log: '+esc2(res.error.message)+'</div>';
+    return;
+  }
+  var data = res.data || [];
+  if (!data.length) {
+    content.innerHTML = bar + renderEmptyState({
+      icon:'history', heading:'No changes logged yet',
+      sub:'Edits to an engagement - phase, owner, dates, remarks - will appear here with who made them.'
+    });
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
+
+  var rows = data.map(function(l){
+    var meta = TRK_LOG_ACTION_META[l.action] ||
+               { icon:'\u2022', label:(l.action||''), color:'var(--nx-ink-muted)' };
+    var changes = '\u2014';
+    if (l.field_changes && typeof l.field_changes === 'object') {
+      var parts = Object.keys(l.field_changes).map(function(f){
+        var c = l.field_changes[f] || {};
+        return '<span style="color:var(--muted)">'+esc2(f)+':</span> '+
+          '<span style="color:var(--danger);text-decoration:line-through">'+esc2(c.from==null?'\u2014':String(c.from))+'</span>'+
+          ' \u2192 <span style="color:var(--success)">'+esc2(c.to==null?'\u2014':String(c.to))+'</span>';
+      });
+      if (parts.length) changes = parts.join('<br>');
+    }
+    return '<tr>'+
+      '<td style="white-space:nowrap;font-size:12px;color:var(--muted)" title="'+esc2(relativeTimeTitle(l.changed_at))+'">'+
+        relativeTime(l.changed_at)+'</td>'+
+      '<td style="font-size:12px;font-weight:600">'+esc2(l.engagement_name||'\u2014')+'</td>'+
+      '<td><span style="color:'+meta.color+';font-weight:600;white-space:nowrap">'+meta.icon+' '+esc2(meta.label)+'</span></td>'+
+      '<td style="font-size:12px">'+esc2(l.changed_by||'')+'</td>'+
+      '<td style="font-size:12px;line-height:1.7">'+changes+'</td>'+
+    '</tr>';
+  }).join('');
+
+  content.innerHTML = bar +
+    '<div class="card" style="padding:0"><div class="table-wrap"><table>'+
+    '<thead><tr><th>When</th><th>Engagement</th><th>Action</th><th>Changed By</th><th>Changes</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table></div></div>';
+  if (typeof renderIcons === 'function') renderIcons();
 }

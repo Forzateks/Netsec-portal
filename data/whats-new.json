@@ -422,6 +422,24 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v183-tracker-log",
+      "version": "v183",
+      "released_at": "2026-09-23T10:30:29Z",
+      "category": "new",
+      "title": "Project Tracker now keeps an activity log",
+      "body": "Project Tracker has an Activity Log tab showing every change made to an engagement \u2014 phase, owner, dates, remarks, archiving \u2014 with who made it and the before and after values. Entries cannot be edited or deleted by anyone.",
+      "link": null
+    },
+    {
+      "id": "v183-deal-status-colours",
+      "version": "v183",
+      "released_at": "2026-09-23T10:30:29Z",
+      "category": "fixed",
+      "title": "Won and Completed deals are easier to tell apart",
+      "body": "In Professional Services, Won deals are now orange and Completed deals are green, so a finished deal stands out from one that has only been awarded.",
+      "link": null
+    },
+    {
       "id": "v182-add-site-completed",
       "version": "v182",
       "released_at": "2026-09-15T07:56:04Z",
