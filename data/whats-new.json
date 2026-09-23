@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v188-breakdown-engagement-names",
+      "version": "v188",
+      "released_at": "2026-09-23T11:56:30Z",
+      "category": "fixed",
+      "title": "Revenue breakdown names the engagement",
+      "body": "Rows in the revenue breakdown now show the linked engagement name instead of the client name, so two deals for the same client are no longer identical rows — FAB-MISR-EGYPT-DC and FAB-MISR-EGYPT-DR now read apart. A deal with no engagement linked still shows the client and its GIT Ref No.",
+      "link": null
+    },
+    {
       "id": "v187-breakdown-newest-first",
       "version": "v187",
       "released_at": "2026-09-23T11:53:33Z",

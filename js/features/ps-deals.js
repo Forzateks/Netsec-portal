@@ -31,6 +31,20 @@ var _psMilestonesUserEdited = false;
 // already exist prompts the user before recalculating amounts.
 var _psFinalValueCommitted = null;
 
+// v188: esc2() escapes quotes for ATTRIBUTE/JS contexts - it turns an
+// apostrophe into ' , which renders as a visible backslash in plain text
+// ("MASHREQ'S AL QOUZ EBSU"). For text nodes the right escape is the HTML
+// one, so the breakdown uses this instead. See CLAUDE.md section 11: the
+// full esc2 rewrite is its own deploy, this is a local text-context escape,
+// not a change to esc2.
+function _psTextEsc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// v188: engagement id -> name, for the revenue breakdown labels.
+var _psGraphEngNames = {};
+
 var PS_REGIONS = ['UAE','KSA','Qatar','Oman','Bahrain','Kuwait','Other'];
 var PS_MODES   = ['Remote','Remote+Onsite','Onsite','Shared (GulfIT-Partner)'];
 var PS_STATUS_META = {
@@ -333,7 +347,13 @@ function _psYearlyRevenue(rows, milestones) {
     // Payments still count even when the deal has no awarded year - the money
     // arrived. Only the awarded bar needs the year.
     countsAsRevenue[d.id] = true;
-    dealLabel[d.id] = (d.client_name || 'Unnamed deal') + (d.git_ref_no ? ' (' + d.git_ref_no + ')' : '');
+    // Prefer the linked engagement's name - it is how the work is actually
+    // referred to. Falls back to the client (and GIT ref) when a deal has no
+    // engagement linked, or the engagement has since been deleted.
+    var engName = d.linked_engagement_id ? _psGraphEngNames[d.linked_engagement_id] : null;
+    dealLabel[d.id] = engName
+      ? engName
+      : ((d.client_name || 'Unnamed deal') + (d.git_ref_no ? ' (' + d.git_ref_no + ')' : ''));
     if (!d.awarded_year) { excludedCount++; return; }
     var amt = Number(d.final_ps_value_usd) || 0;
     var b = bucket(d.awarded_year);
@@ -390,10 +410,15 @@ async function loadPsGraphs() {
   // against awarded. Both queries are fired together - the chart needs both
   // before it can draw anything.
   var pair = await Promise.all([
-    sb.from('ps_deals').select('id,client_name,git_ref_no,awarded_year,final_ps_value_usd,status,is_archived'),
-    sb.from('ps_milestones').select('deal_id,payment_received_usd,actual_completion_date')
+    sb.from('ps_deals').select('id,client_name,git_ref_no,linked_engagement_id,awarded_year,final_ps_value_usd,status,is_archived'),
+    sb.from('ps_milestones').select('deal_id,payment_received_usd,actual_completion_date'),
+    sb.from('engagements').select('id,name')
   ]);
-  var res = pair[0], msRes = pair[1];
+  var res = pair[0], msRes = pair[1], engRes = pair[2];
+  // v188: the breakdown names the ENGAGEMENT a deal is linked to, so fetch
+  // the names here rather than relying on the ENGAGEMENTS cache being warm.
+  _psGraphEngNames = {};
+  if (!engRes.error) (engRes.data||[]).forEach(function(e){ _psGraphEngNames[e.id] = e.name; });
   if (res.error) {
     el.innerHTML = '<div class="alert alert-error show">Error: '+res.error.message+'</div>';
     return;
@@ -525,7 +550,7 @@ function _psRenderRevenueChart(rows, milestones) {
               '<div class="ps-rev-bd-head"><span class="ps-rev-dot ps-rev-dot-awarded"></span>Awarded '+
                 '<strong>'+fmtUsd(y.usd, false)+'</strong></div>'+
               list(y.awardedFrom, 'No deals awarded this year', function(it){
-                return '<div class="ps-rev-bd-row"><span>'+esc2(it.label)+'</span>'+
+                return '<div class="ps-rev-bd-row"><span>'+_psTextEsc(it.label)+'</span>'+
                        '<span class="num">'+fmtUsd(it.usd, false)+'</span></div>';
               })+
             '</div>'+
@@ -533,7 +558,7 @@ function _psRenderRevenueChart(rows, milestones) {
               '<div class="ps-rev-bd-head"><span class="ps-rev-dot ps-rev-dot-collected"></span>Collected '+
                 '<strong>'+fmtUsd(y.paid, false)+'</strong></div>'+
               list(y.paidFrom, 'No payments received this year', function(it){
-                return '<div class="ps-rev-bd-row"><span>'+esc2(it.label)+
+                return '<div class="ps-rev-bd-row"><span>'+_psTextEsc(it.label)+
                        (it.n > 1 ? ' <span class="ps-rev-bd-n">'+it.n+' payments</span>' : '')+'</span>'+
                        '<span class="num">'+fmtUsd(it.usd, false)+'</span></div>';
               })+
