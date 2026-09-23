@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v184-awarded-vs-collected",
+      "version": "v184",
+      "released_at": "2026-09-23T11:39:02Z",
+      "category": "new",
+      "title": "Revenue chart now shows collected against awarded",
+      "body": "Professional Services → Graphs shows two bars per year: what was awarded and what has actually been collected from milestone payments, with the percentage collected under each year. Collected is grouped by the year the deal was awarded, so both bars cover the same deals.",
+      "link": null
+    },
+    {
       "id": "v183-tracker-log",
       "version": "v183",
       "released_at": "2026-09-23T10:30:29Z",

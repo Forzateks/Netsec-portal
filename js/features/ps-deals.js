@@ -302,19 +302,38 @@ var PS_REVENUE_STATUSES = ['won', 'in_progress', 'completed'];
 // v157: takes rows as an argument (the Graphs tab fetches its own) rather
 // than reading the PS_DEALS global — the chart lives on its own sub-tab now
 // and must not depend on the Deals tab having been visited first.
-function _psYearlyRevenue(rows) {
+// v184: also totals what has actually been COLLECTED against each year.
+// Collected is grouped by the deal's awarded_year, not by when the payment
+// arrived - so each pair of bars answers "of what we won in this year, how
+// much has come in", using the same set of deals for both bars. (Grouping
+// payments by their own date would answer a different question - cash flow
+// per year - and the two bars would no longer be comparable.)
+// milestones === null means the milestone query failed; collected is then
+// unknown and the chart draws awarded only.
+function _psYearlyRevenue(rows, milestones) {
   var byYear = {};
   var excludedCount = 0;
+  var yearOfDeal = {};
   (rows||[]).forEach(function(d){
     if (d.is_archived) return;
     if (PS_REVENUE_STATUSES.indexOf(d.status) === -1) return;
     if (!d.awarded_year) { excludedCount++; return; }
-    byYear[d.awarded_year] = (byYear[d.awarded_year] || 0) + (Number(d.final_ps_value_usd) || 0);
+    if (!byYear[d.awarded_year]) byYear[d.awarded_year] = { usd: 0, paid: 0 };
+    byYear[d.awarded_year].usd += (Number(d.final_ps_value_usd) || 0);
+    yearOfDeal[d.id] = d.awarded_year;
   });
+  var havePaid = Array.isArray(milestones);
+  if (havePaid) {
+    milestones.forEach(function(m){
+      var y = yearOfDeal[m.deal_id];   // ignores milestones on excluded deals
+      if (!y) return;
+      byYear[y].paid += (Number(m.payment_received_usd) || 0);
+    });
+  }
   var years = Object.keys(byYear)
-    .map(function(y){ return { year: Number(y), usd: byYear[y] }; })
+    .map(function(y){ return { year: Number(y), usd: byYear[y].usd, paid: byYear[y].paid }; })
     .sort(function(a,b){ return a.year - b.year; });
-  return { years: years, excludedCount: excludedCount };
+  return { years: years, excludedCount: excludedCount, havePaid: havePaid };
 }
 
 // ── RENDER ────────────────────────────────────────────────────────
@@ -328,13 +347,21 @@ async function loadPsGraphs() {
   if (!el) return;
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
 
-  var res = await sb.from('ps_deals')
-    .select('awarded_year,final_ps_value_usd,status,is_archived');
+  // v184: milestone payments come along so the chart can show collected
+  // against awarded. Both queries are fired together - the chart needs both
+  // before it can draw anything.
+  var pair = await Promise.all([
+    sb.from('ps_deals').select('id,awarded_year,final_ps_value_usd,status,is_archived'),
+    sb.from('ps_milestones').select('deal_id,payment_received_usd')
+  ]);
+  var res = pair[0], msRes = pair[1];
   if (res.error) {
     el.innerHTML = '<div class="alert alert-error show">Error: '+res.error.message+'</div>';
     return;
   }
-  _psRenderRevenueChart(res.data || []);
+  // A milestone-query failure degrades to awarded-only rather than blanking
+  // the chart - the awarded figures are still worth showing.
+  _psRenderRevenueChart(res.data || [], msRes.error ? null : (msRes.data || []));
 }
 
 // v150: builds the inline SVG "Revenue by Year" bar chart. Same hand-rolled
@@ -344,8 +371,8 @@ async function loadPsGraphs() {
 // v157: moved out of the Deals tab onto its own Graphs sub-tab, writing to
 // #ps-graphs-content. The card + title now live in index.html (matching the
 // AMC Graphs tab), so this only emits the chart body.
-function _psRenderRevenueChart(rows) {
-  var data = _psYearlyRevenue(rows);
+function _psRenderRevenueChart(rows, milestones) {
+  var data = _psYearlyRevenue(rows, milestones);
   var wrap = document.getElementById('ps-graphs-content');
   if (!wrap) return;
   if (!data.years.length) {
@@ -360,37 +387,82 @@ function _psRenderRevenueChart(rows) {
     return;
   }
 
-  var barW = 70, gap = 30, padL = 30, padR = 30, padTop = 50, barAreaH = 140, padBottom = 34;
+  // Two bars per year when collected figures are available: awarded, then
+  // collected. Scale is shared so the pair is directly comparable.
+  var paired = data.havePaid;
+  var barW = paired ? 46 : 70, barGap = 8, gap = 34,
+      padL = 30, padR = 30, padTop = 62, barAreaH = 140, padBottom = 34;
+  var groupW = paired ? (barW*2 + barGap) : barW;
   var n = data.years.length;
-  var svgW = padL + padR + n*barW + (n-1)*gap;
+  var svgW = padL + padR + n*groupW + (n-1)*gap;
   var svgH = padTop + barAreaH + padBottom;
   var maxUsd = 0;
-  data.years.forEach(function(y){ if (y.usd > maxUsd) maxUsd = y.usd; });
+  data.years.forEach(function(y){
+    if (y.usd > maxUsd) maxUsd = y.usd;
+    if (paired && y.paid > maxUsd) maxUsd = y.paid;
+  });
+
+  var baseY = padTop + barAreaH;
+  function bar(x, usd, fill, labelTop) {
+    var h = maxUsd > 0 ? Math.round((usd/maxUsd) * barAreaH) : 0;
+    if (usd > 0 && h < 2) h = 2;
+    var y = baseY - h, cx = x + barW/2;
+    // A zero bar still gets its label, so an uncollected year reads as $0
+    // rather than as missing data.
+    return '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+h+'" rx="4" style="fill:'+fill+'"/>'+
+      '<text x="'+cx+'" y="'+(y-((labelTop && !paired)?20:8))+'" text-anchor="middle" font-family="Inter,sans-serif" '+
+        'font-weight="700" font-size="'+(paired?12:14)+'" style="fill:var(--nx-ink)">'+fmtUsd(usd, false)+'</text>'+
+      // The AED line is dropped in paired mode: at two bars per year it
+      // collides with the neighbouring bar's value label.
+      (labelTop && !paired
+        ? '<text x="'+cx+'" y="'+(y-6)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" '+
+          'style="fill:var(--nx-ink-muted)">'+fmtAed(usdToAed(usd), false)+'</text>'
+        : '');
+  }
 
   var bars = data.years.map(function(y, i){
-    var x = padL + i*(barW+gap);
-    var h = maxUsd > 0 ? Math.round((y.usd/maxUsd) * barAreaH) : 0;
-    if (y.usd > 0 && h < 2) h = 2;
-    var barY = padTop + (barAreaH - h);
-    var cx = x + barW/2;
-    var usdLabel = fmtUsd(y.usd, false);
-    var aedLabel = fmtAed(usdToAed(y.usd), false);
-    return '<g>'+
-      '<rect x="'+x+'" y="'+barY+'" width="'+barW+'" height="'+h+'" rx="4" style="fill:var(--nx-primary)"/>'+
-      '<text x="'+cx+'" y="'+(barY-24)+'" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="14" style="fill:var(--nx-ink)">'+usdLabel+'</text>'+
-      '<text x="'+cx+'" y="'+(barY-8)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" style="fill:var(--nx-ink-muted)">'+aedLabel+'</text>'+
-      '<text x="'+cx+'" y="'+(padTop+barAreaH+20)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" style="fill:var(--nx-ink)">'+y.year+'</text>'+
+    var gx = padL + i*(groupW+gap);
+    var cx = gx + groupW/2;
+    var body = paired
+      ? bar(gx, y.usd, 'var(--nx-primary)', true) + bar(gx+barW+barGap, y.paid, 'var(--nx-green)', false)
+      : bar(gx, y.usd, 'var(--nx-primary)', true);
+    var pct = (paired && y.usd > 0) ? Math.round((y.paid / y.usd) * 100) : null;
+    return '<g>'+ body +
+      '<text x="'+cx+'" y="'+(baseY+20)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" style="fill:var(--nx-ink)">'+y.year+'</text>'+
+      (pct !== null
+        ? '<text x="'+cx+'" y="'+(baseY+32)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" style="fill:var(--nx-ink-muted)">'+pct+'% collected</text>'
+        : '')+
     '</g>';
   }).join('');
+
+  // Legend sits inside the viewBox so it travels with the chart when the
+  // container scrolls sideways on a narrow screen.
+  var legend = paired
+    ? '<g>'+
+        '<rect x="'+padL+'" y="14" width="10" height="10" rx="2" style="fill:var(--nx-primary)"/>'+
+        '<text x="'+(padL+16)+'" y="23" font-family="Inter,sans-serif" font-size="11" style="fill:var(--nx-ink-muted)">Awarded</text>'+
+        '<rect x="'+(padL+86)+'" y="14" width="10" height="10" rx="2" style="fill:var(--nx-green)"/>'+
+        '<text x="'+(padL+102)+'" y="23" font-family="Inter,sans-serif" font-size="11" style="fill:var(--nx-ink-muted)">Collected</text>'+
+      '</g>'
+    : '';
 
   var footnote = data.excludedCount > 0
     ? '<div style="font-size:11px;color:var(--nx-orange-deep);font-style:italic;margin-top:6px">'+data.excludedCount+' deal'+(data.excludedCount===1?'':'s')+' excluded — no awarded year set</div>'
     : '';
 
+  var collectedNote = paired
+    ? '<div style="font-size:11px;color:var(--nx-ink-muted);margin-top:6px">'+
+        'Collected is milestone payments received, grouped by the year the deal was awarded.'+
+      '</div>'
+    : '<div style="font-size:11px;color:var(--nx-orange-deep);font-style:italic;margin-top:6px">'+
+        'Collected figures unavailable - showing awarded only.'+
+      '</div>';
+
   wrap.innerHTML =
     '<div style="overflow-x:auto">'+
-    '<svg viewBox="0 0 '+svgW+' '+svgH+'" width="'+svgW+'" height="'+svgH+'" style="display:block">'+bars+'</svg>'+
+    '<svg viewBox="0 0 '+svgW+' '+svgH+'" width="'+svgW+'" height="'+svgH+'" style="display:block">'+legend+bars+'</svg>'+
     '</div>'+
+    collectedNote +
     footnote;
 }
 
