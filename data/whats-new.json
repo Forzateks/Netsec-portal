@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v186-revenue-breakdown",
+      "version": "v186",
+      "released_at": "2026-09-23T11:50:46Z",
+      "category": "new",
+      "title": "The revenue chart now shows its working",
+      "body": "Under the Professional Services revenue chart there is a year-by-year breakdown: which deals make up the awarded bar, and which deals the collected bar was paid from, with the number of payments where there was more than one. Every figure on the chart can now be traced to the deals behind it.",
+      "link": null
+    },
+    {
       "id": "v185-collected-by-payment-year",
       "version": "v185",
       "released_at": "2026-09-23T11:45:28Z",

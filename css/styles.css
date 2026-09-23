@@ -3202,3 +3202,26 @@ tr.inv-log-deleted .inv-log-del-key{opacity:.75;font-weight:600}
 .lv-overview-table th:nth-child(3),.lv-overview-table td:nth-child(3),
 .lv-overview-table th:nth-child(7),.lv-overview-table td:nth-child(7),
 .lv-overview-table th:nth-child(10),.lv-overview-table td:nth-child(10){box-shadow:inset 1px 0 0 var(--lv-group-rule)}
+
+/* == PS REVENUE BREAKDOWN (v186) ========================================
+   The chart's working, shown under it: which deals make the awarded bar and
+   which payments make the collected bar, per year. */
+.ps-rev-breakdown{margin-top:18px;border-top:1px solid var(--nx-hairline);padding-top:14px;
+  display:flex;flex-direction:column;gap:14px}
+.ps-rev-bd-title{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.ps-rev-bd-year{display:flex;flex-direction:column;gap:8px}
+.ps-rev-bd-yr{font-size:13px;font-weight:700;color:var(--text)}
+.ps-rev-bd-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ps-rev-bd-col{background:var(--nx-canvas);border-radius:var(--radius-md);padding:10px 12px;
+  display:flex;flex-direction:column;gap:5px}
+.ps-rev-bd-head{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.ps-rev-bd-head strong{margin-left:auto;font-size:13px;color:var(--text);font-variant-numeric:tabular-nums}
+.ps-rev-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.ps-rev-dot-awarded{background:var(--nx-primary)}
+.ps-rev-dot-collected{background:var(--nx-green)}
+.ps-rev-bd-row{display:flex;gap:10px;font-size:12px;color:var(--text);line-height:1.5}
+.ps-rev-bd-row span:first-child{flex:1;min-width:0;overflow-wrap:anywhere}
+.ps-rev-bd-row .num{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+.ps-rev-bd-n{font-size:11px;color:var(--muted)}
+.ps-rev-bd-empty{font-size:12px;color:var(--nx-ink-faint);font-style:italic}
+@media(max-width:640px){ .ps-rev-bd-cols{grid-template-columns:1fr} }

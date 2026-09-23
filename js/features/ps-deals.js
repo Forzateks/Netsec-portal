@@ -320,8 +320,11 @@ function _psYearlyRevenue(rows, milestones) {
   var byYear = {};
   var excludedCount = 0;
   var countsAsRevenue = {};
+  var dealLabel = {};
   function bucket(y) {
-    if (!byYear[y]) byYear[y] = { usd: 0, paid: 0 };
+    // v186: awardedFrom / paidFrom keep the parts behind each total so the
+    // chart can show its own working rather than an unexplained number.
+    if (!byYear[y]) byYear[y] = { usd: 0, paid: 0, awardedFrom: [], paidFrom: {} };
     return byYear[y];
   }
   (rows||[]).forEach(function(d){
@@ -330,8 +333,12 @@ function _psYearlyRevenue(rows, milestones) {
     // Payments still count even when the deal has no awarded year - the money
     // arrived. Only the awarded bar needs the year.
     countsAsRevenue[d.id] = true;
+    dealLabel[d.id] = (d.client_name || 'Unnamed deal') + (d.git_ref_no ? ' (' + d.git_ref_no + ')' : '');
     if (!d.awarded_year) { excludedCount++; return; }
-    bucket(d.awarded_year).usd += (Number(d.final_ps_value_usd) || 0);
+    var amt = Number(d.final_ps_value_usd) || 0;
+    var b = bucket(d.awarded_year);
+    b.usd += amt;
+    b.awardedFrom.push({ label: dealLabel[d.id], usd: amt });
   });
 
   var havePaid = Array.isArray(milestones);
@@ -343,12 +350,27 @@ function _psYearlyRevenue(rows, milestones) {
       if (!amt) return;
       var y = m.actual_completion_date ? Number(String(m.actual_completion_date).slice(0, 4)) : null;
       if (!y) { undatedPaid += amt; return; }
-      bucket(y).paid += amt;
+      var b = bucket(y);
+      b.paid += amt;
+      // Several milestones of one deal can land in the same year - group them
+      // so the breakdown reads "Landmark - $55,000 (4 payments)".
+      var key = m.deal_id;
+      if (!b.paidFrom[key]) b.paidFrom[key] = { label: dealLabel[key] || 'Unnamed deal', usd: 0, n: 0 };
+      b.paidFrom[key].usd += amt;
+      b.paidFrom[key].n += 1;
     });
   }
 
+  var big = function(a, b){ return b.usd - a.usd; };
   var years = Object.keys(byYear)
-    .map(function(y){ return { year: Number(y), usd: byYear[y].usd, paid: byYear[y].paid }; })
+    .map(function(y){
+      var b = byYear[y];
+      return {
+        year: Number(y), usd: b.usd, paid: b.paid,
+        awardedFrom: b.awardedFrom.slice().sort(big),
+        paidFrom: Object.keys(b.paidFrom).map(function(k){ return b.paidFrom[k]; }).sort(big)
+      };
+    })
     .sort(function(a,b){ return a.year - b.year; });
   return { years: years, excludedCount: excludedCount, havePaid: havePaid, undatedPaid: undatedPaid };
 }
@@ -368,7 +390,7 @@ async function loadPsGraphs() {
   // against awarded. Both queries are fired together - the chart needs both
   // before it can draw anything.
   var pair = await Promise.all([
-    sb.from('ps_deals').select('id,awarded_year,final_ps_value_usd,status,is_archived'),
+    sb.from('ps_deals').select('id,client_name,git_ref_no,awarded_year,final_ps_value_usd,status,is_archived'),
     sb.from('ps_milestones').select('deal_id,payment_received_usd,actual_completion_date')
   ]);
   var res = pair[0], msRes = pair[1];
@@ -482,13 +504,51 @@ function _psRenderRevenueChart(rows, milestones) {
       '</div>'
     : '';
 
+  // v186: the chart's working, year by year. Plain rows rather than a hover
+  // tooltip - it has to be readable on a phone and visible without hovering.
+  var breakdown = '';
+  if (paired) {
+    breakdown = '<div class="ps-rev-breakdown">'+
+      '<div class="ps-rev-bd-title">How each year is made up</div>'+
+      data.years.map(function(y){
+        function list(items, empty, fmtItem) {
+          if (!items.length) return '<div class="ps-rev-bd-empty">'+empty+'</div>';
+          return items.map(fmtItem).join('');
+        }
+        return '<div class="ps-rev-bd-year">'+
+          '<div class="ps-rev-bd-yr">'+y.year+'</div>'+
+          '<div class="ps-rev-bd-cols">'+
+            '<div class="ps-rev-bd-col">'+
+              '<div class="ps-rev-bd-head"><span class="ps-rev-dot ps-rev-dot-awarded"></span>Awarded '+
+                '<strong>'+fmtUsd(y.usd, false)+'</strong></div>'+
+              list(y.awardedFrom, 'No deals awarded this year', function(it){
+                return '<div class="ps-rev-bd-row"><span>'+esc2(it.label)+'</span>'+
+                       '<span class="num">'+fmtUsd(it.usd, false)+'</span></div>';
+              })+
+            '</div>'+
+            '<div class="ps-rev-bd-col">'+
+              '<div class="ps-rev-bd-head"><span class="ps-rev-dot ps-rev-dot-collected"></span>Collected '+
+                '<strong>'+fmtUsd(y.paid, false)+'</strong></div>'+
+              list(y.paidFrom, 'No payments received this year', function(it){
+                return '<div class="ps-rev-bd-row"><span>'+esc2(it.label)+
+                       (it.n > 1 ? ' <span class="ps-rev-bd-n">'+it.n+' payments</span>' : '')+'</span>'+
+                       '<span class="num">'+fmtUsd(it.usd, false)+'</span></div>';
+              })+
+            '</div>'+
+          '</div>'+
+        '</div>';
+      }).join('')+
+    '</div>';
+  }
+
   wrap.innerHTML =
     '<div style="overflow-x:auto">'+
     '<svg viewBox="0 0 '+svgW+' '+svgH+'" width="'+svgW+'" height="'+svgH+'" style="display:block">'+legend+bars+'</svg>'+
     '</div>'+
     collectedNote +
     undatedNote +
-    footnote;
+    footnote +
+    breakdown;
 }
 
 function renderPsDeals() {
