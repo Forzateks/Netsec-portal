@@ -510,7 +510,10 @@ function _psRenderRevenueChart(rows, milestones) {
   if (paired) {
     breakdown = '<div class="ps-rev-breakdown">'+
       '<div class="ps-rev-bd-title">How each year is made up</div>'+
-      data.years.map(function(y){
+      // Newest year first: the current year is what gets checked, so it reads
+      // at the top. The chart itself stays left-to-right oldest-first - a
+      // reversed time axis is harder to read than a reversed list.
+      data.years.slice().reverse().map(function(y){
         function list(items, empty, fmtItem) {
           if (!items.length) return '<div class="ps-rev-bd-empty">'+empty+'</div>';
           return items.map(fmtItem).join('');

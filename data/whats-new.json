@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v187-breakdown-newest-first",
+      "version": "v187",
+      "released_at": "2026-09-23T11:53:33Z",
+      "category": "fixed",
+      "title": "Revenue breakdown starts with the current year",
+      "body": "The year-by-year breakdown under the revenue chart now lists the newest year first, so the current year is at the top instead of the bottom. The chart itself still runs oldest to newest left to right.",
+      "link": null
+    },
+    {
       "id": "v186-revenue-breakdown",
       "version": "v186",
       "released_at": "2026-09-23T11:50:46Z",
