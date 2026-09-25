@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v190-ps-list-order",
+      "version": "v190",
+      "released_at": "2026-09-25T08:30:00Z",
+      "category": "new",
+      "title": "Professional Services list is ordered by status",
+      "body": "The deals list now groups by status \u2014 In Progress first, then Won, Completed, and Quoted, with Lost and Cancelled at the bottom \u2014 and sorts alphabetically by client within each group. The CSV and Excel exports come out in the same order.",
+      "link": null
+    },
+    {
       "id": "v189-ps-excel-export",
       "version": "v189",
       "released_at": "2026-09-25T07:52:00Z",

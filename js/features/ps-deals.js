@@ -154,6 +154,34 @@ function _psToggleArchivedView() {
   renderPsDeals();
 }
 
+// v190: the register reads live work first and the pipeline last. Deals
+// used to come out in fetch order (newest quoted first) with the statuses
+// interleaved, so an In Progress job sat below a quote nobody had answered.
+// Within a status, deals are alphabetical by client - the register is read
+// by looking for a name, not a date.
+var PS_STATUS_ORDER = ['in_progress', 'won', 'completed', 'quoted', 'lost', 'cancelled'];
+function _psStatusRank(status) {
+  var i = PS_STATUS_ORDER.indexOf(status);
+  return i === -1 ? PS_STATUS_ORDER.length : i;   // an unknown status sorts last
+}
+
+// status group -> client A-Z -> newest quote first for the same client.
+function _psListSort(a, b) {
+  var r = _psStatusRank(a.status) - _psStatusRank(b.status);
+  if (r) return r;
+  var an = (a.client_name || '').trim(), bn = (b.client_name || '').trim();
+  // A deal with no client name goes to the end of its group rather than to
+  // the top, where an empty string would otherwise sort.
+  if (!an !== !bn) return an ? -1 : 1;
+  var byName = an.localeCompare(bn, undefined, { sensitivity: 'base' });
+  if (byName) return byName;
+  var ay = a.quoted_year || 0, by = b.quoted_year || 0;
+  if (ay !== by) return by - ay;
+  var am = a.quoted_month || 0, bm = b.quoted_month || 0;
+  if (am !== bm) return bm - am;
+  return (b.id || 0) - (a.id || 0);
+}
+
 function _psFilteredDeals() {
   var search = (((document.getElementById('ps-search')||{}).value)||'').toLowerCase().trim();
   var client = ((document.getElementById('ps-filter-client')||{}).value)||'';
@@ -179,7 +207,9 @@ function _psFilteredDeals() {
   if (_psStatusFilter !== 'all') {
     rows = rows.filter(function(d){ return d.status === _psStatusFilter; });
   }
-  return rows;
+  // Sorted here rather than in the renderer so the list, the CSV and the
+  // Excel export all come out in the same order.
+  return rows.sort(_psListSort);
 }
 
 // v131: counts feeding the chip-row badges. Operates on the
