@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v191-collected-pending-split",
+      "version": "v191",
+      "released_at": "2026-09-25T09:10:00Z",
+      "category": "fixed",
+      "title": "The deals list now says collected, not paid",
+      "body": "The Progress column used to add up every amount typed into a milestone and call it paid, even when none of those milestones were signed off. It now shows what has actually been collected \u2014 completed milestones only, the same rule as the revenue chart \u2014 with anything else on a second line in orange as pending. The CSV and Excel exports carry both figures as separate columns.",
+      "link": null
+    },
+    {
       "id": "v190-ps-list-order",
       "version": "v190",
       "released_at": "2026-09-25T08:30:00Z",

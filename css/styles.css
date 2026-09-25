@@ -2513,6 +2513,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Progress cell in the deal list view. */
 .ps-table .ps-progress{font-size:11px;line-height:1.4}
 
+/* v191: money sitting on milestones that are not Completed yet. Deliberately
+   the same orange the revenue chart footnotes it in - both tokens flip for
+   dark mode, so no theme-specific rule is needed. */
+.ps-progress-pending{color:var(--nx-orange-deep);font-size:10.5px;line-height:1.4}
+
 /* "X / Y milestones done" suffix in the engagement tracker linked-PS row */
 .ps-linked-progress{font-size:11px;margin-left:auto}
 

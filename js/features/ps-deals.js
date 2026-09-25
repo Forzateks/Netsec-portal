@@ -248,27 +248,41 @@ function _psQuotedLabel(d) {
 
 // Roll up milestone counts + payment totals for a deal. Returns an
 // object the list view and tracker integration both consume.
+// v191: splits the money the same way the revenue chart does - an amount is
+// COLLECTED only once its milestone is marked Completed, anything else is
+// PENDING. paid stays as the sum of both, for anything that wants the raw
+// figure. Before this the list called the lot "paid", which read as money in
+// the bank on a deal where nothing had been signed off.
 function _psDealProgress(dealId) {
   var ms = (PS_MILESTONES||[]).filter(function(m){ return m.deal_id === dealId; });
   var doneCount = 0;
-  var paidTotal = 0;
+  var collected = 0;
+  var pending = 0;
   ms.forEach(function(m){
-    if (m.status === 'completed') doneCount += 1;
-    paidTotal += Number(m.payment_received_usd) || 0;
+    var amt = Number(m.payment_received_usd) || 0;
+    if (m.status === 'completed') { doneCount += 1; collected += amt; }
+    else pending += amt;
   });
-  return { total: ms.length, done: doneCount, paid: paidTotal };
+  return { total: ms.length, done: doneCount,
+           collected: r2(collected), pending: r2(pending), paid: r2(collected + pending) };
 }
 
-// "3 / 5 done · $6,000 / $10,000 paid" — list view summary cell.
+// "3 / 5 done · $6,000 / $10,000 collected" (+ "$2,000 pending") — list
+// view summary cell. v191: reads the same as the revenue chart, so a deal
+// can no longer show money as received while the chart counts none of it.
 function _psProgressCell(deal) {
   var p = _psDealProgress(deal.id);
   if (!p.total) return '<span class="dim">—</span>';
   var final = deal.final_ps_value_usd;
-  var paidLabel = (final != null && final !== '')
-    ? (fmtUsd(p.paid, false) + ' / ' + fmtUsd(final, false) + ' paid')
-    : (fmtUsd(p.paid, false) + ' paid');
+  var collectedLabel = (final != null && final !== '')
+    ? (fmtUsd(p.collected, false) + ' / ' + fmtUsd(final, false) + ' collected')
+    : (fmtUsd(p.collected, false) + ' collected');
   return '<div class="num" style="font-size:11px;line-height:1.4">'+
-    p.done + ' / ' + p.total + ' done · ' + paidLabel +
+    p.done + ' / ' + p.total + ' done · ' + collectedLabel +
+    (p.pending > 0
+      ? '<div class="ps-progress-pending" title="Recorded against milestones not yet marked Completed">'+
+          fmtUsd(p.pending, false)+' pending</div>'
+      : '') +
   '</div>';
 }
 
@@ -1707,18 +1721,9 @@ function renderLinkedPsDealsForEngagement(engagementId) {
 // this gives one row per milestone so the numbers can be pivoted. Exports
 // exactly what the list is filtered to - what you see is what you get.
 //
-// Collected vs Pending follows the same rule as the revenue chart (v189): an
-// amount counts as collected only once its milestone is marked Completed.
-function _psPaymentSplit(dealId) {
-  var collected = 0, pending = 0;
-  (PS_MILESTONES||[]).forEach(function(m){
-    if (m.deal_id !== dealId) return;
-    var amt = Number(m.payment_received_usd) || 0;
-    if (!amt) return;
-    if (m.status === 'completed') collected += amt; else pending += amt;
-  });
-  return { collected: r2(collected), pending: r2(pending) };
-}
+// Collected vs Pending comes from _psDealProgress, so the sheet, the list and
+// the revenue chart all count a payment the same way: collected only once its
+// milestone is marked Completed.
 
 async function downloadPsDealsExcel() {
   if (!isManager) { showError('Manager access only.'); return; }
@@ -1764,7 +1769,6 @@ async function downloadPsDealsExcel() {
     ]];
     deals.forEach(function(d, i){
       var p = _psDealProgress(d.id);
-      var split = _psPaymentSplit(d.id);
       var finalUsd = num(d.final_ps_value_usd);
       dAoa.push([
         i+1, d.git_ref_no||'', d.client_name||'', d.partner||'', d.region||'', d.mode||'', d.vendor||'',
@@ -1775,7 +1779,7 @@ async function downloadPsDealsExcel() {
         finalUsd === '' ? '' : r2(usdToAed(finalUsd)),
         (PS_STATUS_META[d.status]||{}).label || d.status || '',
         p.done, p.total,
-        split.collected, split.pending,
+        p.collected, p.pending,
         engName(d.linked_engagement_id), d.consulted_with_tech||'', d.remarks||''
       ]);
     });
@@ -1833,7 +1837,7 @@ function downloadPsDealsCsv() {
     'S.No','GIT Ref No','Client','Partner','Region','Mode','Vendor',
     'Quoted Year','Quoted Month','Awarded Year','Man Days',
     'PS Tech USD','PS Sales USD','Final USD',
-    'Status','Milestones Done','Total Milestones','Paid USD','Milestones',
+    'Status','Milestones Done','Total Milestones','Collected USD','Pending USD','Milestones',
     'Linked Engagement','Consulted','Remarks'
   ];
   function esc(v) {
@@ -1862,13 +1866,13 @@ function downloadPsDealsCsv() {
       d.quoted_year, d.quoted_month, d.awarded_year, d.man_days,
       d.ps_quoted_tech_usd, d.ps_quoted_sales_usd, d.final_ps_value_usd,
       d.status,
-      p.done, p.total, p.paid,
+      p.done, p.total, p.collected, p.pending,
       milestoneSummary(d.id),
       eng ? eng.name : '',
       d.consulted_with_tech, d.remarks
     ].map(esc).join(','));
   });
-  if (rows.length === 0) lines.push(esc('No data') + ',,,,,,,,,,,,,,,,,,,,,'); // 22 columns since v181 (GIT Ref No) // header + 1 row so the file isn't empty
+  if (rows.length === 0) lines.push(esc('No data') + ',,,,,,,,,,,,,,,,,,,,,,'); // 23 columns since v191 (Collected/Pending split) // header + 1 row so the file isn't empty
   var blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8' });
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
