@@ -324,6 +324,10 @@ var PS_REVENUE_STATUSES = ['won', 'in_progress', 'completed'];
 // awarded bar in 2024 and collected bars in 2025 and 2026, which is what the
 // money actually did. The two bars in a year are NOT a ratio of each other.
 //
+// v189: "received" means the milestone's status is Completed. Money recorded
+// against a milestone still Active / Awaiting Sign-off / Awaiting Payment is
+// expected, not banked, and is reported separately as pendingPaid.
+//
 // A payment with no actual date cannot be placed in a year; it is counted in
 // undatedPaid and footnoted rather than silently dropped or lumped into a
 // year it may not belong to.
@@ -363,11 +367,18 @@ function _psYearlyRevenue(rows, milestones) {
 
   var havePaid = Array.isArray(milestones);
   var undatedPaid = 0;
+  var pendingPaid = 0;
   if (havePaid) {
     milestones.forEach(function(m){
       if (!countsAsRevenue[m.deal_id]) return;     // archived / not a revenue status
       var amt = Number(m.payment_received_usd) || 0;
       if (!amt) return;
+      // v189: an amount only counts as COLLECTED once the milestone is marked
+      // Completed. A figure typed against an Awaiting-Payment milestone is what
+      // is expected, not what has arrived - counting it inflated the collected
+      // bar. It is held in pendingPaid and footnoted rather than dropped, so
+      // the money stays visible.
+      if (m.status !== 'completed') { pendingPaid += amt; return; }
       var y = m.actual_completion_date ? Number(String(m.actual_completion_date).slice(0, 4)) : null;
       if (!y) { undatedPaid += amt; return; }
       var b = bucket(y);
@@ -392,7 +403,8 @@ function _psYearlyRevenue(rows, milestones) {
       };
     })
     .sort(function(a,b){ return a.year - b.year; });
-  return { years: years, excludedCount: excludedCount, havePaid: havePaid, undatedPaid: undatedPaid };
+  return { years: years, excludedCount: excludedCount, havePaid: havePaid,
+           undatedPaid: undatedPaid, pendingPaid: pendingPaid };
 }
 
 // ── RENDER ────────────────────────────────────────────────────────
@@ -411,7 +423,7 @@ async function loadPsGraphs() {
   // before it can draw anything.
   var pair = await Promise.all([
     sb.from('ps_deals').select('id,client_name,git_ref_no,linked_engagement_id,awarded_year,final_ps_value_usd,status,is_archived'),
-    sb.from('ps_milestones').select('deal_id,payment_received_usd,actual_completion_date'),
+    sb.from('ps_milestones').select('deal_id,payment_received_usd,actual_completion_date,status'),
     sb.from('engagements').select('id,name')
   ]);
   var res = pair[0], msRes = pair[1], engRes = pair[2];
@@ -515,9 +527,9 @@ function _psRenderRevenueChart(rows, milestones) {
 
   var collectedNote = paired
     ? '<div style="font-size:11px;color:var(--nx-ink-muted);margin-top:6px">'+
-        'Awarded is counted in the year the deal was awarded. Collected is each milestone '+
-        'payment in the year it was received, so a project awarded one year can be collected '+
-        'across later years.'+
+        'Awarded is counted in the year the deal was awarded. Collected counts a milestone '+
+        'payment only once that milestone is marked Completed, in the year it was received - '+
+        'so a project awarded one year can be collected across later years.'+
       '</div>'
     : '<div style="font-size:11px;color:var(--nx-orange-deep);font-style:italic;margin-top:6px">'+
         'Collected figures unavailable - showing awarded only.'+
@@ -526,6 +538,15 @@ function _psRenderRevenueChart(rows, milestones) {
   var undatedNote = (paired && data.undatedPaid > 0)
     ? '<div style="font-size:11px;color:var(--nx-orange-deep);font-style:italic;margin-top:4px">'+
         fmtUsd(data.undatedPaid, false)+' received is not shown - those milestones have no actual date set.'+
+      '</div>'
+    : '';
+
+  // v189: money typed against a milestone that is not Completed yet. Shown so
+  // it is obvious why the collected bar is lower than the deal list's "paid".
+  var pendingNote = (paired && data.pendingPaid > 0)
+    ? '<div style="font-size:11px;color:var(--nx-orange-deep);font-style:italic;margin-top:4px">'+
+        fmtUsd(data.pendingPaid, false)+' is recorded against milestones not yet marked Completed - '+
+        'it counts as collected once their status changes.'+
       '</div>'
     : '';
 
@@ -575,6 +596,7 @@ function _psRenderRevenueChart(rows, milestones) {
     '</div>'+
     collectedNote +
     undatedNote +
+    pendingNote +
     footnote +
     breakdown;
 }
@@ -1647,6 +1669,130 @@ function renderLinkedPsDealsForEngagement(engagementId) {
     '<div class="ps-linked-head"><i data-lucide="briefcase" style="width:13px;height:13px;vertical-align:-2px"></i> Linked Professional Services <span class="dim">('+linked.length+')</span></div>'+
     rows+
   '</div>';
+}
+
+// ── EXCEL EXPORT ────────────────────────────────────────────
+// v189: the deal register and every milestone behind it, as two sheets of one
+// workbook. The CSV squashes the milestones into a single pipe-separated cell;
+// this gives one row per milestone so the numbers can be pivoted. Exports
+// exactly what the list is filtered to - what you see is what you get.
+//
+// Collected vs Pending follows the same rule as the revenue chart (v189): an
+// amount counts as collected only once its milestone is marked Completed.
+function _psPaymentSplit(dealId) {
+  var collected = 0, pending = 0;
+  (PS_MILESTONES||[]).forEach(function(m){
+    if (m.deal_id !== dealId) return;
+    var amt = Number(m.payment_received_usd) || 0;
+    if (!amt) return;
+    if (m.status === 'completed') collected += amt; else pending += amt;
+  });
+  return { collected: r2(collected), pending: r2(pending) };
+}
+
+async function downloadPsDealsExcel() {
+  if (!isManager) { showError('Manager access only.'); return; }
+  var deals = _psFilteredDeals();
+  if (!deals.length) { showError('No deals match the current filters - nothing to export.'); return; }
+
+  var btn = document.getElementById('ps-xlsx-btn');
+  var restore = btn ? btn.innerHTML : '';
+  function resetBtn() {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.innerHTML = restore;
+    if (typeof renderIcons === 'function') renderIcons();
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparing...'; }
+
+  try {
+    await ensureXlsxLoaded();
+  } catch (e) { resetBtn(); showError('Could not load the Excel library.'); return; }
+
+  try {
+    var engName = function(id) {
+      if (!id) return '';
+      var e = (ENGAGEMENTS||[]).find(function(x){ return x.id === id; });
+      return e ? e.name : '';
+    };
+    // Blank rather than 0 for a missing figure - an empty cell sums correctly
+    // and does not read as "quoted at nothing".
+    var num = function(v) {
+      if (v === null || v === undefined || v === '') return '';
+      var n = Number(v);
+      return isNaN(n) ? '' : n;
+    };
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    // -- Sheet 1: the deals --
+    var dAoa = [[
+      'S.No','GIT Ref No','Client','Partner','Region','Mode','Vendor',
+      'Quoted Year','Quoted Month','Awarded Year','Man Days',
+      'PS Tech (USD)','PS Sales (USD)','Final (USD)','Final (AED)',
+      'Status','Milestones Done','Total Milestones',
+      'Collected (USD)','Pending (USD)','Linked Engagement','Consulted','Remarks'
+    ]];
+    deals.forEach(function(d, i){
+      var p = _psDealProgress(d.id);
+      var split = _psPaymentSplit(d.id);
+      var finalUsd = num(d.final_ps_value_usd);
+      dAoa.push([
+        i+1, d.git_ref_no||'', d.client_name||'', d.partner||'', d.region||'', d.mode||'', d.vendor||'',
+        num(d.quoted_year),
+        (d.quoted_month >= 1 && d.quoted_month <= 12) ? months[d.quoted_month-1] : '',
+        num(d.awarded_year), num(d.man_days),
+        num(d.ps_quoted_tech_usd), num(d.ps_quoted_sales_usd), finalUsd,
+        finalUsd === '' ? '' : r2(usdToAed(finalUsd)),
+        (PS_STATUS_META[d.status]||{}).label || d.status || '',
+        p.done, p.total,
+        split.collected, split.pending,
+        engName(d.linked_engagement_id), d.consulted_with_tech||'', d.remarks||''
+      ]);
+    });
+    var dWs = XLSX.utils.aoa_to_sheet(dAoa);
+    dWs['!cols'] = [{wch:6},{wch:14},{wch:20},{wch:18},{wch:9},{wch:16},{wch:18},
+      {wch:11},{wch:12},{wch:12},{wch:10},{wch:14},{wch:14},{wch:13},{wch:13},
+      {wch:12},{wch:15},{wch:16},{wch:15},{wch:14},{wch:34},{wch:18},{wch:40}];
+
+    // -- Sheet 2: one row per milestone of those deals --
+    var mAoa = [[
+      'Deal S.No','GIT Ref No','Client','Engagement','Deal Status',
+      '#','Milestone','%','Amount (USD)','Payment Recorded (USD)',
+      'Milestone Status','Counted as Collected','Expected','Actual','Notes'
+    ]];
+    deals.forEach(function(d, i){
+      (PS_MILESTONES||[])
+        .filter(function(m){ return m.deal_id === d.id; })
+        .sort(function(a,b){ return (a.sequence_order||0) - (b.sequence_order||0); })
+        .forEach(function(m){
+          mAoa.push([
+            i+1, d.git_ref_no||'', d.client_name||'', engName(d.linked_engagement_id),
+            (PS_STATUS_META[d.status]||{}).label || d.status || '',
+            m.sequence_order||'', m.title||'', num(m.percentage),
+            num(m.amount_usd), num(m.payment_received_usd),
+            (PS_MS_STATUS_META[m.status]||{}).label || m.status || '',
+            m.status === 'completed' ? 'Yes' : 'No',
+            // ISO dates: unambiguous across locales, and they still sort
+            // chronologically as text.
+            m.expected_completion_date||'', m.actual_completion_date||'', m.notes||''
+          ]);
+        });
+    });
+    if (mAoa.length === 1) mAoa.push(['No milestones recorded for the exported deals']);
+    var mWs = XLSX.utils.aoa_to_sheet(mAoa);
+    mWs['!cols'] = [{wch:10},{wch:14},{wch:20},{wch:34},{wch:12},{wch:5},{wch:34},
+      {wch:7},{wch:14},{wch:21},{wch:18},{wch:19},{wch:13},{wch:13},{wch:34}];
+
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, dWs, 'Deals');
+    XLSX.utils.book_append_sheet(wb, mWs, 'Milestones');
+    XLSX.writeFile(wb, 'professional-services-' + new Date().toISOString().slice(0,10) + '.xlsx');
+    showToast('Exported ' + fmtCount(deals.length) + ' deal' + (deals.length===1?'':'s') + ' ✓');
+  } catch (e) {
+    showError('Excel export failed: ' + (e && e.message ? e.message : e));
+  } finally {
+    resetBtn();
+  }
 }
 
 // ── CSV EXPORT ────────────────────────────────────────────────────

@@ -422,6 +422,24 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v189-ps-excel-export",
+      "version": "v189",
+      "released_at": "2026-09-25T07:52:00Z",
+      "category": "new",
+      "title": "Excel export for Professional Services",
+      "body": "Professional Services now has an Excel button next to CSV. It downloads a workbook with two sheets: the deal register exactly as you have it filtered, and one row per milestone behind those deals \u2014 title, amount, payment recorded, status and dates \u2014 so the milestone detail can be sorted and pivoted instead of sitting inside one CSV cell.",
+      "link": null
+    },
+    {
+      "id": "v189-collected-needs-completed",
+      "version": "v189",
+      "released_at": "2026-09-25T07:52:00Z",
+      "category": "fixed",
+      "title": "Collected now waits for the milestone to be Completed",
+      "body": "A milestone payment counts towards the green Collected bar only once that milestone's status is Completed. An amount entered against a milestone still marked Awaiting Payment is what is expected, not what has arrived, so it is footnoted under the chart instead of counted \u2014 and it moves into Collected the moment the status changes.",
+      "link": null
+    },
+    {
       "id": "v188-breakdown-engagement-names",
       "version": "v188",
       "released_at": "2026-09-23T11:56:30Z",
