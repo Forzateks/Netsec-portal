@@ -745,8 +745,13 @@ input,textarea,select,.no-transition,.no-transition *{transition:none}
   .top-bar-brand{display:none}
 }
 
-/* Flex spacer between brand and right controls. */
-.top-bar-spacer{flex:1;min-width:0}
+/* Flex spacer between brand and right controls. v192: hosts the global
+   search, centred on desktop and pushed right on phones. */
+.top-bar-spacer{flex:1;min-width:0;display:flex;justify-content:center;
+  /* one layer above the right-hand cluster: every top-bar child is z-index 1
+     (.top-bar > *), so the phone search overlay - which lives in here - was
+     painted UNDER the user chip and its close button could not be tapped. */
+  z-index:2}
 
 /* Right cluster — db dot, notification bell, user chip. */
 .top-bar-right{display:flex;align-items:center;gap:12px;position:relative}
@@ -3230,3 +3235,86 @@ tr.inv-log-deleted .inv-log-del-key{opacity:.75;font-weight:600}
 .ps-rev-bd-n{font-size:11px;color:var(--muted)}
 .ps-rev-bd-empty{font-size:12px;color:var(--nx-ink-faint);font-style:italic}
 @media(max-width:640px){ .ps-rev-bd-cols{grid-template-columns:1fr} }
+
+/* == GLOBAL SEARCH (v192) =================================================
+   Top-bar search box + results panel. All colours are tokens, so the three
+   theme states (light / auto-dark / forced dark) need no extra rules. */
+.gsearch{position:relative;width:100%;max-width:460px}
+.gsearch[hidden]{display:none}
+.gs-trigger{display:none}
+.gs-box{display:flex;align-items:center;gap:8px;height:36px;padding:0 10px;
+  background:var(--nx-canvas);border:1px solid var(--nx-hairline);border-radius:var(--radius-md);
+  transition:border-color .15s,background .15s}
+.gs-box:focus-within{background:var(--nx-surface);border-color:var(--nx-primary)}
+.gs-box-icon{width:15px;height:15px;color:var(--nx-ink-muted);flex-shrink:0}
+.gs-box input{flex:1;min-width:0;height:100%;border:none;background:transparent;outline:none;
+  font:inherit;font-size:13px;color:var(--nx-ink);padding:0}
+.gs-box input:focus,.gs-box input:hover{box-shadow:none;border:none}  /* the box draws the focus ring, not the field */
+.gs-box input::placeholder{color:var(--nx-ink-faint)}
+.gs-box input::-webkit-search-cancel-button{display:none}
+.gs-kbd{font:inherit;font-size:10.5px;color:var(--nx-ink-muted);border:1px solid var(--nx-hairline);
+  border-radius:var(--radius-xs);padding:1px 5px;background:var(--nx-surface);white-space:nowrap}
+.gs-close{display:none;background:none;border:none;color:var(--nx-ink-muted);cursor:pointer;
+  padding:4px;border-radius:var(--radius-sm);line-height:0}
+.gs-close svg{width:16px;height:16px}
+
+.gs-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:200;
+  max-height:min(70vh,560px);overflow-y:auto;overscroll-behavior:contain;
+  background:var(--nx-surface);border:1px solid var(--nx-hairline);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-2);padding:6px}
+.gs-panel[hidden]{display:none}
+.gs-empty{padding:16px 12px;font-size:13px;color:var(--nx-ink-muted);display:flex;align-items:center;gap:8px}
+.gs-spinner{width:14px;height:14px;border-width:2px}
+.gs-group{padding:4px 0}
+.gs-group + .gs-group{border-top:1px solid var(--nx-hairline)}
+.gs-group-label{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--nx-ink-muted);padding:6px 10px 4px}
+.gs-group-more{font-weight:500;text-transform:none;letter-spacing:0;color:var(--nx-ink-faint)}
+.gs-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;background:none;
+  font:inherit;color:var(--nx-ink);padding:8px 10px;border-radius:var(--radius-md);cursor:pointer}
+.gs-item-active{background:var(--nx-canvas)}
+.gs-item-icon{width:16px;height:16px;color:var(--nx-ink-muted);flex-shrink:0}
+.gs-item-body{flex:1;min-width:0;display:flex;flex-direction:column}
+.gs-item-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gs-item-sub{font-size:11.5px;color:var(--nx-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gs-item-meta{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--nx-ink);white-space:nowrap}
+mark.gs-hit{background:var(--pill-info-bg);color:inherit;border-radius:2px;padding:0 1px}
+.gs-foot{font-size:11px;color:var(--nx-ink-faint);padding:6px 10px 2px;border-top:1px solid var(--nx-hairline);margin-top:4px}
+.gs-note{font-size:11px;color:var(--nx-ink-muted);padding:4px 10px}
+.gs-note-warn{color:var(--nx-orange-deep)}
+
+/* client money summary (managers) */
+.gs-summary{padding:4px 4px 8px;border-bottom:1px solid var(--nx-hairline);margin-bottom:4px}
+.gs-sum{background:var(--nx-canvas);border-radius:var(--radius-md);padding:10px 12px;margin:4px 0}
+.gs-sum-name{font-size:13px;font-weight:700;color:var(--nx-ink);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.gs-sum-count{font-size:11px;font-weight:500;color:var(--nx-ink-muted)}
+.gs-sum-stats{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:6px}
+.gs-sum-stat{display:flex;flex-direction:column}
+.gs-sum-label{font-size:10.5px;color:var(--nx-ink-muted)}
+.gs-sum-val{font-size:14px;font-weight:700;color:var(--nx-ink);font-variant-numeric:tabular-nums}
+.gs-sum-good .gs-sum-val{color:var(--nx-green)}
+.gs-sum-warn .gs-sum-val{color:var(--nx-orange-deep)}
+
+/* tablets: the box shrinks before the screen title is squeezed out */
+@media(max-width:900px){ .gsearch{max-width:300px} .gs-kbd{display:none} }
+
+/* phones: an icon in the bar that opens a full-width overlay */
+@media(max-width:640px){
+  .top-bar-spacer{justify-content:flex-end}
+  .gsearch{width:auto;max-width:none;position:static}
+  .gs-trigger{display:inline-flex}
+  .gs-box{display:none}
+  .gsearch.open .gs-trigger{visibility:hidden}
+  .gsearch.open .gs-box{display:flex;position:fixed;z-index:210;left:12px;right:12px;
+    top:calc(10px + max(0px, env(safe-area-inset-top, 0px)));height:44px;background:var(--nx-surface);
+    border-color:var(--nx-primary);box-shadow:var(--shadow-2)}
+  .gsearch.open .gs-box input{font-size:16px}  /* 16px stops iOS zooming on focus */
+  .gsearch.open .gs-close{display:inline-flex}
+  .gs-panel{position:fixed;left:12px;right:12px;z-index:210;
+    top:calc(62px + max(0px, env(safe-area-inset-top, 0px)));max-height:calc(100vh - 90px)}
+  .gs-item{padding:10px}
+}
+@media (display-mode: standalone) and (max-width: 640px) {
+  .gsearch.open .gs-box{top:calc(10px + max(50px, env(safe-area-inset-top, 0px)))}
+  .gs-panel{top:calc(62px + max(50px, env(safe-area-inset-top, 0px)))}
+}

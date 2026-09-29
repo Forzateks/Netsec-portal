@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v192-global-search",
+      "version": "v192",
+      "released_at": "2026-09-29T10:30:00Z",
+      "category": "new",
+      "title": "Search the whole portal from the top bar",
+      "body": "There is now a search box at the top of every screen \u2014 press Ctrl+K or / to jump into it. Type a customer, engagement, serial number, task or article and pick a result to open it directly. Managers also get a money summary when the search matches a client: PS awarded, collected, pending, AMC value and open quotes. On a phone, tap the magnifying glass.",
+      "link": null
+    },
+    {
       "id": "v191-collected-pending-split",
       "version": "v191",
       "released_at": "2026-09-25T09:10:00Z",

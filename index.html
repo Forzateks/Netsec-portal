@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v191',
+    release: 'netsec-portal@v192',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -241,7 +241,27 @@
        wordmark here was pure duplication. Kept in sync by _setTopBarScreen()
        in js/core/navigation.js. -->
   <div class="top-bar-screen" id="top-bar-screen">Dashboard</div>
-  <div class="top-bar-spacer"></div>
+  <!-- v192: global search. Hidden until initApp() knows who is signed in;
+       js/features/global-search.js. On phones it collapses to an icon that
+       expands into a full-width overlay. -->
+  <div class="top-bar-spacer">
+    <div class="gsearch" id="gsearch" hidden>
+      <button type="button" class="gs-trigger top-bar-bell" onclick="focusGlobalSearch()" title="Search" aria-label="Search">
+        <i data-lucide="search" aria-hidden="true"></i>
+      </button>
+      <div class="gs-box">
+        <i data-lucide="search" class="gs-box-icon" aria-hidden="true"></i>
+        <input id="gs-input" type="search" autocomplete="off" spellcheck="false"
+               placeholder="Search…" aria-label="Search the portal"
+               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gs-panel">
+        <kbd class="gs-kbd hide-mobile" aria-hidden="true">Ctrl K</kbd>
+        <button type="button" class="gs-close" onclick="closeGlobalSearch()" aria-label="Close search">
+          <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="gs-panel" id="gs-panel" role="listbox" aria-label="Search results" hidden></div>
+    </div>
+  </div>
   <div class="top-bar-right">
     <div class="db-status glow-button glow-button-sm glow-button-static" title="Database connection">
       <div class="db-dot" id="db-dot"></div>
@@ -3270,6 +3290,7 @@
 <script src="js/features/team-skills.js"></script>
 <script src="js/features/team.js"></script>
 <script src="js/features/tasks.js"></script>
+<script src="js/features/global-search.js"></script>
 <script src="js/core/init.js"></script>
 </body>
 </html>

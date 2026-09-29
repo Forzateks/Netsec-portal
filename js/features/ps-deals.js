@@ -255,16 +255,22 @@ function _psQuotedLabel(d) {
 // the bank on a deal where nothing had been signed off.
 function _psDealProgress(dealId) {
   var ms = (PS_MILESTONES||[]).filter(function(m){ return m.deal_id === dealId; });
-  var doneCount = 0;
-  var collected = 0;
-  var pending = 0;
-  ms.forEach(function(m){
+  var split = _psSplitPayments(ms);
+  return { total: ms.length, done: split.done,
+           collected: split.collected, pending: split.pending,
+           paid: r2(split.collected + split.pending) };
+}
+
+// v192: the Completed rule on its own, for callers that have milestone rows
+// but not the PS_MILESTONES cache (the global search's client summary).
+function _psSplitPayments(milestones) {
+  var done = 0, collected = 0, pending = 0;
+  (milestones||[]).forEach(function(m){
     var amt = Number(m.payment_received_usd) || 0;
-    if (m.status === 'completed') { doneCount += 1; collected += amt; }
+    if (m.status === 'completed') { done += 1; collected += amt; }
     else pending += amt;
   });
-  return { total: ms.length, done: doneCount,
-           collected: r2(collected), pending: r2(pending), paid: r2(collected + pending) };
+  return { done: done, collected: r2(collected), pending: r2(pending) };
 }
 
 // "3 / 5 done · $6,000 / $10,000 collected" (+ "$2,000 pending") — list

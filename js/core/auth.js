@@ -204,6 +204,9 @@ async function doLogout() {
     // every 60s with an empty currentUser — visible in the edge logs as task
     // queries with no assigned_to filter, running against a dead session.
     if (typeof stopNotifPolling === 'function') stopNotifPolling();
+    // v192: clear the last search too - the next person to sign in on this
+    // device must not see the previous user's query or results.
+    if (typeof resetGlobalSearch === 'function') resetGlobalSearch();
     LEAVE_DAYS = {};
     if (typeof Sentry !== 'undefined') { try { Sentry.setUser(null); } catch (e) {} }
     document.getElementById('app').style.display = 'none';
@@ -358,6 +361,9 @@ async function initApp(user) {
   if (isManager) updateNotifBadge();
   if (typeof startNotifPolling === 'function') startNotifPolling();
   if (typeof updateTasksBadge === 'function') updateTasksBadge();
+  // v192: the search box needs isManager settled - it decides which sources
+  // are searched and the placeholder text.
+  if (typeof initGlobalSearch === 'function') initGlobalSearch();
 }
 
 // == AUTH-STATE VALIDATION (v82) ==================================

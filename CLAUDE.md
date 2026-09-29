@@ -76,7 +76,8 @@ Netsec-portal/
 │       ├── ps-deals.js     # Professional Services deals + milestones
 │       ├── team-skills.js  # Team skills matrix
 │       ├── team.js         # Team Portfolio (public route at /#/team + internal mode)
-│       └── tasks.js        # Tasks + task templates + task-completion approvals
+│       ├── tasks.js        # Tasks + task templates + task-completion approvals
+│       └── global-search.js # Top-bar search across the portal + manager client money summary (v192)
 ├── data/
 │   ├── team.json           # Team Portfolio content
 │   └── whats-new.json      # Versioned release notes shown in the "What's new" modal
@@ -100,7 +101,7 @@ Netsec-portal/
 → `navigation.js` → `helpers.js` → `projects.js` → `unified-sessions.js` →
 `notifications.js` → `inventory.js` → `approvals.js` → `knowledge-base.js` →
 `tracker.js` → `certificates.js` → `amc-contracts.js` → `ps-deals.js` →
-`team-skills.js` → `team.js` → `tasks.js` → `init.js`.
+`team-skills.js` → `team.js` → `tasks.js` → `global-search.js` → `init.js`.
 
 All scripts are plain globals (no modules/imports). Functions are called across files by
 global name, often guarded with `typeof fn === 'function'`. `state.js` must load first
