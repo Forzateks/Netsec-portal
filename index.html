@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v192',
+    release: 'netsec-portal@v193',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -1029,6 +1029,35 @@
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:6px">Sessions before the From date are exempt. Default 2026-01-01.</div>
       <div id="violations-result" style="margin-top:14px;display:none;font-size:13px"></div>
+    </div>
+
+    <!-- ══ PUBLIC HOLIDAYS (v193) ══ -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:6px">📅 Public Holidays</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">
+        A public holiday is not charged as annual leave, and work on it is credited as overtime
+        under weekend rules. Adding or removing one re-counts any leave request that covers the date.
+        KSA does not observe every UAE holiday, so pick who it applies to.
+      </div>
+      <div class="form-grid" style="margin-bottom:8px">
+        <div class="form-group"><label for="ph-date">Date</label><input type="date" id="ph-date"></div>
+        <div class="form-group"><label for="ph-name">Holiday</label><input type="text" id="ph-name" maxlength="80" placeholder="e.g. Eid Al Fitr"></div>
+        <div class="form-group"><label for="ph-region">Applies to</label>
+          <select id="ph-region">
+            <option value="UAE">UAE</option>
+            <option value="KSA">KSA</option>
+            <option value="ALL">UAE + KSA</option>
+          </select>
+        </div>
+        <div class="form-group" style="justify-content:flex-end">
+          <label style="display:flex;align-items:center;gap:8px;font-weight:500;cursor:pointer">
+            <input type="checkbox" id="ph-ot" checked style="width:auto"> Work on this day counts as OT
+          </label>
+        </div>
+      </div>
+      <div id="ph-error" class="alert alert-error" style="display:none;margin-bottom:8px"></div>
+      <button class="btn btn-primary" id="ph-add-btn" onclick="addPublicHoliday()"><i data-lucide="plus" class="btn-icon"></i>Add Holiday</button>
+      <div id="ph-list" style="margin-top:14px"></div>
     </div>
 
     <div class="card" style="margin-bottom:16px;border-left:3px solid var(--nx-primary);background:var(--pill-info-bg)">

@@ -32,6 +32,11 @@ const WEEKEND_OVERRIDES = [
 // calcWorkingDays() in leave.js, and making leave days "weekend" there
 // would stop a new request counting days that overlap existing leave.
 let LEAVE_DAYS = {};
+// v193: public holidays, as rows of { holiday_date, name, region, counts_for_ot }.
+// Loaded by loadPublicHolidays() before the first screen renders. Read only
+// through getPublicHoliday() - region rules live there (KSA does not observe
+// every UAE holiday).
+let PUBLIC_HOLIDAYS = [];
 
 const LEAVE_ALLOWANCE = 22;
 const SICK_ALLOWANCE  = 12;

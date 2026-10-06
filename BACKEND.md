@@ -428,6 +428,30 @@ Knowledge Base — articles and notes submitted by employees.
 
 ---
 
+### 11. `public_holidays` (v193)
+Public holidays. A holiday is **not a working day**, so it is never charged as
+leave, and (when `counts_for_ot` is true) work on it is credited as overtime
+under weekend rules.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint | PK |
+| `holiday_date` | date | Unique together with `region` |
+| `name` | text | e.g. "Prophet's Birthday" |
+| `region` | text | `UAE`, `KSA` or `ALL`. KSA does not observe every UAE holiday |
+| `counts_for_ot` | boolean | Default true. False = recorded for leave only, no OT for work on it |
+| `created_by` / `created_at` | text / timestamptz | |
+
+- **RLS:** everyone signed in can read; only managers can insert/update/delete.
+- **Managed from:** Settings -> Admin Tools -> Public Holidays. Adding or removing a
+  holiday re-counts `leave_requests.working_days` for live requests covering the date.
+- **Read through** `getPublicHoliday(employee, iso)` in `leave.js` - never query the
+  table inline; the region rule lives there.
+- First row: 2026-08-28 Prophet's Birthday, UAE, `counts_for_ot = false` (decision
+  6 Oct 2026: holiday OT applies from then on, not to work already done that day).
+- Data fix shipped with it: `leave_requests` id 9 (Ahmed Ali, 05-Aug to 03-Sep-2026)
+  `working_days` 22 -> 21.
+
 ## RLS Policies
 
 All tables use open anon-key policies (same pattern — app relies on PIN auth, not Supabase Auth):

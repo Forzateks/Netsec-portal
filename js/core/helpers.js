@@ -506,7 +506,11 @@ function bandBadge(s) {
   // v172: a leave-day session is stored with band 'Wknd' because it follows
   // weekend rules, which reads as wrong next to a Tuesday. Label it for what
   // it is instead — the credit maths is identical either way.
-  if (s.on_leave) return '<span class="badge badge-Wknd">On leave</span>';
+  if (s.on_leave) {
+    // v193: the same flag covers a public holiday; name it for what it was.
+    var dayType = (typeof isOnLeave === 'function') ? isOnLeave(s.employee || '', s.ot_date) : '';
+    return '<span class="badge badge-Wknd">' + (dayType === 'holiday' ? 'Holiday' : 'On leave') + '</span>';
+  }
   if (b !== 'Eve') return '<span class="badge badge-'+b+'">'+b+'</span>';
   if (!s.start_time || !s.end_time) return '<span class="badge badge-Eve">Eve</span>';
   var emp = s.employee || '';

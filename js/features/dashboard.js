@@ -1220,7 +1220,8 @@ var BACKUP_TABLES = [
   { table:'rollout_projects',        sheet:'Rollout Projects',        idCol:'id' },
   { table:'rollout_sites',           sheet:'Rollout Sites',           idCol:'id' },
   { table:'rollout_site_activity_log', sheet:'Rollout Activity Log', idCol:'id' },
-  { table:'engagement_activity_log',   sheet:'Tracker Activity Log', idCol:'id' }
+  { table:'engagement_activity_log',   sheet:'Tracker Activity Log', idCol:'id' },
+  { table:'public_holidays',           sheet:'Public Holidays',      idCol:'id' }
 ];
 
 // Escape a JS value into a SQL literal safe for an INSERT VALUES clause.

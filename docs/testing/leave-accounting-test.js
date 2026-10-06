@@ -6,7 +6,11 @@ const leave=fs.readFileSync('../../js/features/leave.js','utf8');
 const ot   =fs.readFileSync('../../js/features/overtime.js','utf8');
 const KSA_EMP=['Salman Aziz','Mohammed Afsal'];
 const WEEKEND_OVERRIDES=[{ employee:'Ahmed Ali', from:'2025-12-30', to:'2026-02-05', weekendDays:[4,5] }];
-eval([extract(ot,'isWeekend'),extract(leave,'calcWorkingDays'),
+// v193: holidays are read through getPublicHoliday(); empty by default so the
+// earlier cases run exactly as before.
+var PUBLIC_HOLIDAYS=[];
+eval([extract(ot,'isWeekend'),extract(leave,'employeeRegion'),extract(leave,'getPublicHoliday'),
+      extract(leave,'calcWorkingDays'),extract(leave,'leaveEffectiveRange'),
       extract(leave,'computeLeaveUsedDays'),extract(leave,'computeUpcomingApprovedDays'),extract(leave,'_isoDayBefore')].join('\n'));
 
 let pass=0,fail=0;
@@ -87,6 +91,28 @@ t('other UAE staff unaffected inside that window',
   calcWorkingDays('2026-01-08','2026-01-09','Prasanth'), 2);
 t('KSA staff unaffected inside that window',
   calcWorkingDays('2026-01-09','2026-01-10','Mohammed Afsal'), 0);
+
+console.log('\n=== v193: public holidays ===');
+PUBLIC_HOLIDAYS=[{holiday_date:'2026-08-28',name:"Prophet's Birthday",region:'UAE',counts_for_ot:false},
+                 {holiday_date:'2026-12-02',name:'National Day',region:'ALL',counts_for_ot:true},
+                 {holiday_date:'2026-08-29',name:'Sat holiday',region:'UAE',counts_for_ot:true}];
+t('Ahmed 05-Aug..03-Sep drops the UAE holiday (22 -> 21)',
+  calcWorkingDays('2026-08-05','2026-09-03','Ahmed Ali'), 21);
+t('KSA staff over the same range are not affected',
+  calcWorkingDays('2026-08-05','2026-09-03','Salman Aziz'), 22);
+t('a single day that is a holiday is 0',
+  calcWorkingDays('2026-08-28','2026-08-28','Prasanth'), 0);
+t('a holiday on a weekend is not subtracted twice',
+  calcWorkingDays('2026-08-28','2026-08-31','Prasanth'), 1);
+t('ALL-region holiday applies to UAE', calcWorkingDays('2026-12-01','2026-12-03','Prasanth'), 2);
+t('ALL-region holiday applies to KSA', calcWorkingDays('2026-12-01','2026-12-03','Mohammed Afsal'), 2);
+t('approved leave over the holiday is charged 21',
+  computeLeaveUsedDays({employee:'Ahmed Ali',start_date:'2026-08-05',end_date:'2026-09-03',working_days:22,status:'approved'},'2026-10-06'), 21);
+t('half day on a holiday uses nothing',
+  computeLeaveUsedDays({employee:'Prasanth',start_date:'2026-08-28',end_date:'2026-08-28',working_days:0.5,status:'approved'},'2026-10-06'), 0);
+t('half day on a normal day still uses 0.5',
+  computeLeaveUsedDays({employee:'Prasanth',start_date:'2026-08-27',end_date:'2026-08-27',working_days:0.5,status:'approved'},'2026-10-06'), 0.5);
+PUBLIC_HOLIDAYS=[];
 
 console.log('\n' + (fail===0 ? 'ALL '+pass+' PASSED' : pass+' passed, '+fail+' FAILED'));
 process.exit(fail?1:0);

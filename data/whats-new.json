@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v193-public-holidays",
+      "version": "v193",
+      "released_at": "2026-10-06T15:23:43Z",
+      "category": "new",
+      "title": "Public holidays are no longer charged as leave",
+      "body": "The portal now knows about public holidays. If your annual leave covers one, that day is left out of the count, and from now on work logged on a public holiday is credited as overtime at 1:1, the same as a weekend. Holidays are per region, so a UAE holiday does not apply to KSA staff. Managers record them in Settings \u2192 Admin Tools \u2192 Public Holidays.",
+      "link": null
+    },
+    {
       "id": "v192-global-search",
       "version": "v192",
       "released_at": "2026-09-29T10:30:00Z",

@@ -1,19 +1,58 @@
 ﻿// == LEAVE REQUESTS (Annual + Sick) ===============================
+// == PUBLIC HOLIDAYS (v193) =======================================
+// A public holiday is not a working day, so it is never charged as leave.
+// When the holiday's counts_for_ot flag is set, work on it is also credited
+// as overtime under weekend rules (see isOnLeave() in overtime.js).
+//
+// Region: an employee is KSA if they are in KSA_EMP, otherwise UAE. A holiday
+// applies to its own region, or to everyone when its region is 'ALL'.
+function employeeRegion(employee) {
+  return KSA_EMP.includes(employee) ? 'KSA' : 'UAE';
+}
+
+// The holiday row that applies to this employee on this 'YYYY-MM-DD', or null.
+function getPublicHoliday(employee, iso) {
+  if (!iso || typeof PUBLIC_HOLIDAYS === 'undefined' || !PUBLIC_HOLIDAYS.length) return null;
+  var region = employeeRegion(employee || '');
+  for (var i = 0; i < PUBLIC_HOLIDAYS.length; i++) {
+    var h = PUBLIC_HOLIDAYS[i];
+    if (h.holiday_date === iso && (h.region === 'ALL' || h.region === region)) return h;
+  }
+  return null;
+}
+
+// Returns true on success. On failure the previous list is kept: a stale
+// list miscounts nothing that was right a minute ago, an empty one would
+// silently charge every holiday back as leave.
+async function loadPublicHolidays() {
+  var res = await sb.from('public_holidays')
+    .select('id,holiday_date,name,region,counts_for_ot')
+    .order('holiday_date', { ascending: true });
+  if (res.error) return false;
+  PUBLIC_HOLIDAYS = res.data || [];
+  return true;
+}
+
 function calcWorkingDays(startStr,endStr,employee) {
   if (!startStr||!endStr) return 0;
   const start=new Date(startStr); const end=new Date(endStr);
   if (end<start) return 0;
   let count=0; const cur=new Date(start);
   while (cur<=end) {
-    const wd=cur.getDay();
+    // v193: UTC getters throughout. new Date('YYYY-MM-DD') is UTC midnight, so
+    // local getters read the PREVIOUS day in any timezone west of Greenwich -
+    // a holiday (or weekend) was then matched a day early. Gulf browsers were
+    // unaffected; this makes the count the same everywhere.
+    const wd=cur.getUTCDay();
     // v166: pass the DATE too. isWeekend() only consults WEEKEND_OVERRIDES
     // (dated onsite rotations, e.g. a Thu+Fri weekend) when it is given a
     // date string — without it every leave day was counted against the
     // employee's DEFAULT region weekend, so a rotation's real days off were
     // charged as leave and its real working days were not counted at all.
-    const iso = cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
-    if (!isWeekend(wd,employee,iso)) count++;
-    cur.setDate(cur.getDate()+1);
+    const iso = cur.getUTCFullYear()+'-'+String(cur.getUTCMonth()+1).padStart(2,'0')+'-'+String(cur.getUTCDate()).padStart(2,'0');
+    // v193: a public holiday for this employee's region is not a working day.
+    if (!isWeekend(wd,employee,iso) && !getPublicHoliday(employee,iso)) count++;
+    cur.setUTCDate(cur.getUTCDate()+1);
   }
   return count;
 }
@@ -109,6 +148,9 @@ function _isoDayAfter(iso) {
 // rather than cleared: a stale map under-credits nobody, an empty one
 // silently drops leave-day OT for everyone.
 async function loadLeaveDays() {
+  // v193: every caller that refreshes the leave map (login, approvals, the
+  // Recompute tools) wants current holidays too - calcOT reads both.
+  var holidaysOk = await loadPublicHolidays();
   var map = {};
   function mark(emp, iso, type) {
     if (!emp || !iso) return;
@@ -135,7 +177,9 @@ async function loadLeaveDays() {
   });
 
   LEAVE_DAYS = map;
-  return true;
+  // False if either half is stale, so the Recompute tools can refuse to run
+  // against an out-of-date picture of who was off.
+  return holidaysOk;
 }
 
 function computeLeaveUsedDays(leave, todayISO) {
@@ -143,7 +187,10 @@ function computeLeaveUsedDays(leave, todayISO) {
   if (!range) return 0;
   if (range.start > todayISO) return 0;
   var lastDay = range.end < todayISO ? range.end : todayISO;
-  if (parseFloat(leave.working_days) === 0.5 && range.start === range.end) return 0.5;
+  if (parseFloat(leave.working_days) === 0.5 && range.start === range.end) {
+    // v193: a half day that lands on a public holiday used no leave at all.
+    return getPublicHoliday(leave.employee, range.start) ? 0 : 0.5;
+  }
   return calcWorkingDays(range.start, lastDay, leave.employee);
 }
 
@@ -271,7 +318,7 @@ async function updateLeavePreview() {
     document.getElementById('lv-prev-bal').textContent  = '—';
     return;
   }
-  var days = isHalfDay ? 0.5 : calcWorkingDays(start,end,currentUser);
+  var days = isHalfDay ? (getPublicHoliday(currentUser,start) ? 0 : 0.5) : calcWorkingDays(start,end,currentUser);
   const year = start.split('-')[0];
   // v135 fix: pass the DB category ('annual'/'sick'), NOT the raw dropdown
   // value ('annual_full'). leave_requests.leave_type stores the category
@@ -295,12 +342,28 @@ async function submitLeaveRequest() {
   const end    = document.getElementById('lv-end').value;
   const reason = document.getElementById('lv-reason').value.trim();
   const errEl  = document.getElementById('leave-error');
+  // v193: put the default text back first. Specific messages (overlap,
+  // half-day, public holiday) overwrite this element, and it was never
+  // reset - so a later, unrelated mistake re-showed the old message.
+  if (errEl) {
+    if (!errEl.dataset.defaultText) errEl.dataset.defaultText = errEl.textContent;
+    errEl.textContent = errEl.dataset.defaultText;
+  }
   if (!start||!end){showAlert('leave-error');return;}
   var isHalfDay = parseLtype(ltype).isHalfDay;
   // Half-day → 0.5 working day. Otherwise the standard working-day count
   // (excludes weekends per region).
-  var days = isHalfDay ? 0.5 : calcWorkingDays(start,end,currentUser);
-  if (days<=0){showAlert('leave-error');return;}
+  var days = isHalfDay ? (getPublicHoliday(currentUser,start) ? 0 : 0.5) : calcWorkingDays(start,end,currentUser);
+  if (days<=0){
+    // v193: say why, instead of the generic "fill the dates" alert.
+    var onlyHol = getPublicHoliday(currentUser,start);
+    if (errEl) {
+      errEl.textContent = (onlyHol && start === end)
+        ? '\u26a0\ufe0f ' + fmtDate(start) + ' is a public holiday (' + onlyHol.name + ') - no leave is needed.'
+        : '\u26a0\ufe0f Those dates contain no working days - weekends and public holidays are not charged as leave.';
+    }
+    showAlert('leave-error');return;
+  }
   // Defensive: if user manipulated the DOM to check half-day on a
   // multi-day range, force-collapse to single-day.
   if (isHalfDay && start !== end) {
@@ -1397,3 +1460,146 @@ async function cancelLeaveRequest(id) {
 }
 
 // == EXPORT CSV ====================================================
+
+
+// == PUBLIC HOLIDAYS - MANAGER ADMIN (v193) =======================
+// Settings -> Admin Tools -> Public Holidays. Adding or removing a holiday
+// re-counts the stored working_days of every live leave request that covers
+// the date, so the cards and the balance never disagree.
+
+function _phEsc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+async function renderPublicHolidays() {
+  var host = document.getElementById('ph-list');
+  if (!host) return;
+  host.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+  var ok = await loadPublicHolidays();
+  if (!ok) { host.innerHTML = '<div class="alert alert-error show">Could not load public holidays. Check your connection and try again.</div>'; return; }
+  if (!PUBLIC_HOLIDAYS.length) {
+    host.innerHTML = '<div style="font-size:13px;color:var(--muted)">No public holidays recorded yet.</div>';
+    return;
+  }
+  var regionLabel = { UAE: 'UAE', KSA: 'KSA', ALL: 'UAE + KSA' };
+  // Newest first - the one just added is what gets checked.
+  var rows = PUBLIC_HOLIDAYS.slice().reverse().map(function(h){
+    return '<tr>'+
+      '<td style="white-space:nowrap">'+fmtDate(h.holiday_date)+'</td>'+
+      '<td>'+_phEsc(h.name)+'</td>'+
+      '<td>'+(regionLabel[h.region] || _phEsc(h.region))+'</td>'+
+      '<td>'+(h.counts_for_ot ? 'Yes' : 'No')+'</td>'+
+      '<td style="text-align:right"><button class="btn btn-sm btn-danger btn-icon-only" onclick="deletePublicHoliday('+Number(h.id)+')" title="Remove holiday" aria-label="Remove holiday"><i data-lucide="trash-2"></i></button></td>'+
+    '</tr>';
+  }).join('');
+  host.innerHTML = '<div class="table-wrap"><table><thead><tr>'+
+    '<th>Date</th><th>Holiday</th><th>Applies to</th><th>Work counts as OT</th><th></th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+// Re-count stored working_days for live leave requests covering `iso`.
+// Call AFTER PUBLIC_HOLIDAYS has been reloaded. Half-day rows keep their 0.5
+// label (computeLeaveUsedDays already charges them 0 on a holiday), and
+// cancelled / rejected rows are history, not a live count.
+// Returns { changed, failed }.
+async function _recountLeaveForHoliday(iso, region) {
+  var res = await sb.from('leave_requests')
+    .select('id,employee,start_date,end_date,working_days,status')
+    .in('status', ['pending', 'needs_review', 'approved'])
+    .lte('start_date', iso).gte('end_date', iso);
+  if (res.error) return { changed: 0, failed: 1 };
+  var changed = 0, failed = 0;
+  for (var i = 0; i < (res.data || []).length; i++) {
+    var r = res.data[i];
+    if (region !== 'ALL' && employeeRegion(r.employee) !== region) continue;
+    if (parseFloat(r.working_days) === 0.5 && r.start_date === r.end_date) continue;
+    var days = calcWorkingDays(r.start_date, r.end_date, r.employee);
+    if (days === parseFloat(r.working_days)) continue;
+    var up = await sb.from('leave_requests').update({ working_days: days }).eq('id', r.id).select('id');
+    if (up.error || !up.data || !up.data.length) failed++; else changed++;
+  }
+  return { changed: changed, failed: failed };
+}
+
+function _phAfterChange() {
+  // Everything that reads holidays: the OT map, and whichever leave view is open.
+  if (typeof loadLeaveDays === 'function') loadLeaveDays();
+  renderPublicHolidays();
+}
+
+// Guarded before the first await: requireAuth() is a network round trip, so
+// a double-click used to send both calls past validation - the second then
+// hit the unique key and showed a false "already recorded" error beside the
+// first one's success.
+var _phAdding = false;
+async function addPublicHoliday() {
+  if (!isManager) { showError('Manager access only.'); return; }
+  if (_phAdding) return;
+  _phAdding = true;
+  try { await _addPublicHolidayNow(); }
+  finally { _phAdding = false; }
+}
+
+async function _addPublicHolidayNow() {
+  if (!await requireAuth()) return;
+  var dateEl = document.getElementById('ph-date'), nameEl = document.getElementById('ph-name');
+  var regionEl = document.getElementById('ph-region'), otEl = document.getElementById('ph-ot');
+  var errEl = document.getElementById('ph-error'), btn = document.getElementById('ph-add-btn');
+  var iso = dateEl.value, name = (nameEl.value || '').trim(), region = regionEl.value;
+  errEl.style.display = 'none';
+  function fail(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  if (!iso)  return fail('Pick the holiday date.');
+  if (!name) return fail('Give the holiday a name.');
+  if (name.length > 80) return fail('Keep the name under 80 characters.');
+  if (['UAE','KSA','ALL'].indexOf(region) === -1) return fail('Pick who the holiday applies to.');
+  // 'ALL' and a single region on the same date would overlap; so would a repeat.
+  var clash = PUBLIC_HOLIDAYS.find(function(h){
+    return h.holiday_date === iso && (h.region === region || h.region === 'ALL' || region === 'ALL');
+  });
+  if (clash) return fail(fmtDate(iso) + ' is already recorded as ' + clash.name + ' (' + (clash.region === 'ALL' ? 'UAE + KSA' : clash.region) + ').');
+
+  // A past date with OT ticked reaches back: sessions already logged that day
+  // would gain weekend credit the next time Policy Recompute is run.
+  var now = new Date();
+  var todayIso = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  if (otEl.checked && iso < todayIso &&
+      !confirm(fmtDate(iso) + ' is in the past.\n\n"Work on this day counts as OT" is ticked, so sessions already logged on that day will be credited as overtime the next time Policy Recompute is run.\n\nPress OK to keep it ticked, or Cancel to go back and untick it.')) {
+    return;
+  }
+
+  btn.disabled = true;
+  try {
+    var ins = await sb.from('public_holidays').insert({
+      holiday_date: iso, name: name, region: region, counts_for_ot: !!otEl.checked, created_by: currentUser
+    });
+    if (ins.error) {
+      return fail(ins.error.code === '23505' ? 'That date is already recorded for this region.' : 'Error: ' + ins.error.message);
+    }
+    await loadPublicHolidays();
+    var rc = await _recountLeaveForHoliday(iso, region);
+    dateEl.value = ''; nameEl.value = '';
+    if (rc.failed) showError('Holiday added, but ' + rc.failed + ' leave request(s) could not be re-counted. Open them and save again.');
+    else showToast('Holiday added' + (rc.changed ? ' - ' + rc.changed + ' leave request' + (rc.changed === 1 ? '' : 's') + ' re-counted' : '') + ' \u2713');
+    _phAfterChange();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function deletePublicHoliday(id) {
+  if (!isManager) { showError('Manager access only.'); return; }
+  var h = PUBLIC_HOLIDAYS.find(function(x){ return x.id === id; });
+  if (!h) return;
+  if (!confirm('Remove ' + h.name + ' (' + fmtDate(h.holiday_date) + ')?\n\nLeave that covers this date will be charged for it again.')) return;
+  if (!await requireAuth()) return;
+  var del = await sb.from('public_holidays').delete().eq('id', id).select('id');
+  if (del.error) { showError('Could not remove the holiday: ' + del.error.message); return; }
+  if (!del.data || !del.data.length) { showError('The holiday was not removed - it may already be gone.'); renderPublicHolidays(); return; }
+  await loadPublicHolidays();
+  var rc = await _recountLeaveForHoliday(h.holiday_date, h.region);
+  if (rc.failed) showError('Holiday removed, but ' + rc.failed + ' leave request(s) could not be re-counted.');
+  else showToast('Holiday removed' + (rc.changed ? ' - ' + rc.changed + ' leave request' + (rc.changed === 1 ? '' : 's') + ' re-counted' : '') + ' \u2713');
+  _phAfterChange();
+}

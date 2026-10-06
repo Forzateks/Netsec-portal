@@ -24,10 +24,13 @@ function isWeekend(wd, employee, dateStr) {
 // judged against the KSA calendar day, not the logger's.
 function isOnLeave(employee, dateStr) {
   if (!employee || !dateStr) return '';
-  if (typeof LEAVE_DAYS === 'undefined' || !LEAVE_DAYS) return '';
-  var days = LEAVE_DAYS[employee];
-  if (!days) return '';
-  return days[dateStr] || '';
+  var days = (typeof LEAVE_DAYS !== 'undefined' && LEAVE_DAYS) ? LEAVE_DAYS[employee] : null;
+  if (days && days[dateStr]) return days[dateStr];
+  // v193: a public holiday for this employee's region is a day off too, and
+  // is credited the same way. counts_for_ot lets a holiday be recorded for
+  // leave purposes without paying OT for work already done on it.
+  var h = (typeof getPublicHoliday === 'function') ? getPublicHoliday(employee, dateStr) : null;
+  return (h && h.counts_for_ot) ? 'holiday' : '';
 }
 
 // Per-region OT thresholds. KSA office hours run later, so block window
@@ -165,13 +168,15 @@ function explainOT(session) {
   lines.push('--- How this was calculated ---');
   lines.push('Region: ' + region + (region==='KSA' ? ' (block 8:00 AM - 7:00 PM, Eve from 7:00 PM)' : ' (block 7:30 AM - 6:30 PM, Eve from 6:30 PM)'));
   lines.push('Day: ' + (session.day_name || '') +
-    (onLeave ? ' (on leave - no block)' : isWknd ? ' (weekend - no block)' : ' (weekday)'));
+    (leaveType === 'holiday' ? ' (public holiday - no block)' : onLeave ? ' (on leave - no block)' : isWknd ? ' (weekend - no block)' : ' (weekday)'));
   lines.push('Time: ' + fmtTime(session.start_time) + ' to ' + fmtTime(session.end_time) + '  (raw: ' + rawDur.toFixed(2) + 'h)');
   lines.push('');
 
   if (isWknd) {
     if (onLeave) {
-      lines.push('On leave: this day was approved annual leave, so weekend rules apply.');
+      lines.push(leaveType === 'holiday'
+        ? 'Public holiday: this day was a public holiday, so weekend rules apply.'
+        : 'On leave: this day was approved annual leave, so weekend rules apply.');
     }
     lines.push('Weekend rule: 1:1 rate, no cap. All hours count.');
     lines.push('Credited: ' + rawDur.toFixed(2) + 'h');
@@ -523,7 +528,12 @@ async function recomputeAllOT(mode) {
   if (!isManager) { showError('Manager only.'); return; }
   // v172: leave days change what counts as OT, so always recompute against
   // a fresh map — a stale one would strip credit from leave-day sessions.
-  if (typeof loadLeaveDays === 'function') await loadLeaveDays();
+  if (typeof loadLeaveDays === 'function' && !(await loadLeaveDays())) {
+    // v193: without current leave + holidays, calcOT would strip credit from
+    // every session logged on a day off.
+    showError('Could not load leave and public-holiday data, so nothing was changed. Check your connection and try again.');
+    return;
+  }
   var resultEl = document.getElementById('recompute-result');
   var applyBtn = document.getElementById('recompute-apply-btn');
   resultEl.style.display = 'block';
@@ -661,7 +671,12 @@ async function previewViolations() {
   if (!isManager) { showError('Manager only.'); return; }
   // v172: leave days change what counts as OT, so always recompute against
   // a fresh map — a stale one would strip credit from leave-day sessions.
-  if (typeof loadLeaveDays === 'function') await loadLeaveDays();
+  if (typeof loadLeaveDays === 'function' && !(await loadLeaveDays())) {
+    // v193: without current leave + holidays, calcOT would strip credit from
+    // every session logged on a day off.
+    showError('Could not load leave and public-holiday data, so nothing was changed. Check your connection and try again.');
+    return;
+  }
   var resultEl = document.getElementById('violations-result');
   var applyBtn = document.getElementById('violations-apply-btn');
   var fromEl   = document.getElementById('violations-from');
@@ -767,7 +782,12 @@ async function previewReevalArchived() {
   if (!isManager) { showError('Manager only.'); return; }
   // v172: an archived block-window session becomes valid if that day turns
   // out to be leave, so re-evaluate against a fresh leave map too.
-  if (typeof loadLeaveDays === 'function') await loadLeaveDays();
+  if (typeof loadLeaveDays === 'function' && !(await loadLeaveDays())) {
+    // v193: without current leave + holidays, calcOT would strip credit from
+    // every session logged on a day off.
+    showError('Could not load leave and public-holiday data, so nothing was changed. Check your connection and try again.');
+    return;
+  }
   var resultEl = document.getElementById('reeval-result');
   var applyBtn = document.getElementById('reeval-apply-btn');
   resultEl.style.display = 'block';

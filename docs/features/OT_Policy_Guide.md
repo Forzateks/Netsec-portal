@@ -193,3 +193,17 @@ A: Log it as soon as possible. Backdated submissions are allowed, but the manage
 ## 8. Need help?
 
 Contact the manager (Venkatesan) or **Mohammed Nasif** (`nasif@gulfitd.com`) for portal issues, password resets, or policy questions.
+
+---
+
+## Public holidays
+
+- A public holiday is **not charged as annual leave**. If your leave covers a public
+  holiday, that day is left out of the count automatically.
+- If you **work on a public holiday** that is marked as counting for OT, every hour is
+  credited as overtime at 1:1, with no regular-hours block — the same as a weekend.
+  Holidays recorded from October 2026 onwards count; 28-Aug-2026 was recorded for leave
+  only.
+- Holidays are per region. A UAE holiday does not apply to KSA staff unless it is
+  recorded for both (the table name in the system is `public_holidays`).
+- Managers record holidays in **Settings → Admin Tools → Public Holidays**.

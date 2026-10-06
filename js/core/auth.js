@@ -208,6 +208,7 @@ async function doLogout() {
     // device must not see the previous user's query or results.
     if (typeof resetGlobalSearch === 'function') resetGlobalSearch();
     LEAVE_DAYS = {};
+    PUBLIC_HOLIDAYS = [];
     if (typeof Sentry !== 'undefined') { try { Sentry.setUser(null); } catch (e) {} }
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
@@ -349,7 +350,23 @@ async function initApp(user) {
   // is needed for session-log dropdowns and Manage Engagements, but the
   // dashboard fetches its own data — no need to block on it. checkConnection
   // is also a fire-and-forget status ping.
+  // v193: public holidays decide how many leave days the dashboard shows as
+  // used, so they must be in before the first render. One small query, capped
+  // at 4s so a slow network delays the dashboard rather than blocking it.
+  var holidayLoad = null, holidaysLate = false;
+  if (typeof loadPublicHolidays === 'function') {
+    try {
+      holidayLoad = loadPublicHolidays();
+      await Promise.race([holidayLoad, new Promise(function(r){ setTimeout(function(){ holidaysLate = true; r(); }, 4000); })]);
+    } catch (e) { /* render without holidays rather than not at all */ }
+  }
   showScreen('dashboard');
+  // If the cap won, the dashboard above drew without holidays - redraw it
+  // once they land, provided the user is still looking at it.
+  if (holidayLoad) holidayLoad.then(function(){
+    var dash = document.getElementById('screen-dashboard');
+    if (holidaysLate && dash && dash.classList.contains('active') && typeof renderDashboard === 'function') renderDashboard();
+  }, function(){});
   checkConnection();
   loadProjects().then(function(){
     if (typeof populateProjectDropdowns === 'function') populateProjectDropdowns();

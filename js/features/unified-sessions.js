@@ -773,13 +773,15 @@ function _renderLeaveOTNote(date) {
   if (!hits.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
 
   var lines = hits.map(function(h){
-    return '<li>' + esc2(h.name) + ' is on annual leave</li>';
+    return '<li>' + esc2(h.name) + (h.type === 'holiday' ? ' - public holiday' : ' is on annual leave') + '</li>';
   }).join('');
   el.innerHTML =
     '<div class="leave-ot-note-head">⚠️ Working on a day off</div>' +
     '<ul class="leave-ot-note-list">' + lines + '</ul>' +
     '<div class="leave-ot-note-sub">Every hour is credited at 1:1 with no regular-hours block, ' +
-    'the same as a weekend. The leave day itself is still used — it is not given back.</div>';
+    'the same as a weekend.' +
+    (hits.some(function(h){ return h.type !== 'holiday'; }) ? ' The leave day itself is still used \u2014 it is not given back.' : '') +
+    '</div>';
   el.style.display = '';
 }
 
@@ -1049,7 +1051,7 @@ async function saveUnifiedSession() {
       row.source_session_id = unifiedId;
       rowsToInsert.push(row);
       createdParts.push(name + ' ' + fmtHours(calc.credited) + ' ' +
-        (calc.onLeave ? 'on leave' : calc.band));
+        (calc.leaveType === 'holiday' ? 'public holiday' : calc.onLeave ? 'on leave' : calc.band));
     });
     if (rowsToInsert.length) {
       var insRes = await sb.from('ot_sessions').insert(rowsToInsert);

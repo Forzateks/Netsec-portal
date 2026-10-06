@@ -217,11 +217,19 @@ but `bandBadge()` re-derives and renders both badges.
 
 Full employee-facing rules: `docs/features/OT_Policy_Guide.md`.
 
+**Public holidays (v193):** the `public_holidays` table lists holidays per region
+(`UAE` / `KSA` / `ALL` — KSA does not observe every UAE holiday). A holiday is not a
+working day: `calcWorkingDays()` skips it, so it is never charged as leave. When the
+row's `counts_for_ot` is true, `isOnLeave()` returns `'holiday'` and `calcOT()` credits
+work on it under weekend rules, exactly like an approved leave day. Always read holidays
+through `getPublicHoliday(employee, iso)` in `leave.js` — never inline the region rule.
+
 ### Manager admin tools (Settings → Admin Tools)
 - **Policy Recompute** — re-runs `calcOT` on all sessions
 - **Archive Policy Violators** — soft-archive sessions inside the block window
 - **Re-evaluate Archived** — un-archive sessions that now qualify
 - **Purge** — hard-delete archived/rejected rows >1 year old
+- **Public Holidays** — add/remove holidays; re-counts leave that covers the date
 
 > Comp-off balance can currently go negative if old approved sessions get recomputed away
 > — documented gap, unhandled.
@@ -264,6 +272,7 @@ against `user_profiles.is_manager`) and `current_employee_name()`. See
 | `amc_contract_activity_log` | Read (screen is manager-only, so moot in practice) | Append-only writes bound to `changed_by = current_employee_name()` — no UPDATE/DELETE policy |
 | KB articles | Submit; edit/delete own | All |
 | Profiles, customers, engagements | Read | Manage |
+| `public_holidays` | Read | Add / remove (Admin Tools) |
 | Admin tools, backup | None | Full |
 
 ---
@@ -280,7 +289,7 @@ Current tables (`docs/schema.sql`): `user_profiles`, `customers`, `vendors`,
 `comp_off_requests`, `inventory`, `inventory_activity_log`, `certificates`,
 `employee_skills`, `kb_articles`, `notifications`, `dashboard_alert_snoozes`,
 `engagement_activity_log`, `team_members`, `tasks`, `task_assignments`, `task_templates`,
-`task_template_assignees`, `backup_log`.
+`task_template_assignees`, `backup_log`, `public_holidays`.
 
 Key facts:
 - **`unified_sessions`** is now the single source of truth for session data (the old
