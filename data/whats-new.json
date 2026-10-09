@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v194-duplicate-warning-same-people",
+      "version": "v194",
+      "released_at": "2026-10-09T10:40:36Z",
+      "category": "fixed",
+      "title": "Duplicate-session warning only when it is the same people",
+      "body": "The \"Possible duplicate session\" warning used to appear whenever anyone had logged the same customer at an overlapping time, even if it was a different person doing separate work. It now appears only when someone on your session \u2014 you or a team member you ticked \u2014 is already on the other session, which is the case where hours would be counted twice.",
+      "link": null
+    },
+    {
       "id": "v193-public-holidays",
       "version": "v193",
       "released_at": "2026-10-06T15:23:43Z",

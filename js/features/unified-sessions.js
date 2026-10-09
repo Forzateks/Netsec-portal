@@ -952,9 +952,18 @@ async function saveUnifiedSession() {
   // same date + type + customer and an overlapping time, so the logger can
   // verify before adding. Advisory only — they can still proceed. A query
   // error is swallowed so a transient failure never blocks a legitimate save.
+  //
+  // v194: ...and only when the two sessions share a PERSON. Two colleagues
+  // working for the same customer at the same hour are two real sessions, not
+  // a duplicate - the old check warned Afsal about Nasif's solo session. It is
+  // a possible duplicate only if someone on this session (the logger or a
+  // ticked team member) is already on the other one, as its logger or on its
+  // team: that person's hours would then be counted twice.
   try {
+    var dupPeople = {};
+    _buildTeamList(currentUser, teamMembers).forEach(function(n){ dupPeople[n.toLowerCase()] = 1; });
     var dupQ = sb.from('unified_sessions')
-      .select('employee,start_time,end_time,activity_type,customer_name')
+      .select('employee,team_members,start_time,end_time,activity_type,customer_name')
       .eq('session_date', date)
       .eq('session_type', type);
     if ((isEng || isCustomerTest) && customer) dupQ = dupQ.eq('customer_name', customer);
@@ -963,7 +972,8 @@ async function saveUnifiedSession() {
       // Time-overlap on HH:MM strings (same-day approximation — fine for an
       // advisory check). Two ranges overlap when start_a < end_b AND end_a > start_b.
       var clashes = dupRes.data.filter(function(r){
-        return r.start_time && r.end_time && r.start_time < end && r.end_time > start;
+        if (!(r.start_time && r.end_time && r.start_time < end && r.end_time > start)) return false;
+        return _buildTeamList(r.employee, r.team_members).some(function(n){ return dupPeople[n.toLowerCase()]; });
       });
       if (clashes.length) {
         var c0 = clashes[0];
