@@ -493,20 +493,43 @@ function statusIcon(s){
 }
 function esc2(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
-// v195: "Tuesday, 13-Oct-2026" for the viewer's own local day. Shown on
-// screens whose figures are relative to today (AMC days-remaining, revenue
-// collected so far), so a screenshot or printout says when it was true.
-function fmtTodayLong() {
+// v197: the date and time on the office clock - UAE for UAE staff, KSA for
+// KSA staff - NOT the browser's clock. A browser can report a timezone other
+// than where the person is (privacy modes and remote desktops commonly say
+// UTC), which showed 07:07 when it was 11:07 in Dubai. UAE (UTC+4) and KSA
+// (UTC+3) keep no daylight saving, so a fixed IANA zone is exact.
+function officeClock() {
+  var ksa = (typeof KSA_EMP !== 'undefined' && typeof currentUser !== 'undefined' && KSA_EMP.indexOf(currentUser) !== -1);
+  var tz = ksa ? 'Asia/Riyadh' : 'Asia/Dubai';
   var d = new Date();
-  var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()] + ', ' + fmtDate(iso);
+  try {
+    var parts = {};
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz, weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(d).forEach(function(p){ parts[p.type] = p.value; });
+    return { iso: parts.year + '-' + parts.month + '-' + parts.day, weekday: parts.weekday,
+             time: parts.hour + ':' + parts.minute, region: ksa ? 'KSA' : 'UAE' };
+  } catch (e) {
+    // Very old browser without timezone support: fall back to its own clock.
+    return { iso: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'),
+             weekday: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()],
+             time: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), region: '' };
+  }
 }
 
-// v196: the same plus the current time, 24-hour like every other time in
-// the app: "Wednesday, 14-Oct-2026 · 10:42".
+// v195: "Tuesday, 13-Oct-2026". Shown on screens whose figures are relative
+// to today (AMC days-remaining, revenue collected so far).
+function fmtTodayLong() {
+  var c = officeClock();
+  return c.weekday + ', ' + fmtDate(c.iso);
+}
+
+// v196: plus the 24-hour time and whose clock it is:
+// "Wednesday, 14-Oct-2026 · 11:07 UAE".
 function fmtNowLong() {
-  var d = new Date();
-  return fmtTodayLong() + ' · ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  var c = officeClock();
+  return c.weekday + ', ' + fmtDate(c.iso) + ' · ' + c.time + (c.region ? ' ' + c.region : '');
 }
 
 // v196: any element marked data-live-now shows fmtNowLong() and keeps

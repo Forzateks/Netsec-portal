@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v197-office-time",
+      "version": "v197",
+      "released_at": "2026-10-14T07:10:27Z",
+      "category": "fixed",
+      "title": "The clock shows UAE time",
+      "body": "The date and time on AMC Contracts and the Professional Services graph now always use UAE time (KSA time for KSA staff), whatever timezone your browser reports.",
+      "link": null
+    },
+    {
       "id": "v196-live-time",
       "version": "v196",
       "released_at": "2026-10-14T05:48:45Z",
