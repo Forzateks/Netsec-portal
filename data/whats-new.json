@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v196-live-time",
+      "version": "v196",
+      "released_at": "2026-10-14T05:48:45Z",
+      "category": "new",
+      "title": "Current time next to today\u2019s date",
+      "body": "The date on AMC Contracts and on the Professional Services graph now shows the current time as well, and keeps it up to date while the page is open.",
+      "link": null
+    },
+    {
       "id": "v195-leave-year-filter",
       "version": "v195",
       "released_at": "2026-10-14T05:09:21Z",

@@ -260,8 +260,9 @@ function _amcRenderTotalCard(rows) {
     '</div>'+
     '<div class="today-stamp">'+
       '<div class="today-stamp-label">Today</div>'+
-      '<div class="today-stamp-value">'+fmtTodayLong()+'</div>'+
+      '<div class="today-stamp-value" data-live-now>'+fmtNowLong()+'</div>'+
     '</div>';
+  startLiveNow();
   card.style.display = '';
 }
 

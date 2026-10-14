@@ -502,6 +502,28 @@ function fmtTodayLong() {
   return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()] + ', ' + fmtDate(iso);
 }
 
+// v196: the same plus the current time, 24-hour like every other time in
+// the app: "Wednesday, 14-Oct-2026 · 10:42".
+function fmtNowLong() {
+  var d = new Date();
+  return fmtTodayLong() + ' · ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+// v196: any element marked data-live-now shows fmtNowLong() and keeps
+// ticking - one shared timer, so screens that render a stamp just add the
+// attribute and call startLiveNow(). Also rolls the date over at midnight.
+var _liveNowTimer = null;
+function refreshLiveNow() {
+  var els = document.querySelectorAll('[data-live-now]');
+  if (!els.length) return;
+  var txt = fmtNowLong();
+  for (var i = 0; i < els.length; i++) if (els[i].textContent !== txt) els[i].textContent = txt;
+}
+function startLiveNow() {
+  refreshLiveNow();
+  if (!_liveNowTimer) _liveNowTimer = setInterval(refreshLiveNow, 10000);
+}
+
 // Render the band badge(s) for an OT session row. Stored band is one of the
 // five enum values (Eve / Early / Mid / Wknd / Day), but a session that
 // covers BOTH morning Early OT and evening Eve OT is stored as 'Eve' for
