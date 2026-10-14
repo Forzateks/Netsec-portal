@@ -493,6 +493,15 @@ function statusIcon(s){
 }
 function esc2(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
+// v195: "Tuesday, 13-Oct-2026" for the viewer's own local day. Shown on
+// screens whose figures are relative to today (AMC days-remaining, revenue
+// collected so far), so a screenshot or printout says when it was true.
+function fmtTodayLong() {
+  var d = new Date();
+  var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()] + ', ' + fmtDate(iso);
+}
+
 // Render the band badge(s) for an OT session row. Stored band is one of the
 // five enum values (Eve / Early / Mid / Wknd / Day), but a session that
 // covers BOTH morning Early OT and evening Eve OT is stored as 'Eve' for

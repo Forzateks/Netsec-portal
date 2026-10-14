@@ -385,12 +385,13 @@ async function renderEmployeeDashboard() {
     sb.from('comp_off_register').select('*').eq('employee',currentUser),
     sb.from('comp_off_requests').select('*').eq('employee',currentUser).order('created_at',{ascending:false}),
     sb.from('leave_requests').select('*').eq('employee',currentUser).order('created_at',{ascending:false}),
-    // Switched from annual_leave to leave_requests in v81 — used days are
-    // now computed day-by-day via computeLeaveUsedDays (in leave.js).
-    sb.from('leave_requests')
+    // Switched from annual_leave to leave_requests in v81; since v195 days
+    // are charged to the year they fall in (computeLeaveDaysInYear).
+    // v195: rows that TOUCH the year, so a leave begun last December still
+    // charges its January days to this year.
+    leaveYearFilter(sb.from('leave_requests')
       .select('start_date,end_date,working_days,leave_type,status,employee,effective_end_date,cancelled_at,reviewed_at')
-      .eq('employee',currentUser)
-      .gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
+      .eq('employee',currentUser), year),
     sb.from('unified_sessions').select('total_hours,team_members,employee,session_date').gte('session_date',prevMonth+'-01').lte('session_date',monthEnd),
     // Year-wide aggregate for the Top-8 Engagement / Customer cards.
     // Paginated via fetchAllRows so totals aren't silently capped at 1000.
@@ -410,7 +411,7 @@ async function renderEmployeeDashboard() {
   var _todayISO = (typeof _leaveTodayISO === 'function') ? _leaveTodayISO() : new Date().toISOString().slice(0,10);
   var leaveUsed = (alData||[])
     .filter(function(r){ return (r.leave_type||'annual') === 'annual'; })
-    .reduce(function(a,r){ return a + (typeof computeLeaveUsedDays === 'function' ? computeLeaveUsedDays(r, _todayISO) : parseFloat(r.working_days||0)); }, 0);
+    .reduce(function(a,r){ return a + computeLeaveDaysInYear(r, year, _todayISO); }, 0);
   var leaveBalance = LEAVE_ALLOWANCE - leaveUsed;
   var monthApproved = (sessions||[]).filter(function(x){return (x.ot_date||'').startsWith(month) && (x.status==='approved'||!x.status);});
   var prevMonthApproved = (sessions||[]).filter(function(x){return (x.ot_date||'').startsWith(prevMonth) && (x.status==='approved'||!x.status);});

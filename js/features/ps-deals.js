@@ -467,6 +467,9 @@ async function loadPsGraphs() {
   var el = document.getElementById('ps-graphs-content');
   if (!el) return;
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+  // v195: collected is "so far", so say as of when.
+  var stamp = document.getElementById('ps-graphs-today');
+  if (stamp) stamp.innerHTML = '<span class="today-stamp-label">As of</span> <span class="today-stamp-value">' + fmtTodayLong() + '</span>';
 
   // v184: milestone payments come along so the chart can show collected
   // against awarded. Both queries are fired together - the chart needs both

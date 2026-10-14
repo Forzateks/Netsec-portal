@@ -248,12 +248,20 @@ function _amcRenderTotalCard(rows) {
   var aedLine = aed != null
     ? '<div class="amc-total-aed">≈ ' + (typeof fmtAed === 'function' ? fmtAed(aed, true) : 'AED ' + aed.toFixed(2)) + '</div>'
     : '';
+  // v195: today's date beside the total - every "Expired 2d ago" /
+  // "Active 105d" on this screen is counted from it.
   card.innerHTML =
-    '<div class="amc-total-label">Total AMC Value</div>'+
-    '<div class="amc-total-value">'+_amcFmtUSD(sum, true)+'</div>'+
-    aedLine+
-    '<div class="amc-total-sub">Across '+n+' contract'+(n===1?'':'s')+'</div>'+
-    foot;
+    '<div class="amc-total-main">'+
+      '<div class="amc-total-label">Total AMC Value</div>'+
+      '<div class="amc-total-value">'+_amcFmtUSD(sum, true)+'</div>'+
+      aedLine+
+      '<div class="amc-total-sub">Across '+n+' contract'+(n===1?'':'s')+'</div>'+
+      foot+
+    '</div>'+
+    '<div class="today-stamp">'+
+      '<div class="today-stamp-label">Today</div>'+
+      '<div class="today-stamp-value">'+fmtTodayLong()+'</div>'+
+    '</div>';
   card.style.display = '';
 }
 

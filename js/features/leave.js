@@ -205,6 +205,41 @@ function _isoDayBefore(iso) {
          String(d.getUTCDate()).padStart(2, '0');
 }
 
+// == LEAVE YEAR (v195) ============================================
+// Annual and sick allowances belong to a calendar year: they start again on
+// 1 January and unused days do not carry over. A day of leave is charged to
+// the year it FALLS in, so a leave running from December into January is
+// split between the two years instead of landing whole on the year it began
+// (which is what filtering by start_date did).
+//
+// todayISO caps the count at "taken so far"; pass null for the whole year
+// including days still to come.
+function computeLeaveDaysInYear(leave, year, todayISO) {
+  var range = leaveEffectiveRange(leave);
+  if (!range) return 0;
+  var yStart = year + '-01-01', yEnd = year + '-12-31';
+  var start = range.start > yStart ? range.start : yStart;
+  var end   = range.end   < yEnd   ? range.end   : yEnd;
+  if (todayISO && todayISO < end) end = todayISO;
+  if (end < start) return 0;
+  if (parseFloat(leave.working_days) === 0.5 && range.start === range.end) {
+    return getPublicHoliday(leave.employee, range.start) ? 0 : 0.5;
+  }
+  return calcWorkingDays(start, end, leave.employee);
+}
+
+// Approved days of `year` that have not happened yet.
+function computeUpcomingDaysInYear(leave, year, todayISO) {
+  if (!leave || leave.status !== 'approved') return 0;
+  return Math.max(0, computeLeaveDaysInYear(leave, year, null) - computeLeaveDaysInYear(leave, year, todayISO));
+}
+
+// Narrows a leave_requests query to rows that touch `year` at all: started on
+// or before 31 December AND ended on or after 1 January.
+function leaveYearFilter(q, year) {
+  return q.lte('start_date', year + '-12-31').gte('end_date', year + '-01-01');
+}
+
 // Approved working days still in the future — total minus already-taken.
 // Used by Team Leave Overview to show "+N upcoming" under the used cell.
 function computeUpcomingApprovedDays(leave, todayISO) {
@@ -234,16 +269,15 @@ async function getLeaveDaysUsed(employee, year, leaveType) {
   // New model: read from leave_requests and sum computeLeaveUsedDays. The
   // legacy annual_leave table is no longer the source of truth — its
   // existing rows stay in place but are not read for computation.
-  var res = await sb.from('leave_requests')
+  var res = await leaveYearFilter(sb.from('leave_requests')
     .select('start_date,end_date,working_days,leave_type,status,employee,effective_end_date,cancelled_at,reviewed_at')
-    .eq('employee', employee)
-    .gte('start_date', year+'-01-01').lte('start_date', year+'-12-31');
+    .eq('employee', employee), year);
   if (res.error) { console.warn('getLeaveDaysUsed:', res.error.message); return 0; }
   var todayISO = _leaveTodayISO();
   return (res.data||[]).filter(function(r){
     if (leaveType) return (r.leave_type||'annual') === leaveType;
     return true;
-  }).reduce(function(s,r){ return s + computeLeaveUsedDays(r, todayISO); }, 0);
+  }).reduce(function(s,r){ return s + computeLeaveDaysInYear(r, year, todayISO); }, 0);
 }
 
 function isCompOffType(t) { return t==='compoff_full' || t==='compoff_half'; }
@@ -327,8 +361,16 @@ async function updateLeavePreview() {
   // dropdown variants — making "Used This Year" always read 0 and overstating
   // "Balance After".
   const used = await getLeaveDaysUsed(currentUser,year,parsed.category);
-  const balAfter = allowance - used - days;
-  document.getElementById('lv-prev-days').textContent = fmtDays(days);
+  // v195: a request running past 31 December only spends this year's
+  // allowance for the days up to the year end; the rest belongs to next year.
+  const yearEnd = year + '-12-31';
+  const daysThisYear = (isHalfDay || end <= yearEnd) ? days : calcWorkingDays(start, yearEnd, currentUser);
+  const balAfter = allowance - used - daysThisYear;
+  // v195: a request crossing 31 December says how it splits, so "6 days"
+  // beside a 4-day deduction from this year's balance is not a puzzle.
+  document.getElementById('lv-prev-days').textContent = (daysThisYear !== days)
+    ? fmtDays(days) + ' (' + fmtNumber(daysThisYear, 1) + ' in ' + year + ', ' + fmtNumber(days - daysThisYear, 1) + ' in ' + (Number(year) + 1) + ')'
+    : fmtDays(days);
   document.getElementById('lv-prev-used').textContent = fmtNumber(used,1)+' / '+allowance;
   document.getElementById('lv-prev-bal').textContent  = fmtDays(balAfter);
   document.getElementById('lv-prev-bal').style.color  = balAfter<0?'var(--danger)':balAfter<=3?'var(--gold)':'var(--success)';
@@ -634,26 +676,63 @@ async function renderLeaveHistory() {
   }).join('');
 }
 
+// v195: which year the overview shows. null = the current year.
+var _lvTeamYear = null;
+var _lvTeamSeq = 0;   // a quick second year change must win over the first
+function setLeaveTeamYear(y) {
+  var n = Number(y);
+  _lvTeamYear = (/^\d{4}$/.test(String(y)) && n >= 2000 && n <= 2100) ? String(y) : null;
+  renderLeaveTeam();
+}
+
 async function renderLeaveTeam() {
   document.getElementById('lv-team-load').style.display='flex';
   document.getElementById('lv-team-content').innerHTML='';
-  const year=new Date().getFullYear().toString();
+  const thisYear=_leaveTodayISO().slice(0,4);
+  const year=_lvTeamYear || thisYear;
+  const mySeq=++_lvTeamSeq;
   // Switched from annual_leave (at-approval-time) to leave_requests so the
-  // day-by-day rule applies. Pull every leave_request that started in the
-  // year — computeLeaveUsedDays decides which days actually count today.
+  // day-by-day rule applies.
   // v164: comp-off joins annual + sick in this table, so pull the two CO
   // sources alongside the leave requests. ot_sessions can exceed the 1000-row
   // Supabase cap, so it goes through fetchAllRows; leave_requests (one year)
   // and comp_off_register are far below it.
-  const [{data}, otRes, coRes] = await Promise.all([
-    sb.from('leave_requests')
-      .select('employee,start_date,end_date,working_days,leave_type,status,effective_end_date,cancelled_at,reviewed_at')
-      .gte('start_date',year+'-01-01').lte('start_date',year+'-12-31'),
+  // v195: every year's requests come back, not just the selected one - the
+  // list of years in the filter is built from what actually exists, and the
+  // per-year split is done here so a leave crossing New Year is counted in
+  // both. The table is small (a few dozen rows a year); fetchAllRows keeps it
+  // correct if that ever stops being true.
+  const [lvRes, otRes, coRes] = await Promise.all([
+    fetchAllRows(function(){ return sb.from('leave_requests')
+      .select('employee,start_date,end_date,working_days,leave_type,status,effective_end_date,cancelled_at,reviewed_at'); }),
     fetchAllRows(function(){ return sb.from('ot_sessions').select('employee,status,band,rate,credited_hours'); }),
     sb.from('comp_off_register').select('employee,days')
   ]);
+  if (mySeq!==_lvTeamSeq) return;
   document.getElementById('lv-team-load').style.display='none';
-  const records=data||[];
+  if (lvRes.error) {
+    // An empty table here would read as "nobody has taken any leave".
+    document.getElementById('lv-team-content').innerHTML =
+      '<div class="alert alert-error show">Could not load leave records. Check your connection and try again.</div>';
+    return;
+  }
+  const allRecords=lvRes.data||[];
+  const yStart=year+'-01-01', yEnd=year+'-12-31';
+  const records=allRecords.filter(function(r){ return r.start_date && r.end_date && r.start_date<=yEnd && r.end_date>=yStart; });
+  // Years on offer: from the earliest leave on record to next year (leave is
+  // booked ahead), or further if something is already booked beyond that.
+  var minY=Number(thisYear), maxY=Number(thisYear)+1;
+  allRecords.forEach(function(r){
+    var a=Number(String(r.start_date||'').slice(0,4)), b=Number(String(r.end_date||'').slice(0,4));
+    if (a && a<minY) minY=a;
+    if (b && b>maxY) maxY=b;
+  });
+  if (Number(year)<minY) minY=Number(year);
+  if (Number(year)>maxY) maxY=Number(year);
+  var yearOpts='';
+  for (var yy=maxY; yy>=minY; yy--) {
+    yearOpts+='<option value="'+yy+'"'+(String(yy)===year?' selected':'')+'>'+yy+(String(yy)===thisYear?' (current)':'')+'</option>';
+  }
   const otRows=(otRes&&otRes.data)||[];
   const coRows=(coRes&&coRes.data)||[];
   const todayISO = _leaveTodayISO();
@@ -666,12 +745,12 @@ async function renderLeaveTeam() {
     function sumUsed(typeKey) {
       return empRecs
         .filter(function(r){ return (r.leave_type||'annual')===typeKey; })
-        .reduce(function(s,r){ return s + computeLeaveUsedDays(r, todayISO); }, 0);
+        .reduce(function(s,r){ return s + computeLeaveDaysInYear(r, year, todayISO); }, 0);
     }
     function sumUpcoming(typeKey) {
       return empRecs
         .filter(function(r){ return (r.leave_type||'annual')===typeKey; })
-        .reduce(function(s,r){ return s + computeUpcomingApprovedDays(r, todayISO); }, 0);
+        .reduce(function(s,r){ return s + computeUpcomingDaysInYear(r, year, todayISO); }, 0);
     }
     const annualUsed    = sumUsed('annual');
     const annualUpcoming= sumUpcoming('annual');
@@ -727,7 +806,13 @@ async function renderLeaveTeam() {
   }).join('');
 
   document.getElementById('lv-team-content').innerHTML=
-    '<div class="card"><div class="card-title">'+(isManager?'Team':'My')+' Leave Overview '+year+'</div>'+
+    '<div class="card">'+
+    '<div class="flex-between" style="gap:12px;flex-wrap:wrap;margin-bottom:14px">'+
+      '<div class="card-title" style="margin-bottom:0">'+(isManager?'Team':'My')+' Leave Overview '+year+'</div>'+
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--muted)">Year'+
+        '<select id="lv-team-year" onchange="setLeaveTeamYear(this.value)" style="width:auto;padding:7px 10px;font-size:13px">'+yearOpts+'</select>'+
+      '</label>'+
+    '</div>'+
     // v181: lv-overview-table tints the Annual / Sick / Comp-off column groups
     // (by position, see css/styles.css) so the three allowances read apart.
     '<div class="table-wrap"><table class="lv-overview-table"><thead><tr>'+
@@ -738,6 +823,7 @@ async function renderLeaveTeam() {
     '<th class="hide-mobile">CO Earned</th><th class="hide-mobile">CO Used</th><th>CO Balance</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Annual: '+fmtDays(LEAVE_ALLOWANCE)+'/yr &nbsp;|&nbsp; Sick: '+fmtDays(SICK_ALLOWANCE)+'/yr &nbsp;|&nbsp; Comp off: earned from approved OT (8 credited hours = 1 day), no yearly cap</div>'+
+    '<div style="margin-top:4px;font-size:12px;color:var(--muted)">Annual and sick leave start again on 1 January and unused days do not carry over. Comp Off is a running balance, so those three columns are the same whichever year is selected.</div>'+
     '</div>';
 
   // v102: manager-only OT/Comp Off summary card sits alongside the leave

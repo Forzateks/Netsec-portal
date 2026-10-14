@@ -422,6 +422,16 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v195-leave-year-filter",
+      "version": "v195",
+      "released_at": "2026-10-14T05:09:21Z",
+      "category": "new",
+      "title": "Leave Overview by year",
+      "body": "Leave Overview now has a Year filter. Annual and sick leave start again on 1 January and unused days do not carry over; a leave that runs from December into January is counted in each year for the days that fall in it. Comp Off stays a running balance. AMC Contracts and the Professional Services graph also show today\u2019s date.",
+      "link": "leave",
+      "link_text": "Open Leave"
+    },
+    {
       "id": "v194-duplicate-warning-same-people",
       "version": "v194",
       "released_at": "2026-10-09T10:40:36Z",

@@ -209,6 +209,8 @@ async function doLogout() {
     if (typeof resetGlobalSearch === 'function') resetGlobalSearch();
     LEAVE_DAYS = {};
     PUBLIC_HOLIDAYS = [];
+    // v195: the next person on this device starts on the current year.
+    if (typeof _lvTeamYear !== 'undefined') _lvTeamYear = null;
     if (typeof Sentry !== 'undefined') { try { Sentry.setUser(null); } catch (e) {} }
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
