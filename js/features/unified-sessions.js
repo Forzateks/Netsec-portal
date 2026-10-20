@@ -1116,7 +1116,17 @@ async function saveUnifiedSession() {
 }
 
 // === MY SESSIONS (Beta) view ===================================
+// v198: what the list is showing right now, for the Excel export - the rows
+// AFTER every filter (including the member filter applied in the browser)
+// and the filter values that produced them. Only the latest render may
+// set it, so a slow earlier load cannot replace a newer result.
+var _usShown = { rows: [], filters: null };
+var _usRenderSeq = 0;
+
 async function renderUSSessions() {
+  var mySeq = ++_usRenderSeq;
+  var xBtn = document.getElementById('us-xlsx-btn');
+  if (xBtn) xBtn.disabled = true;   // nothing to export until this load lands
   document.getElementById('us-sess-loading').style.display = 'flex';
   document.getElementById('us-sess-table').style.display = 'none';
   document.getElementById('us-sess-empty').style.display = 'none';
@@ -1140,6 +1150,7 @@ async function renderUSSessions() {
     if (fTo)   q = q.lte('session_date', fTo);
     return q;
   });
+  if (mySeq !== _usRenderSeq) return;
   document.getElementById('us-sess-loading').style.display = 'none';
   var rows = res.data || [];
 
@@ -1156,6 +1167,8 @@ async function renderUSSessions() {
       return members.indexOf(target) !== -1;
     });
   }
+  _usShown = { rows: res.error ? [] : rows.slice(), filters: { type: fType, cust: fCust, eng: fEng, mem: fMem, from: fFrom, to: fTo } };
+  if (xBtn) xBtn.disabled = !!res.error || !rows.length;
   if (!rows.length) {
     document.getElementById('us-sess-empty').style.display = 'block';
     var emptyCards = document.getElementById('us-sess-cards');
@@ -2042,4 +2055,77 @@ async function deleteUS(id) {
 
   showToast('Session deleted ✓');
   renderUSSessions();
+}
+
+// == MY SESSIONS EXCEL EXPORT (v198) ===============================
+// Exports exactly the sessions the list is showing after its filters, oldest
+// first, with a total-hours row. A second sheet records which filters were
+// applied and when, so the file explains itself when it is forwarded.
+async function exportUSSessionsExcel() {
+  var shown = _usShown || { rows: [] };
+  var rows = (shown.rows || []).slice();
+  if (!rows.length) { showError('Nothing to export - no sessions match the filters.'); return; }
+  var btn = document.getElementById('us-xlsx-btn');
+  var restore = btn ? btn.innerHTML : '';
+  function done() { if (btn) { btn.disabled = false; btn.innerHTML = restore; if (typeof renderIcons === 'function') renderIcons(); } }
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparing...'; }
+  try { await ensureXlsxLoaded(); }
+  catch (e) { done(); showError('Could not load the Excel library. Check your connection and try again.'); return; }
+
+  try {
+    rows.sort(function(a, b){
+      return (a.session_date || '').localeCompare(b.session_date || '') ||
+             (a.start_time || '').localeCompare(b.start_time || '');
+    });
+    var typeLabel = function(k) {
+      var t = (typeof SESSION_TYPE_BADGES !== 'undefined') ? SESSION_TYPE_BADGES[k] : null;
+      return t && t.label ? String(t.label).replace(/^[^A-Za-z0-9]+/, '').trim() : (k || '');
+    };
+    var num = function(v) { var n = Number(v); return (v === null || v === undefined || v === '' || isNaN(n)) ? '' : n; };
+    var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    var aoa = [[ 'S.No','Date','Day','Start','End','Hours','Office Hours','OT Hours','Type','Customer','Engagement',
+                 'Activity','Session Info','Logged By','Team Members','Stakeholders','Mode','Remarks' ]];
+    var total = 0;
+    rows.forEach(function(r, i){
+      var h = num(r.total_hours);
+      if (h !== '') total += h;
+      var dIdx = r.session_date ? new Date(r.session_date + 'T00:00:00Z').getUTCDay() : -1;
+      aoa.push([
+        i + 1, r.session_date || '', dIdx >= 0 ? days[dIdx] : '', fmtTime(r.start_time), fmtTime(r.end_time),
+        h, num(r.office_hours), num(r.ot_hours), typeLabel(r.session_type),
+        r.customer_name || '', r.engagement_name || '', r.activity_type || '', r.session_info || '',
+        r.employee || '', r.team_members || '', r.stake_holders || '', r.mode || '', r.remarks || ''
+      ]);
+    });
+    aoa.push([]);
+    aoa.push(['', '', '', '', 'Total', r2(total), '', '', fmtCount(rows.length) + ' session' + (rows.length === 1 ? '' : 's')]);
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:6},{wch:11},{wch:5},{wch:6},{wch:6},{wch:7},{wch:12},{wch:9},{wch:16},{wch:20},{wch:34},
+                   {wch:18},{wch:48},{wch:18},{wch:30},{wch:20},{wch:10},{wch:30}];
+
+    var f = shown.filters || {};
+    var typeName = f.type ? typeLabel(f.type) : 'All';
+    var now = (typeof fmtNowLong === 'function') ? fmtNowLong() : new Date().toString();
+    var info = XLSX.utils.aoa_to_sheet([
+      ['My Sessions export'], [],
+      ['Exported', now], ['Exported by', currentUser || ''], [],
+      ['Type', typeName], ['Customer', f.cust || 'All'], ['Engagement', f.eng || 'All'],
+      ['Member', f.mem || 'All'], ['From', f.from || 'Any'], ['To', f.to || 'Any'], [],
+      ['Sessions', rows.length], ['Total hours', r2(total)]
+    ]);
+    info['!cols'] = [{wch:14},{wch:44}];
+
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sessions');
+    XLSX.utils.book_append_sheet(wb, info, 'Filters');
+    var slug = String(f.eng || f.cust || 'all').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'all';
+    var stamp = (typeof officeClock === 'function') ? officeClock().iso : new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, 'sessions-' + slug + '-' + stamp + '.xlsx');
+    showToast('Exported ' + fmtCount(rows.length) + ' session' + (rows.length === 1 ? '' : 's') + ' \u2713');
+  } catch (e) {
+    showError('Excel export failed: ' + (e && e.message ? e.message : e));
+  } finally {
+    done();
+  }
 }

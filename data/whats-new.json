@@ -422,6 +422,16 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v198-my-sessions-excel",
+      "version": "v198",
+      "released_at": "2026-10-20T07:52:40Z",
+      "category": "new",
+      "title": "Export My Sessions to Excel",
+      "body": "My Sessions has an Excel button. It downloads exactly the sessions you have filtered \u2014 by type, customer, engagement, member or dates \u2014 oldest first with a total-hours row, plus a second sheet listing the filters used.",
+      "link": "my-sessions",
+      "link_text": "Open My Sessions"
+    },
+    {
       "id": "v197-office-time",
       "version": "v197",
       "released_at": "2026-10-14T07:10:27Z",
