@@ -1222,7 +1222,8 @@ var BACKUP_TABLES = [
   { table:'rollout_sites',           sheet:'Rollout Sites',           idCol:'id' },
   { table:'rollout_site_activity_log', sheet:'Rollout Activity Log', idCol:'id' },
   { table:'engagement_activity_log',   sheet:'Tracker Activity Log', idCol:'id' },
-  { table:'public_holidays',           sheet:'Public Holidays',      idCol:'id' }
+  { table:'public_holidays',           sheet:'Public Holidays',      idCol:'id' },
+  { table:'inventory_models',          sheet:'Inventory Models',     idCol:'id' }
 ];
 
 // Escape a JS value into a SQL literal safe for an INSERT VALUES clause.
@@ -1322,9 +1323,24 @@ function _generateSqlDump(dataByTable) {
 // Fetch every backup table in parallel and return a {table: rows[]} map.
 // Each fetch is paginated through fetchAllRows so tables larger than the
 // Supabase 1000-row cap (unified_sessions in particular) export in full.
+// v199: each table is read through backup_read_table(), a database function
+// that returns the WHOLE table to a manager or the backup person. A plain
+// select only returns what the signed-in user may see under RLS, so a backup
+// taken by the backup person (an employee) silently left out PS deals, team
+// skills and other people's certificates / notifications / snoozes. If the
+// function is missing (older database) it falls back to the plain read.
+function _backupFetchTable(table) {
+  return sb.rpc('backup_read_table', { p_table: table }).then(function(res){
+    if (!res.error) return { data: Array.isArray(res.data) ? res.data : [], error: null };
+    var missing = res.error.code === 'PGRST202' || res.error.code === '42883';
+    if (missing) return fetchAllRows(function(){ return sb.from(table).select('*'); });
+    return { data: null, error: res.error };
+  });
+}
+
 async function _fetchAllBackupData() {
   var jobs = BACKUP_TABLES.map(function(entry){
-    return fetchAllRows(function(){ return sb.from(entry.table).select('*'); })
+    return _backupFetchTable(entry.table)
       .then(function(res){
         if (res.error) {
           console.error('Backup fetch failed for ' + entry.table + ':', res.error);
@@ -1617,6 +1633,10 @@ async function renderBackupReminderBanner() {
 // can't see the button — but we navigate anyway so a backup-responsible
 // employee gets a clear destination instead of a dead-end click.
 function goToFullBackup() {
+  // v199: Admin Tools is manager-only, so for the backup person (an
+  // employee) the banner's button used to land on a screen they cannot
+  // open. Run the backup straight away instead.
+  if (!isManager) { backupExcel('all'); return; }
   if (typeof navigateSub === 'function') {
     navigateSub('projects', 'otmanager');
   } else if (typeof showScreen === 'function') {

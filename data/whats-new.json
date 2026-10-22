@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v199-inventory-companies",
+      "version": "v199",
+      "released_at": "2026-10-22T05:33:25Z",
+      "category": "new",
+      "title": "Inventory for any brand, not just Aruba",
+      "body": "Inventory now records the company for each device. Pick one such as Netally in Add Device, then its model \u2014 or choose \u201c+ Add new model\u201d or \u201c+ Add new company\u201d to add your own. The device list shows the company under the model and can be filtered by it. The backup person can now take a complete Full Backup from the user menu.",
+      "link": null
+    },
+    {
       "id": "v198-my-sessions-excel",
       "version": "v198",
       "released_at": "2026-10-20T07:52:40Z",

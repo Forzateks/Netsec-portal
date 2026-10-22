@@ -273,7 +273,9 @@ against `user_profiles.is_manager`) and `current_employee_name()`. See
 | KB articles | Submit; edit/delete own | All |
 | Profiles, customers, engagements | Read | Manage |
 | `public_holidays` | Read | Add / remove (Admin Tools) |
-| Admin tools, backup | None | Full |
+| `inventory_models` | Read + add (Inventory form) | Same + delete |
+| Full Backup | Only the `is_backup_responsible` user (via `backup_read_table()`, user menu) | Full |
+| Admin tools | None | Full |
 
 ---
 
@@ -289,7 +291,7 @@ Current tables (`docs/schema.sql`): `user_profiles`, `customers`, `vendors`,
 `comp_off_requests`, `inventory`, `inventory_activity_log`, `certificates`,
 `employee_skills`, `kb_articles`, `notifications`, `dashboard_alert_snoozes`,
 `engagement_activity_log`, `team_members`, `tasks`, `task_assignments`, `task_templates`,
-`task_template_assignees`, `backup_log`, `public_holidays`.
+`task_template_assignees`, `backup_log`, `public_holidays`, `inventory_models`.
 
 Key facts:
 - **`unified_sessions`** is now the single source of truth for session data (the old

@@ -14,7 +14,7 @@ function showInventoryTab(tab) {
     else           { sub.classList.remove('active'); }
   });
   if (tab === 'devices') loadInventory();
-  if (tab === 'add')     resetAddDeviceForm();
+  if (tab === 'add')     { resetAddDeviceForm(); loadInvCatalog().then(function(){ fillInvVendorSelect('add', ''); fillInvModelSelect('add', '', ''); }); }
   if (tab === 'log')     loadActivityLog();
   setSidebarSubActive('inventory', tab);
 }
@@ -22,14 +22,16 @@ function showInventoryTab(tab) {
 async function loadInventory() {
   var wrap = document.getElementById('inv-table-wrap');
   wrap.innerHTML = '<div class="loading"><div class="spinner"></div>Loading inventory...</div>';
-  var res = await sb.from('inventory').select('*').order('id');
+  var both = await Promise.all([sb.from('inventory').select('*').order('id'), loadInvCatalog()]);
+  var res = both[0];
   if (res.error) {
     wrap.innerHTML = '<div class="alert alert-error show">Error: '+res.error.message+'</div>';
     return;
   }
   _invData = res.data || [];
+  fillInvFilterVendors();
   renderInventoryStats(_invData);
-  renderInventoryTable(_invData);
+  applyInventoryFilters();
 }
 
 function renderInventoryStats(data) {
@@ -64,7 +66,7 @@ function invStatusClass(status) {
 // Reset every Inventory filter input and re-render. Wired to the "Clear
 // filters" CTA in the empty-state card.
 function clearInventoryFilters() {
-  ['inv-search','inv-filter-model','inv-filter-location','inv-filter-status'].forEach(function(id){
+  ['inv-search','inv-filter-vendor','inv-filter-model','inv-filter-location','inv-filter-status'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
   applyInventoryFilters();
@@ -73,20 +75,24 @@ function clearInventoryFilters() {
 function applyInventoryFilters() {
   var search  = (document.getElementById('inv-search').value||'').toLowerCase();
   var modelF  = document.getElementById('inv-filter-model').value;
+  var vendorF = (document.getElementById('inv-filter-vendor') || {}).value || '';
   var locF    = document.getElementById('inv-filter-location').value;
   var statusF = document.getElementById('inv-filter-status').value;
 
   var filtered = _invData.filter(function(d) {
     var matchSearch = !search ||
       (d.serial_number||'').toLowerCase().includes(search) ||
+      (d.vendor||'').toLowerCase().includes(search) ||
+      (d.model_no||'').toLowerCase().includes(search) ||
       (d.current_location||'').toLowerCase().includes(search) ||
       (d.current_partner||'').toLowerCase().includes(search) ||
       (d.current_end_user||'').toLowerCase().includes(search) ||
       (d.remarks||'').toLowerCase().includes(search);
     var matchModel  = !modelF  || d.model_no === modelF;
+    var matchVendor = !vendorF || (d.vendor||'') === vendorF;
     var matchLoc    = !locF    || d.current_location === locF;
     var matchStatus = !statusF || (d.availability_status||'').toLowerCase().includes(statusF);
-    return matchSearch && matchModel && matchLoc && matchStatus;
+    return matchSearch && matchVendor && matchModel && matchLoc && matchStatus;
   });
   renderInventoryTable(filtered);
 }
@@ -100,6 +106,7 @@ function renderInventoryTable(data) {
     var anyFilter =
       (document.getElementById('inv-search').value||'') ||
       (document.getElementById('inv-filter-model').value||'') ||
+      ((document.getElementById('inv-filter-vendor')||{}).value||'') ||
       (document.getElementById('inv-filter-location').value||'') ||
       (document.getElementById('inv-filter-status').value||'');
     wrap.innerHTML = anyFilter
@@ -114,7 +121,7 @@ function renderInventoryTable(data) {
       : renderEmptyState({
           icon: 'package',
           heading: 'No devices tracked yet',
-          sub: 'Add your Aruba EC devices to track serial numbers, locations, and audit history.',
+          sub: 'Add your devices to track serial numbers, locations, and audit history.',
           btnText: 'Add first device',
           btnOnclick: "navigateSub('inventory','add')"
         });
@@ -134,7 +141,7 @@ function renderInventoryTable(data) {
             : '')+
         '</span>'+
       '</td>'+
-      '<td>'+esc2(d.model_no||'—')+'</td>'+
+      '<td>'+_invEsc(d.model_no||'—')+(d.vendor ? '<div style="font-size:11px;color:var(--muted)">'+_invEsc(d.vendor)+'</div>' : '')+'</td>'+
       '<td><span class="badge '+sc+'">'+esc2(d.availability_status||'—')+'</span></td>'+
       '<td class="hide-mobile">'+esc2(d.current_location||'—')+'</td>'+
       '<td class="hide-mobile">'+esc2(d.current_partner||'—')+'</td>'+
@@ -213,7 +220,7 @@ function _invCopyFallback(text) {
 }
 
 function resetAddDeviceForm() {
-  ['inv-add-serial','inv-add-model','inv-add-status','inv-add-rail','inv-add-ids',
+  ['inv-add-serial','inv-add-status','inv-add-rail','inv-add-ids',
    'inv-add-location','inv-add-partner','inv-add-enduser','inv-add-prevlocation',
    'inv-add-auditloc','inv-add-version','inv-add-remarks','inv-add-auditdate'].forEach(function(id) {
     var el = document.getElementById(id);
@@ -233,12 +240,19 @@ async function saveNewDevice() {
     return;
   }
 
+  var addVendor = document.getElementById('inv-add-vendor').value;
+  var addModel  = document.getElementById('inv-add-model').value;
+  if (addVendor === INV_NEW || addModel === INV_NEW) { showError('Finish adding the company or model first.'); return; }
+  if (!addVendor) { showError('Pick the company.'); return; }
+  if (!addModel)  { showError('Pick the model (or add a new one from the list).'); return; }
+
   var btn = document.getElementById('inv-add-save-btn');
   btn.disabled = true; btn.textContent = '⏳ Saving...';
 
   var payload = {
     serial_number:       serial,
-    model_no:            document.getElementById('inv-add-model').value,
+    vendor:              addVendor,
+    model_no:            addModel,
     availability_status: document.getElementById('inv-add-status').value,
     rail_kit:            document.getElementById('inv-add-rail').value,
     ids_ps:              document.getElementById('inv-add-ids').value,
@@ -282,7 +296,8 @@ function openEditDeviceModal(id) {
   if (!d) return;
   _invEditId = id;
   document.getElementById('inv-edit-serial').textContent     = d.serial_number;
-  document.getElementById('inv-edit-model').value            = d.model_no || '';
+  fillInvVendorSelect('edit', d.vendor || '');
+  fillInvModelSelect('edit', d.vendor || '', d.model_no || '');
   document.getElementById('inv-edit-status').value           = d.availability_status || '';
   document.getElementById('inv-edit-rail').value             = d.rail_kit || 'N/A';
   document.getElementById('inv-edit-ids').value              = d.ids_ps || 'N/A';
@@ -317,8 +332,17 @@ async function saveEditDevice() {
   btn.disabled = true; btn.textContent = '⏳ Saving...';
 
   var old = _invData.find(function(x) { return x.id === _invEditId; });
+  var editVendor = document.getElementById('inv-edit-vendor').value;
+  var editModel  = document.getElementById('inv-edit-model').value;
+  if (editVendor === INV_NEW || editModel === INV_NEW || !editVendor || !editModel) {
+    showError(!editVendor ? 'Pick the company.' : 'Pick the model (or add a new one from the list).');
+    btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="btn-icon"></i>Save Changes';
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
   var newData = {
-    model_no:            document.getElementById('inv-edit-model').value,
+    vendor:              editVendor,
+    model_no:            editModel,
     availability_status: document.getElementById('inv-edit-status').value,
     rail_kit:            document.getElementById('inv-edit-rail').value,
     ids_ps:              document.getElementById('inv-edit-ids').value,
@@ -336,7 +360,7 @@ async function saveEditDevice() {
 
   // Build change diff for log
   var fieldLabels = {
-    model_no:'Model', availability_status:'Status', rail_kit:'Rail Kit', ids_ps:'IDS/PS',
+    vendor:'Company', model_no:'Model', availability_status:'Status', rail_kit:'Rail Kit', ids_ps:'IDS/PS',
     current_location:'Location', current_partner:'Partner', current_end_user:'End User',
     previous_location:'Prev Location', audit_location:'Audit Location',
     version:'Version', remarks:'Remarks', audit_date:'Audit Date'
@@ -383,7 +407,7 @@ async function saveEditDevice() {
 // inventory_activity_log has no UPDATE or DELETE policy, so the entry cannot
 // be edited or removed afterwards.
 var INV_DELETE_SNAPSHOT_FIELDS = [
-  ['model_no','Model'], ['availability_status','Status'], ['current_location','Location'],
+  ['vendor','Company'], ['model_no','Model'], ['availability_status','Status'], ['current_location','Location'],
   ['current_partner','Partner'], ['current_end_user','End user'], ['ids_ps','IDS/PS'],
   ['version','Version'], ['remarks','Remarks']
 ];
@@ -503,12 +527,12 @@ async function loadActivityLog() {
 
 function exportInventoryCSV() {
   if (!_invData.length) { showError('No data to export.'); return; }
-  var headers = ['Serial Number','Model','Status','Rail Kit','IDS/PS','Location',
+  var headers = ['Serial Number','Company','Model','Status','Rail Kit','IDS/PS','Location',
                  'Partner','End User','Previous Location','Audit Location','Version',
                  'Remarks','Audit Date','Last Updated By'];
   var rows = [headers];
   _invData.forEach(function(d) {
-    rows.push([d.serial_number,d.model_no,d.availability_status,d.rail_kit,d.ids_ps,
+    rows.push([d.serial_number,d.vendor,d.model_no,d.availability_status,d.rail_kit,d.ids_ps,
                d.current_location,d.current_partner,d.current_end_user,d.previous_location,
                d.audit_location,d.version,d.remarks,d.audit_date,d.last_updated_by]);
   });
@@ -521,3 +545,155 @@ function exportInventoryCSV() {
   a.click();
 }
 
+// == COMPANIES & MODELS (v199) ======================================
+// Inventory used to be Aruba EdgeConnect only, with five models hard-coded
+// in three dropdowns. Devices now carry a company (inventory.vendor) and the
+// models come from the inventory_models catalogue, which anyone can extend
+// from the Add / Edit Device form ("+ Add new model..."). Company names are
+// offered from that catalogue plus the active Vendors & Products list, so
+// "Netally" is spelled the same everywhere.
+var _invModels  = [];   // [{ vendor, model }]
+var _invVendors = [];   // active names from the vendors table
+var INV_NEW = '__new__';
+
+async function loadInvCatalog() {
+  var res = await Promise.all([
+    sb.from('inventory_models').select('vendor,model').order('vendor').order('model'),
+    sb.from('vendors').select('name').eq('is_active', true).order('name')
+  ]);
+  if (!res[0].error) _invModels  = res[0].data || [];
+  if (!res[1].error) _invVendors = (res[1].data || []).map(function(v){ return v.name; });
+  return !res[0].error;
+}
+
+function _invEsc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Every company worth offering: catalogue, vendor list, and anything already
+// on a device (so an old value is never dropped from its own edit form).
+function _invCompanies() {
+  var seen = {}, out = [];
+  function add(n) { n = (n || '').trim(); if (n && !seen[n.toLowerCase()]) { seen[n.toLowerCase()] = 1; out.push(n); } }
+  _invModels.forEach(function(m){ add(m.vendor); });
+  _invVendors.forEach(add);
+  (_invData || []).forEach(function(d){ add(d.vendor); });
+  return out.sort(function(a, b){ return a.localeCompare(b); });
+}
+
+function _invModelsFor(vendor) {
+  var v = (vendor || '').toLowerCase(), seen = {}, out = [];
+  _invModels.forEach(function(m){
+    if ((m.vendor || '').toLowerCase() === v && !seen[m.model.toLowerCase()]) { seen[m.model.toLowerCase()] = 1; out.push(m.model); }
+  });
+  return out;
+}
+
+function fillInvVendorSelect(prefix, selected) {
+  var sel = document.getElementById('inv-' + prefix + '-vendor');
+  if (!sel) return;
+  var list = _invCompanies();
+  if (selected && list.indexOf(selected) === -1) list.unshift(selected);
+  sel.innerHTML = '<option value="">-- Select company --</option>' +
+    list.map(function(n){ return '<option value="' + _invEsc(n) + '"' + (n === selected ? ' selected' : '') + '>' + _invEsc(n) + '</option>'; }).join('') +
+    '<option value="' + INV_NEW + '">+ Add new company...</option>';
+}
+
+function fillInvModelSelect(prefix, vendor, selected) {
+  var sel = document.getElementById('inv-' + prefix + '-model');
+  if (!sel) return;
+  if (!vendor) {
+    sel.innerHTML = '<option value="">-- Pick a company first --</option>';
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+  var list = _invModelsFor(vendor);
+  if (selected && list.indexOf(selected) === -1) list.unshift(selected);
+  sel.innerHTML = '<option value="">-- Select model --</option>' +
+    list.map(function(m){ return '<option value="' + _invEsc(m) + '"' + (m === selected ? ' selected' : '') + '>' + _invEsc(m) + '</option>'; }).join('') +
+    '<option value="' + INV_NEW + '">+ Add new model...</option>';
+}
+
+// Store a new company+model pair. A pair someone else added a moment ago
+// (unique violation) is fine - it exists, which is all we wanted.
+async function _invAddModel(vendor, model) {
+  if (!await requireAuth()) return false;
+  var ins = await sb.from('inventory_models').insert({ vendor: vendor, model: model, created_by: currentUser });
+  if (ins.error && ins.error.code !== '23505') { showError('Could not add the model: ' + ins.error.message); return false; }
+  await loadInvCatalog();
+  fillInvFilterVendors();
+  return true;
+}
+
+async function onInvVendorChange(prefix) {
+  var vSel = document.getElementById('inv-' + prefix + '-vendor');
+  if (vSel.value !== INV_NEW) { fillInvModelSelect(prefix, vSel.value, ''); return; }
+  var name = await promptInput({
+    title: 'Add a company', label: 'Company name', placeholder: 'e.g. Netally', confirmText: 'Next',
+    body: 'Then add its first model. Use the same spelling as Vendors & Products if the company is listed there.',
+    validate: function(v){ return v.length > 60 ? 'Keep it under 60 characters.' : null; }
+  });
+  if (!name) { fillInvVendorSelect(prefix, ''); fillInvModelSelect(prefix, '', ''); return; }
+  // Reuse an existing spelling rather than creating "NetAlly" next to "Netally".
+  var existing = _invCompanies().find(function(c){ return c.toLowerCase() === name.toLowerCase(); });
+  name = existing || name;
+  var model = await promptInput({
+    title: 'First model for ' + name, label: 'Model', placeholder: 'e.g. LinkRunner 10G', confirmText: 'Add',
+    validate: function(v){ return v.length > 60 ? 'Keep it under 60 characters.' : null; }
+  });
+  if (!model) { fillInvVendorSelect(prefix, existing ? name : ''); fillInvModelSelect(prefix, existing ? name : '', ''); return; }
+  if (await _invAddModel(name, model)) {
+    fillInvVendorSelect(prefix, name);
+    fillInvModelSelect(prefix, name, model);
+    showToast('Added ' + name + ' ' + model + ' \u2713');
+  } else {
+    fillInvVendorSelect(prefix, ''); fillInvModelSelect(prefix, '', '');
+  }
+}
+
+async function onInvModelChange(prefix) {
+  var vendor = document.getElementById('inv-' + prefix + '-vendor').value;
+  var mSel = document.getElementById('inv-' + prefix + '-model');
+  if (mSel.value !== INV_NEW) return;
+  var model = await promptInput({
+    title: 'Add a model for ' + vendor, label: 'Model', placeholder: 'e.g. EtherScope nXG', confirmText: 'Add',
+    validate: function(v){ return v.length > 60 ? 'Keep it under 60 characters.' : null; }
+  });
+  if (!model) { fillInvModelSelect(prefix, vendor, ''); return; }
+  var dup = _invModelsFor(vendor).find(function(m){ return m.toLowerCase() === model.toLowerCase(); });
+  if (dup) { fillInvModelSelect(prefix, vendor, dup); return; }
+  if (await _invAddModel(vendor, model)) { fillInvModelSelect(prefix, vendor, model); showToast('Added model ' + model + ' \u2713'); }
+  else fillInvModelSelect(prefix, vendor, '');
+}
+
+function fillInvFilterVendors() {
+  var sel = document.getElementById('inv-filter-vendor');
+  if (!sel) return;
+  var keep = sel.value;
+  var list = _invCompanies().filter(function(c){
+    return (_invData || []).some(function(d){ return (d.vendor || '') === c; });
+  });
+  sel.innerHTML = '<option value="">All Companies</option>' +
+    list.map(function(n){ return '<option value="' + _invEsc(n) + '">' + _invEsc(n) + '</option>'; }).join('');
+  sel.value = list.indexOf(keep) !== -1 ? keep : '';
+  fillInvFilterModels();
+}
+
+// Models that are actually on devices, narrowed to the chosen company.
+function fillInvFilterModels() {
+  var sel = document.getElementById('inv-filter-model');
+  if (!sel) return;
+  var keep = sel.value;
+  var vendor = (document.getElementById('inv-filter-vendor') || {}).value || '';
+  var seen = {}, list = [];
+  (_invData || []).forEach(function(d){
+    if (!d.model_no || (vendor && (d.vendor || '') !== vendor) || seen[d.model_no]) return;
+    seen[d.model_no] = 1; list.push(d.model_no);
+  });
+  list.sort(function(a, b){ return a.localeCompare(b); });
+  sel.innerHTML = '<option value="">All Models</option>' +
+    list.map(function(m){ return '<option value="' + _invEsc(m) + '">' + _invEsc(m) + '</option>'; }).join('');
+  sel.value = list.indexOf(keep) !== -1 ? keep : '';
+}

@@ -452,6 +452,18 @@ under weekend rules.
 - Data fix shipped with it: `leave_requests` id 9 (Ahmed Ali, 05-Aug to 03-Sep-2026)
   `working_days` 22 -> 21.
 
+### 12. `inventory_models` (v199)
+Companies and models offered in the Inventory Add/Edit Device form. Anyone
+signed in can add a pair; only managers can delete. Unique on (vendor, model).
+`inventory.vendor` (text) now records each device's company; existing rows were
+set to `Aruba / HPE Networking`.
+
+### Backup access (v199)
+`backup_read_table(p_table)` (SECURITY DEFINER) returns a whole table as JSON to
+a manager or the `is_backup_responsible` user, for the tables in `BACKUP_TABLES`.
+Full Backup uses it so the backup person's file is complete. Decision 22-Oct-2026:
+the backup person gets full read through the backup only; app screens unchanged.
+
 ## RLS Policies
 
 All tables use open anon-key policies (same pattern — app relies on PIN auth, not Supabase Auth):

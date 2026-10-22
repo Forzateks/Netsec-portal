@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v198',
+    release: 'netsec-portal@v199',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -322,6 +322,8 @@
         </div>
         <div class="user-menu-divider"></div>
         <button class="user-menu-item" onclick="closeUserMenu();openChangePasswordModal()"><i data-lucide="key-round"></i>Change Password</button>
+        <!-- v199: for the backup person (and managers), always reachable -->
+        <button class="user-menu-item" id="user-menu-backup" style="display:none" onclick="closeUserMenu();backupExcel('all')"><i data-lucide="database-backup"></i>Full Backup</button>
         <div class="user-menu-divider"></div>
         <button class="user-menu-item user-menu-item-danger" onclick="closeUserMenu();doLogout()"><i data-lucide="log-out"></i>Logout</button>
         <!-- v116: quiet version label. No always-on header chrome; reachable
@@ -1522,17 +1524,16 @@
         <input type="text" id="inv-search" placeholder="Serial no., partner, location..." oninput="applyInventoryFilters()">
       </div>
       <div class="form-group">
+        <label>Company</label>
+        <select id="inv-filter-vendor" onchange="fillInvFilterModels();applyInventoryFilters()">
+          <option value="">All Companies</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>Model</label>
+        <!-- v199: filled from the inventory_models catalogue -->
         <select id="inv-filter-model" onchange="applyInventoryFilters()">
           <option value="">All Models</option>
-          <!-- v123: synced with the 5 models in the Add Device form below
-               (was missing EC-SP / EC-M / EC-10104 / EC-10106, plus
-               EC-XS NFR isn't a value the form supports). -->
-          <option>EC-XS</option>
-          <option>EC-SP</option>
-          <option>EC-M</option>
-          <option>EC-10104</option>
-          <option>EC-10106</option>
         </select>
       </div>
       <div class="form-group">
@@ -1580,15 +1581,13 @@
           <input type="text" id="inv-add-serial" placeholder="e.g. 001BBC1234AB">
         </div>
         <div class="form-group">
-          <label>Model No.</label>
-          <select id="inv-add-model">
-            <option value="">-- Select --</option>
-            <option>EC-XS</option>
-            <option>EC-SP</option>
-            <option>EC-M</option>
-            <option>EC-10104</option>
-            <option>EC-10106</option>
-          </select>
+          <label for="inv-add-vendor">Company</label>
+          <!-- v199: any brand, not only Aruba EdgeConnect -->
+          <select id="inv-add-vendor" onchange="onInvVendorChange('add')"></select>
+        </div>
+        <div class="form-group">
+          <label for="inv-add-model">Model No.</label>
+          <select id="inv-add-model" onchange="onInvModelChange('add')"></select>
         </div>
         <div class="form-group full">
           <label>Availability Status</label>
@@ -2379,15 +2378,12 @@
     <div class="modal-title">✏️ Edit Device — <span id="inv-edit-serial" style="font-variant-numeric:tabular-nums;font-size:14px;color:var(--teal)"></span></div>
     <div class="form-grid">
       <div class="form-group">
-        <label>Model No.</label>
-        <select id="inv-edit-model">
-          <option value="">-- Select --</option>
-          <option>EC-XS</option>
-          <option>EC-SP</option>
-          <option>EC-M</option>
-          <option>EC-10104</option>
-          <option>EC-10106</option>
-        </select>
+        <label for="inv-edit-vendor">Company</label>
+        <select id="inv-edit-vendor" onchange="onInvVendorChange('edit')"></select>
+      </div>
+      <div class="form-group">
+        <label for="inv-edit-model">Model No.</label>
+        <select id="inv-edit-model" onchange="onInvModelChange('edit')"></select>
       </div>
       <div class="form-group">
         <label>Availability Status</label>

@@ -68,6 +68,7 @@ The backup is **data-only**. The schema (CREATE TABLE statements, RLS policies, 
 29. `task_templates`
 30. `task_template_assignees`
 31. `public_holidays` (v193 — standalone, no foreign keys)
+32. `inventory_models` (v199 — standalone, no foreign keys)
 
 (`backup_log` is intentionally excluded — it's the backup audit trail, not user data.)
 

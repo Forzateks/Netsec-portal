@@ -383,6 +383,9 @@ async function initApp(user) {
   // v192: the search box needs isManager settled - it decides which sources
   // are searched and the placeholder text.
   if (typeof initGlobalSearch === 'function') initGlobalSearch();
+  // v199: the Full Backup menu item for whoever is responsible for backups.
+  var bkItem = document.getElementById('user-menu-backup');
+  if (bkItem) bkItem.style.display = (isBackupResponsible || isManager) ? '' : 'none';
 }
 
 // == AUTH-STATE VALIDATION (v82) ==================================
