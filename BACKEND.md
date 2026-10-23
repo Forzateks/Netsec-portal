@@ -361,7 +361,8 @@ Device inventory — UAE/Oman/Bahrain/KDM/Qatar hardware tracking.
 |---|---|---|
 | id | bigserial PK | |
 | serial_number | text UNIQUE NOT NULL | Primary device identifier |
-| model_no | text | EC-XS / EC-XS NFR |
+| vendor | text | Company, e.g. `Aruba / HPE Networking`, `Array Networks`, `Netally` (v199) |
+| model_no | text | EC-XS, APV1800, ... — offered from `inventory_models` |
 | audit_location | text | e.g. STORE-GITD |
 | availability_status | text | Free text — e.g. "Available in Qatar", "Available (locked)" |
 | rail_kit | text | N/A / Yes |
@@ -376,6 +377,17 @@ Device inventory — UAE/Oman/Bahrain/KDM/Qatar hardware tracking.
 | last_updated_by | text | Employee name who last edited |
 | created_at | timestamptz | DEFAULT NOW() |
 | updated_at | timestamptz | DEFAULT NOW() |
+
+**Data import already run** (2026-10-23 — Array Networks devices from the UAE/KSA
+team sheet): 8 devices added with `vendor = 'Array Networks'` (AWF3500, APV1800 ×2,
+AVX3600, AG1000, CMX100, APV2600, APV5800), each with a `created` row in
+`inventory_activity_log` (`changed_by = 'Mohammed Nasif (import)'`), plus the 7 models
+in `inventory_models`. Every imported row's `remarks` contains the marker
+`Imported 2026-10-23 from UAE/KSA team sheet`, so the import can be rolled back with
+`DELETE FROM inventory WHERE remarks LIKE '%Imported 2026-10-23%'` (the activity-log
+rows are append-only and stay). Do **not** run it again — the serials would be skipped
+by the unique key, but the sheet's `PN:94100` entry is a part number, not a serial, and
+should be replaced with the real serial via Edit.
 
 ---
 
