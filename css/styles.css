@@ -3325,3 +3325,45 @@ mark.gs-hit{background:var(--pill-info-bg);color:inherit;border-radius:2px;paddi
   .gsearch.open .gs-box{top:calc(10px + max(50px, env(safe-area-inset-top, 0px)))}
   .gs-panel{top:calc(62px + max(50px, env(safe-area-inset-top, 0px)))}
 }
+
+/* == LEAVE REQUESTS LIST (v200) ===========================================
+   One line per request. Desktop is a grid with a header row; phones stack
+   each request into three short lines. Tokens only, so dark mode follows. */
+.lv-hist-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.lv-hist-summary{font-size:12px;color:var(--muted);margin-bottom:8px;min-height:16px}
+.lv-req-list{border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;background:var(--nx-surface)}
+.lv-req{display:grid;grid-template-columns:150px 86px minmax(180px,1.2fr) minmax(0,1.6fr) 210px;gap:12px;align-items:center;padding:10px 14px;border-top:1px solid var(--border);font-size:13px}
+.lv-noemp .lv-req{grid-template-columns:86px minmax(180px,1.2fr) minmax(0,1.6fr) 210px}
+.lv-req-head{border-top:none;background:var(--nx-canvas);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding-top:8px;padding-bottom:8px}
+.lv-req-rejected .c-when,.lv-req-cancelled .c-when,.lv-req-cancelled .c-who{opacity:.65}
+.lv-req .c-who{font-weight:600;color:var(--navy);min-width:0;overflow-wrap:anywhere}
+.lv-req .c-when{display:flex;flex-direction:column;gap:1px;font-variant-numeric:tabular-nums}
+.lv-when-date{white-space:nowrap;color:var(--navy)}
+.lv-when-days{font-size:12px;color:var(--muted)}
+.lv-req .c-note{min-width:0}
+.lv-reason{color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lv-msg{font-size:12px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+.lv-msg-warn{color:var(--pill-warn-fg)}
+.lv-msg-bad{color:var(--pill-danger-fg)}
+.lv-req .c-status{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.lv-type{display:inline-block;padding:2px 9px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;white-space:nowrap}
+.lv-type-annual{background:var(--pill-info-bg);color:var(--pill-info-fg)}
+.lv-type-sick{background:var(--pill-purple-bg);color:var(--pill-purple-fg)}
+.lv-type-compoff{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+@media(max-width:900px){
+  .lv-req{grid-template-columns:130px 80px minmax(150px,1fr) 170px}
+  .lv-noemp .lv-req{grid-template-columns:80px minmax(150px,1fr) 170px}
+  .lv-req .c-note{grid-column:1 / -1;order:5}
+}
+@media(max-width:640px){
+  .lv-req-head{display:none}
+  .lv-req,.lv-noemp .lv-req{grid-template-columns:1fr auto;grid-template-areas:"who status" "type when" "note note";gap:6px 10px;padding:12px}
+  .lv-noemp .lv-req{grid-template-areas:"type status" "when when" "note note"}
+  .lv-req .c-who{grid-area:who}
+  .lv-req .c-type{grid-area:type}
+  .lv-req .c-when{grid-area:when;align-items:flex-end;text-align:right}
+  .lv-noemp .lv-req .c-when{align-items:flex-start;text-align:left}
+  .lv-req .c-note{grid-area:note;grid-column:auto}
+  .lv-req .c-status{grid-area:status}
+  .lv-reason{white-space:normal}
+}

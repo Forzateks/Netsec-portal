@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v199',
+    release: 'netsec-portal@v200',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -561,6 +561,20 @@
           <option>Salman Aziz</option><option>Mohammed Afsal</option><option>Mohammed Nasif</option>
         </select>
       </div>
+      <!-- v200: filter by type (chips with counts) and status; the employee
+           filter above is manager-only. -->
+      <div class="lv-hist-bar">
+        <div class="amc-chip-row" id="lv-hist-chips" style="margin-bottom:0"></div>
+        <select id="lv-hist-status" onchange="renderLeaveHistoryView()" aria-label="Filter by status" style="width:auto;padding:7px 12px">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="needs_review">Needs review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div id="lv-hist-summary" class="lv-hist-summary"></div>
       <div id="lv-hist-load" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="lv-hist-content"></div>
     </div>

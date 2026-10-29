@@ -581,24 +581,99 @@ async function submitCompOffViaLeaveForm(ltype) {
   document.getElementById('lv-prev-bal').textContent='—';
 }
 
+// == LEAVE REQUESTS LIST (v200) ===================================
+// One compact line per request instead of a large card. Type chips (All /
+// Annual / Sick / Comp Off, with counts) and a status filter narrow it; the
+// manager's employee filter re-fetches. Requests are fetched once per
+// employee choice and filtered in the browser, so switching chips is instant.
+var _lvHistRows = [];     // every request for the chosen employee, newest first
+var _lvHistType = '';     // '' = all | 'annual' | 'sick' | 'compoff'
+var _lvHistSeq = 0;       // a slow earlier fetch must not overwrite a newer one
+
+var LV_TYPES = [
+  { key: 'annual',  label: 'Annual' },
+  { key: 'sick',    label: 'Sick' },
+  { key: 'compoff', label: 'Comp Off' }
+];
+
+function _lvHistTypeOf(r) {
+  if (r._kind === 'compoff') return 'compoff';
+  var t = r.leave_type || 'annual';       // blank means annual
+  return (t === 'sick' || t === 'compoff') ? t : 'annual';
+}
+
+function setLeaveHistType(t) {
+  _lvHistType = t || '';
+  renderLeaveHistoryView();
+}
+
+function clearLeaveHistFilters() {
+  _lvHistType = '';
+  var st = document.getElementById('lv-hist-status'); if (st) st.value = '';
+  renderLeaveHistoryView();
+}
+
 async function renderLeaveHistory() {
+  var mySeq = ++_lvHistSeq;
   document.getElementById('lv-hist-load').style.display='flex';
   document.getElementById('lv-hist-content').innerHTML='';
-  const filter=isManager?document.getElementById('lv-hist-filter').value:currentUser;
-  let lq=sb.from('leave_requests').select('*').order('created_at',{ascending:false});
-  let cq=sb.from('comp_off_requests').select('*').order('created_at',{ascending:false});
-  if (filter) { lq=lq.eq('employee',filter); cq=cq.eq('employee',filter); }
-  const [lr, cr] = await Promise.all([lq, cq]);
+  var filter=isManager?document.getElementById('lv-hist-filter').value:currentUser;
+  var both = await Promise.all([
+    fetchAllRows(function(){
+      var q=sb.from('leave_requests').select('*').order('created_at',{ascending:false});
+      return filter ? q.eq('employee',filter) : q;
+    }),
+    fetchAllRows(function(){
+      var q=sb.from('comp_off_requests').select('*').order('created_at',{ascending:false});
+      return filter ? q.eq('employee',filter) : q;
+    })
+  ]);
+  if (mySeq !== _lvHistSeq) return;
   document.getElementById('lv-hist-load').style.display='none';
-
-  const leaveRows = (lr.data||[]).map(function(r){ return Object.assign({_kind:'leave'}, r); });
-  const coRows    = (cr.data||[]).map(function(r){ return Object.assign({_kind:'compoff'}, r); });
-  const all = leaveRows.concat(coRows).sort(function(a,b){
+  var lr = both[0], cr = both[1];
+  if (lr.error || cr.error) {
+    // An empty list here would read as "no leave requests yet".
+    _lvHistRows = [];
+    document.getElementById('lv-hist-chips').innerHTML = '';
+    document.getElementById('lv-hist-summary').textContent = '';
+    document.getElementById('lv-hist-content').innerHTML =
+      '<div class="alert alert-error show">Could not load leave requests. Check your connection and try again.</div>';
+    return;
+  }
+  var leaveRows = (lr.data||[]).map(function(r){ return Object.assign({_kind:'leave'}, r); });
+  var coRows    = (cr.data||[]).map(function(r){ return Object.assign({_kind:'compoff'}, r); });
+  _lvHistRows = leaveRows.concat(coRows).sort(function(a,b){
     return new Date(b.created_at||0) - new Date(a.created_at||0);
   });
+  renderLeaveHistoryView();
+}
 
-  if (!all.length){
-    document.getElementById('lv-hist-content').innerHTML = renderEmptyState({
+// Draws the list from the cached rows and the current type / status filters.
+function renderLeaveHistoryView() {
+  var content = document.getElementById('lv-hist-content');
+  if (!content) return;
+  var status = (document.getElementById('lv-hist-status')||{}).value || '';
+  var all = _lvHistRows;
+
+  // Chip counts follow the status filter, so each chip shows what it would give.
+  var byStatus = status ? all.filter(function(r){ return r.status === status; }) : all;
+  var counts = { annual: 0, sick: 0, compoff: 0 };
+  byStatus.forEach(function(r){ counts[_lvHistTypeOf(r)]++; });
+  var chip = function(key, label, n) {
+    var active = (_lvHistType === key);
+    return '<button type="button" class="amc-chip'+(active?' amc-chip-active':'')+'" onclick="setLeaveHistType(\''+key+'\')">'+
+      label+' <span class="amc-chip-count">'+fmtCount(n)+'</span></button>';
+  };
+  document.getElementById('lv-hist-chips').innerHTML =
+    chip('', 'All', byStatus.length) +
+    LV_TYPES.map(function(t){ return chip(t.key, t.label, counts[t.key]); }).join('');
+
+  var rows = _lvHistType ? byStatus.filter(function(r){ return _lvHistTypeOf(r) === _lvHistType; }) : byStatus;
+  var summary = document.getElementById('lv-hist-summary');
+
+  if (!all.length) {
+    summary.textContent = '';
+    content.innerHTML = renderEmptyState({
       icon: 'palmtree',
       heading: 'No leave requests yet',
       sub: 'Submit annual or sick leave requests here. Manager reviews and approves.',
@@ -608,72 +683,86 @@ async function renderLeaveHistory() {
     if (typeof renderIcons === 'function') renderIcons();
     return;
   }
-  document.getElementById('lv-hist-content').innerHTML=all.map(function(r){
-    if (r._kind==='compoff') {
-      return '<div class="request-card '+r.status+'">'+
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
-        '<div><strong>'+r.employee+'</strong> <span style="font-size:11px;font-weight:600;color:var(--gold)">Comp Off ('+r.type+')</span><br>'+
-        '<span style="font-variant-numeric:tabular-nums;font-size:13px">'+fmtDate(r.request_date)+'</span><br>'+
-        '<span style="font-size:12px;color:var(--muted)">'+fmtDays(r.days)+(r.remarks?' | '+r.remarks:(r.related_activity?' | '+r.related_activity:''))+'</span></div>'+
-        '<span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+cap(r.status)+'</span></div>'+
-        (r.manager_comment?'<div style="font-size:12px;color:var(--muted);margin-top:4px">💬 '+r.manager_comment+'</div>':'')+
-        '</div>';
-    }
-    var ltIcon  = (r.leave_type||'annual')==='sick' ? 'Sick Leave' : 'Annual Leave';
-    var ltColor = (r.leave_type||'annual')==='sick' ? 'var(--nx-purple-mid)' : 'var(--teal)';
-    // Half-day flag: working_days === 0.5 on a single-date row. The string
-    // shows "(half day)" inline next to the date range to stay compact.
-    var isHalf = (parseFloat(r.working_days) === 0.5);
-    var halfTag = isHalf ? ' <span style="font-size:11px;color:var(--nx-purple-mid);font-weight:600">(half day)</span>' : '';
+  if (!rows.length) {
+    summary.textContent = '';
+    content.innerHTML = renderEmptyState({
+      icon: 'search-x',
+      heading: 'No requests match these filters',
+      sub: 'Try another type or status.',
+      btnText: 'Clear filters',
+      btnIcon: 'x',
+      btnOnclick: 'clearLeaveHistFilters()'
+    });
+    if (typeof renderIcons === 'function') renderIcons();
+    return;
+  }
 
-    // Determine if the employee can still cancel this request. Mirrors the
-    // server-side rule applied by cancelLeaveRequest: pending / needs_review
-    // are cancellable at any time; approved is cancellable while end_date is
-    // today-or-later (past-only leaves are locked).
-    var todayISO = (typeof _leaveTodayISO === 'function') ? _leaveTodayISO() : '';
-    var canCancel = false;
+  summary.textContent = (rows.length === all.length)
+    ? fmtCount(rows.length) + ' request' + (rows.length === 1 ? '' : 's')
+    : 'Showing ' + fmtCount(rows.length) + ' of ' + fmtCount(all.length) + ' requests';
+
+  var showEmp = !!isManager;
+  var todayISO = (typeof _leaveTodayISO === 'function') ? _leaveTodayISO() : '';
+  content.innerHTML =
+    '<div class="lv-req-list' + (showEmp ? '' : ' lv-noemp') + '">' +
+      '<div class="lv-req lv-req-head" aria-hidden="true">' +
+        (showEmp ? '<div class="c-who">Employee</div>' : '') +
+        '<div class="c-type">Type</div><div class="c-when">Dates</div><div class="c-note">Note</div><div class="c-status">Status</div>' +
+      '</div>' +
+      rows.map(function(r){ return _lvHistRowHtml(r, showEmp, todayISO); }).join('') +
+    '</div>';
+}
+
+function _lvHistRowHtml(r, showEmp, todayISO) {
+  var type = _lvHistTypeOf(r);
+  var typeLabel = type === 'sick' ? 'Sick' : type === 'compoff' ? 'Comp Off' : 'Annual';
+  var statusLabel = cap((r.status || '').replace('_', ' '));
+  var date, days, half, reason, note = '', noteTone = '';
+
+  if (r._kind === 'compoff') {
+    date = fmtDate(r.request_date);
+    days = fmtDays(r.days);
+    half = /half/i.test(r.type || '');
+    reason = r.remarks || r.related_activity || '';
+    if (r.manager_comment) note = 'Manager: ' + r.manager_comment;
+  } else {
+    date = (r.start_date === r.end_date) ? fmtDate(r.start_date) : fmtDateRange(r.start_date, r.end_date);
+    days = fmtDays(r.working_days);
+    half = (parseFloat(r.working_days) === 0.5);
+    reason = r.reason || '';
+    if (r.status === 'needs_review') { note = 'Discussion pending: ' + (r.manager_comment || 'no comment'); noteTone = 'warn'; }
+    else if (r.status === 'rejected' && r.manager_comment) { note = 'Rejected: ' + r.manager_comment; noteTone = 'bad'; }
+    else if (r.status === 'cancelled') {
+      var who = r.cancelled_by ? (r.cancelled_by === r.employee ? 'the employee' : r.cancelled_by) : '';
+      note = 'Cancelled' + (r.cancelled_at ? ' ' + relativeTime(r.cancelled_at) : '') + (who ? ' by ' + who : '') +
+        (r.effective_end_date ? ' \u00b7 counted through ' + fmtDate(r.effective_end_date) : '') +
+        (r.manager_comment ? ' \u00b7 ' + r.manager_comment : '');
+      noteTone = 'muted';
+    }
+    else if (r.manager_comment) note = 'Manager: ' + r.manager_comment;
+  }
+
+  // Cancel mirrors cancelLeaveRequest(): pending / needs_review any time,
+  // approved while the leave has not fully passed. Comp-off has no cancel.
+  var canCancel = false;
+  if (r._kind === 'leave') {
     if (r.status === 'pending' || r.status === 'needs_review') canCancel = true;
     else if (r.status === 'approved' && r.end_date && r.end_date >= todayISO) canCancel = true;
-    var cancelBtn = canCancel
-      ? '<button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="cancelLeaveRequest('+r.id+')" title="Cancel this leave">✕ Cancel</button>'
-      : '';
+  }
 
-    // Status banner — gives the employee the manager's context at a glance.
-    // needs_review (yellow): "the manager wants to talk before approving"
-    // rejected     (red):    "rejection reason"
-    // cancelled    (grey):   "cancellation details"
-    var banner = '';
-    if (r.status === 'needs_review') {
-      banner = '<div style="background:var(--pill-warn-bg);color:var(--nx-orange-deep);border-left:3px solid var(--gold);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
-        '💬 <strong>Pending discussion with manager:</strong> ' + esc2(r.manager_comment || '(no comment)') +
-        '</div>';
-    } else if (r.status === 'rejected' && r.manager_comment) {
-      banner = '<div style="background:var(--pill-danger-bg);color:var(--pill-danger-fg);border-left:3px solid var(--danger);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
-        '🚫 <strong>Rejection reason:</strong> ' + esc2(r.manager_comment) +
-        '</div>';
-    } else if (r.status === 'cancelled') {
-      var who = r.cancelled_by ? (r.cancelled_by === r.employee ? 'you' : esc2(r.cancelled_by)) : 'someone';
-      banner = '<div style="background:var(--nx-canvas);color:var(--nx-ink-2);border-left:3px solid var(--nx-ink-faint);padding:8px 10px;border-radius:6px;font-size:12px;margin-top:8px;line-height:1.4">'+
-        '🚫 Cancelled ' + (r.cancelled_at ? relativeTime(r.cancelled_at) : '') + ' by ' + who +
-        (r.effective_end_date ? ' · counted through ' + fmtDate(r.effective_end_date) : '') +
-        (r.manager_comment ? ' · ' + esc2(r.manager_comment) : '') +
-        '</div>';
-    }
-
-    var statusLabel = cap((r.status||'').replace('_',' '));
-    return '<div class="request-card '+r.status+'">'+
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;flex-wrap:wrap">'+
-      '<div><strong>'+r.employee+'</strong> <span style="font-size:11px;font-weight:600;color:'+ltColor+'">'+ltIcon+'</span><br>'+
-      '<span style="font-variant-numeric:tabular-nums;font-size:13px">'+fmtDate(r.start_date)+(r.start_date===r.end_date?'':' to '+fmtDate(r.end_date))+halfTag+'</span><br>'+
-      '<span style="font-size:12px;color:var(--muted)">'+r.working_days+' working day'+(parseFloat(r.working_days)===1?'':'s')+(r.reason?' | '+r.reason:'')+'</span></div>'+
-      '<div style="display:flex;align-items:center;flex-wrap:wrap"><span class="badge badge-'+r.status+'">'+statusIcon(r.status)+' '+statusLabel+'</span>'+cancelBtn+'</div></div>'+
-      // Show manager_comment inline only for rejected/needs_review where we
-      // didn't already emit a richer banner. For approved leaves it stays
-      // as the historical-context line.
-      (r.status === 'approved' && r.manager_comment ? '<div style="font-size:12px;color:var(--muted);margin-top:4px">💬 '+esc2(r.manager_comment)+'</div>':'')+
-      banner+
-      '</div>';
-  }).join('');
+  return '<div class="lv-req lv-req-' + _phEsc(r.status) + '">' +
+    (showEmp ? '<div class="c-who">' + _phEsc(r.employee) + '</div>' : '') +
+    '<div class="c-type"><span class="lv-type lv-type-' + type + '">' + typeLabel + '</span></div>' +
+    '<div class="c-when"><span class="lv-when-date">' + _phEsc(date) + '</span>' +
+      '<span class="lv-when-days">' + _phEsc(days) + (half ? ' \u00b7 half day' : '') + '</span></div>' +
+    '<div class="c-note">' +
+      (reason ? '<div class="lv-reason" title="' + _phEsc(reason) + '">' + _phEsc(reason) + '</div>' : '') +
+      (note ? '<div class="lv-msg' + (noteTone ? ' lv-msg-' + noteTone : '') + '">' + _phEsc(note) + '</div>' : '') +
+    '</div>' +
+    '<div class="c-status"><span class="badge badge-' + _phEsc(r.status) + '">' + _phEsc(statusLabel) + '</span>' +
+      (canCancel ? '<button class="btn btn-sm btn-ghost" onclick="cancelLeaveRequest(' + Number(r.id) + ')" title="Cancel this leave">Cancel</button>' : '') +
+    '</div>' +
+  '</div>';
 }
 
 // v195: which year the overview shows. null = the current year.

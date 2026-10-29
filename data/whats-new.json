@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v200-leave-requests-list",
+      "version": "v200",
+      "released_at": "2026-10-29T10:55:55Z",
+      "category": "new",
+      "title": "Leave Requests: simpler list with filters",
+      "body": "Leave Requests is now one compact line per request. Filter by type \u2014 Annual, Sick or Comp Off, each with a count \u2014 and by status, on top of the existing employee filter.",
+      "link": null
+    },
+    {
       "id": "v199-inventory-companies",
       "version": "v199",
       "released_at": "2026-10-22T05:33:25Z",
