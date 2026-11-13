@@ -27,6 +27,7 @@ var TOP_BAR_LABELS = {
   inventory:    'Inventory',
   certificates: 'Certificates',
   skills:       'Team Skills',
+  learning:     'Team Learning',
   kb:           'Knowledge Base',
   team:         'Team Portfolio'
 };
@@ -202,6 +203,7 @@ function showScreen(name) {
   if (name==='rollout') { if (typeof showRolloutTab === 'function') showRolloutTab('overview'); }
   if (name==='skills')  { if (typeof loadSkills === 'function')  loadSkills(); }
   if (name==='tasks')   { if (typeof loadTasks === 'function')   loadTasks(); }
+  if (name==='learning') { if (typeof showLearningTab === 'function') showLearningTab('mine'); }
 }
 
 // Parent-click handler for the projects accordions (Sessions / Reports).
@@ -251,6 +253,7 @@ function navigateSub(screen, subTab) {
   else if (screen==='amc')       showAMCTab(subTab);
   else if (screen==='psdeals')   showPsDealsTab(subTab);
   else if (screen==='rollout')   showRolloutTab(subTab);
+  else if (screen==='learning')  showLearningTab(subTab);
   closeSidebarOnMobile();
 }
 

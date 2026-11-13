@@ -209,6 +209,7 @@ async function doLogout() {
     if (typeof resetGlobalSearch === 'function') resetGlobalSearch();
     LEAVE_DAYS = {};
     PUBLIC_HOLIDAYS = [];
+    if (typeof resetLearningState === 'function') resetLearningState();
     // v195: the next person on this device starts on the current year.
     if (typeof _lvTeamYear !== 'undefined') _lvTeamYear = null;
     if (typeof Sentry !== 'undefined') { try { Sentry.setUser(null); } catch (e) {} }
@@ -332,6 +333,10 @@ async function initApp(user) {
   });
   var sbiCertAll = document.getElementById('sbi-certificates-all');
   if (sbiCertAll) sbiCertAll.style.display = isManager ? '' : 'none';
+  // v201: Team Learning team views are for managers.
+  ['sbi-learning-team','sbi-learning-compare'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.style.display = isManager ? '' : 'none';
+  });
   // Approvals sits at the top of the sidebar as a manager-only group
   // (no section label in the new layout).
   document.getElementById('tab-approvals').style.display  = isManager ? '' : 'none';

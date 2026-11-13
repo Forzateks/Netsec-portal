@@ -470,6 +470,28 @@ signed in can add a pair; only managers can delete. Unique on (vendor, model).
 `inventory.vendor` (text) now records each device's company; existing rows were
 set to `Aruba / HPE Networking`.
 
+### 13. `learning_entries` (v201)
+Team Learning: one row per **employee + week + product**, where the week is the
+**Friday** that ends it (a CHECK enforces Friday).
+
+| Column | Notes |
+|---|---|
+| `employee`, `week_date` | Whose week; Friday date |
+| `vendor`, `technology`, `product_line_id` | Product, from Vendors & Products or typed; unique with employee + week |
+| `course_status` / `cert_status` / `hands_on_status` | `not_started` / `in_progress` / `completed` (or NULL) |
+| `course_date`, `cert_date` | Completion dates |
+| `update_note` | What was done this week (blank at the start of each week) |
+| `is_blocked`, `blocker_note` | Roadblock flag and reason |
+| `next_steps`, `due_date` | |
+| `created_by`/`updated_by`/`*_at` | Stamped by trigger `_learning_entries_touch` |
+
+- **RLS:** employees read/write only their own rows; managers read/write everyone's.
+- **A new week** starts as a copy of the person's last week (statuses, roadblock, next steps;
+  the weekly update text is cleared). Done by the app, only for your own current week.
+- **Compare** (managers) is computed in the browser: each person against their own
+  previous week - never against other people.
+- Included in `BACKUP_TABLES` and in `backup_read_table()`'s allow-list.
+
 ### Backup access (v199)
 `backup_read_table(p_table)` (SECURITY DEFINER) returns a whole table as JSON to
 a manager or the `is_backup_responsible` user, for the tables in `BACKUP_TABLES`.

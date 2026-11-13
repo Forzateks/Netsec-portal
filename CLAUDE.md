@@ -77,7 +77,8 @@ Netsec-portal/
 │       ├── team-skills.js  # Team skills matrix
 │       ├── team.js         # Team Portfolio (public route at /#/team + internal mode)
 │       ├── tasks.js        # Tasks + task templates + task-completion approvals
-│       └── global-search.js # Top-bar search across the portal + manager client money summary (v192)
+│       ├── global-search.js # Top-bar search across the portal + manager client money summary (v192)
+│       └── learning.js     # Team Learning: weekly course/cert/hands-on progress, roadblocks, manager compare (v201)
 ├── data/
 │   ├── team.json           # Team Portfolio content
 │   └── whats-new.json      # Versioned release notes shown in the "What's new" modal
@@ -101,7 +102,7 @@ Netsec-portal/
 → `navigation.js` → `helpers.js` → `projects.js` → `unified-sessions.js` →
 `notifications.js` → `inventory.js` → `approvals.js` → `knowledge-base.js` →
 `tracker.js` → `certificates.js` → `amc-contracts.js` → `ps-deals.js` →
-`team-skills.js` → `team.js` → `tasks.js` → `global-search.js` → `init.js`.
+`team-skills.js` → `team.js` → `tasks.js` → `global-search.js` → `learning.js` → `init.js`.
 
 All scripts are plain globals (no modules/imports). Functions are called across files by
 global name, often guarded with `typeof fn === 'function'`. `state.js` must load first
@@ -274,6 +275,7 @@ against `user_profiles.is_manager`) and `current_employee_name()`. See
 | Profiles, customers, engagements | Read | Manage |
 | `public_holidays` | Read | Add / remove (Admin Tools) |
 | `inventory_models` | Read + add (Inventory form) | Same + delete |
+| `learning_entries` (Team Learning) | Own rows only | All rows, can edit |
 | Full Backup | Only the `is_backup_responsible` user (via `backup_read_table()`, user menu) | Full |
 | Admin tools | None | Full |
 
@@ -291,7 +293,7 @@ Current tables (`docs/schema.sql`): `user_profiles`, `customers`, `vendors`,
 `comp_off_requests`, `inventory`, `inventory_activity_log`, `certificates`,
 `employee_skills`, `kb_articles`, `notifications`, `dashboard_alert_snoozes`,
 `engagement_activity_log`, `team_members`, `tasks`, `task_assignments`, `task_templates`,
-`task_template_assignees`, `backup_log`, `public_holidays`, `inventory_models`.
+`task_template_assignees`, `backup_log`, `public_holidays`, `inventory_models`, `learning_entries`.
 
 Key facts:
 - **`unified_sessions`** is now the single source of truth for session data (the old

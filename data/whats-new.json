@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v201-learning-tracker",
+      "version": "v201",
+      "released_at": "2026-11-13T10:38:23Z",
+      "category": "new",
+      "title": "Team Learning: weekly progress on courses and certifications",
+      "body": "Team \u2192 Team Learning \u2192 My Week: for each product you are learning, record the course, certification and hands-on status, what you did this week, any roadblock, next steps and a due date. A new week starts as a copy of your last one, so you only change what moved. Managers also get Team Week and Compare, which shows each person against their own previous week.",
+      "link": null
+    },
+    {
       "id": "v200-leave-requests-list",
       "version": "v200",
       "released_at": "2026-10-29T10:55:55Z",
