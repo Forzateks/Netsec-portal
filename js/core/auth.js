@@ -328,7 +328,7 @@ async function initApp(user) {
   // shared groups (Catalog has employee-visible Inventory + Certificates
   // alongside manager-only Vendors + Skills; Settings has employee-visible
   // KB + OT Policy alongside manager-only Admin Tools).
-  ['sbi-projects-custmgr','sbi-projects-manage','sbi-projects-vendors','sbi-projects-otmanager','tab-amc','tab-psdeals','tab-skills'].forEach(function(id){
+  ['sbi-projects-custmgr','sbi-projects-manage','sbi-projects-vendors','sbi-projects-otmanager','tab-releases','tab-amc','tab-psdeals','tab-skills'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.style.display = isManager ? '' : 'none';
   });
   var sbiCertAll = document.getElementById('sbi-certificates-all');

@@ -28,6 +28,7 @@ var TOP_BAR_LABELS = {
   certificates: 'Certificates',
   skills:       'Team Skills',
   learning:     'Team Learning',
+  releases:     'Release History',
   kb:           'Knowledge Base',
   team:         'Team Portfolio'
 };
@@ -204,6 +205,7 @@ function showScreen(name) {
   if (name==='skills')  { if (typeof loadSkills === 'function')  loadSkills(); }
   if (name==='tasks')   { if (typeof loadTasks === 'function')   loadTasks(); }
   if (name==='learning') { if (typeof showLearningTab === 'function') showLearningTab('mine'); }
+  if (name==='releases') { if (typeof loadReleases === 'function') loadReleases(); }
 }
 
 // Parent-click handler for the projects accordions (Sessions / Reports).

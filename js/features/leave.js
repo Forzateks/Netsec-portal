@@ -34,10 +34,18 @@ async function loadPublicHolidays() {
 }
 
 function calcWorkingDays(startStr,endStr,employee) {
-  if (!startStr||!endStr) return 0;
+  return listWorkingDays(startStr,endStr,employee).length;
+}
+
+// v202: the working days (ISO strings) between two dates for this employee -
+// weekends (region + dated rotations) and public holidays skipped. Comp Off
+// uses the list itself (one register row per day); calcWorkingDays is its count.
+function listWorkingDays(startStr,endStr,employee) {
+  const out=[];
+  if (!startStr||!endStr) return out;
   const start=new Date(startStr); const end=new Date(endStr);
-  if (end<start) return 0;
-  let count=0; const cur=new Date(start);
+  if (end<start) return out;
+  const cur=new Date(start);
   while (cur<=end) {
     // v193: UTC getters throughout. new Date('YYYY-MM-DD') is UTC midnight, so
     // local getters read the PREVIOUS day in any timezone west of Greenwich -
@@ -51,10 +59,17 @@ function calcWorkingDays(startStr,endStr,employee) {
     // charged as leave and its real working days were not counted at all.
     const iso = cur.getUTCFullYear()+'-'+String(cur.getUTCMonth()+1).padStart(2,'0')+'-'+String(cur.getUTCDate()).padStart(2,'0');
     // v193: a public holiday for this employee's region is not a working day.
-    if (!isWeekend(wd,employee,iso) && !getPublicHoliday(employee,iso)) count++;
+    if (!isWeekend(wd,employee,iso) && !getPublicHoliday(employee,iso)) out.push(iso);
     cur.setUTCDate(cur.getUTCDate()+1);
   }
-  return count;
+  return out;
+}
+
+// v202: how a comp-off request's date(s) read - one day, or a range with its count.
+function coWhen(r) {
+  var n = (r.dates && r.dates.length) ? r.dates.length : 1;
+  if (n > 1 && r.end_date && r.end_date !== r.request_date) return fmtDateRange(r.request_date, r.end_date);
+  return fmtDate(r.request_date);
 }
 
 // Compute how many working days of a leave request have actually been TAKEN
@@ -302,12 +317,15 @@ function onLeaveTypeChange() {
   const ltype = document.getElementById('lv-type').value;
   // v104: half-day variants (any category) and comp-off all use single-date layout.
   const parsed = parseLtype(ltype);
-  const singleDay = parsed.isHalfDay || parsed.category === 'compoff';
+  // v202: a FULL comp-off day can span several days (one request, many days).
+  const singleDay = parsed.isHalfDay || (parsed.category === 'compoff' && ltype !== 'compoff_full');
   const endWrap = document.getElementById('lv-end-wrap');
   const startLabel = document.getElementById('lv-start-label');
   const startWrap = document.getElementById('lv-start-wrap');
   if (endWrap)   endWrap.style.display   = singleDay ? 'none' : '';
-  if (startLabel) startLabel.textContent = singleDay ? 'Date *' : 'Start Date *';
+  if (startLabel) startLabel.textContent = singleDay ? 'Date *' : (ltype === 'compoff_full' ? 'From *' : 'Start Date *');
+  var endLabel = document.getElementById('lv-end-label');
+  if (endLabel) endLabel.textContent = ltype === 'compoff_full' ? 'To (leave empty for a single day)' : 'End Date *';
   if (startWrap) startWrap.classList.toggle('full', singleDay);
   updateLeavePreview();
 }
@@ -318,7 +336,9 @@ async function updateLeavePreview() {
   const ltype = document.getElementById('lv-type') ? document.getElementById('lv-type').value : 'annual_full';
 
   if (isCompOffType(ltype)) {
-    const reqDays = ltype==='compoff_full' ? 1 : 0.5;
+    // v202: Full comp-off may cover a date range - count only its working days.
+    var coList = (ltype==='compoff_full') ? _coRequestDates(start, end) : (start ? [start] : []);
+    const reqDays = ltype==='compoff_full' ? coList.length : 0.5;
     document.getElementById('lv-prev-type').textContent = ltype==='compoff_full' ? 'Comp Off (Full)' : 'Comp Off (Half)';
     if (!start) {
       document.getElementById('lv-prev-days').textContent = '—';
@@ -332,7 +352,7 @@ async function updateLeavePreview() {
     ]);
     const s = calcSummary(sessions||[], coRegs||[], currentUser);
     const balAfter = s.balance - reqDays;
-    document.getElementById('lv-prev-days').textContent = fmtDays(reqDays);
+    document.getElementById('lv-prev-days').textContent = reqDays ? fmtDays(reqDays) : 'No working days';
     document.getElementById('lv-prev-used').textContent = fmtNumber(s.used,2)+' / '+fmtNumber(s.totalCO,2);
     document.getElementById('lv-prev-bal').textContent  = fmtDays(balAfter);
     document.getElementById('lv-prev-bal').style.color  = balAfter<0?'var(--danger)':balAfter<=1?'var(--gold)':'var(--success)';
@@ -504,37 +524,92 @@ async function submitLeaveRequest() {
   document.getElementById('lv-prev-bal').textContent='—';
 }
 
+// v202: the dates a comp-off request covers. Full Day with an end date = every
+// working day in the range; with no end (or the same day) = just that date, as before.
+var CO_MAX_DAYS = 31;
+function _coRequestDates(start, end) {
+  if (!start) return [];
+  if (!end || end === start) return [start];
+  return listWorkingDays(start, end, currentUser);
+}
+
+var _coSubmitting = false;
 async function submitCompOffViaLeaveForm(ltype) {
+  if (_coSubmitting) return;
+  _coSubmitting = true;
+  try { await _submitCompOff(ltype); } finally { _coSubmitting = false; }
+}
+
+async function _submitCompOff(ltype) {
   if (!await requireAuth()) return;
   const date   = document.getElementById('lv-start').value;
+  const endRaw = document.getElementById('lv-end').value;
   const reason = document.getElementById('lv-reason').value.trim();
   const errEl  = document.getElementById('leave-error');
   if (!date) { showAlert('leave-error'); return; }
-  const days     = ltype==='compoff_full' ? 1 : 0.5;
-  const typeLabel = days===1 ? 'Full Day' : 'Half Day';
+  const isFull = ltype==='compoff_full';
+  const end = isFull ? endRaw : '';
+  if (end && end < date) {
+    if (errEl) errEl.textContent = '\u26a0\ufe0f The end date is before the start date.';
+    showAlert('leave-error'); return;
+  }
+  const dates = _coRequestDates(date, end);
+  if (!dates.length) {
+    if (errEl) errEl.textContent = '\u26a0\ufe0f No working days in that range (weekends and public holidays are skipped).';
+    showAlert('leave-error'); return;
+  }
+  if (dates.length > CO_MAX_DAYS) {
+    if (errEl) errEl.textContent = '\u26a0\ufe0f A request can cover up to ' + CO_MAX_DAYS + ' days. Please split it.';
+    showAlert('leave-error'); return;
+  }
+  const first = dates[0], last = dates[dates.length-1];
+  const days     = isFull ? dates.length : 0.5;
+  const typeLabel = isFull ? 'Full Day' : 'Half Day';
+  const multi = dates.length > 1;
+  const whenText = multi ? fmtDateRange(first, last) + ' (' + dates.length + ' working days)' : first;
 
-  // Block requesting comp off on a date that already has a non-rejected
+  // Block requesting comp off on any date that already has a non-rejected
   // request OR an already-redeemed register entry for this user.
   var conflictRes = await Promise.all([
     sb.from('comp_off_requests')
-      .select('id,status,request_date').eq('employee', currentUser)
-      .neq('status','rejected').eq('request_date', date),
+      .select('id,status,request_date,end_date,dates').eq('employee', currentUser)
+      .neq('status','rejected').lte('request_date', last),
     sb.from('comp_off_register')
-      .select('id,date_taken').eq('employee', currentUser).eq('date_taken', date)
+      .select('id,date_taken').eq('employee', currentUser).in('date_taken', dates)
   ]);
-  var conflict = (conflictRes[0].data && conflictRes[0].data[0]) ||
-                 (conflictRes[1].data && conflictRes[1].data[0]);
-  if (conflict) {
-    if (errEl) errEl.textContent = '⚠️ You already have a comp off record for ' + date + '. Cancel that one or pick a different date.';
+  var clash = null;
+  (conflictRes[0].data || []).forEach(function(q){
+    var qd = (q.dates && q.dates.length) ? q.dates : [q.request_date];
+    qd.forEach(function(d){ if (!clash && dates.indexOf(d) !== -1) clash = d; });
+  });
+  if (!clash && conflictRes[1].data && conflictRes[1].data[0]) clash = conflictRes[1].data[0].date_taken;
+  if (clash) {
+    if (errEl) errEl.textContent = '\u26a0\ufe0f You already have a comp off record for ' + fmtDate(clash) + '. Cancel that one or pick different dates.';
     showAlert('leave-error'); return;
   }
+
+  // Ask before going past the balance (the preview already shows it in red).
+  try {
+    const [{data:ses},{data:regs}] = await Promise.all([
+      sb.from('ot_sessions').select('*').eq('employee',currentUser),
+      sb.from('comp_off_register').select('*').eq('employee',currentUser)
+    ]);
+    const bal = calcSummary(ses||[], regs||[], currentUser).balance;
+    if (days > bal) {
+      if (!await confirmAction({
+        title: 'Not enough comp-off balance',
+        body: 'You are asking for ' + fmtDays(days) + ' but your balance is ' + fmtDays(bal) + '. Send the request anyway?',
+        confirmText: 'Send anyway'
+      })) return;
+    }
+  } catch(e) { /* the balance check is advisory - never block the request on it */ }
 
   var emailWindow = window.open('about:blank', '_blank');
 
   const btn=document.getElementById('lv-save-btn');
   btn.disabled=true; btn.textContent='⏳ Submitting...';
   const {error}=await sb.from('comp_off_requests').insert({
-    employee:currentUser, request_date:date, type:typeLabel,
+    employee:currentUser, request_date:first, end_date:last, dates:dates, type:typeLabel,
     days, related_activity:'', remarks:reason, status:'pending'
   });
   btn.disabled=false; btn.innerHTML='<i data-lucide="send" class="btn-icon"></i>Submit Request'; if (typeof renderIcons === 'function') renderIcons();
@@ -543,12 +618,12 @@ async function submitCompOffViaLeaveForm(ltype) {
     showError('Error: '+error.message); return;
   }
 
-  var subject = 'Comp Off Request - ' + currentUser + ' - ' + typeLabel + ' on ' + date;
+  var subject = 'Comp Off Request - ' + currentUser + ' - ' + typeLabel + ' on ' + whenText;
   var body =
     'Hi Venkat,\n\n' +
     'I have submitted a comp off request through the NetSec Portal:\n\n' +
-    'Type: ' + typeLabel + ' (' + days + ' day)\n' +
-    'Date: ' + date + '\n' +
+    'Type: ' + typeLabel + ' (' + days + (days === 1 ? ' day' : ' days') + ')\n' +
+    (multi ? 'Dates: ' : 'Date: ') + whenText + '\n' +
     'Reason: ' + (reason || '(none)') + '\n\n' +
     'Please review and approve at https://netsec-portal.pages.dev/\n\n' +
     'Thanks,\n' + currentUser;
@@ -720,7 +795,7 @@ function _lvHistRowHtml(r, showEmp, todayISO) {
   var date, days, half, reason, note = '', noteTone = '';
 
   if (r._kind === 'compoff') {
-    date = fmtDate(r.request_date);
+    date = coWhen(r);
     days = fmtDays(r.days);
     half = /half/i.test(r.type || '');
     reason = r.remarks || r.related_activity || '';
@@ -1285,7 +1360,7 @@ function approvalCard(r,type) {
   const isPending = r.status==='pending';
   const isNeedsReview = r.status==='needs_review';
   let info='';
-  if (type==='compoff') info='<strong>'+r.employee+'</strong> — '+r.type+' on '+fmtDate(r.request_date)+(r.related_activity?' ('+r.related_activity+')':'');
+  if (type==='compoff') info='<strong>'+r.employee+'</strong> — '+r.type+(r.dates&&r.dates.length>1?' ('+fmtDays(r.days)+')':'')+' on '+coWhen(r)+(r.related_activity?' ('+r.related_activity+')':'');
   else {
     var isHalf = (parseFloat(r.working_days) === 0.5);
     var halfBadge = isHalf ? ' <span class="badge" style="background:var(--pill-purple-bg);color:var(--pill-purple-fg);font-size:10px">Half day</span>' : '';
@@ -1453,7 +1528,12 @@ async function deleteRequest(type, id) {
 
   if (isApproved && existing) {
     if (type === 'compoff') {
-      await sb.from('comp_off_register').delete().eq('related_request', id);
+      // v202: register rows carry request_id (one per day of the request). Older
+      // approvals have no link - match those on employee + date.
+      await sb.from('comp_off_register').delete().eq('request_id', id);
+      var coDates = (existing.dates && existing.dates.length) ? existing.dates : [existing.request_date];
+      await sb.from('comp_off_register').delete()
+        .eq('employee', existing.employee).is('request_id', null).in('date_taken', coDates);
     } else {
       // annual_leave doesn't have related_request FK - match on emp + dates + type
       await sb.from('annual_leave').delete()
@@ -1469,6 +1549,7 @@ async function deleteRequest(type, id) {
   renderLeaveApprovals();
 }
 
+var _coApproving = false;
 async function processRequest(decision) {
   if (!approveTarget) return;
   if (!await requireAuth()) return;
@@ -1527,19 +1608,21 @@ async function processRequest(decision) {
     }
   }
 
-  const {error}=await sb.from(table).update(payload).eq('id',id);
-  if (error){showError('Error: '+error.message);return;}
-
-  // Comp-off approval still mirrors into comp_off_register (its balance
-  // model is unchanged). Leave approval no longer writes to annual_leave —
-  // the day-by-day rule reads leave_requests directly, so the snapshot row
-  // would be dead data.
+  // v202: approving a comp-off goes through ONE database function that writes
+  // the request status and one register row per day together (all or nothing),
+  // and answers 'already approved' to a double-click instead of adding rows twice.
+  // Leave approval no longer writes to annual_leave - the day-by-day rule reads
+  // leave_requests directly.
   if (decision==='approved' && type==='compoff') {
-    const {data}=await sb.from('comp_off_requests').select('*').eq('id',id).single();
-    if (data) await sb.from('comp_off_register').insert({
-      employee:data.employee,date_taken:data.request_date,type:data.type,
-      days:data.days,approved_by:currentUser,remarks:data.remarks||''
-    });
+    if (_coApproving) return;
+    _coApproving = true;
+    try {
+      const rpcRes = await sb.rpc('approve_comp_off_request', { p_id: id, p_comment: comment || null });
+      if (rpcRes.error){showError('Error: '+rpcRes.error.message);return;}
+    } finally { _coApproving = false; }
+  } else {
+    const {error}=await sb.from(table).update(payload).eq('id',id);
+    if (error){showError('Error: '+error.message);return;}
   }
 
   if (decision === 'approved') await _approveSuccessGlow();

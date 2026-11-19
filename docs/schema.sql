@@ -415,7 +415,8 @@ CREATE TABLE public.comp_off_register (
   days numeric(3,1) NOT NULL,
   approved_by text,
   remarks text,
-  created_at timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now(),
+  request_id bigint  -- v202: the comp_off_requests row this day came from (NULL for older approvals)
 );
 
 CREATE TABLE public.comp_off_requests (
@@ -430,7 +431,9 @@ CREATE TABLE public.comp_off_requests (
   manager_comment text,
   reviewed_by text,
   reviewed_at timestamptz,
-  created_at timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now(),
+  end_date date,    -- v202: last day of a multi-day request (NULL / = request_date for one day)
+  dates date[]      -- v202: every day the request covers; NULL on older single-day rows
 );
 
 CREATE TABLE public.inventory (
@@ -1319,6 +1322,16 @@ CREATE POLICY learning_entries_select ON public.learning_entries FOR SELECT TO a
 CREATE POLICY learning_entries_insert ON public.learning_entries FOR INSERT TO authenticated WITH CHECK (employee = current_employee_name() OR is_manager_user());
 CREATE POLICY learning_entries_update ON public.learning_entries FOR UPDATE TO authenticated USING (employee = current_employee_name() OR is_manager_user()) WITH CHECK (employee = current_employee_name() OR is_manager_user());
 CREATE POLICY learning_entries_delete ON public.learning_entries FOR DELETE TO authenticated USING (employee = current_employee_name() OR is_manager_user());
+
+-- == v202: multi-day Comp Off (migration v202_comp_off_multi_day) ===========
+ALTER TABLE public.comp_off_requests ADD CONSTRAINT comp_off_requests_range_chk CHECK (end_date IS NULL OR end_date >= request_date);
+ALTER TABLE public.comp_off_register ADD CONSTRAINT comp_off_register_request_id_fkey
+  FOREIGN KEY (request_id) REFERENCES public.comp_off_requests(id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX comp_off_register_request_day_uq ON public.comp_off_register (request_id, date_taken) WHERE request_id IS NOT NULL;
+-- function public.approve_comp_off_request(p_id bigint, p_comment text) RETURNS jsonb, SECURITY DEFINER, manager only:
+--   locks the request, returns {already_approved:true} if it is already approved, otherwise writes one comp_off_register
+--   row per day (days / number of days each, request_id set, ON CONFLICT DO NOTHING) and marks the request approved -
+--   all in one transaction. EXECUTE granted to authenticated; the manager check is inside the function.
 
 COMMIT;
 

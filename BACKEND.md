@@ -232,8 +232,8 @@ Approved comp off entitlements (written when a comp off request is approved).
 | id | bigserial PK | |
 | employee | text | |
 | date_taken | date | Date the comp off was used |
-| days | numeric | 1.0 or 0.5 |
-| related_request | bigint | FK to comp_off_requests.id |
+| days | numeric | 1.0 or 0.5 (one row per day) |
+| request_id | bigint | v202: FK to comp_off_requests.id (ON DELETE CASCADE); NULL on approvals made before v202. Unique with date_taken. |
 | created_at | timestamptz | |
 
 ---
@@ -245,9 +245,11 @@ Employee requests to take a comp off day.
 |---|---|---|
 | id | bigserial PK | |
 | employee | text | |
-| request_date | date | Date requested to take off |
+| request_date | date | First (or only) day requested |
+| end_date | date | v202: last day of a multi-day request |
+| dates | date[] | v202: every working day covered (NULL on older rows = just request_date) |
 | type | text | Full Day / Half Day |
-| days | numeric | 1.0 or 0.5 |
+| days | numeric | Total days: number of dates for Full Day, 0.5 for Half Day |
 | related_activity | text | Optional context |
 | remarks | text | |
 | status | text | pending / approved / rejected |
@@ -491,6 +493,16 @@ Team Learning: one row per **employee + week + product**, where the week is the
 - **Compare** (managers) is computed in the browser: each person against their own
   previous week - never against other people.
 - Included in `BACKUP_TABLES` and in `backup_read_table()`'s allow-list.
+
+### 14. Multi-day Comp Off (v202)
+One Comp Off request can now cover several days. The app lists the employee's
+working days in the chosen range (weekends and public holidays skipped) into
+`comp_off_requests.dates`; `days` is their count. **Approval** goes through
+`approve_comp_off_request(p_id, p_comment)` (SECURITY DEFINER, manager only): in one
+transaction it writes one `comp_off_register` row per day (linked by `request_id`) and
+marks the request approved; a second call (double-click) returns `already_approved`
+instead of adding rows again. Deleting a request cascades to its register rows.
+The Release History screen (managers) reads `data/whats-new.json` - no database table.
 
 ### Backup access (v199)
 `backup_read_table(p_table)` (SECURITY DEFINER) returns a whole table as JSON to

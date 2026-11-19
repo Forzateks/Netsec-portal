@@ -484,7 +484,7 @@ async function renderEmployeeDashboard() {
   if (pendingCO.length || pendingLV.length || pendingOT.length) {
     html += '<div class="card"><div class="card-title">My Pending Requests</div>';
     pendingOT.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">OT Session &middot; '+r.activity+' &middot; '+fmtDate(r.ot_date)+' ('+r.band+' '+fmtHours(r.duration_hours)+')<span class="badge badge-pending" style="margin-left:8px">Awaiting approval</span></div>'; });
-    pendingCO.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">Comp Off &middot; '+r.type+' &middot; '+fmtDate(r.request_date)+'<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
+    pendingCO.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">Comp Off &middot; '+r.type+' &middot; '+(typeof coWhen==='function'?coWhen(r):fmtDate(r.request_date))+'<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
     pendingLV.forEach(function(r){ html += '<div class="request-card pending" style="margin-bottom:8px">Leave &middot; '+fmtDateRange(r.start_date, r.end_date)+' &middot; '+fmtDays(r.working_days)+'<span class="badge badge-pending" style="margin-left:8px">Pending</span></div>'; });
     html += '</div>';
   }

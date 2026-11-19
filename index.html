@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v201',
+    release: 'netsec-portal@v202',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -492,6 +492,7 @@
   <div class="sidebar-footer">
     <div class="sidebar-section-label sidebar-section-label-sm">Settings</div>
     <div class="sidebar-item sidebar-item-sm" id="sbi-projects-otmanager" onclick="navigateSub('projects','otmanager');closeSidebarOnMobile()" style="display:none"><i data-lucide="shield-check" class="sidebar-icon"></i>Admin Tools</div>
+    <div class="sidebar-item sidebar-item-sm" id="tab-releases" onclick="showScreen('releases');closeSidebarOnMobile()" style="display:none"><i data-lucide="history" class="sidebar-icon"></i>Release History</div>
     <div class="sidebar-item sidebar-item-sm" id="tab-kb"                 onclick="showScreen('kb');closeSidebarOnMobile()"><i data-lucide="book-open-text" class="sidebar-icon"></i>Knowledge Base</div>
     <div class="sidebar-item sidebar-item-sm" id="sbi-projects-otpolicy"  onclick="navigateSub('projects','otpolicy');closeSidebarOnMobile()"><i data-lucide="book-open" class="sidebar-icon"></i>OT Policy</div>
     <div class="sidebar-footer-actions">
@@ -544,7 +545,7 @@
           <input type="date" id="lv-start" onchange="updateLeavePreview()">
         </div>
         <div class="form-group" id="lv-end-wrap">
-          <label>End Date *</label>
+          <label id="lv-end-label">End Date *</label>
           <input type="date" id="lv-end" onchange="updateLeavePreview()">
         </div>
         <div class="form-group full">
@@ -2057,6 +2058,18 @@
   </div>
 </div>
 
+<!-- ══ RELEASE HISTORY (v202) ══ -->
+<div class="screen" id="screen-releases">
+  <div class="card rl-bar">
+    <input type="search" id="rl-search" placeholder="Search updates…" oninput="renderReleases()" aria-label="Search updates">
+    <select id="rl-cat" onchange="renderReleases()" aria-label="Filter by type">
+      <option value="">All types</option><option value="new">New</option><option value="fixed">Fixed</option><option value="app">Update</option><option value="tip">Tip</option>
+    </select>
+    <span class="rl-count" id="rl-count"></span>
+  </div>
+  <div id="rl-content"></div>
+</div>
+
 <!-- ══ TEAM LEARNING (v201) ══ -->
 <div class="screen" id="screen-learning">
   <div class="ln-weekbar card">
@@ -3363,6 +3376,7 @@
 <script src="js/features/tasks.js"></script>
 <script src="js/features/global-search.js"></script>
 <script src="js/features/learning.js"></script>
+<script src="js/features/releases.js"></script>
 <script src="js/core/init.js"></script>
 </body>
 </html>

@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v202-comp-off-multi-day",
+      "version": "v202",
+      "released_at": "2026-11-19T10:58:07Z",
+      "category": "new",
+      "title": "Comp Off for several days in one request, and Release History",
+      "body": "Leave \u2192 Request Leave \u2192 Comp Off (Full Day): pick From and To dates and one request covers every working day in the range \u2014 weekends and public holidays are skipped \u2014 so you no longer apply once per day. The manager approves it in a single click. Half-day comp off stays a single date. Managers also get Settings \u2192 Release History, listing every update pushed with its version, date and details.",
+      "link": null
+    },
+    {
       "id": "v201-learning-tracker",
       "version": "v201",
       "released_at": "2026-11-13T10:38:23Z",

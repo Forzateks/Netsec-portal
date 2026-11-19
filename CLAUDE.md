@@ -78,7 +78,8 @@ Netsec-portal/
 │       ├── team.js         # Team Portfolio (public route at /#/team + internal mode)
 │       ├── tasks.js        # Tasks + task templates + task-completion approvals
 │       ├── global-search.js # Top-bar search across the portal + manager client money summary (v192)
-│       └── learning.js     # Team Learning: weekly course/cert/hands-on progress, roadblocks, manager compare (v201)
+│       ├── learning.js     # Team Learning: weekly course/cert/hands-on progress, roadblocks, manager compare (v201)
+│       └── releases.js     # Release History (managers): every pushed update from data/whats-new.json (v202)
 ├── data/
 │   ├── team.json           # Team Portfolio content
 │   └── whats-new.json      # Versioned release notes shown in the "What's new" modal
@@ -102,7 +103,7 @@ Netsec-portal/
 → `navigation.js` → `helpers.js` → `projects.js` → `unified-sessions.js` →
 `notifications.js` → `inventory.js` → `approvals.js` → `knowledge-base.js` →
 `tracker.js` → `certificates.js` → `amc-contracts.js` → `ps-deals.js` →
-`team-skills.js` → `team.js` → `tasks.js` → `global-search.js` → `learning.js` → `init.js`.
+`team-skills.js` → `team.js` → `tasks.js` → `global-search.js` → `learning.js` → `releases.js` → `init.js`.
 
 All scripts are plain globals (no modules/imports). Functions are called across files by
 global name, often guarded with `typeof fn === 'function'`. `state.js` must load first
@@ -175,7 +176,7 @@ and hidden at login by `initApp()` in `auth.js`.
 | Customers & Deals (manager) | Customers, Engagements, Professional Services, AMC Contracts |
 | Catalog | Inventory, Certificates, Vendors & Products (mgr), Team Skills (mgr) |
 | Team | Team Portfolio (also a **public** route at `/#/team`, no auth) |
-| Settings | Admin Tools (mgr), Knowledge Base, OT Policy |
+| Settings | Admin Tools (mgr), Release History (mgr, v202), Knowledge Base, OT Policy |
 
 `/#/team` is the one route that renders without authentication (public-mode in `init.js`).
 
