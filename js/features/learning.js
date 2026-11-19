@@ -38,6 +38,14 @@ function _lnPoints(text) {
   if (!lines.length) return '';
   return '<ul class="ln-points">' + lines.map(function(l){ return '<li>' + _lnEsc(l) + '</li>'; }).join('') + '</ul>';
 }
+// v203: earlier weeks' updates (newest first), each under its week - shown
+// above this week's update in My Week, Team Week and Compare.
+function _lnPrevHtml(list) {
+  if (!list || !list.length) return '';
+  return '<div class="ln-lastwk">' + list.map(function(h){
+    return '<span class="ln-lastwk-h">Week ending ' + fmtDate(h.week) + '</span>' + _lnPoints(h.note);
+  }).join('') + '</div>';
+}
 function _lnEsc(v) {
   return String(v == null ? '' : v)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -269,7 +277,7 @@ function _lnPaintEditor(emp, week, notice, offerFrom) {
           '<td data-label="Course">' + _lnStatusSelect(i, 'course_status', r.course_status, 'Course status') + _lnDateInput(i, 'course_date', r.course_date, 'Course completion date') + '</td>' +
           '<td data-label="Certification">' + _lnStatusSelect(i, 'cert_status', r.cert_status, 'Certification status') + _lnDateInput(i, 'cert_date', r.cert_date, 'Certification date') + '</td>' +
           '<td data-label="Hands-on">' + _lnStatusSelect(i, 'hands_on_status', r.hands_on_status, 'Hands-on status') + '</td>' +
-          '<td data-label="This week\'s update" class="ln-wide">' + (_lnPrevNotes[_lnKey(r)] ? '<div class="ln-lastwk">' + _lnPrevNotes[_lnKey(r)].map(function(h){ return '<span class="ln-lastwk-h">Week ending ' + fmtDate(h.week) + '</span>' + _lnPoints(h.note); }).join('') + '</div>' : '') + _lnText(i, 'update_note', r.update_note, 'This week\'s update', 'One point per line - what did you do this week?', true) + '</td>' +
+          '<td data-label="This week\'s update" class="ln-wide">' + _lnPrevHtml(_lnPrevNotes[_lnKey(r)]) + _lnText(i, 'update_note', r.update_note, 'This week\'s update', 'One point per line - what did you do this week?', true) + '</td>' +
           '<td data-label="Roadblocks" class="ln-block-cell">' + _lnRbHtml(i, r) + '</td>' +
           // v202: Next steps hidden for now (the column and its data stay).
           '<td data-label="Due">' + _lnDueHtml(i, r) + '</td>' +
@@ -627,6 +635,19 @@ async function renderLearningTeam() {
   if (res.error) { host.innerHTML = _lnError('Could not load the team week'); return; }
   var rows = res.data || [];
   _lnTeamRows = rows;
+  // v203: the previous 3 weeks' updates, shown above this week's in each row.
+  var earlier = await fetchAllRows(function(){
+    return sb.from('learning_entries').select('employee,vendor,technology,update_note,week_date')
+      .in('week_date', [_lnAddDays(week, -7), _lnAddDays(week, -14), _lnAddDays(week, -21)]);
+  });
+  if (mySeq !== _lnSeq) return;
+  var teamPrev = {};
+  (earlier.data || []).filter(function(r){ return r.update_note; })
+    .sort(function(a, b){ return a.week_date < b.week_date ? 1 : -1; })
+    .forEach(function(r){
+      var k = r.employee + '|' + _lnKey(r);
+      (teamPrev[k] = teamPrev[k] || []).push({ week: r.week_date, note: r.update_note });
+    });
   var vendors = {};
   rows.forEach(function(r){ vendors[r.vendor] = 1; });
   var shown = rows.filter(function(r){
@@ -690,7 +711,7 @@ async function renderLearningTeam() {
                 '<td data-label="Course"' + (r.course_date ? ' title="Completed ' + fmtDate(r.course_date) + '"' : '') + '>' + _lnPill(r.course_status) + '</td>' +
                 '<td data-label="Certification"' + (r.cert_date ? ' title="Completed ' + fmtDate(r.cert_date) + '"' : '') + '>' + _lnPill(r.cert_status) + '</td>' +
                 '<td data-label="Hands-on">' + _lnPill(r.hands_on_status) + '</td>' +
-                '<td data-label="This week\'s update" class="ln-wide">' + (r.update_note ? _lnPoints(r.update_note) : '<span class="ln-dim">—</span>') + '</td>' +
+                '<td data-label="This week\'s update" class="ln-wide">' + _lnPrevHtml(teamPrev[r.employee + '|' + _lnKey(r)]) + (r.update_note ? _lnPoints(r.update_note) : '<span class="ln-dim">No update yet this week</span>') + '</td>' +
                 '<td data-label="Due">' + (r.due_date ? fmtDate(r.due_date) : '<span class="ln-dim">—</span>') + '</td>' +
               '</tr>';
             }).join('') + '</tbody></table></div>'
@@ -803,7 +824,7 @@ async function renderLearningCompare() {
               (it.dir === 'new' && prev.length ? '<span class="ln-newtag">new</span>' : '') + '</td>' +
             LN_AREAS.map(function(a){ return '<td data-label="' + a.label + '">' + _lnCmpCell(pr ? pr[a.f] : null, r[a.f], !!pr) + '</td>'; }).join('') +
             '<td data-label="Roadblock">' + rb + '</td>' +
-            '<td data-label="This week\'s update" class="ln-wide">' + (r.update_note ? _lnPoints(r.update_note) : '<span class="ln-dim">—</span>') + '</td>' +
+            '<td data-label="This week\'s update" class="ln-wide">' + _lnPrevHtml(pr && pr.update_note ? [{ week: prevWeek, note: pr.update_note }] : null) + (r.update_note ? _lnPoints(r.update_note) : '<span class="ln-dim">No update yet this week</span>') + '</td>' +
           '</tr>';
         }).join('') +
       '</tbody></table></div>' +
