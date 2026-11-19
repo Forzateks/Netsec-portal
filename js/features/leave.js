@@ -1730,33 +1730,6 @@ function _phEsc(v) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-async function renderPublicHolidays() {
-  var host = document.getElementById('ph-list');
-  if (!host) return;
-  host.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
-  var ok = await loadPublicHolidays();
-  if (!ok) { host.innerHTML = '<div class="alert alert-error show">Could not load public holidays. Check your connection and try again.</div>'; return; }
-  if (!PUBLIC_HOLIDAYS.length) {
-    host.innerHTML = '<div style="font-size:13px;color:var(--muted)">No public holidays recorded yet.</div>';
-    return;
-  }
-  var regionLabel = { UAE: 'UAE', KSA: 'KSA', ALL: 'UAE + KSA' };
-  // Newest first - the one just added is what gets checked.
-  var rows = PUBLIC_HOLIDAYS.slice().reverse().map(function(h){
-    return '<tr>'+
-      '<td style="white-space:nowrap">'+fmtDate(h.holiday_date)+'</td>'+
-      '<td>'+_phEsc(h.name)+'</td>'+
-      '<td>'+(regionLabel[h.region] || _phEsc(h.region))+'</td>'+
-      '<td>'+(h.counts_for_ot ? 'Yes' : 'No')+'</td>'+
-      '<td style="text-align:right"><button class="btn btn-sm btn-danger btn-icon-only" onclick="deletePublicHoliday('+Number(h.id)+')" title="Remove holiday" aria-label="Remove holiday"><i data-lucide="trash-2"></i></button></td>'+
-    '</tr>';
-  }).join('');
-  host.innerHTML = '<div class="table-wrap"><table><thead><tr>'+
-    '<th>Date</th><th>Holiday</th><th>Applies to</th><th>Work counts as OT</th><th></th>'+
-    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
-  if (typeof renderIcons === 'function') renderIcons();
-}
-
 // Re-count stored working_days for live leave requests covering `iso`.
 // Call AFTER PUBLIC_HOLIDAYS has been reloaded. Half-day rows keep their 0.5
 // label (computeLeaveUsedDays already charges them 0 on a holiday), and
@@ -1781,83 +1754,262 @@ async function _recountLeaveForHoliday(iso, region) {
   return { changed: changed, failed: failed };
 }
 
+// == PUBLIC HOLIDAYS PICKER (v205) ==========================================
+// Leave -> Public Holidays (managers). UAE and KSA each get their own list of
+// holidays to tick; a ticked day is not a working day for that country only
+// (calcWorkingDays / isOnLeave read PUBLIC_HOLIDAYS through getPublicHoliday).
+// Dates of the moon-based holidays are expected dates (Umm al-Qura calendar) -
+// editable until ticked, because the real day is announced shortly before.
+var _phYear = null;
+var _phBusy = false;
+var _phRows = { UAE: [], KSA: [] };
+
+// h: [hijri month, hijri day]; f: [month, day] on the Gregorian calendar.
+var PH_CATALOG = {
+  UAE: [
+    { n: "New Year's Day", f: [1, 1] },
+    { n: 'Eid Al Fitr - Day 1', h: [10, 1] }, { n: 'Eid Al Fitr - Day 2', h: [10, 2] }, { n: 'Eid Al Fitr - Day 3', h: [10, 3] },
+    { n: 'Arafat Day', h: [12, 9] },
+    { n: 'Eid Al Adha - Day 1', h: [12, 10] }, { n: 'Eid Al Adha - Day 2', h: [12, 11] }, { n: 'Eid Al Adha - Day 3', h: [12, 12] },
+    { n: 'Islamic New Year', h: [1, 1] },
+    { n: "Prophet's Birthday", h: [3, 12] },
+    { n: 'National Day', f: [12, 2] }, { n: 'National Day - Day 2', f: [12, 3] }
+  ],
+  KSA: [
+    { n: 'Founding Day', f: [2, 22] },
+    { n: 'Eid Al Fitr - Day 1', h: [10, 1] }, { n: 'Eid Al Fitr - Day 2', h: [10, 2] }, { n: 'Eid Al Fitr - Day 3', h: [10, 3] }, { n: 'Eid Al Fitr - Day 4', h: [10, 4] },
+    { n: 'Arafat Day', h: [12, 9] },
+    { n: 'Eid Al Adha - Day 1', h: [12, 10] }, { n: 'Eid Al Adha - Day 2', h: [12, 11] }, { n: 'Eid Al Adha - Day 3', h: [12, 12] }, { n: 'Eid Al Adha - Day 4', h: [12, 13] },
+    { n: 'National Day', f: [9, 23] }
+  ]
+};
+
+function _phIso(y, m, d) { return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'); }
+
+// Gregorian ISO dates in `year` for each Hijri month-day, by scanning the year.
+function _phHijriMap(year) {
+  var map = {};
+  try {
+    var fmt = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: 'UTC', month: 'numeric', day: 'numeric' });
+    for (var t = Date.UTC(year, 0, 1); t <= Date.UTC(year, 11, 31); t += 86400000) {
+      var parts = fmt.formatToParts(new Date(t)), m = 0, d = 0;
+      parts.forEach(function(p){ if (p.type === 'month') m = parseInt(p.value, 10); if (p.type === 'day') d = parseInt(p.value, 10); });
+      var iso = new Date(t).toISOString().slice(0, 10);
+      (map[m + '-' + d] = map[m + '-' + d] || []).push(iso);
+    }
+  } catch (e) { return null; }
+  return map;
+}
+
+function _phCatalogRows(region, year, hmap) {
+  var out = [];
+  PH_CATALOG[region].forEach(function(c){
+    if (c.f) { out.push({ name: c.n, iso: _phIso(year, c.f[0], c.f[1]), moon: false }); return; }
+    var dates = hmap && hmap[c.h[0] + '-' + c.h[1]];
+    (dates || []).forEach(function(iso){ out.push({ name: c.n, iso: iso, moon: true }); });
+  });
+  out.sort(function(x, y){ return x.iso < y.iso ? -1 : x.iso > y.iso ? 1 : 0; });
+  return out;
+}
+
+function _phFor(region, iso) {
+  return PUBLIC_HOLIDAYS.find(function(h){ return h.holiday_date === iso && (h.region === region || h.region === 'ALL'); }) || null;
+}
+
+async function renderPublicHolidays() {
+  var host = document.getElementById('ph-tab-content');
+  if (!host) return;
+  if (!isManager) { host.innerHTML = '<div class="card"><div class="empty-state">Public holidays are managed by managers.</div></div>'; return; }
+  var openYear = _phYear || new Date().getFullYear();
+  // Read what the manager typed before the spinner replaces the page.
+  host.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+  var ok = await loadPublicHolidays();
+  if (!ok) { host.innerHTML = '<div class="alert alert-error show">Could not load public holidays. Check your connection and try again.</div>'; return; }
+  _phYear = openYear;
+  var hmap = _phHijriMap(openYear);
+  var thisYear = new Date().getFullYear();
+  var yearOpts = [thisYear - 1, thisYear, thisYear + 1, thisYear + 2].map(function(y){ return '<option value="' + y + '"' + (y === openYear ? ' selected' : '') + '>' + y + '</option>'; }).join('');
+
+  var cards = ['UAE', 'KSA'].map(function(region){
+    var rows = _phCatalogRows(region, openYear, hmap);
+    _phRows[region] = rows;
+    var matchedIds = {};
+    var list = rows.map(function(r, i){
+      var h = _phFor(region, r.iso);
+      if (h) matchedIds[h.id] = 1;
+      var id = 'ph-' + region + '-' + i;
+      return '<div class="ph-row' + (h ? ' ph-on' : '') + '">' +
+        '<label class="ph-check"><input type="checkbox" id="' + id + '"' + (h ? ' checked' : '') + ' onchange="phToggle(\'' + region + '\',' + i + ',this)"> <span class="ph-name">' + _phEsc(r.name) + '</span></label>' +
+        (h ? '<span class="ph-date">' + fmtDate(r.iso) + (h.region === 'ALL' ? ' <span class="ph-both">UAE + KSA</span>' : '') + '</span>'
+           : '<input type="date" class="ph-date-in" id="' + id + '-d" value="' + r.iso + '" aria-label="Date of ' + _phEsc(r.name) + '">' + (r.moon ? '<span class="ph-moon" title="Expected date - confirm when the moon sighting is announced">expected</span>' : '')) +
+      '</div>';
+    }).join('');
+    // Anything else recorded for this country and year (typed by hand, or moved from the list).
+    var others = PUBLIC_HOLIDAYS.filter(function(h){
+      return (h.region === region || h.region === 'ALL') && h.holiday_date.slice(0, 4) === String(openYear) && !matchedIds[h.id];
+    });
+    var otherHtml = others.length
+      ? '<div class="ph-sub">Added by hand</div>' + others.map(function(h){
+          return '<div class="ph-row ph-on"><span class="ph-name">' + _phEsc(h.name) + '</span><span class="ph-date">' + fmtDate(h.holiday_date) + (h.region === 'ALL' ? ' <span class="ph-both">UAE + KSA</span>' : '') + '</span>' +
+            '<button type="button" class="btn btn-sm btn-ghost btn-icon-only" onclick="deletePublicHoliday(' + Number(h.id) + ')" title="Remove" aria-label="Remove ' + _phEsc(h.name) + '"><i data-lucide="trash-2"></i></button></div>';
+        }).join('')
+      : '';
+    var count = PUBLIC_HOLIDAYS.filter(function(h){ return (h.region === region || h.region === 'ALL') && h.holiday_date.slice(0, 4) === String(openYear); }).length;
+    return '<div class="card ph-card">' +
+      '<div class="ph-head"><div class="card-title" style="margin:0">' + region + ' team</div><span class="ph-count">' + count + ' selected</span></div>' +
+      (list || '<div class="ph-none">Could not work out the Islamic holiday dates in this browser - add them below.</div>') +
+      otherHtml +
+      '<div class="ph-sub">Add your own</div>' +
+      '<div class="ph-own"><input type="date" id="ph-own-d-' + region + '" aria-label="Date"><input type="text" id="ph-own-n-' + region + '" maxlength="80" placeholder="Holiday name" aria-label="Holiday name">' +
+        '<button type="button" class="btn btn-sm btn-primary" onclick="phAddOwn(\'' + region + '\')">Add</button></div>' +
+      '<div id="ph-err-' + region + '" class="alert alert-error" style="display:none;margin-top:8px"></div>' +
+    '</div>';
+  }).join('');
+
+  host.innerHTML =
+    '<div class="card ph-bar">' +
+      '<label class="ph-year">Year <select id="ph-year" onchange="phSetYear(this.value)">' + yearOpts + '</select></label>' +
+      '<label class="ph-ot"><input type="checkbox" id="ph-ot" checked> Work on a ticked day counts as overtime</label>' +
+      '<div class="ph-help">Tick the days your team is off. A ticked day is not charged as leave and does not count as a working day — for that country only. ' +
+        'Islamic holiday dates are expected dates: change the date before ticking if the announced day is different. ' +
+        'Ticking or unticking re-counts any leave request that covers the date.</div>' +
+    '</div>' +
+    '<div class="ph-grid">' + cards + '</div>';
+  if (typeof renderIcons === 'function') renderIcons();
+}
+
+function phSetYear(y) {
+  var n = Number(y);
+  _phYear = (n >= 2000 && n <= 2100) ? n : null;
+  renderPublicHolidays();
+}
+
 function _phAfterChange() {
   // Everything that reads holidays: the OT map, and whichever leave view is open.
   if (typeof loadLeaveDays === 'function') loadLeaveDays();
   renderPublicHolidays();
 }
 
-// Guarded before the first await: requireAuth() is a network round trip, so
-// a double-click used to send both calls past validation - the second then
-// hit the unique key and showed a false "already recorded" error beside the
-// first one's success.
-var _phAdding = false;
-async function addPublicHoliday() {
-  if (!isManager) { showError('Manager access only.'); return; }
-  if (_phAdding) return;
-  _phAdding = true;
-  try { await _addPublicHolidayNow(); }
-  finally { _phAdding = false; }
+function _phToday() {
+  var c = (typeof officeClock === 'function') ? officeClock(currentUser) : null;
+  if (c && c.iso) return c.iso;
+  var now = new Date();
+  return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 }
 
-async function _addPublicHolidayNow() {
-  if (!await requireAuth()) return;
-  var dateEl = document.getElementById('ph-date'), nameEl = document.getElementById('ph-name');
-  var regionEl = document.getElementById('ph-region'), otEl = document.getElementById('ph-ot');
-  var errEl = document.getElementById('ph-error'), btn = document.getElementById('ph-add-btn');
-  var iso = dateEl.value, name = (nameEl.value || '').trim(), region = regionEl.value;
+// Insert one holiday for one country. Returns '' on success, or the problem.
+async function _phInsert(region, iso, name, ot) {
+  var clash = _phFor(region, iso);
+  if (clash) return fmtDate(iso) + ' is already recorded as ' + clash.name + '.';
+  // A past date with OT on reaches back: sessions already logged that day
+  // would gain weekend credit the next time Policy Recompute is run.
+  if (ot && iso < _phToday() && !await confirmAction({
+    title: fmtDate(iso) + ' is in the past',
+    body: '"Work counts as overtime" is on, so sessions already logged on that day will be credited as overtime the next time Policy Recompute is run.\n\nContinue with it on?',
+    confirmText: 'Keep it on'
+  })) return 'cancelled';
+  var ins = await sb.from('public_holidays').insert({ holiday_date: iso, name: name, region: region, counts_for_ot: !!ot, created_by: currentUser });
+  if (ins.error) return ins.error.code === '23505' ? 'That date is already recorded for this country.' : 'Error: ' + ins.error.message;
+  return '';
+}
+
+async function _phReport(isos, region, verb) {
+  await loadPublicHolidays();
+  var changed = 0, failed = 0;
+  for (var i = 0; i < isos.length; i++) {
+    var rc = await _recountLeaveForHoliday(isos[i], region);
+    changed += rc.changed; failed += rc.failed;
+  }
+  if (failed) showError('Holiday ' + verb + ', but ' + failed + ' leave request(s) could not be re-counted. Open them and save again.');
+  else showToast('Holiday ' + verb + (changed ? ' - ' + changed + ' leave request' + (changed === 1 ? '' : 's') + ' re-counted' : '') + ' ✓');
+}
+
+async function phToggle(region, idx, box) {
+  if (!isManager) { showError('Manager access only.'); box.checked = !box.checked; return; }
+  if (_phBusy) { box.checked = !box.checked; return; }
+  _phBusy = true;
+  var wantOn = box.checked;
+  try {
+    if (!await requireAuth()) { box.checked = !wantOn; return; }
+    var row = _phRows[region][idx];
+    if (!row) return;
+    var otherRegion = region === 'UAE' ? 'KSA' : 'UAE';
+    if (wantOn) {
+      var dEl = document.getElementById('ph-' + region + '-' + idx + '-d');
+      var iso = (dEl && dEl.value) || row.iso;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) { showError('Pick a valid date.'); box.checked = false; return; }
+      var otOn = !!(document.getElementById('ph-ot') || {}).checked;
+      var err = await _phInsert(region, iso, row.name, otOn);
+      if (err) { box.checked = false; if (err !== 'cancelled') showError(err); return; }
+      await _phReport([iso], region, 'added');
+    } else {
+      var h = _phFor(region, row.iso);
+      if (!h) return;
+      if (!await confirmAction({
+        title: 'Untick ' + h.name + ' (' + fmtDate(h.holiday_date) + ') for ' + region + '?',
+        body: 'Leave that covers this date will be charged for it again for ' + region + ' staff.' + (h.region === 'ALL' ? '\n\nIt stays a holiday for ' + otherRegion + '.' : ''),
+        confirmText: 'Untick'
+      })) { box.checked = true; return; }
+      var del = await sb.from('public_holidays').delete().eq('id', h.id).select('id');
+      if (del.error || !del.data || !del.data.length) { box.checked = true; showError('Could not remove the holiday' + (del.error ? ': ' + del.error.message : '.')); return; }
+      if (h.region === 'ALL') {
+        // The old "UAE + KSA" row covered both: keep the other country.
+        var keep = await sb.from('public_holidays').insert({ holiday_date: h.holiday_date, name: h.name, region: otherRegion, counts_for_ot: !!h.counts_for_ot, created_by: currentUser });
+        if (keep.error) showError('Removed for ' + region + ', but could not keep it for ' + otherRegion + ': ' + keep.error.message);
+      }
+      await _phReport([h.holiday_date], region, 'removed');
+    }
+  } finally {
+    _phBusy = false;
+    _phAfterChange();
+  }
+}
+
+async function phAddOwn(region) {
+  if (!isManager) { showError('Manager access only.'); return; }
+  if (_phBusy) return;
+  var dEl = document.getElementById('ph-own-d-' + region), nEl = document.getElementById('ph-own-n-' + region);
+  var errEl = document.getElementById('ph-err-' + region);
+  var iso = dEl.value, name = (nEl.value || '').trim();
   errEl.style.display = 'none';
   function fail(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
-  if (!iso)  return fail('Pick the holiday date.');
+  if (!iso) return fail('Pick the holiday date.');
   if (!name) return fail('Give the holiday a name.');
   if (name.length > 80) return fail('Keep the name under 80 characters.');
-  if (['UAE','KSA','ALL'].indexOf(region) === -1) return fail('Pick who the holiday applies to.');
-  // 'ALL' and a single region on the same date would overlap; so would a repeat.
-  var clash = PUBLIC_HOLIDAYS.find(function(h){
-    return h.holiday_date === iso && (h.region === region || h.region === 'ALL' || region === 'ALL');
-  });
-  if (clash) return fail(fmtDate(iso) + ' is already recorded as ' + clash.name + ' (' + (clash.region === 'ALL' ? 'UAE + KSA' : clash.region) + ').');
-
-  // A past date with OT ticked reaches back: sessions already logged that day
-  // would gain weekend credit the next time Policy Recompute is run.
-  var now = new Date();
-  var todayIso = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-  if (otEl.checked && iso < todayIso &&
-      !confirm(fmtDate(iso) + ' is in the past.\n\n"Work on this day counts as OT" is ticked, so sessions already logged on that day will be credited as overtime the next time Policy Recompute is run.\n\nPress OK to keep it ticked, or Cancel to go back and untick it.')) {
-    return;
-  }
-
-  btn.disabled = true;
+  _phBusy = true;
+  var changed = false;
   try {
-    var ins = await sb.from('public_holidays').insert({
-      holiday_date: iso, name: name, region: region, counts_for_ot: !!otEl.checked, created_by: currentUser
-    });
-    if (ins.error) {
-      return fail(ins.error.code === '23505' ? 'That date is already recorded for this region.' : 'Error: ' + ins.error.message);
-    }
-    await loadPublicHolidays();
-    var rc = await _recountLeaveForHoliday(iso, region);
-    dateEl.value = ''; nameEl.value = '';
-    if (rc.failed) showError('Holiday added, but ' + rc.failed + ' leave request(s) could not be re-counted. Open them and save again.');
-    else showToast('Holiday added' + (rc.changed ? ' - ' + rc.changed + ' leave request' + (rc.changed === 1 ? '' : 's') + ' re-counted' : '') + ' \u2713');
-    _phAfterChange();
+    if (!await requireAuth()) return;
+    var otOn = !!(document.getElementById('ph-ot') || {}).checked;
+    var err = await _phInsert(region, iso, name, otOn);
+    if (err) { if (err !== 'cancelled') fail(err); return; }   // keep the page as is so the message stays visible
+    changed = true;
+    await _phReport([iso], region, 'added');
   } finally {
-    btn.disabled = false;
+    _phBusy = false;
+    if (changed) _phAfterChange();
   }
 }
 
 async function deletePublicHoliday(id) {
   if (!isManager) { showError('Manager access only.'); return; }
+  if (_phBusy) return;
   var h = PUBLIC_HOLIDAYS.find(function(x){ return x.id === id; });
   if (!h) return;
-  if (!confirm('Remove ' + h.name + ' (' + fmtDate(h.holiday_date) + ')?\n\nLeave that covers this date will be charged for it again.')) return;
-  if (!await requireAuth()) return;
-  var del = await sb.from('public_holidays').delete().eq('id', id).select('id');
-  if (del.error) { showError('Could not remove the holiday: ' + del.error.message); return; }
-  if (!del.data || !del.data.length) { showError('The holiday was not removed - it may already be gone.'); renderPublicHolidays(); return; }
-  await loadPublicHolidays();
-  var rc = await _recountLeaveForHoliday(h.holiday_date, h.region);
-  if (rc.failed) showError('Holiday removed, but ' + rc.failed + ' leave request(s) could not be re-counted.');
-  else showToast('Holiday removed' + (rc.changed ? ' - ' + rc.changed + ' leave request' + (rc.changed === 1 ? '' : 's') + ' re-counted' : '') + ' \u2713');
-  _phAfterChange();
+  if (!await confirmAction({
+    title: 'Remove ' + h.name + ' (' + fmtDate(h.holiday_date) + ')?',
+    body: 'Leave that covers this date will be charged for it again.',
+    confirmText: 'Remove', danger: true
+  })) return;
+  _phBusy = true;
+  try {
+    if (!await requireAuth()) return;
+    var del = await sb.from('public_holidays').delete().eq('id', id).select('id');
+    if (del.error) { showError('Could not remove the holiday: ' + del.error.message); return; }
+    if (!del.data || !del.data.length) { showError('The holiday was not removed - it may already be gone.'); return; }
+    await _phReport([h.holiday_date], h.region, 'removed');
+  } finally {
+    _phBusy = false;
+    _phAfterChange();
+  }
 }

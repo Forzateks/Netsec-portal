@@ -74,7 +74,8 @@ function _projectsActiveTab() {
 }
 
 function showLeaveTab(tab) {
-  ['log','history','team'].forEach(function(t) {
+  if (tab === 'holidays' && !isManager) tab = 'log';
+  ['log','history','team','holidays'].forEach(function(t) {
     const el=document.getElementById('ltab-'+t);
     const sub=document.getElementById('lsub-'+t);
     if (!el) return;
@@ -95,6 +96,7 @@ function showLeaveTab(tab) {
   }
   if (tab==='history') renderLeaveHistory();
   if (tab==='team')    renderLeaveTeam();
+  if (tab==='holidays') renderPublicHolidays();
   setSidebarSubActive('leave', tab);
 }
 

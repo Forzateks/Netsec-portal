@@ -93,7 +93,64 @@ async function _lnCanLeave() {
 }
 
 // == NAVIGATION ==
+// == PRODUCT PICKER (v205) ==================================================
+// A drop-down with a tick box per product. Unticked products are hidden from
+// the table (nothing is deleted), leaving more room for the update columns.
+// The unticked set is remembered while the page is open, so new products show.
+var _lnHide = { mine: {}, team: {} };
+function _lnPickHtml(scope, products) {
+  if (!products || products.length < 2) return '';
+  var seen = {}, list = [];
+  products.forEach(function(r){ var k = _lnKey(r); if (!seen[k]) { seen[k] = 1; list.push({ k: k, v: r.vendor, t: r.technology }); } });
+  list.sort(function(a, b){ return (a.v + '|' + a.t).toLowerCase() < (b.v + '|' + b.t).toLowerCase() ? -1 : 1; });
+  return '<details class="ln-pp" id="ln-pp-' + scope + '"><summary class="btn btn-sm btn-ghost"><i data-lucide="list-checks" class="btn-icon"></i><span class="ln-pp-label">All products</span></summary>' +
+    '<div class="ln-pp-panel"><div class="ln-pp-actions"><button type="button" class="btn btn-sm btn-ghost" onclick="_lnPickAll(\'' + scope + '\',true)">Select all</button>' +
+    '<button type="button" class="btn btn-sm btn-ghost" onclick="_lnPickAll(\'' + scope + '\',false)">Clear</button></div>' +
+    list.map(function(p){
+      return '<label class="ln-pp-opt"><input type="checkbox" data-pk="' + _lnEsc(p.k) + '"' + (_lnHide[scope][p.k] ? '' : ' checked') + ' onchange="_lnPickChange(\'' + scope + '\')">' +
+        '<span><span class="ln-pp-v">' + _lnEsc(p.v) + '</span> ' + _lnEsc(p.t) + '</span></label>';
+    }).join('') + '</div></details>';
+}
+function _lnPickChange(scope) {
+  var box = document.getElementById('ln-pp-' + scope);
+  if (!box) return;
+  var hide = {};
+  Array.prototype.forEach.call(box.querySelectorAll('input[data-pk]'), function(c){ if (!c.checked) hide[c.getAttribute('data-pk')] = 1; });
+  _lnHide[scope] = hide;
+  _lnApplyPick(scope);
+}
+function _lnPickAll(scope, on) {
+  var box = document.getElementById('ln-pp-' + scope);
+  if (!box) return;
+  Array.prototype.forEach.call(box.querySelectorAll('input[data-pk]'), function(c){ c.checked = on; });
+  _lnPickChange(scope);
+}
+function _lnApplyPick(scope) {
+  var host = document.getElementById(scope === 'mine' ? 'ln-mine-content' : 'ln-team-content');
+  if (!host) return;
+  var hide = _lnHide[scope];
+  Array.prototype.forEach.call(host.querySelectorAll('tr[data-pk]'), function(tr){
+    tr.classList.toggle('ln-hide', !!hide[tr.getAttribute('data-pk')]);
+  });
+  Array.prototype.forEach.call(host.querySelectorAll('.ln-group'), function(g){
+    var trs = g.querySelectorAll('tr[data-pk]');
+    if (!trs.length) return;
+    g.classList.toggle('ln-hide', g.querySelectorAll('tr[data-pk]:not(.ln-hide)').length === 0);
+  });
+  var box = document.getElementById('ln-pp-' + scope);
+  if (box) {
+    var all = box.querySelectorAll('input[data-pk]'), on = box.querySelectorAll('input[data-pk]:checked');
+    var lab = box.querySelector('.ln-pp-label');
+    if (lab) lab.textContent = on.length === all.length ? 'All products' : (on.length ? on.length + ' of ' + all.length + ' products' : 'No products');
+  }
+}
+document.addEventListener('click', function(e){
+  Array.prototype.forEach.call(document.querySelectorAll('details.ln-pp[open]'), function(d){ if (!d.contains(e.target)) d.removeAttribute('open'); });
+});
+
 async function showLearningTab(tab) {
+  // v205: Compare is hidden for now (the code stays).
+  if (tab === 'compare') tab = 'team';
   if (tab !== 'mine' && !isManager) tab = 'mine';
   if (_lnTab === 'mine' && tab !== 'mine' && !(await _lnCanLeave())) { tab = 'mine'; }
   _lnTab = tab;
@@ -271,7 +328,7 @@ function _lnPaintEditor(emp, week, notice, offerFrom) {
       '<th>Product</th><th>Course</th><th>Certification</th><th>Hands-on</th><th>This week\'s update</th>' +
       '<th>Roadblocks</th><th>Due</th><th></th></tr></thead><tbody>' +
       _lnRows.map(function(r, i){
-        return '<tr class="' + (r.is_blocked ? 'ln-row-blocked' : '') + '">' +
+        return '<tr class="' + (r.is_blocked ? 'ln-row-blocked' : '') + '" data-pk="' + _lnEsc(_lnKey(r)) + '">' +
           '<td data-label="Product"><div class="ln-vendor">' + _lnEsc(r.vendor) + '</div><div class="ln-tech">' + _lnEsc(r.technology) + '</div>' +
             (r._new ? '<span class="ln-newtag">new</span>' : '') + '</td>' +
           '<td data-label="Course">' + _lnStatusSelect(i, 'course_status', r.course_status, 'Course status') + _lnDateInput(i, 'course_date', r.course_date, 'Course completion date') + '</td>' +
@@ -295,7 +352,7 @@ function _lnPaintEditor(emp, week, notice, offerFrom) {
     '<div class="card">' +
       '<div class="ln-ed-head">' +
         '<div><div class="card-title" style="margin-bottom:2px">' + (mine ? 'My Week' : _lnEsc(emp) + '’s week') + '</div>' +
-        '<div class="ln-sub">' + _lnEsc(_lnWeekLabel(week)) + '</div></div>' + empPicker +
+        '<div class="ln-sub">' + _lnEsc(_lnWeekLabel(week)) + '</div></div><div class="ln-head-tools">' + _lnPickHtml('mine', _lnRows) + empPicker + '</div>' +
       '</div>' +
       (notice ? '<div class="ln-notice">' + _lnEsc(notice) + '</div>' : '') +
       body +
@@ -306,6 +363,7 @@ function _lnPaintEditor(emp, week, notice, offerFrom) {
       '</div>' +
     '</div>';
   _lnUpdateSaveBar();
+  _lnApplyPick('mine');
   if (typeof renderIcons === 'function') renderIcons();
 }
 
@@ -663,6 +721,7 @@ async function renderLearningTeam() {
         people.map(function(p){ return '<option value="' + _lnEsc(p) + '"' + (p === fEmp ? ' selected' : '') + '>' + _lnEsc(p) + '</option>'; }).join('') + '</select>' +
       '<select id="ln-team-vendor" onchange="renderLearningTeam()" aria-label="Vendor"><option value="">All vendors</option>' +
         Object.keys(vendors).sort().map(function(v){ return '<option value="' + _lnEsc(v) + '"' + (v === fVendor ? ' selected' : '') + '>' + _lnEsc(v) + '</option>'; }).join('') + '</select>' +
+      _lnPickHtml('team', rows) +
       '<label class="ln-check"><input type="checkbox" id="ln-team-blocked" onchange="renderLearningTeam()"' + (fBlocked ? ' checked' : '') + '> Roadblocks only</label>' +
     '</div>';
 
@@ -695,7 +754,7 @@ async function renderLearningTeam() {
       (mine.length
         ? '<div class="ln-grid-wrap"><table class="ln-view"><thead><tr><th>Product</th><th>Course</th><th>Certification</th><th>Hands-on</th><th>Last week (' + _lnEsc(fmtDate(lastWeek)) + ')</th><th>This week\'s update</th><th>Due</th></tr></thead><tbody>' +
             mine.map(function(r){
-              return '<tr class="' + (r.is_blocked ? 'ln-row-blocked' : '') + '">' +
+              return '<tr class="' + (r.is_blocked ? 'ln-row-blocked' : '') + '" data-pk="' + _lnEsc(_lnKey(r)) + '">' +
                 '<td data-label="Product"><div class="ln-vendor">' + _lnEsc(r.vendor) + '</div><div class="ln-tech">' + _lnEsc(r.technology) + '</div>' +
                   (r.is_blocked ? '<div class="ln-blocked-tag">Blocked' + _lnPoints(r.blocker_note) + '</div>' : '') + '</td>' +
                 '<td data-label="Course"' + (r.course_date ? ' title="Completed ' + fmtDate(r.course_date) + '"' : '') + '>' + _lnPill(r.course_status) + '</td>' +
@@ -718,6 +777,7 @@ async function renderLearningTeam() {
       stat('Roadblocks', blocked.length, blocked.length ? 'wknd' : '') +
     '</div>' +
     '<div class="card">' + filters + roadblocks + (groups || '<div class="ln-none">Nothing matches these filters.</div>') + '</div>';
+  _lnApplyPick('team');
   if (typeof renderIcons === 'function') renderIcons();
 }
 

@@ -422,6 +422,24 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v205-public-holidays-picker",
+      "version": "v205",
+      "released_at": "2026-11-19T12:15:59Z",
+      "category": "new",
+      "title": "Leave \u2192 Public Holidays: tick the days off, UAE and KSA separately",
+      "body": "Managers get a Public Holidays tab under Leave with one list for the UAE and one for KSA. Tick a holiday and it stops counting as a working day for that country only \u2014 leave is not charged for it and existing requests are re-counted. Islamic holiday dates are filled in as expected dates you can change before ticking, and you can add your own. It replaces the card that was in Admin Tools.",
+      "link": null
+    },
+    {
+      "id": "v205-learning-product-picker",
+      "version": "v205",
+      "released_at": "2026-11-19T12:15:59Z",
+      "category": "new",
+      "title": "Team Learning: choose which products to show",
+      "body": "A Products drop-down with tick boxes in My Week and Team Week lets you show only the products you care about, so the update columns get more room. Nothing is deleted \u2014 unticked products are just hidden. Compare is hidden for now.",
+      "link": null
+    },
+    {
       "id": "v204-team-week-last-week-column",
       "version": "v204",
       "released_at": "2026-11-19T12:03:05Z",

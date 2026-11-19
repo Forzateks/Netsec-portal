@@ -231,7 +231,7 @@ through `getPublicHoliday(employee, iso)` in `leave.js` — never inline the reg
 - **Archive Policy Violators** — soft-archive sessions inside the block window
 - **Re-evaluate Archived** — un-archive sessions that now qualify
 - **Purge** — hard-delete archived/rejected rows >1 year old
-- **Public Holidays** — add/remove holidays; re-counts leave that covers the date
+- **Public Holidays** (v205: moved to **Leave → Public Holidays**, managers) — UAE and KSA lists with tick boxes (Islamic dates are expected dates, editable before ticking) plus add-your-own; re-counts leave that covers the date
 
 > Comp-off balance can currently go negative if old approved sessions get recomputed away
 > — documented gap, unhandled.
