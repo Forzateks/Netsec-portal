@@ -635,19 +635,14 @@ async function renderLearningTeam() {
   if (res.error) { host.innerHTML = _lnError('Could not load the team week'); return; }
   var rows = res.data || [];
   _lnTeamRows = rows;
-  // v203: the previous 3 weeks' updates, shown above this week's in each row.
+  // v204: last week's update, shown in its own column beside this week's.
+  var lastWeek = _lnAddDays(week, -7);
   var earlier = await fetchAllRows(function(){
-    return sb.from('learning_entries').select('employee,vendor,technology,update_note,week_date')
-      .in('week_date', [_lnAddDays(week, -7), _lnAddDays(week, -14), _lnAddDays(week, -21)]);
+    return sb.from('learning_entries').select('employee,vendor,technology,update_note').eq('week_date', lastWeek);
   });
   if (mySeq !== _lnSeq) return;
   var teamPrev = {};
-  (earlier.data || []).filter(function(r){ return r.update_note; })
-    .sort(function(a, b){ return a.week_date < b.week_date ? 1 : -1; })
-    .forEach(function(r){
-      var k = r.employee + '|' + _lnKey(r);
-      (teamPrev[k] = teamPrev[k] || []).push({ week: r.week_date, note: r.update_note });
-    });
+  (earlier.data || []).forEach(function(r){ if (r.update_note) teamPrev[r.employee + '|' + _lnKey(r)] = r.update_note; });
   var vendors = {};
   rows.forEach(function(r){ vendors[r.vendor] = 1; });
   var shown = rows.filter(function(r){
@@ -686,13 +681,8 @@ async function renderLearningTeam() {
         }).join('') + '</div>'
     : '';
 
-  var roadblocks = requests + (blocked.length
-    ? '<div class="ln-roadblocks"><div class="ln-rb-title">Roadblocks this week (' + blocked.length + ')</div>' +
-        blocked.map(function(r){
-          return '<div class="ln-rb"><strong>' + _lnEsc(r.employee) + '</strong> · ' + _lnEsc(r.vendor) + ' ' + _lnEsc(r.technology) +
-                 '<div class="ln-rb-note">' + (_lnPoints(r.blocker_note) || 'No details given') + '</div></div>';
-        }).join('') + '</div>'
-    : '');
+  // v204: no separate roadblock banner - blocked rows are red and list their roadblocks.
+  var roadblocks = requests;
 
   var groups = people.filter(function(p){ return !fEmp || p === fEmp; }).map(function(p){
     var mine = shown.filter(function(r){ return r.employee === p; });
@@ -703,7 +693,7 @@ async function renderLearningTeam() {
       '<div class="ln-group-head"><div class="ln-group-name">' + _lnEsc(p) + '</div>' +
         '<button class="btn btn-sm btn-ghost" data-emp="' + _lnEsc(p) + '" onclick="learningEditFor(this.getAttribute(\'data-emp\'))"><i data-lucide="pencil" class="btn-icon"></i>' + (hasAny ? 'Edit' : 'Add entries') + '</button></div>' +
       (mine.length
-        ? '<div class="ln-grid-wrap"><table class="ln-view"><thead><tr><th>Product</th><th>Course</th><th>Certification</th><th>Hands-on</th><th>This week\'s update</th><th>Due</th></tr></thead><tbody>' +
+        ? '<div class="ln-grid-wrap"><table class="ln-view"><thead><tr><th>Product</th><th>Course</th><th>Certification</th><th>Hands-on</th><th>Last week (' + _lnEsc(fmtDate(lastWeek)) + ')</th><th>This week\'s update</th><th>Due</th></tr></thead><tbody>' +
             mine.map(function(r){
               return '<tr class="' + (r.is_blocked ? 'ln-row-blocked' : '') + '">' +
                 '<td data-label="Product"><div class="ln-vendor">' + _lnEsc(r.vendor) + '</div><div class="ln-tech">' + _lnEsc(r.technology) + '</div>' +
@@ -711,7 +701,8 @@ async function renderLearningTeam() {
                 '<td data-label="Course"' + (r.course_date ? ' title="Completed ' + fmtDate(r.course_date) + '"' : '') + '>' + _lnPill(r.course_status) + '</td>' +
                 '<td data-label="Certification"' + (r.cert_date ? ' title="Completed ' + fmtDate(r.cert_date) + '"' : '') + '>' + _lnPill(r.cert_status) + '</td>' +
                 '<td data-label="Hands-on">' + _lnPill(r.hands_on_status) + '</td>' +
-                '<td data-label="This week\'s update" class="ln-wide">' + _lnPrevHtml(teamPrev[r.employee + '|' + _lnKey(r)]) + (r.update_note ? _lnPoints(r.update_note) : '<span class="ln-dim">No update yet this week</span>') + '</td>' +
+                '<td data-label="Last week" class="ln-wide ln-lastcol">' + (teamPrev[r.employee + '|' + _lnKey(r)] ? _lnPoints(teamPrev[r.employee + '|' + _lnKey(r)]) : '<span class="ln-dim">—</span>') + '</td>' +
+                '<td data-label="This week\'s update" class="ln-wide">' + (r.update_note ? _lnPoints(r.update_note) : '<span class="ln-dim">—</span>') + '</td>' +
                 '<td data-label="Due">' + (r.due_date ? fmtDate(r.due_date) : '<span class="ln-dim">—</span>') + '</td>' +
               '</tr>';
             }).join('') + '</tbody></table></div>'

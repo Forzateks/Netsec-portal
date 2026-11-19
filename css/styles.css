@@ -3503,3 +3503,4 @@ mark.gs-hit{background:var(--pill-info-bg);color:inherit;border-radius:2px;paddi
 .ln-grid td[data-label="Course"] .ln-date,.ln-grid td[data-label="Certification"] .ln-date{display:none}
 .ln-grid td[data-label="Course"]:hover .ln-date,.ln-grid td[data-label="Course"]:focus-within .ln-date,
 .ln-grid td[data-label="Certification"]:hover .ln-date,.ln-grid td[data-label="Certification"]:focus-within .ln-date{display:block}
+.ln-view td.ln-lastcol{color:var(--muted)}
