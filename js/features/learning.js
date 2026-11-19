@@ -32,6 +32,12 @@ var _lnSeq     = 0;       // only the latest load may paint
 var _lnSaving  = false;
 
 // == SMALL HELPERS ==
+// v202: an update shown point by point - one bullet per line the person typed.
+function _lnPoints(text) {
+  var lines = String(text || '').split(/\r?\n/).map(function(l){ return l.replace(/^\s*[-*•]\s*/, '').trim(); }).filter(Boolean);
+  if (!lines.length) return '';
+  return '<ul class="ln-points">' + lines.map(function(l){ return '<li>' + _lnEsc(l) + '</li>'; }).join('') + '</ul>';
+}
 function _lnEsc(v) {
   return String(v == null ? '' : v)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -130,6 +136,8 @@ async function _lnLoadCatalog() {
 }
 
 // == MY WEEK ==
+var _lnTeamRows = [];    // v202: the Team Week rows on screen (approve buttons)
+var _lnPrevNotes = {};   // product key -> up to 3 earlier {week, note}, newest first
 async function renderLearningMine() {
   var host = document.getElementById('ln-mine-content');
   if (!host) return;
@@ -170,7 +178,21 @@ async function renderLearningMine() {
     }
   }
 
-  _lnRows = rows.map(function(r){ return Object.assign({ _origCert: r.cert_status }, r); });
+  // v202: show what was written the week before, right above this week's box.
+  _lnPrevNotes = {};
+  if (rows.length) {
+    var lastWk = await sb.from('learning_entries').select('vendor,technology,update_note,week_date')
+      .eq('employee', emp).lt('week_date', week).order('week_date', { ascending: false }).limit(60);
+    if (mySeq !== _lnSeq) return;
+    (lastWk.data || []).forEach(function(r){
+      if (!r.update_note) return;
+      var k = _lnKey(r);
+      var list = _lnPrevNotes[k] || (_lnPrevNotes[k] = []);
+      if (list.length < 3) list.push({ week: r.week_date, note: r.update_note });
+    });
+  }
+
+  _lnRows = rows.map(function(r){ return Object.assign({ _origCert: r.cert_status, _origDue: r.due_date }, r); });
   await _lnLoadCatalog();
   if (mySeq !== _lnSeq) return;
   _lnPaintEditor(emp, week, notice, offerFrom);
@@ -239,7 +261,7 @@ function _lnPaintEditor(emp, week, notice, offerFrom) {
   } else {
     body = '<div class="ln-grid-wrap"><table class="ln-grid"><thead><tr>' +
       '<th>Product</th><th>Course</th><th>Certification</th><th>Hands-on</th><th>This week\'s update</th>' +
-      '<th>Roadblock</th><th>Next steps</th><th>Due</th><th></th></tr></thead><tbody>' +
+      '<th>Roadblocks</th><th>Due</th><th></th></tr></thead><tbody>' +
       _lnRows.map(function(r, i){
         return '<tr class="' + (r.is_blocked ? 'ln-row-blocked' : '') + '">' +
           '<td data-label="Product"><div class="ln-vendor">' + _lnEsc(r.vendor) + '</div><div class="ln-tech">' + _lnEsc(r.technology) + '</div>' +
@@ -247,14 +269,15 @@ function _lnPaintEditor(emp, week, notice, offerFrom) {
           '<td data-label="Course">' + _lnStatusSelect(i, 'course_status', r.course_status, 'Course status') + _lnDateInput(i, 'course_date', r.course_date, 'Course completion date') + '</td>' +
           '<td data-label="Certification">' + _lnStatusSelect(i, 'cert_status', r.cert_status, 'Certification status') + _lnDateInput(i, 'cert_date', r.cert_date, 'Certification date') + '</td>' +
           '<td data-label="Hands-on">' + _lnStatusSelect(i, 'hands_on_status', r.hands_on_status, 'Hands-on status') + '</td>' +
-          '<td data-label="This week\'s update" class="ln-wide">' + _lnText(i, 'update_note', r.update_note, 'This week\'s update', 'What did you do this week?', true) + '</td>' +
-          '<td data-label="Roadblock" class="ln-block-cell">' +
-            '<label class="ln-check"><input type="checkbox" data-i="' + i + '" data-f="is_blocked"' + (r.is_blocked ? ' checked' : '') + ' onchange="_lnOnInput(this)"> Blocked</label>' +
-            '<input type="text" data-i="' + i + '" data-f="blocker_note" value="' + _lnEsc(r.blocker_note || '') + '" oninput="_lnOnInput(this)" placeholder="What is blocking?" aria-label="What is blocking"' + (r.is_blocked ? '' : ' disabled') + '>' +
-          '</td>' +
-          '<td data-label="Next steps">' + _lnText(i, 'next_steps', r.next_steps, 'Next steps', 'Next step') + '</td>' +
-          '<td data-label="Due">' + _lnDateInput(i, 'due_date', r.due_date, 'Due date') + '</td>' +
-          '<td class="ln-act"><button class="btn btn-sm btn-ghost btn-icon-only" onclick="_lnRemoveRow(' + i + ')" title="Remove this product from the week" aria-label="Remove ' + _lnEsc(r.technology) + '"><i data-lucide="trash-2"></i></button></td>' +
+          '<td data-label="This week\'s update" class="ln-wide">' + (_lnPrevNotes[_lnKey(r)] ? '<div class="ln-lastwk">' + _lnPrevNotes[_lnKey(r)].map(function(h){ return '<span class="ln-lastwk-h">Week ending ' + fmtDate(h.week) + '</span>' + _lnPoints(h.note); }).join('') + '</div>' : '') + _lnText(i, 'update_note', r.update_note, 'This week\'s update', 'One point per line - what did you do this week?', true) + '</td>' +
+          '<td data-label="Roadblocks" class="ln-block-cell">' + _lnRbHtml(i, r) + '</td>' +
+          // v202: Next steps hidden for now (the column and its data stay).
+          '<td data-label="Due">' + _lnDueHtml(i, r) + '</td>' +
+          '<td class="ln-act">' + (r.remove_requested
+            ? '<div class="ln-rm-req">Removal requested</div>' + (isManager
+                ? '<button class="btn btn-sm btn-ghost" onclick="_lnRemoveRow(' + i + ')">Approve</button><button class="btn btn-sm btn-ghost" onclick="_lnKeepRow(' + i + ')">Keep</button>'
+                : '<button class="btn btn-sm btn-ghost" onclick="_lnRemoveRow(' + i + ')">Withdraw</button>')
+            : '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="_lnRemoveRow(' + i + ')" title="' + (isManager ? 'Remove this product from the week' : 'Ask your manager to remove this product') + '" aria-label="Remove ' + _lnEsc(r.technology) + '"><i data-lucide="trash-2"></i></button>') + '</td>' +
         '</tr>';
       }).join('') +
       '</tbody></table></div>';
@@ -294,13 +317,80 @@ function _lnOnInput(el) {
   r[f] = v;
   r._dirty = true;
   if (el.tagName === 'SELECT') el.className = 'ln-st ln-st-' + (v || 'none');
-  if (f === 'is_blocked') {
-    var tr = el.closest('tr');
-    var note = tr && tr.querySelector('input[data-f="blocker_note"]');
-    if (note) { note.disabled = !v; if (v) note.focus(); }
-    if (tr) tr.classList.toggle('ln-row-blocked', !!v);
-  }
   _lnUpdateSaveBar();
+}
+
+// == ROADBLOCKS (v202): a list of rows, one roadblock each - no tick box ==
+// Stored as lines of blocker_note; is_blocked is simply "has at least one".
+function _lnRbLines(r) {
+  return r.is_blocked ? String(r.blocker_note || '').split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean) : [];
+}
+function _lnRbRow(i, val) {
+  return '<div class="ln-rb-row"><input type="text" data-rbi="' + i + '" value="' + _lnEsc(val || '') + '" oninput="_lnRbSync(' + i + ')" placeholder="What is blocking?" aria-label="Roadblock">' +
+    '<button type="button" class="btn btn-sm btn-ghost btn-icon-only" onclick="_lnRbRemove(this,' + i + ')" title="Remove this roadblock" aria-label="Remove this roadblock"><i data-lucide="x"></i></button></div>';
+}
+function _lnRbHtml(i, r) {
+  return '<div class="ln-rb-list" id="ln-rb-' + i + '">' + _lnRbLines(r).map(function(l){ return _lnRbRow(i, l); }).join('') + '</div>' +
+    '<button type="button" class="btn btn-sm btn-ghost ln-rb-add" onclick="_lnRbAdd(' + i + ')"><i data-lucide="plus" class="btn-icon"></i>Add roadblock</button>';
+}
+function _lnRbAdd(i) {
+  var list = document.getElementById('ln-rb-' + i);
+  if (!list) return;
+  list.insertAdjacentHTML('beforeend', _lnRbRow(i, ''));
+  if (typeof renderIcons === 'function') renderIcons();
+  var inputs = list.querySelectorAll('input'); inputs[inputs.length - 1].focus();
+}
+function _lnRbRemove(btn, i) {
+  var row = btn.closest('.ln-rb-row'); if (row) row.remove();
+  _lnRbSync(i);
+}
+function _lnRbSync(i) {
+  var r = _lnRows[i], list = document.getElementById('ln-rb-' + i);
+  if (!r || !list) return;
+  var lines = Array.prototype.map.call(list.querySelectorAll('input'), function(x){ return x.value.trim(); }).filter(Boolean);
+  var note = lines.length ? lines.join('\n') : null;
+  if (note === (r.is_blocked ? (r.blocker_note || null) : null)) return;
+  r.blocker_note = note;
+  r.is_blocked = !!note;
+  r._dirty = true;
+  var tr = list.closest('tr'); if (tr) tr.classList.toggle('ln-row-blocked', r.is_blocked);
+  _lnUpdateSaveBar();
+}
+
+// == DUE DATE (v202): fixed once saved; changing it needs a manager ==
+// Employees ask for a new date (due_date_pending); a manager approves or
+// rejects it. The database enforces the lock too (_learning_entries_due_guard).
+function _lnDueHtml(i, r) {
+  if (!r._origDue) return _lnDateInput(i, 'due_date', r.due_date, 'Due date');
+  var pend = r.due_date_pending;
+  if (isManager) {
+    return _lnDateInput(i, 'due_date', r.due_date, 'Due date') +
+      (pend ? '<div class="ln-due-req">Asked for ' + fmtDate(pend) +
+        '<div class="ln-due-btns"><button type="button" class="btn btn-sm btn-primary" onclick="_lnDueDecideInEditor(' + i + ',true)">Approve</button>' +
+        '<button type="button" class="btn btn-sm btn-ghost" onclick="_lnDueDecideInEditor(' + i + ',false)">Reject</button></div></div>' : '');
+  }
+  return '<div class="ln-due-locked" title="Set once - a manager approves any change"><i data-lucide="lock"></i>' + fmtDate(r.due_date) + '</div>' +
+    '<label class="ln-due-ask">' + (pend ? 'Change requested - waiting for manager' : 'Ask to change to') +
+      '<input type="date" class="ln-date" data-i="' + i + '" data-f="due_date_pending" value="' + _lnEsc(pend || '') + '" onchange="_lnOnInput(this)" aria-label="Ask to change the due date to"></label>';
+}
+function _lnDueDecideInEditor(i, approve) {
+  var r = _lnRows[i]; if (!r || !r.due_date_pending) return;
+  if (approve) r.due_date = r.due_date_pending;
+  r.due_date_pending = null;
+  r._dirty = true;
+  _lnRepaint();
+  _lnUpdateSaveBar();
+}
+// From Team Week: approve / reject straight away.
+async function learningDueDecision(id, approve) {
+  if (!await requireAuth()) return;
+  var row = (_lnTeamRows || []).filter(function(r){ return r.id === id; })[0];
+  if (!row || !row.due_date_pending) return;
+  var patch = approve ? { due_date: row.due_date_pending, due_date_pending: null } : { due_date_pending: null };
+  var u = await sb.from('learning_entries').update(patch).eq('id', id).select('id');
+  if (u.error || !u.data || !u.data.length) { showError('Could not update the due date' + (u.error ? ': ' + u.error.message : '.')); return; }
+  showToast(approve ? 'New due date approved ✓' : 'Due date request rejected ✓');
+  renderLearningTeam();
 }
 
 function _lnUpdateSaveBar() {
@@ -315,6 +405,22 @@ async function _lnRemoveRow(i) {
   var r = _lnRows[i];
   if (!r) return;
   if (r._new) { _lnRows.splice(i, 1); _lnRepaint(); return; }
+  if (!isManager) {
+    // v202: employees cannot delete - they ask, and a manager approves.
+    var want = !r.remove_requested;
+    if (want && !await confirmAction({
+      title: 'Ask to remove ' + r.technology + '?',
+      body: 'Your manager has to approve it. Until then it stays in your week.',
+      confirmText: 'Ask manager'
+    })) return;
+    if (!await requireAuth()) return;
+    var rq = await sb.from('learning_entries').update({ remove_requested: want }).eq('id', r.id).select('id');
+    if (rq.error || !rq.data || !rq.data.length) { showError('Could not send the request' + (rq.error ? ': ' + rq.error.message : '.')); return; }
+    r.remove_requested = want;
+    showToast(want ? 'Removal sent to your manager for approval ✓' : 'Removal request withdrawn ✓');
+    _lnRepaint();
+    return;
+  }
   var ok = await confirmAction({
     title: 'Remove ' + r.technology + ' from this week?',
     body: 'It is removed from the week ending ' + fmtDate(r.week_date) + ' only. Earlier weeks keep their entries.',
@@ -326,6 +432,26 @@ async function _lnRemoveRow(i) {
   _lnRows.splice(i, 1);
   showToast('Removed ✓');
   _lnRepaint();
+}
+
+// Manager keeps a product an employee asked to remove.
+async function _lnKeepRow(i) {
+  var r = _lnRows[i]; if (!r || !await requireAuth()) return;
+  var u = await sb.from('learning_entries').update({ remove_requested: false }).eq('id', r.id).select('id');
+  if (u.error || !u.data || !u.data.length) { showError('Could not update it' + (u.error ? ': ' + u.error.message : '.')); return; }
+  r.remove_requested = false;
+  showToast('Kept ✓');
+  _lnRepaint();
+}
+// From Team Week: remove (approve) or keep.
+async function learningRemoveDecision(id, approve) {
+  if (!await requireAuth()) return;
+  var q = approve ? sb.from('learning_entries').delete().eq('id', id).select('id')
+                  : sb.from('learning_entries').update({ remove_requested: false }).eq('id', id).select('id');
+  var u = await q;
+  if (u.error || !u.data || !u.data.length) { showError('Could not update it' + (u.error ? ': ' + u.error.message : '.')); return; }
+  showToast(approve ? 'Removed ✓' : 'Kept ✓');
+  renderLearningTeam();
 }
 
 function _lnRepaint() {
@@ -418,7 +544,7 @@ async function saveLearningWeek() {
   try {
     if (!await requireAuth()) { failed = changed.length; return; }
     var fields = ['course_status', 'course_date', 'cert_status', 'cert_date', 'hands_on_status', 'update_note',
-                  'is_blocked', 'blocker_note', 'next_steps', 'due_date'];
+                  'is_blocked', 'blocker_note', 'next_steps', 'due_date', 'due_date_pending'];
     var newRows = changed.filter(function(r){ return r._new; });
     if (newRows.length) {
       var payload = newRows.map(function(r){
@@ -447,6 +573,9 @@ async function saveLearningWeek() {
     _lnUpdateSaveBar();
   }
   if (failed) { showError(failed + ' product' + (failed === 1 ? ' was' : 's were') + ' not saved' + (firstErr ? ': ' + firstErr : '.') + ' Your edits are still on screen; try Save again.'); return; }
+  // v202: a due date that is now saved becomes locked for the employee.
+  _lnRows.forEach(function(r){ r._origDue = r.due_date; });
+  _lnRepaint();
   showToast('Week saved ✓');
 
   // Newly completed certifications: offer to put the certificate on the
@@ -497,6 +626,7 @@ async function renderLearningTeam() {
   if (mySeq !== _lnSeq) return;
   if (res.error) { host.innerHTML = _lnError('Could not load the team week'); return; }
   var rows = res.data || [];
+  _lnTeamRows = rows;
   var vendors = {};
   rows.forEach(function(r){ vendors[r.vendor] = 1; });
   var shown = rows.filter(function(r){
@@ -520,13 +650,28 @@ async function renderLearningTeam() {
       '<label class="ln-check"><input type="checkbox" id="ln-team-blocked" onchange="renderLearningTeam()"' + (fBlocked ? ' checked' : '') + '> Roadblocks only</label>' +
     '</div>';
 
-  var roadblocks = blocked.length
+  // v202: requests waiting for a manager - due date changes and removals.
+  var reqs = rows.filter(function(r){ return r.due_date_pending || r.remove_requested; });
+  var requests = reqs.length
+    ? '<div class="ln-requests"><div class="ln-rb-title">Waiting for your approval (' + reqs.length + ')</div>' +
+        reqs.map(function(r){
+          var what = r.remove_requested ? 'Remove from the week'
+                   : 'Due date ' + (r.due_date ? fmtDate(r.due_date) : '(none)') + ' \u2192 ' + fmtDate(r.due_date_pending);
+          var fn = r.remove_requested ? 'learningRemoveDecision' : 'learningDueDecision';
+          return '<div class="ln-req-row"><div><strong>' + _lnEsc(r.employee) + '</strong> \u00b7 ' + _lnEsc(r.vendor) + ' ' + _lnEsc(r.technology) +
+                 '<div class="ln-rb-note">' + _lnEsc(what) + '</div></div>' +
+                 '<div class="ln-due-btns"><button class="btn btn-sm btn-primary" onclick="' + fn + '(' + Number(r.id) + ',true)">Approve</button>' +
+                 '<button class="btn btn-sm btn-ghost" onclick="' + fn + '(' + Number(r.id) + ',false)">' + (r.remove_requested ? 'Keep' : 'Reject') + '</button></div></div>';
+        }).join('') + '</div>'
+    : '';
+
+  var roadblocks = requests + (blocked.length
     ? '<div class="ln-roadblocks"><div class="ln-rb-title">Roadblocks this week (' + blocked.length + ')</div>' +
         blocked.map(function(r){
           return '<div class="ln-rb"><strong>' + _lnEsc(r.employee) + '</strong> · ' + _lnEsc(r.vendor) + ' ' + _lnEsc(r.technology) +
-                 '<div class="ln-rb-note">' + _lnEsc(r.blocker_note || 'No details given') + '</div></div>';
+                 '<div class="ln-rb-note">' + (_lnPoints(r.blocker_note) || 'No details given') + '</div></div>';
         }).join('') + '</div>'
-    : '';
+    : '');
 
   var groups = people.filter(function(p){ return !fEmp || p === fEmp; }).map(function(p){
     var mine = shown.filter(function(r){ return r.employee === p; });
@@ -537,16 +682,15 @@ async function renderLearningTeam() {
       '<div class="ln-group-head"><div class="ln-group-name">' + _lnEsc(p) + '</div>' +
         '<button class="btn btn-sm btn-ghost" data-emp="' + _lnEsc(p) + '" onclick="learningEditFor(this.getAttribute(\'data-emp\'))"><i data-lucide="pencil" class="btn-icon"></i>' + (hasAny ? 'Edit' : 'Add entries') + '</button></div>' +
       (mine.length
-        ? '<div class="ln-grid-wrap"><table class="ln-view"><thead><tr><th>Product</th><th>Course</th><th>Certification</th><th>Hands-on</th><th>This week\'s update</th><th>Next steps</th><th>Due</th></tr></thead><tbody>' +
+        ? '<div class="ln-grid-wrap"><table class="ln-view"><thead><tr><th>Product</th><th>Course</th><th>Certification</th><th>Hands-on</th><th>This week\'s update</th><th>Due</th></tr></thead><tbody>' +
             mine.map(function(r){
               return '<tr class="' + (r.is_blocked ? 'ln-row-blocked' : '') + '">' +
                 '<td data-label="Product"><div class="ln-vendor">' + _lnEsc(r.vendor) + '</div><div class="ln-tech">' + _lnEsc(r.technology) + '</div>' +
-                  (r.is_blocked ? '<div class="ln-blocked-tag">Blocked: ' + _lnEsc(r.blocker_note || '') + '</div>' : '') + '</td>' +
-                '<td data-label="Course">' + _lnPill(r.course_status) + (r.course_date ? '<div class="ln-small">' + fmtDate(r.course_date) + '</div>' : '') + '</td>' +
-                '<td data-label="Certification">' + _lnPill(r.cert_status) + (r.cert_date ? '<div class="ln-small">' + fmtDate(r.cert_date) + '</div>' : '') + '</td>' +
+                  (r.is_blocked ? '<div class="ln-blocked-tag">Blocked' + _lnPoints(r.blocker_note) + '</div>' : '') + '</td>' +
+                '<td data-label="Course"' + (r.course_date ? ' title="Completed ' + fmtDate(r.course_date) + '"' : '') + '>' + _lnPill(r.course_status) + '</td>' +
+                '<td data-label="Certification"' + (r.cert_date ? ' title="Completed ' + fmtDate(r.cert_date) + '"' : '') + '>' + _lnPill(r.cert_status) + '</td>' +
                 '<td data-label="Hands-on">' + _lnPill(r.hands_on_status) + '</td>' +
-                '<td data-label="This week\'s update" class="ln-wide">' + (r.update_note ? _lnEsc(r.update_note) : '<span class="ln-dim">—</span>') + '</td>' +
-                '<td data-label="Next steps">' + (r.next_steps ? _lnEsc(r.next_steps) : '<span class="ln-dim">—</span>') + '</td>' +
+                '<td data-label="This week\'s update" class="ln-wide">' + (r.update_note ? _lnPoints(r.update_note) : '<span class="ln-dim">—</span>') + '</td>' +
                 '<td data-label="Due">' + (r.due_date ? fmtDate(r.due_date) : '<span class="ln-dim">—</span>') + '</td>' +
               '</tr>';
             }).join('') + '</tbody></table></div>'
@@ -659,7 +803,7 @@ async function renderLearningCompare() {
               (it.dir === 'new' && prev.length ? '<span class="ln-newtag">new</span>' : '') + '</td>' +
             LN_AREAS.map(function(a){ return '<td data-label="' + a.label + '">' + _lnCmpCell(pr ? pr[a.f] : null, r[a.f], !!pr) + '</td>'; }).join('') +
             '<td data-label="Roadblock">' + rb + '</td>' +
-            '<td data-label="This week\'s update" class="ln-wide">' + (r.update_note ? _lnEsc(r.update_note) : '<span class="ln-dim">—</span>') + '</td>' +
+            '<td data-label="This week\'s update" class="ln-wide">' + (r.update_note ? _lnPoints(r.update_note) : '<span class="ln-dim">—</span>') + '</td>' +
           '</tr>';
         }).join('') +
       '</tbody></table></div>' +
@@ -680,5 +824,5 @@ async function renderLearningCompare() {
 }
 
 function resetLearningState() {
-  _lnTab = 'mine'; _lnWeek = null; _lnEditEmp = null; _lnRows = []; _lnCatalog = null; _lnSeq++;
+  _lnTab = 'mine'; _lnWeek = null; _lnEditEmp = null; _lnRows = []; _lnCatalog = null; _lnTeamRows = []; _lnSeq++;
 }

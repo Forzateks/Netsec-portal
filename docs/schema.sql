@@ -1333,6 +1333,16 @@ CREATE UNIQUE INDEX comp_off_register_request_day_uq ON public.comp_off_register
 --   row per day (days / number of days each, request_id set, ON CONFLICT DO NOTHING) and marks the request approved -
 --   all in one transaction. EXECUTE granted to authenticated; the manager check is inside the function.
 
+-- == v202: Team Learning due-date lock + removal approval ===================
+-- (migrations v202_learning_due_date_lock, v202_learning_remove_needs_manager)
+ALTER TABLE public.learning_entries ADD COLUMN due_date_pending date;                       -- employee's requested new due date
+ALTER TABLE public.learning_entries ADD COLUMN remove_requested boolean DEFAULT false NOT NULL; -- employee asked to remove the product
+-- trigger learning_entries_due_guard (BEFORE INSERT OR UPDATE, function public._learning_entries_due_guard(), SECURITY DEFINER):
+--   non-managers cannot change a due_date once set, and a new week's row cannot carry a different due_date
+--   from that product's latest earlier week. Managers are exempt.
+DROP POLICY learning_entries_delete ON public.learning_entries;
+CREATE POLICY learning_entries_delete ON public.learning_entries FOR DELETE TO authenticated USING (is_manager_user());
+
 COMMIT;
 
 -- End of schema. Apply the data dump next (netsec-backup-<DATE>.sql).

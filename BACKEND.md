@@ -493,6 +493,12 @@ Team Learning: one row per **employee + week + product**, where the week is the
 - **Compare** (managers) is computed in the browser: each person against their own
   previous week - never against other people.
 - Included in `BACKUP_TABLES` and in `backup_read_table()`'s allow-list.
+- **v202:** `update_note` and `blocker_note` hold one point per line (shown as bullets;
+  roadblocks are entered as rows, `is_blocked` = at least one). **Due date** is locked once
+  set for employees (trigger `learning_entries_due_guard`); they put the wanted date in
+  `due_date_pending` and a manager approves or rejects it (Team Week panel). **Removing** a
+  product is manager-only (delete policy); employees set `remove_requested` instead.
+  `next_steps` is kept but hidden in the app.
 
 ### 14. Multi-day Comp Off (v202)
 One Comp Off request can now cover several days. The app lists the employee's

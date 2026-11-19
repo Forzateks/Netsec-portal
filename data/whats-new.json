@@ -424,10 +424,19 @@
     {
       "id": "v202-comp-off-multi-day",
       "version": "v202",
-      "released_at": "2026-11-19T10:58:07Z",
+      "released_at": "2026-11-19T11:46:33Z",
       "category": "new",
       "title": "Comp Off for several days in one request, and Release History",
       "body": "Leave \u2192 Request Leave \u2192 Comp Off (Full Day): pick From and To dates and one request covers every working day in the range \u2014 weekends and public holidays are skipped \u2014 so you no longer apply once per day. The manager approves it in a single click. Half-day comp off stays a single date. Managers also get Settings \u2192 Release History, listing every update pushed with its version, date and details.",
+      "link": null
+    },
+    {
+      "id": "v202-learning-updates",
+      "version": "v202",
+      "released_at": "2026-11-19T11:46:33Z",
+      "category": "new",
+      "title": "Team Learning: updates point by point, roadblock rows, due dates locked",
+      "body": "Write each week's update one point per line; the last three weeks' updates appear above the box with the week they were added. Roadblocks are now rows you add (no tick box). A due date is fixed once saved \u2014 ask for a new date and a manager approves it. Removing a product also needs a manager's approval. Completion dates show when you hover over the status, and Next steps is hidden for now.",
       "link": null
     },
     {

@@ -3478,3 +3478,28 @@ mark.gs-hit{background:var(--pill-info-bg);color:inherit;border-radius:2px;paddi
 .rl-cat-new{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
 .rl-cat-fixed{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
 @media(max-width:640px){.rl-ver-when{margin-left:0;width:100%}}
+.ln-lastwk{font-size:12px;color:var(--muted);background:var(--bg);border-left:3px solid var(--border);border-radius:var(--radius-xs);padding:6px 8px;margin-bottom:6px;white-space:pre-wrap;line-height:1.4}
+.ln-lastwk-h{display:block;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px}
+.ln-points{margin:0;padding-left:16px}
+.ln-points li{margin:1px 0}
+.ln-lastwk .ln-points{margin-bottom:4px}
+.ln-lastwk-h:not(:first-child){margin-top:6px}
+/* v202: Team Learning - roadblock rows, locked due date, requests, dates on hover */
+.ln-rb-list{display:flex;flex-direction:column;gap:4px}
+.ln-rb-row{display:flex;gap:4px;align-items:center}
+.ln-rb-row input{flex:1;min-width:0}
+.ln-rb-add{margin-top:4px;font-size:12px}
+.ln-due-locked{display:flex;align-items:center;gap:4px;font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums}
+.ln-due-locked svg{width:13px;height:13px;color:var(--muted)}
+.ln-due-ask{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+.ln-due-ask input{display:block;margin-top:2px}
+.ln-due-req{font-size:12px;color:var(--pill-warn-fg);margin-top:4px}
+.ln-due-btns{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.ln-rm-req{font-size:11px;font-weight:700;color:var(--pill-warn-fg);margin-bottom:4px}
+.ln-requests{border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:12px;background:var(--pill-warn-bg)}
+.ln-req-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--border)}
+.ln-req-row:first-of-type{border-top:0}
+.ln-blocked-tag .ln-points{font-weight:400}
+.ln-grid td[data-label="Course"] .ln-date,.ln-grid td[data-label="Certification"] .ln-date{display:none}
+.ln-grid td[data-label="Course"]:hover .ln-date,.ln-grid td[data-label="Course"]:focus-within .ln-date,
+.ln-grid td[data-label="Certification"]:hover .ln-date,.ln-grid td[data-label="Certification"]:focus-within .ln-date{display:block}
