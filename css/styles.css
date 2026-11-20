@@ -3572,3 +3572,9 @@ mark.gs-hit{background:var(--pill-info-bg);color:inherit;border-radius:2px;paddi
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23615d59' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center}
 .ln-grid select.ln-st-none{background-color:transparent;color:var(--muted);border-color:var(--border);border-style:dashed}
 .ln-grid td[data-label="Course"],.ln-grid td[data-label="Certification"],.ln-grid td[data-label="Hands-on"]{min-width:0;width:1%;white-space:nowrap}
+
+/* == v207: Team Week filters sit in the date bar ============================ */
+.ln-weekbar-filters{flex:1 1 auto;display:flex;justify-content:center;min-width:0}
+.ln-weekbar-filters .ln-filters{margin-bottom:0}
+@media(max-width:900px){ .ln-weekbar-filters{flex-basis:100%;order:3;justify-content:flex-start} }
+.ln-view td[data-label="Due"]{white-space:nowrap}

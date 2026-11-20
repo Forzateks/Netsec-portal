@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v207-team-week-filters-in-date-bar",
+      "version": "v207",
+      "released_at": "2026-11-20T05:52:09Z",
+      "category": "new",
+      "title": "Team Week: filters moved into the date bar",
+      "body": "The employee, vendor, Products and Roadblocks-only filters now sit in the date bar at the top of Team Week, so the table starts higher up the page.",
+      "link": null
+    },
+    {
       "id": "v206-menu-collapse",
       "version": "v206",
       "released_at": "2026-11-20T05:43:58Z",

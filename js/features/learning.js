@@ -177,6 +177,8 @@ async function showLearningTab(tab) {
   });
   if (typeof setSidebarSubActive === 'function') setSidebarSubActive('learning', tab);
   _lnSyncWeekBar();
+  var tf = document.getElementById('ln-team-filters');   // v207: Team Week filters live in the date bar
+  if (tf) tf.style.display = (tab === 'team') ? '' : 'none';
   if (tab === 'mine') renderLearningMine();
   else if (tab === 'team') renderLearningTeam();
   else renderLearningCompare();
@@ -802,7 +804,9 @@ async function renderLearningTeam() {
       stat('Certifications done', certDone, 'early') +
       stat('Roadblocks', blocked.length, blocked.length ? 'wknd' : '') +
     '</div>' +
-    '<div class="card">' + filters + roadblocks + (groups || '<div class="ln-none">Nothing matches these filters.</div>') + '</div>';
+    '<div class="card">' + roadblocks + (groups || '<div class="ln-none">Nothing matches these filters.</div>') + '</div>';
+  var tfHost = document.getElementById('ln-team-filters');
+  if (tfHost) tfHost.innerHTML = filters;
   _lnApplyPick('team');
   if (typeof renderIcons === 'function') renderIcons();
 }
