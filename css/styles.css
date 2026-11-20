@@ -3400,13 +3400,10 @@ mark.gs-hit{background:var(--pill-info-bg);color:inherit;border-radius:2px;paddi
 .ln-block-cell input[type=text]{margin-top:4px}
 .ln-block-cell input[type=text]:disabled{opacity:.45}
 .ln-row-blocked td{background:var(--pill-danger-bg)}
-.ln-st-completed{background:var(--pill-ok-bg);color:var(--pill-ok-fg);border-color:var(--pill-ok-bd)}
-.ln-st-in_progress{background:var(--pill-warn-bg);color:var(--pill-warn-fg);border-color:var(--pill-warn-bd)}
-.ln-st-not_started{background:var(--pill-danger-bg);color:var(--pill-danger-fg);border-color:var(--pill-danger-bd)}
+/* v208: one neutral colour for every status - the words say which it is */
+.ln-st-completed,.ln-st-in_progress,.ln-st-not_started{background-color:var(--nx-canvas);color:var(--navy);border-color:var(--border)}
 .ln-pill{display:inline-block;padding:2px 9px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;white-space:nowrap}
-.ln-pill-completed{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
-.ln-pill-in_progress{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
-.ln-pill-not_started{background:var(--pill-danger-bg);color:var(--pill-danger-fg)}
+.ln-pill-completed,.ln-pill-in_progress,.ln-pill-not_started{background:var(--nx-canvas);color:var(--navy);border:1px solid var(--border)}
 .ln-pill-muted{opacity:.6}
 .ln-dim{color:var(--nx-ink-faint)}
 .ln-small{font-size:11.5px;color:var(--muted);margin-top:2px}

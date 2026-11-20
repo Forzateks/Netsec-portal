@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v208-learning-one-colour",
+      "version": "v208",
+      "released_at": "2026-11-20T05:59:44Z",
+      "category": "new",
+      "title": "Team Learning: one calm colour for statuses",
+      "body": "Course, Certification and Hands-on chips are now all the same neutral colour, so only the words (Not started, In progress, Completed) tell them apart. No more red, amber and green mix.",
+      "link": null
+    },
+    {
       "id": "v207-team-week-filters-in-date-bar",
       "version": "v207",
       "released_at": "2026-11-20T05:52:09Z",
