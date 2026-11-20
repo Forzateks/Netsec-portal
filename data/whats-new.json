@@ -422,6 +422,24 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v206-menu-collapse",
+      "version": "v206",
+      "released_at": "2026-11-20T05:43:58Z",
+      "category": "new",
+      "title": "Menu: collapse it to icons and open it again",
+      "body": "A Collapse menu button at the top of the left menu shrinks it to icons only, and the same button opens it back up. Clicking a menu group while it is collapsed opens it. Your choice is remembered on this device.",
+      "link": null
+    },
+    {
+      "id": "v206-learning-simpler",
+      "version": "v206",
+      "released_at": "2026-11-20T05:43:58Z",
+      "category": "new",
+      "title": "Team Learning: simpler status chips, Last week in My Week, pick products to show",
+      "body": "Course, Certification and Hands-on are now small coloured chips. My Week has a Last week column beside this week's update, like Team Week. Tick one or more products in the Products drop-down to see only those. Products are listed Semperis, Keyfactor, Claroty, FireMon, NetAlly first. Hovering a completed course or certification shows its date, and choosing Completed fills today's date automatically.",
+      "link": null
+    },
+    {
       "id": "v205-public-holidays-picker",
       "version": "v205",
       "released_at": "2026-11-19T12:15:59Z",

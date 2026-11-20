@@ -322,3 +322,39 @@ function toggleSidebar(open) {
 function closeSidebarOnMobile() {
   if (window.innerWidth <= 900) toggleSidebar(false);
 }
+
+// == SIDEBAR COLLAPSE (v206, desktop) ==
+// Icons-only menu. The choice is remembered on this device. Phones keep the
+// slide-over drawer, so this only acts above 900px.
+function toggleSidebarCollapse(force) {
+  var sb = document.getElementById('sidebar'), btn = document.getElementById('sidebar-collapse');
+  if (!sb) return;
+  var on = (force === undefined) ? !document.body.classList.contains('sb-collapsed') : !!force;
+  document.body.classList.toggle('sb-collapsed', on);
+  Array.prototype.forEach.call(sb.querySelectorAll('.sidebar-item, .sidebar-subitem'), function(el){
+    if (on) {
+      if (!el.getAttribute('title')) { el.setAttribute('title', el.textContent.replace(/\s+/g, ' ').trim().replace(/\s*\d+$/, '')); el.setAttribute('data-sbt', '1'); }
+    } else if (el.getAttribute('data-sbt')) {
+      el.removeAttribute('title'); el.removeAttribute('data-sbt');
+    }
+  });
+  if (btn) {
+    btn.setAttribute('aria-expanded', on ? 'false' : 'true');
+    btn.setAttribute('aria-label', on ? 'Expand menu' : 'Collapse menu');
+    btn.title = on ? 'Expand menu' : 'Collapse menu';
+    var g = btn.querySelector('span'); if (g) g.textContent = on ? '»' : '«';
+  }
+  try { localStorage.setItem('netsec-sb-collapsed', on ? '1' : '0'); } catch (e) {}
+}
+(function(){
+  var sb = document.getElementById('sidebar');
+  if (!sb) return;
+  // A group header clicked while the menu is icons-only opens the menu first,
+  // so its sub-items are reachable.
+  sb.addEventListener('click', function(e){
+    if (document.body.classList.contains('sb-collapsed') && window.innerWidth > 900 && e.target.closest && e.target.closest('.sidebar-item.has-children')) toggleSidebarCollapse(false);
+  }, true);
+  var saved = null;
+  try { saved = localStorage.getItem('netsec-sb-collapsed'); } catch (e) {}
+  if (saved === '1') toggleSidebarCollapse(true);
+})();

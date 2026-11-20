@@ -61,7 +61,7 @@
   Sentry.init({
     dsn: 'https://f3f1bff6420c01036025b7cb2a083b46@o4511426676916224.ingest.de.sentry.io/4511488467337296',
     environment: host === 'netsec-portal.pages.dev' ? 'production' : 'development',
-    release: 'netsec-portal@v205',
+    release: 'netsec-portal@v206',
 
     // Performance: sample 10% of transactions. Sentry free tier = 10k/month.
     tracesSampleRate: 0.1,
@@ -340,6 +340,8 @@
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
   <button class="sidebar-close" onclick="toggleSidebar(false)" title="Close menu">×</button>
+  <!-- v206: desktop only - shrink the menu to icons, or open it up again -->
+  <button type="button" class="sidebar-collapse" id="sidebar-collapse" onclick="toggleSidebarCollapse()" aria-expanded="true" aria-controls="sidebar" aria-label="Collapse menu" title="Collapse menu"><span aria-hidden="true">«</span><span class="sidebar-collapse-text">Collapse menu</span></button>
 
   <!-- ── TOP: high-frequency items, no section label ── -->
   <div class="sidebar-item active" id="tab-dashboard" onclick="showScreen('dashboard');closeSidebarOnMobile()"><i data-lucide="home" class="sidebar-icon"></i>Dashboard</div>

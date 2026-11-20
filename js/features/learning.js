@@ -46,6 +46,23 @@ function _lnPrevHtml(list) {
     return '<span class="ln-lastwk-h">Week ending ' + fmtDate(h.week) + '</span>' + _lnPoints(h.note);
   }).join('') + '</div>';
 }
+// v206: hover text for a completed course / certification (date when known).
+function _lnDoneTip(status, date) {
+  if (status !== 'completed') return '';
+  return ' title="' + (date ? 'Completed on ' + fmtDate(date) : 'Completed - no date entered yet') + '"';
+}
+// v206: vendors always appear in this order; any other vendor follows, A-Z.
+var LN_VENDOR_ORDER = ['semperis', 'keyfactor', 'claroty', 'firemon', 'netally'];
+function _lnVRank(v) {
+  var i = LN_VENDOR_ORDER.indexOf(String(v || '').toLowerCase().replace(/[^a-z]/g, ''));
+  return i === -1 ? LN_VENDOR_ORDER.length : i;
+}
+function _lnCmp(a, b) {
+  var d = _lnVRank(a.vendor) - _lnVRank(b.vendor);
+  if (d) return d;
+  var x = (a.vendor + '|' + a.technology).toLowerCase(), y = (b.vendor + '|' + b.technology).toLowerCase();
+  return x < y ? -1 : (x > y ? 1 : 0);
+}
 function _lnEsc(v) {
   return String(v == null ? '' : v)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -97,17 +114,17 @@ async function _lnCanLeave() {
 // A drop-down with a tick box per product. Unticked products are hidden from
 // the table (nothing is deleted), leaving more room for the update columns.
 // The unticked set is remembered while the page is open, so new products show.
-var _lnHide = { mine: {}, team: {} };
+var _lnHide = { mine: {}, team: {} };   // v206: holds the TICKED products; none ticked = show all
 function _lnPickHtml(scope, products) {
   if (!products || products.length < 2) return '';
   var seen = {}, list = [];
   products.forEach(function(r){ var k = _lnKey(r); if (!seen[k]) { seen[k] = 1; list.push({ k: k, v: r.vendor, t: r.technology }); } });
-  list.sort(function(a, b){ return (a.v + '|' + a.t).toLowerCase() < (b.v + '|' + b.t).toLowerCase() ? -1 : 1; });
+  list.sort(function(a, b){ return _lnCmp({ vendor: a.v, technology: a.t }, { vendor: b.v, technology: b.t }); });
   return '<details class="ln-pp" id="ln-pp-' + scope + '"><summary class="btn btn-sm btn-ghost"><i data-lucide="list-checks" class="btn-icon"></i><span class="ln-pp-label">All products</span></summary>' +
     '<div class="ln-pp-panel"><div class="ln-pp-actions"><button type="button" class="btn btn-sm btn-ghost" onclick="_lnPickAll(\'' + scope + '\',true)">Select all</button>' +
-    '<button type="button" class="btn btn-sm btn-ghost" onclick="_lnPickAll(\'' + scope + '\',false)">Clear</button></div>' +
+    '<button type="button" class="btn btn-sm btn-ghost" onclick="_lnPickAll(\'' + scope + '\',false)">Show all</button></div>' +
     list.map(function(p){
-      return '<label class="ln-pp-opt"><input type="checkbox" data-pk="' + _lnEsc(p.k) + '"' + (_lnHide[scope][p.k] ? '' : ' checked') + ' onchange="_lnPickChange(\'' + scope + '\')">' +
+      return '<label class="ln-pp-opt"><input type="checkbox" data-pk="' + _lnEsc(p.k) + '"' + (_lnHide[scope][p.k] ? ' checked' : '') + ' onchange="_lnPickChange(\'' + scope + '\')">' +
         '<span><span class="ln-pp-v">' + _lnEsc(p.v) + '</span> ' + _lnEsc(p.t) + '</span></label>';
     }).join('') + '</div></details>';
 }
@@ -115,11 +132,11 @@ function _lnPickChange(scope) {
   var box = document.getElementById('ln-pp-' + scope);
   if (!box) return;
   var hide = {};
-  Array.prototype.forEach.call(box.querySelectorAll('input[data-pk]'), function(c){ if (!c.checked) hide[c.getAttribute('data-pk')] = 1; });
+  Array.prototype.forEach.call(box.querySelectorAll('input[data-pk]'), function(c){ if (c.checked) hide[c.getAttribute('data-pk')] = 1; });
   _lnHide[scope] = hide;
   _lnApplyPick(scope);
 }
-function _lnPickAll(scope, on) {
+function _lnPickAll(scope, on) {   // on=true ticks every product; false clears (= show all)
   var box = document.getElementById('ln-pp-' + scope);
   if (!box) return;
   Array.prototype.forEach.call(box.querySelectorAll('input[data-pk]'), function(c){ c.checked = on; });
@@ -128,9 +145,9 @@ function _lnPickAll(scope, on) {
 function _lnApplyPick(scope) {
   var host = document.getElementById(scope === 'mine' ? 'ln-mine-content' : 'ln-team-content');
   if (!host) return;
-  var hide = _lnHide[scope];
+  var hide = _lnHide[scope], anySel = Object.keys(hide).length > 0;
   Array.prototype.forEach.call(host.querySelectorAll('tr[data-pk]'), function(tr){
-    tr.classList.toggle('ln-hide', !!hide[tr.getAttribute('data-pk')]);
+    tr.classList.toggle('ln-hide', anySel && !hide[tr.getAttribute('data-pk')]);
   });
   Array.prototype.forEach.call(host.querySelectorAll('.ln-group'), function(g){
     var trs = g.querySelectorAll('tr[data-pk]');
@@ -141,7 +158,7 @@ function _lnApplyPick(scope) {
   if (box) {
     var all = box.querySelectorAll('input[data-pk]'), on = box.querySelectorAll('input[data-pk]:checked');
     var lab = box.querySelector('.ln-pp-label');
-    if (lab) lab.textContent = on.length === all.length ? 'All products' : (on.length ? on.length + ' of ' + all.length + ' products' : 'No products');
+    if (lab) lab.textContent = on.length ? (on.length === 1 ? '1 product' : on.length + ' products') : 'All products';
   }
 }
 document.addEventListener('click', function(e){
@@ -215,7 +232,7 @@ async function renderLearningMine() {
     .order('vendor').order('technology');
   if (mySeq !== _lnSeq) return;
   if (res.error) { host.innerHTML = _lnError('Could not load this week'); return; }
-  var rows = res.data || [];
+  var rows = (res.data || []).slice().sort(_lnCmp);
   var notice = '', offerFrom = null;
 
   if (!rows.length) {
@@ -233,7 +250,7 @@ async function renderLearningMine() {
         var again = await sb.from('learning_entries').select('*').eq('employee', emp).eq('week_date', week)
           .order('vendor').order('technology');
         if (mySeq !== _lnSeq) return;
-        rows = again.data || [];
+        rows = (again.data || []).slice().sort(_lnCmp);
         notice = 'Started from your entries for the week ending ' + fmtDate(prevWeek) + '. Change what moved this week and add your update.';
       } else {
         offerFrom = prevWeek;
@@ -325,7 +342,7 @@ function _lnPaintEditor(emp, week, notice, offerFrom) {
     '</div>';
   } else {
     body = '<div class="ln-grid-wrap"><table class="ln-grid"><thead><tr>' +
-      '<th>Product</th><th>Course</th><th>Certification</th><th>Hands-on</th><th>This week\'s update</th>' +
+      '<th>Product</th><th>Course</th><th>Certification</th><th>Hands-on</th><th>Last week</th><th>This week\'s update</th>' +
       '<th>Roadblocks</th><th>Due</th><th></th></tr></thead><tbody>' +
       _lnRows.map(function(r, i){
         return '<tr class="' + (r.is_blocked ? 'ln-row-blocked' : '') + '" data-pk="' + _lnEsc(_lnKey(r)) + '">' +
@@ -334,7 +351,8 @@ function _lnPaintEditor(emp, week, notice, offerFrom) {
           '<td data-label="Course">' + _lnStatusSelect(i, 'course_status', r.course_status, 'Course status') + _lnDateInput(i, 'course_date', r.course_date, 'Course completion date') + '</td>' +
           '<td data-label="Certification">' + _lnStatusSelect(i, 'cert_status', r.cert_status, 'Certification status') + _lnDateInput(i, 'cert_date', r.cert_date, 'Certification date') + '</td>' +
           '<td data-label="Hands-on">' + _lnStatusSelect(i, 'hands_on_status', r.hands_on_status, 'Hands-on status') + '</td>' +
-          '<td data-label="This week\'s update" class="ln-wide">' + _lnPrevHtml(_lnPrevNotes[_lnKey(r)]) + _lnText(i, 'update_note', r.update_note, 'This week\'s update', 'One point per line - what did you do this week?', true) + '</td>' +
+          '<td data-label="Last week" class="ln-wide ln-lastcol">' + (_lnPrevNotes[_lnKey(r)] && _lnPrevNotes[_lnKey(r)].length ? _lnPrevHtml(_lnPrevNotes[_lnKey(r)].slice(0, 1)) : '<span class="ln-dim">—</span>') + '</td>' +
+          '<td data-label="This week\'s update" class="ln-wide">' + _lnText(i, 'update_note', r.update_note, 'This week\'s update', 'One point per line - what did you do this week?', true) + '</td>' +
           '<td data-label="Roadblocks" class="ln-block-cell">' + _lnRbHtml(i, r) + '</td>' +
           // v202: Next steps hidden for now (the column and its data stay).
           '<td data-label="Due">' + _lnDueHtml(i, r) + '</td>' +
@@ -382,6 +400,14 @@ function _lnOnInput(el) {
   if (typeof v === 'string' && el.tagName !== 'SELECT' && el.type !== 'date') v = v.length ? v : null;
   r[f] = v;
   r._dirty = true;
+  if ((f === 'course_status' || f === 'cert_status') && v === 'completed') {
+    var df = f === 'course_status' ? 'course_date' : 'cert_date';
+    if (!r[df]) {
+      r[df] = (typeof officeClock === 'function' ? officeClock().iso : new Date().toISOString().slice(0, 10));
+      var di = el.closest('td') && el.closest('td').querySelector('input[type=date]');
+      if (di) di.value = r[df];
+    }
+  }
   if (el.tagName === 'SELECT') el.className = 'ln-st ln-st-' + (v || 'none');
   _lnUpdateSaveBar();
 }
@@ -691,7 +717,7 @@ async function renderLearningTeam() {
   });
   if (mySeq !== _lnSeq) return;
   if (res.error) { host.innerHTML = _lnError('Could not load the team week'); return; }
-  var rows = res.data || [];
+  var rows = (res.data || []).slice().sort(_lnCmp);
   _lnTeamRows = rows;
   // v204: last week's update, shown in its own column beside this week's.
   var lastWeek = _lnAddDays(week, -7);
@@ -720,7 +746,7 @@ async function renderLearningTeam() {
       '<select id="ln-team-emp" onchange="renderLearningTeam()" aria-label="Employee"><option value="">All employees</option>' +
         people.map(function(p){ return '<option value="' + _lnEsc(p) + '"' + (p === fEmp ? ' selected' : '') + '>' + _lnEsc(p) + '</option>'; }).join('') + '</select>' +
       '<select id="ln-team-vendor" onchange="renderLearningTeam()" aria-label="Vendor"><option value="">All vendors</option>' +
-        Object.keys(vendors).sort().map(function(v){ return '<option value="' + _lnEsc(v) + '"' + (v === fVendor ? ' selected' : '') + '>' + _lnEsc(v) + '</option>'; }).join('') + '</select>' +
+        Object.keys(vendors).sort(function(a, b){ return _lnCmp({ vendor: a, technology: '' }, { vendor: b, technology: '' }); }).map(function(v){ return '<option value="' + _lnEsc(v) + '"' + (v === fVendor ? ' selected' : '') + '>' + _lnEsc(v) + '</option>'; }).join('') + '</select>' +
       _lnPickHtml('team', rows) +
       '<label class="ln-check"><input type="checkbox" id="ln-team-blocked" onchange="renderLearningTeam()"' + (fBlocked ? ' checked' : '') + '> Roadblocks only</label>' +
     '</div>';
@@ -757,8 +783,8 @@ async function renderLearningTeam() {
               return '<tr class="' + (r.is_blocked ? 'ln-row-blocked' : '') + '" data-pk="' + _lnEsc(_lnKey(r)) + '">' +
                 '<td data-label="Product"><div class="ln-vendor">' + _lnEsc(r.vendor) + '</div><div class="ln-tech">' + _lnEsc(r.technology) + '</div>' +
                   (r.is_blocked ? '<div class="ln-blocked-tag">Blocked' + _lnPoints(r.blocker_note) + '</div>' : '') + '</td>' +
-                '<td data-label="Course"' + (r.course_date ? ' title="Completed ' + fmtDate(r.course_date) + '"' : '') + '>' + _lnPill(r.course_status) + '</td>' +
-                '<td data-label="Certification"' + (r.cert_date ? ' title="Completed ' + fmtDate(r.cert_date) + '"' : '') + '>' + _lnPill(r.cert_status) + '</td>' +
+                '<td data-label="Course"' + _lnDoneTip(r.course_status, r.course_date) + '>' + _lnPill(r.course_status) + '</td>' +
+                '<td data-label="Certification"' + _lnDoneTip(r.cert_status, r.cert_date) + '>' + _lnPill(r.cert_status) + '</td>' +
                 '<td data-label="Hands-on">' + _lnPill(r.hands_on_status) + '</td>' +
                 '<td data-label="Last week" class="ln-wide ln-lastcol">' + (teamPrev[r.employee + '|' + _lnKey(r)] ? _lnPoints(teamPrev[r.employee + '|' + _lnKey(r)]) : '<span class="ln-dim">—</span>') + '</td>' +
                 '<td data-label="This week\'s update" class="ln-wide">' + (r.update_note ? _lnPoints(r.update_note) : '<span class="ln-dim">—</span>') + '</td>' +
