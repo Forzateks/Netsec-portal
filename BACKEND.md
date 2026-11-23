@@ -499,6 +499,11 @@ Team Learning: one row per **employee + week + product**, where the week is the
   `due_date_pending` and a manager approves or rejects it (Team Week panel). **Removing** a
   product is manager-only (delete policy); employees set `remove_requested` instead.
   `next_steps` is kept but hidden in the app.
+- **v209:** the due-date lock is **switched off** for now - the trigger `learning_entries_due_guard`
+  is disabled (not dropped; `ALTER TABLE learning_entries ENABLE TRIGGER learning_entries_due_guard;`
+  plus `LN_DUE_LOCK = true` in `learning.js` restores it). The delete policy is back to
+  own-rows-or-manager so a person can delete their whole week from My Week
+  (`learningDeleteWeek()`); the per-product "ask your manager to remove" flow is unchanged.
 
 ### 14. Multi-day Comp Off (v202)
 One Comp Off request can now cover several days. The app lists the employee's

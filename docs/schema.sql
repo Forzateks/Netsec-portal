@@ -1343,6 +1343,16 @@ ALTER TABLE public.learning_entries ADD COLUMN remove_requested boolean DEFAULT 
 DROP POLICY learning_entries_delete ON public.learning_entries;
 CREATE POLICY learning_entries_delete ON public.learning_entries FOR DELETE TO authenticated USING (is_manager_user());
 
+-- == v209: due-date lock OFF + people can delete their own week (migration v209_learning_unlock_due_and_delete_week)
+-- The due-date guard trigger is DISABLED (not dropped). To bring the lock back, run:
+--   ALTER TABLE public.learning_entries ENABLE TRIGGER learning_entries_due_guard;
+-- and set LN_DUE_LOCK = true in js/features/learning.js.
+ALTER TABLE public.learning_entries DISABLE TRIGGER learning_entries_due_guard;
+-- Delete policy widened back out: own rows, or any row for a manager.
+DROP POLICY learning_entries_delete ON public.learning_entries;
+CREATE POLICY learning_entries_delete ON public.learning_entries FOR DELETE TO authenticated
+  USING (employee = current_employee_name() OR is_manager_user());
+
 COMMIT;
 
 -- End of schema. Apply the data dump next (netsec-backup-<DATE>.sql).

@@ -3575,3 +3575,4 @@ mark.gs-hit{background:var(--pill-info-bg);color:inherit;border-radius:2px;paddi
 .ln-weekbar-filters .ln-filters{margin-bottom:0}
 @media(max-width:900px){ .ln-weekbar-filters{flex-basis:100%;order:3;justify-content:flex-start} }
 .ln-view td[data-label="Due"]{white-space:nowrap}
+.ln-del-week{margin-right:auto;color:var(--danger)}

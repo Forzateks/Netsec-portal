@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v209-learning-unlock-delete-week",
+      "version": "v209",
+      "released_at": "2026-11-23T07:14:00Z",
+      "category": "new",
+      "title": "Team Learning: due date unlocked, delete a whole week",
+      "body": "The due date can be changed freely again - no manager approval needed for now. My Week has a Delete this week's update button that removes every product and note for that week after you confirm. Other weeks are not touched, and the week is not refilled from last week unless you press Copy from.",
+      "link": null
+    },
+    {
       "id": "v208-learning-one-colour",
       "version": "v208",
       "released_at": "2026-11-20T05:59:44Z",

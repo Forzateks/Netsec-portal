@@ -245,7 +245,7 @@ async function renderLearningMine() {
     // Auto-copy only your OWN current week. A manager opening someone else's
     // week, or anyone browsing another week, gets a button instead - so no
     // row is ever created on someone's behalf just by looking.
-    if (prevWeek && emp === currentUser && week === _lnThisFriday()) {
+    if (prevWeek && emp === currentUser && week === _lnThisFriday() && !_lnNoCopy(emp, week)) {
       var copied = await _lnCopyWeek(emp, prevWeek, week);
       if (mySeq !== _lnSeq) return;
       if (copied.ok) {
@@ -299,9 +299,42 @@ async function _lnCopyWeek(emp, fromWeek, toWeek) {
 async function learningCopyFrom(fromWeek) {
   if (!await requireAuth()) return;
   var emp = (isManager && _lnEditEmp) ? _lnEditEmp : currentUser;
+  _lnNoCopy(emp, _lnWeekNow(), false);
   var r = await _lnCopyWeek(emp, fromWeek, _lnWeekNow());
   if (!r.ok) { showError('Could not copy that week' + (r.error ? ': ' + r.error.message : '.')); return; }
   showToast('Copied from the week ending ' + fmtDate(fromWeek) + ' ✓');
+  renderLearningMine();
+}
+
+// == DELETE THE WHOLE WEEK (v209) ==
+// Remembers (on this device) that a week was deliberately emptied, so opening
+// My Week does not instantly copy last week's products back in.
+function _lnNoCopy(emp, week, set) {
+  var k = 'netsec-ln-emptied|' + emp + '|' + week;
+  try {
+    if (set === true) localStorage.setItem(k, '1');
+    else if (set === false) localStorage.removeItem(k);
+    else return localStorage.getItem(k) === '1';
+  } catch (e) {}
+  return false;
+}
+async function learningDeleteWeek() {
+  var emp = (isManager && _lnEditEmp) ? _lnEditEmp : currentUser;
+  var week = _lnWeekNow();
+  var n = _lnRows.filter(function(r){ return !r._new && r.id; }).length;
+  if (!n) return;
+  var ok = await confirmAction({
+    title: 'Delete the whole update for this week?',
+    body: 'All ' + n + ' product' + (n === 1 ? '' : 's') + ' and their notes for the week ending ' + fmtDate(week) +
+          ' are deleted for ' + (emp === currentUser ? 'you' : emp) + '. Other weeks are not touched. This cannot be undone.',
+    confirmText: 'Delete week', danger: true
+  });
+  if (!ok || !await requireAuth()) return;
+  var del = await sb.from('learning_entries').delete().eq('employee', emp).eq('week_date', week).select('id');
+  if (del.error || !del.data || !del.data.length) { showError('Could not delete the week' + (del.error ? ': ' + del.error.message : '.')); return; }
+  _lnNoCopy(emp, week, true);
+  _lnRows = [];
+  showToast('Deleted the update for the week ending ' + fmtDate(week) + ' ✓');
   renderLearningMine();
 }
 
@@ -378,6 +411,7 @@ function _lnPaintEditor(emp, week, notice, offerFrom) {
       body +
       _lnAddPanelHtml() +
       '<div class="ln-savebar">' +
+        (_lnRows.some(function(r){ return !r._new && r.id; }) ? '<button type="button" class="btn btn-ghost ln-del-week" onclick="learningDeleteWeek()"><i data-lucide="trash-2" class="btn-icon"></i>Delete this week\'s update</button>' : '') +
         '<span id="ln-dirty-hint" class="ln-dirty-hint"></span>' +
         '<button class="btn btn-primary" id="ln-save-btn" onclick="saveLearningWeek()" disabled><i data-lucide="save" class="btn-icon"></i>Save changes</button>' +
       '</div>' +
@@ -454,8 +488,11 @@ function _lnRbSync(i) {
 // == DUE DATE (v202): fixed once saved; changing it needs a manager ==
 // Employees ask for a new date (due_date_pending); a manager approves or
 // rejects it. The database enforces the lock too (_learning_entries_due_guard).
+// v209: the lock is OFF for now. Set LN_DUE_LOCK = true (and re-enable the
+// learning_entries_due_guard trigger) to bring it back.
+var LN_DUE_LOCK = false;
 function _lnDueHtml(i, r) {
-  if (!r._origDue) return _lnDateInput(i, 'due_date', r.due_date, 'Due date');
+  if (!LN_DUE_LOCK || !r._origDue) return _lnDateInput(i, 'due_date', r.due_date, 'Due date');
   var pend = r.due_date_pending;
   if (isManager) {
     return _lnDateInput(i, 'due_date', r.due_date, 'Due date') +
