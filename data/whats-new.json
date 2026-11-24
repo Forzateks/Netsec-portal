@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v210-team-overview-upcoming-comp-off",
+      "version": "v210",
+      "released_at": "2026-11-24T05:56:06Z",
+      "category": "new",
+      "title": "Team Leave Overview: upcoming comp-off shown",
+      "body": "The Upcoming Leave column now also lists each person's approved comp-off days that are still ahead (marked Comp-off), next to their annual and sick leave, in date order. Upcoming leave from any year is shown, not only the year picked.",
+      "link": null
+    },
+    {
       "id": "v209-learning-unlock-delete-week",
       "version": "v209",
       "released_at": "2026-11-23T07:14:00Z",

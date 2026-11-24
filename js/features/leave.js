@@ -870,7 +870,7 @@ async function renderLeaveTeam() {
     fetchAllRows(function(){ return sb.from('leave_requests')
       .select('employee,start_date,end_date,working_days,leave_type,status,effective_end_date,cancelled_at,reviewed_at'); }),
     fetchAllRows(function(){ return sb.from('ot_sessions').select('employee,status,band,rate,credited_hours'); }),
-    sb.from('comp_off_register').select('employee,days')
+    sb.from('comp_off_register').select('employee,days,date_taken')
   ]);
   if (mySeq!==_lvTeamSeq) return;
   document.getElementById('lv-team-load').style.display='none';
@@ -942,15 +942,34 @@ async function renderLeaveTeam() {
     // v145/v146: list this person's UPCOMING approved leave date ranges
     // (end date today or later), so the manager sees exactly when each person
     // is going to be off (from → to). Past leaves are not shown. Sick tagged.
-    var approvedRanges = empRecs
-      .filter(function(r){ return r.status === 'approved' && r.start_date && r.end_date && r.end_date >= todayISO; })
-      .sort(function(a,b){ return (a.start_date||'').localeCompare(b.start_date||''); })
+    // v210: every upcoming approved leave, whatever year it falls in (the
+    // year picker only narrows the used/remaining numbers), plus upcoming
+    // approved comp-off days. Comp-off days are stored one row per day, so
+    // days that follow each other are joined into one from -> to range.
+    var upcoming = allRecords
+      .filter(function(r){ return r.employee === emp && r.status === 'approved' && r.start_date && r.end_date && r.end_date >= todayISO; })
       .map(function(r){
-        var rng = (r.start_date === r.end_date)
-          ? fmtDate(r.start_date)
-          : fmtDateRange(r.start_date, r.end_date);
         var tag = ((r.leave_type||'annual') === 'sick') ? ' <span style="color:var(--gold)">(Sick)</span>' : '';
-        return '<div style="white-space:nowrap;font-size:11.5px;color:var(--navy)">'+esc2(rng)+tag+'</div>';
+        return { s: r.start_date, e: r.end_date, tag: tag };
+      });
+    var coDays = coRows
+      .filter(function(c){ return c.employee === emp && c.date_taken && c.date_taken >= todayISO; })
+      .sort(function(a,b){ return a.date_taken.localeCompare(b.date_taken); });
+    var coRuns = [];
+    coDays.forEach(function(c){
+      var last = coRuns[coRuns.length-1];
+      var nextOfLast = last ? new Date(Date.UTC(+last.e.slice(0,4), +last.e.slice(5,7)-1, +last.e.slice(8,10)) + 86400000).toISOString().slice(0,10) : '';
+      if (last && c.date_taken === nextOfLast) { last.e = c.date_taken; last.half = last.half || parseFloat(c.days) < 1; }
+      else coRuns.push({ s: c.date_taken, e: c.date_taken, half: parseFloat(c.days) < 1 });
+    });
+    coRuns.forEach(function(g){
+      upcoming.push({ s: g.s, e: g.e, tag: ' <span style="color:var(--teal)">(Comp-off'+(g.half?', half day':'')+')</span>' });
+    });
+    var approvedRanges = upcoming
+      .sort(function(a,b){ return a.s.localeCompare(b.s) || a.e.localeCompare(b.e); })
+      .map(function(g){
+        var rng = (g.s === g.e) ? fmtDate(g.s) : fmtDateRange(g.s, g.e);
+        return '<div style="white-space:nowrap;font-size:11.5px;color:var(--navy)">'+esc2(rng)+g.tag+'</div>';
       });
     var approvedCell = approvedRanges.length ? approvedRanges.join('') : '<span class="dim">—</span>';
     return '<tr>'+
