@@ -411,7 +411,7 @@ function _lnPaintEditor(emp, week, notice, offerFrom) {
       body +
       _lnAddPanelHtml() +
       '<div class="ln-savebar">' +
-        (_lnRows.some(function(r){ return !r._new && r.id; }) ? '<button type="button" class="btn btn-ghost ln-del-week" onclick="learningDeleteWeek()"><i data-lucide="trash-2" class="btn-icon"></i>Delete this week\'s update</button>' : '') +
+        (isManager && _lnRows.some(function(r){ return !r._new && r.id; }) ? '<button type="button" class="btn btn-ghost ln-del-week" onclick="learningDeleteWeek()"><i data-lucide="trash-2" class="btn-icon"></i>Delete this week\'s update</button>' : '') +
         '<span id="ln-dirty-hint" class="ln-dirty-hint"></span>' +
         '<button class="btn btn-primary" id="ln-save-btn" onclick="saveLearningWeek()" disabled><i data-lucide="save" class="btn-icon"></i>Save changes</button>' +
       '</div>' +
@@ -488,9 +488,9 @@ function _lnRbSync(i) {
 // == DUE DATE (v202): fixed once saved; changing it needs a manager ==
 // Employees ask for a new date (due_date_pending); a manager approves or
 // rejects it. The database enforces the lock too (_learning_entries_due_guard).
-// v209: the lock is OFF for now. Set LN_DUE_LOCK = true (and re-enable the
-// learning_entries_due_guard trigger) to bring it back.
-var LN_DUE_LOCK = false;
+// v209 switched the lock off; v211 turned it back on. LN_DUE_LOCK = false (with the
+// learning_entries_due_guard trigger disabled) switches it off again.
+var LN_DUE_LOCK = true;
 function _lnDueHtml(i, r) {
   if (!LN_DUE_LOCK || !r._origDue) return _lnDateInput(i, 'due_date', r.due_date, 'Due date');
   var pend = r.due_date_pending;

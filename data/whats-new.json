@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v211-learning-lock-back",
+      "version": "v211",
+      "released_at": "2026-11-24T08:18:24Z",
+      "category": "new",
+      "title": "Team Learning: due date lock is back",
+      "body": "Once saved, a due date is fixed again - ask your manager to change it. Deleting a product or a whole week is a manager action again; employees still use the ask your manager to remove button.",
+      "link": null
+    },
+    {
       "id": "v210-team-overview-upcoming-comp-off",
       "version": "v210",
       "released_at": "2026-11-24T05:56:06Z",

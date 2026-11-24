@@ -1353,6 +1353,11 @@ DROP POLICY learning_entries_delete ON public.learning_entries;
 CREATE POLICY learning_entries_delete ON public.learning_entries FOR DELETE TO authenticated
   USING (employee = current_employee_name() OR is_manager_user());
 
+-- == v211: due-date lock back ON, delete back to manager-only (migration v211_learning_relock_due_and_delete)
+ALTER TABLE public.learning_entries ENABLE TRIGGER learning_entries_due_guard;
+DROP POLICY learning_entries_delete ON public.learning_entries;
+CREATE POLICY learning_entries_delete ON public.learning_entries FOR DELETE TO authenticated USING (is_manager_user());
+
 COMMIT;
 
 -- End of schema. Apply the data dump next (netsec-backup-<DATE>.sql).
