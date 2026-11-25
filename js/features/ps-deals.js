@@ -740,13 +740,13 @@ function _psRenderTable(rows) {
         (sub ? '<div class="ps-sub">'+sub+'</div>' : '')+
         (eng ? '<div class="ps-sub ps-sub-eng">'+eng+'</div>' : '')+
       '</td>'+
-      '<td class="ps-c-vendor"><div class="ps-main">'+esc2(d.vendor||'\u2014')+'</div>'+(d.mode ? '<div class="ps-sub">'+esc2(d.mode)+'</div>' : '')+'</td>'+
-      '<td class="num ps-c-when"><div class="ps-main">'+_psQuotedLabel(d)+'</div><div class="ps-sub">'+(d.awarded_year ? 'Awarded '+d.awarded_year : 'Not awarded')+'</div></td>'+
-      '<td class="num ps-r">'+(d.man_days!=null?d.man_days:'<span class="dim">\u2014</span>')+'</td>'+
       '<td class="ps-r">'+_psUsdCell(d.ps_quoted_tech_usd)+'</td>'+
       '<td class="ps-r">'+_psUsdCell(d.ps_quoted_sales_usd)+'</td>'+
       '<td class="ps-r ps-final">'+_psUsdCell(d.final_ps_value_usd)+'</td>'+
       '<td class="ps-c-status">'+_psStatusBadge(d.status)+bar+'</td>'+
+      '<td class="ps-c-vendor"><div class="ps-main">'+esc2(d.vendor||'\u2014')+'</div>'+(d.mode ? '<div class="ps-sub">'+esc2(d.mode)+'</div>' : '')+'</td>'+
+      '<td class="num ps-c-when"><div class="ps-main">'+_psQuotedLabel(d)+'</div><div class="ps-sub">'+(d.awarded_year ? 'Awarded '+d.awarded_year : 'Not awarded')+'</div></td>'+
+      '<td class="num ps-r">'+(d.man_days!=null?d.man_days:'<span class="dim">\u2014</span>')+'</td>'+
       '<td style="white-space:nowrap;text-align:right" onclick="event.stopPropagation()">'+
         actions+
       '</td>'+
@@ -756,13 +756,13 @@ function _psRenderTable(rows) {
     '<div class="table-wrap"><table class="ps-table">'+
       '<thead><tr>'+
         '<th class="ps-c-client">Client / GIT Ref</th>'+
-        '<th>Vendor</th>'+
-        '<th>Quoted</th>'+
-        '<th class="ps-r">Man&nbsp;Days</th>'+
         '<th class="ps-r">PS Tech</th>'+
         '<th class="ps-r">PS Sales</th>'+
         '<th class="ps-r">Final</th>'+
         '<th>Status</th>'+
+        '<th>Vendor / Mode</th>'+
+        '<th>Quoted</th>'+
+        '<th class="ps-r">Man&nbsp;Days</th>'+
         '<th></th>'+
       '</tr></thead><tbody>'+body+'</tbody></table></div>'+
   '</div>';

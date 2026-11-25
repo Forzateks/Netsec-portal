@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v213-ps-deals-columns-order",
+      "version": "v213",
+      "released_at": "2026-11-25T05:48:43Z",
+      "category": "new",
+      "title": "Professional Services: Vendor, Quoted and Man Days moved to the right",
+      "body": "In the deals table the Vendor (with Mode), Quoted (with Awarded) and Man Days columns now come last, after the amounts and status.",
+      "link": null
+    },
+    {
       "id": "v212-ps-deals-tidy-table",
       "version": "v212",
       "released_at": "2026-11-25T05:47:29Z",
