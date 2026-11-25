@@ -685,12 +685,12 @@ function renderPsDeals() {
   var chipBar = _psShowArchived ? '' :
     '<div class="amc-chip-row" style="margin-bottom:12px">'+
       chip('all',         'All',         counts.all)+
-      chip('quoted',      '📝 Quoted',     counts.quoted)+
-      chip('won',         '🏆 Won',        counts.won)+
-      chip('in_progress', '⏳ In Progress', counts.in_progress)+
-      chip('completed',   '✅ Completed',  counts.completed)+
-      chip('lost',        '❌ Lost',       counts.lost)+
-      chip('cancelled',   '🚫 Cancelled',  counts.cancelled)+
+      chip('quoted',      'Quoted',     counts.quoted)+
+      chip('won',         'Won',        counts.won)+
+      chip('in_progress', 'In Progress', counts.in_progress)+
+      chip('completed',   'Completed',  counts.completed)+
+      chip('lost',        'Lost',       counts.lost)+
+      chip('cancelled',   'Cancelled',  counts.cancelled)+
     '</div>';
 
   if (!rows.length) {
@@ -715,29 +715,38 @@ function renderPsDeals() {
 
 function _psRenderTable(rows) {
   var archived = _psShowArchived;
-  var body = rows.map(function(d, i){
+  var body = rows.map(function(d){
     var actions = archived
       ? '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="event.stopPropagation();restorePsDeal('+d.id+')" title="Restore"><i data-lucide="rotate-ccw"></i></button>'+
         (isManager ? '<button class="btn btn-sm btn-danger btn-icon-only" onclick="event.stopPropagation();permanentlyDeletePsDeal('+d.id+')" title="Permanently Delete (cannot be undone)"><i data-lucide="trash-2"></i></button>' : '')
       : '<button class="btn btn-sm btn-ghost btn-icon-only" onclick="openPsDealModal('+d.id+')" title="Edit"><i data-lucide="pencil"></i></button>';
     var rowClick = archived ? '' : 'onclick="openPsDealModal('+d.id+')"';
+    // v212: 17 columns became 10. Partner/Region and the linked engagement sit
+    // under the client name, Mode under the vendor, Awarded under Quoted and
+    // the progress under the status - so each deal reads as one tidy row.
+    var sub = [d.partner, d.region].filter(Boolean).map(esc2).join(' \u00b7 ');
+    var eng = d.linked_engagement_id ? _psLinkedEngagementLabel(d.linked_engagement_id) : '';
+    var prog = _psDealProgress(d.id);
+    var bar = prog.total
+      ? '<div class="ps-mini-bar" title="'+prog.done+' of '+prog.total+' milestones completed"><span style="width:'+Math.round(prog.done/prog.total*100)+'%"></span></div>'+
+        '<div class="ps-sub num">'+prog.done+' / '+prog.total+' milestones done</div>'+
+        '<div class="ps-sub num">'+fmtUsd(prog.collected, false)+((d.final_ps_value_usd != null && d.final_ps_value_usd !== '') ? ' / '+fmtUsd(d.final_ps_value_usd, false) : '')+' collected</div>'+
+        (prog.pending > 0 ? '<div class="ps-sub ps-progress-pending num" title="Recorded against milestones not yet marked Completed">'+fmtUsd(prog.pending, false)+' pending</div>' : '')
+      : '';
     return '<tr class="ps-row'+(archived?' ps-row-archived':'')+'" '+rowClick+'>'+
-      '<td style="color:var(--muted);font-size:12px">'+(i+1)+'</td>'+
-      '<td onclick="event.stopPropagation()">'+_psGitRefCell(d.git_ref_no)+'</td>'+
-      '<td><strong style="color:var(--navy)">'+esc2(d.client_name||'—')+'</strong></td>'+
-      '<td class="hide-mobile" style="font-size:12px">'+esc2(d.partner||'—')+'</td>'+
-      '<td class="hide-mobile" style="font-size:12px">'+esc2(d.region||'—')+'</td>'+
-      '<td class="hide-mobile" style="font-size:12px">'+esc2(d.mode||'—')+'</td>'+
-      '<td class="hide-mobile" style="font-size:12px">'+esc2(d.vendor||'—')+'</td>'+
-      '<td class="num" style="font-size:12px">'+_psQuotedLabel(d)+'</td>'+
-      '<td class="num hide-mobile" style="font-size:12px">'+(d.awarded_year||'—')+'</td>'+
-      '<td class="num hide-mobile">'+(d.man_days!=null?d.man_days:'—')+'</td>'+
-      '<td>'+_psUsdCell(d.ps_quoted_tech_usd)+'</td>'+
-      '<td class="hide-mobile">'+_psUsdCell(d.ps_quoted_sales_usd)+'</td>'+
-      '<td>'+_psUsdCell(d.final_ps_value_usd)+'</td>'+
-      '<td>'+_psStatusBadge(d.status)+'</td>'+
-      '<td class="hide-mobile">'+_psProgressCell(d)+'</td>'+
-      '<td class="hide-mobile" style="font-size:12px">'+_psLinkedEngagementLabel(d.linked_engagement_id)+'</td>'+
+      '<td class="ps-c-client">'+
+        '<div class="ps-client-name">'+esc2(d.client_name||'\u2014')+'</div>'+
+        (d.git_ref_no ? '<div class="ps-sub ps-sub-ref" onclick="event.stopPropagation()">'+_psGitRefCell(d.git_ref_no)+'</div>' : '')+
+        (sub ? '<div class="ps-sub">'+sub+'</div>' : '')+
+        (eng ? '<div class="ps-sub ps-sub-eng">'+eng+'</div>' : '')+
+      '</td>'+
+      '<td class="ps-c-vendor"><div class="ps-main">'+esc2(d.vendor||'\u2014')+'</div>'+(d.mode ? '<div class="ps-sub">'+esc2(d.mode)+'</div>' : '')+'</td>'+
+      '<td class="num ps-c-when"><div class="ps-main">'+_psQuotedLabel(d)+'</div><div class="ps-sub">'+(d.awarded_year ? 'Awarded '+d.awarded_year : 'Not awarded')+'</div></td>'+
+      '<td class="num ps-r">'+(d.man_days!=null?d.man_days:'<span class="dim">\u2014</span>')+'</td>'+
+      '<td class="ps-r">'+_psUsdCell(d.ps_quoted_tech_usd)+'</td>'+
+      '<td class="ps-r">'+_psUsdCell(d.ps_quoted_sales_usd)+'</td>'+
+      '<td class="ps-r ps-final">'+_psUsdCell(d.final_ps_value_usd)+'</td>'+
+      '<td class="ps-c-status">'+_psStatusBadge(d.status)+bar+'</td>'+
       '<td style="white-space:nowrap;text-align:right" onclick="event.stopPropagation()">'+
         actions+
       '</td>'+
@@ -746,23 +755,15 @@ function _psRenderTable(rows) {
   return '<div class="card" style="padding:0">'+
     '<div class="table-wrap"><table class="ps-table">'+
       '<thead><tr>'+
-        '<th>#</th>'+
-        '<th>GIT Ref No</th>'+
-        '<th>Client</th>'+
-        '<th class="hide-mobile">Partner</th>'+
-        '<th class="hide-mobile">Region</th>'+
-        '<th class="hide-mobile">Mode</th>'+
-        '<th class="hide-mobile">Vendor</th>'+
+        '<th class="ps-c-client">Client / GIT Ref</th>'+
+        '<th>Vendor</th>'+
         '<th>Quoted</th>'+
-        '<th class="hide-mobile">Awarded</th>'+
-        '<th class="hide-mobile">Man&nbsp;Days</th>'+
-        '<th>PS Tech</th>'+
-        '<th class="hide-mobile">PS Sales</th>'+
-        '<th>Final</th>'+
+        '<th class="ps-r">Man&nbsp;Days</th>'+
+        '<th class="ps-r">PS Tech</th>'+
+        '<th class="ps-r">PS Sales</th>'+
+        '<th class="ps-r">Final</th>'+
         '<th>Status</th>'+
-        '<th class="hide-mobile">Progress</th>'+
-        '<th class="hide-mobile">Engagement</th>'+
-        '<th>Actions</th>'+
+        '<th></th>'+
       '</tr></thead><tbody>'+body+'</tbody></table></div>'+
   '</div>';
 }

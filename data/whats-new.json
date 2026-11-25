@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v212-ps-deals-tidy-table",
+      "version": "v212",
+      "released_at": "2026-11-25T05:47:29Z",
+      "category": "new",
+      "title": "Professional Services: a tidier deals table",
+      "body": "The deals table has 9 columns instead of 17. GIT ref, partner, region and the linked engagement now sit under the client name, the mode under the vendor, the awarded year under the quoted date, and the milestone progress under the status. Amounts are right-aligned with the final value in bold, and the client column stays in view when you scroll sideways.",
+      "link": null
+    },
+    {
       "id": "v211-learning-lock-back",
       "version": "v211",
       "released_at": "2026-11-24T08:18:24Z",

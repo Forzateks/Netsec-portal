@@ -2371,6 +2371,26 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ps-table tbody tr.ps-row:hover{background:var(--nx-canvas)}
 .ps-table .num{font-variant-numeric:tabular-nums}
 
+/* v212: calmer, two-line rows. Client stays pinned while the table scrolls sideways. */
+.ps-table tbody td{vertical-align:middle;padding:12px 10px}
+.ps-table thead th{padding:10px}
+.ps-sub-ref{margin:3px 0 1px}
+.ps-table .ps-r{text-align:right;white-space:nowrap}
+.ps-table td.ps-r .num{white-space:nowrap}
+.ps-client-name{font-weight:600;color:var(--navy);font-size:13.5px;line-height:1.3}
+.ps-sub{font-size:11.5px;color:var(--muted);line-height:1.35;margin-top:2px}
+.ps-sub-eng .ps-eng-link{font-weight:500}
+.ps-main{font-size:13px;color:var(--navy);line-height:1.3}
+.ps-c-client{min-width:190px;max-width:260px;position:sticky;left:0;z-index:1;background:var(--nx-surface);border-right:1px solid var(--border)}
+.ps-table thead th.ps-c-client{background:var(--nx-canvas);z-index:2}
+.ps-table tbody tr.ps-row:hover td.ps-c-client,.ps-row.ps-row-archived td.ps-c-client{background:var(--nx-canvas)}
+.ps-c-vendor{min-width:130px}
+.ps-c-when{white-space:nowrap}
+.ps-c-status{min-width:200px}
+.ps-final .num:first-child{font-weight:700}
+.ps-mini-bar{height:4px;border-radius:2px;background:var(--nx-hairline);margin:7px 0 4px;max-width:150px;overflow:hidden}
+.ps-mini-bar span{display:block;height:100%;background:var(--teal);border-radius:2px}
+
 /* Status pills — one per status value, mapped via PS_STATUS_META.cls. */
 .ps-st-quoted    { background:var(--nx-hairline); color:var(--nx-ink-2) }
 .ps-st-won       { background:var(--pill-warn-bg); color:var(--nx-orange-deep) }
