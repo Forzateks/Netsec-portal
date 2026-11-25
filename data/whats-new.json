@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v214-team-leave-overview-tidy",
+      "version": "v214",
+      "released_at": "2026-11-25T05:51:20Z",
+      "category": "new",
+      "title": "Team Leave Overview: a tidier table",
+      "body": "The table has 9 columns instead of 12. Annual leave, Sick leave and Comp-off each get a heading above their columns; used days, the usage bar and approved-upcoming days sit together, and remaining days sit with their status. Sick leave now has a usage bar too, and the Employee column stays in view when you scroll sideways.",
+      "link": null
+    },
+    {
       "id": "v213-ps-deals-columns-order",
       "version": "v213",
       "released_at": "2026-11-25T05:48:43Z",

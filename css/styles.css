@@ -3230,15 +3230,30 @@ tr.inv-log-deleted .inv-log-del-key{opacity:.75;font-weight:600}
   --lv-co-tint:rgba(111,208,143,.07);      --lv-co-head:rgba(111,208,143,.14);
   --lv-group-rule:rgba(255,255,255,.08);
 }
-.lv-overview-table td:nth-child(n+3):nth-child(-n+6){background-color:var(--lv-annual-tint)}
-.lv-overview-table td:nth-child(n+7):nth-child(-n+9){background-color:var(--lv-sick-tint)}
-.lv-overview-table td:nth-child(n+10):nth-child(-n+12){background-color:var(--lv-co-tint)}
-.lv-overview-table th:nth-child(n+3):nth-child(-n+6){background-color:var(--lv-annual-head)}
-.lv-overview-table th:nth-child(n+7):nth-child(-n+9){background-color:var(--lv-sick-head)}
-.lv-overview-table th:nth-child(n+10):nth-child(-n+12){background-color:var(--lv-co-head)}
-.lv-overview-table th:nth-child(3),.lv-overview-table td:nth-child(3),
-.lv-overview-table th:nth-child(7),.lv-overview-table td:nth-child(7),
-.lv-overview-table th:nth-child(10),.lv-overview-table td:nth-child(10){box-shadow:inset 1px 0 0 var(--lv-group-rule)}
+.lv-overview-table td.lv-g-annual{background-color:var(--lv-annual-tint)}
+.lv-overview-table td.lv-g-sick{background-color:var(--lv-sick-tint)}
+.lv-overview-table td.lv-g-co{background-color:var(--lv-co-tint)}
+.lv-overview-table th.lv-g-annual{background-color:var(--lv-annual-head)}
+.lv-overview-table th.lv-g-sick{background-color:var(--lv-sick-head)}
+.lv-overview-table th.lv-g-co{background-color:var(--lv-co-head)}
+.lv-overview-table .lv-g-start{box-shadow:inset 1px 0 0 var(--lv-group-rule)}
+/* v214: two-row header (group names over the columns), two-line cells, pinned Employee column. */
+.lv-overview-table thead th{padding:8px 10px}
+.lv-overview-table tr.lv-grouprow th.lv-g-annual,.lv-overview-table tr.lv-grouprow th.lv-g-sick,.lv-overview-table tr.lv-grouprow th.lv-g-co{text-align:center;color:var(--navy);font-size:12px;letter-spacing:.2px}
+.lv-overview-table tr.lv-grouprow th span{display:block;font-weight:500;font-size:10.5px;color:var(--muted);text-transform:none;letter-spacing:0;margin-top:1px}
+.lv-overview-table thead th.lv-c-emp,.lv-overview-table thead th.lv-c-up{vertical-align:bottom;background:var(--nx-canvas)}
+.lv-overview-table tbody td{padding:12px 10px;vertical-align:middle}
+.lv-overview-table td.lv-c-emp,.lv-overview-table th.lv-c-emp{position:sticky;left:0;z-index:1;min-width:140px}
+.lv-overview-table td.lv-c-emp{background:var(--nx-surface)}
+.lv-overview-table .lv-c-up{min-width:150px}
+.lv-emp-name{font-weight:600;color:var(--navy);font-size:13.5px}
+.lv-sub{font-size:11px;color:var(--muted);line-height:1.35;margin-top:2px}
+.lv-big{font-weight:700;font-size:15px;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--teal)}
+.lv-of{font-weight:500;font-size:12px;color:var(--muted)}
+.lv-bar{height:5px;border-radius:3px;background:var(--nx-hairline);margin:7px 0 3px;min-width:80px;max-width:120px;overflow:hidden}
+.lv-bar span{display:block;height:100%;border-radius:3px}
+.lv-badge-row{margin-top:5px}
+.lv-num{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;color:var(--teal)}
 
 /* == PS REVENUE BREAKDOWN (v186) ========================================
    The chart's working, shown under it: which deals make the awarded bar and

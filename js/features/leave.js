@@ -936,9 +936,9 @@ async function renderLeaveTeam() {
     // manager the full mental model: this is what's been TAKEN; here's what's
     // APPROVED but still in the future.
     var aUpcomingHint = annualUpcoming>0
-      ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">+'+fmtNumber(annualUpcoming,1)+' approved upcoming</div>' : '';
+      ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">+'+fmtNumber(annualUpcoming,1)+' upcoming</div>' : '';
     var sUpcomingHint = sickUpcoming>0
-      ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">+'+fmtNumber(sickUpcoming,1)+' approved upcoming</div>' : '';
+      ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">+'+fmtNumber(sickUpcoming,1)+' upcoming</div>' : '';
     // v145/v146: list this person's UPCOMING approved leave date ranges
     // (end date today or later), so the manager sees exactly when each person
     // is going to be off (from → to). Past leaves are not shown. Sick tagged.
@@ -969,22 +969,32 @@ async function renderLeaveTeam() {
       .sort(function(a,b){ return a.s.localeCompare(b.s) || a.e.localeCompare(b.e); })
       .map(function(g){
         var rng = (g.s === g.e) ? fmtDate(g.s) : fmtDateRange(g.s, g.e);
-        return '<div style="white-space:nowrap;font-size:11.5px;color:var(--navy)">'+esc2(rng)+g.tag+'</div>';
+        return '<div style="font-size:11.5px;color:var(--navy)"><span style="white-space:nowrap">'+esc2(rng)+'</span>'+g.tag+'</div>';
       });
     var approvedCell = approvedRanges.length ? approvedRanges.join('') : '<span class="dim">—</span>';
+    // v214: 12 columns became 9. Used + usage bar + "approved upcoming" share one
+    // cell, Remaining + its status badge share another, for annual and sick alike.
+    var sPct = Math.min((sickUsed/SICK_ALLOWANCE)*100,100);
+    function usedCell(used, allowance, pct, color, hint, grp) {
+      return '<td class="lv-g-'+grp+' lv-g-start">'+
+        '<div class="lv-big">'+fmtNumber(used,1)+' <span class="lv-of">/ '+allowance+'</span></div>'+
+        '<div class="lv-bar"><span style="width:'+pct+'%;background:'+color+'"></span></div>'+
+        '<div class="lv-sub">'+fmtPct(pct)+' used</div>'+hint+
+      '</td>';
+    }
+    function leftCell(rem, color, badge, grp) {
+      return '<td class="lv-g-'+grp+'"><div class="lv-big" style="color:'+color+'">'+fmtNumber(rem,1)+'</div><div class="lv-badge-row">'+badge+'</div></td>';
+    }
     return '<tr>'+
-      '<td><strong>'+emp+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(KSA_EMP.includes(emp)?'KSA — Fri/Sat':'UAE — Sat/Sun')+'</span></td>'+
-      '<td style="font-variant-numeric:tabular-nums">'+approvedCell+'</td>'+
-      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(annualUsed,1)+' / '+LEAVE_ALLOWANCE+aUpcomingHint+'</td>'+
-      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:'+aColor+'">'+fmtNumber(annualRem,1)+'</td>'+
-      '<td><div style="height:8px;background:var(--nx-canvas);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+aPct+'%;background:'+aColor+';border-radius:4px"></div></div><div style="font-size:11px;color:var(--muted);margin-top:3px">'+fmtPct(aPct)+' used</div></td>'+
-      '<td>'+aBadge+'</td>'+
-      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(sickUsed,1)+' / '+SICK_ALLOWANCE+sUpcomingHint+'</td>'+
-      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:'+sColor+'">'+fmtNumber(sickRem,1)+'</td>'+
-      '<td>'+sBadge+'</td>'+
-      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(co.totalCO,2)+'</td>'+
-      '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal)">'+fmtNumber(co.used,2)+'</td>'+
-      '<td style="font-variant-numeric:tabular-nums;font-weight:700;color:'+coColor+'">'+fmtNumber(co.balance,2)+'</td>'+
+      '<td class="lv-c-emp"><div class="lv-emp-name">'+emp+'</div><div class="lv-sub">'+(KSA_EMP.includes(emp)?'KSA \u2014 Fri/Sat':'UAE \u2014 Sat/Sun')+'</div></td>'+
+      '<td class="lv-c-up" style="font-variant-numeric:tabular-nums">'+approvedCell+'</td>'+
+      usedCell(annualUsed, LEAVE_ALLOWANCE, aPct, aColor, aUpcomingHint, 'annual')+
+      leftCell(annualRem, aColor, aBadge, 'annual')+
+      usedCell(sickUsed, SICK_ALLOWANCE, sPct, sColor, sUpcomingHint, 'sick')+
+      leftCell(sickRem, sColor, sBadge, 'sick')+
+      '<td class="lv-g-co lv-g-start hide-mobile lv-num">'+fmtNumber(co.totalCO,2)+'</td>'+
+      '<td class="lv-g-co hide-mobile lv-num">'+fmtNumber(co.used,2)+'</td>'+
+      '<td class="lv-g-co lv-num"><span style="font-weight:700;color:'+coColor+'">'+fmtNumber(co.balance,2)+'</span></td>'+
       '</tr>';
   }).join('');
 
@@ -998,12 +1008,17 @@ async function renderLeaveTeam() {
     '</div>'+
     // v181: lv-overview-table tints the Annual / Sick / Comp-off column groups
     // (by position, see css/styles.css) so the three allowances read apart.
-    '<div class="table-wrap"><table class="lv-overview-table"><thead><tr>'+
-    '<th>Employee</th>'+
-    '<th>Upcoming Leave (dates)</th>'+
-    '<th>Annual Used</th><th>Annual Rem.</th><th>Usage</th><th>Status</th>'+
-    '<th>Sick Used</th><th>Sick Rem.</th><th>Status</th>'+
-    '<th class="hide-mobile">CO Earned</th><th class="hide-mobile">CO Used</th><th>CO Balance</th>'+
+    '<div class="table-wrap"><table class="lv-overview-table"><thead>'+
+    '<tr class="lv-grouprow">'+
+      '<th rowspan="2" class="lv-c-emp">Employee</th>'+
+      '<th rowspan="2" class="lv-c-up">Upcoming leave</th>'+
+      '<th colspan="2" class="lv-g-annual lv-g-start">Annual leave <span>'+fmtDays(LEAVE_ALLOWANCE)+' / yr</span></th>'+
+      '<th colspan="2" class="lv-g-sick lv-g-start">Sick leave <span>'+fmtDays(SICK_ALLOWANCE)+' / yr</span></th>'+
+      '<th colspan="3" class="lv-g-co lv-g-start">Comp-off <span>running balance</span></th>'+
+    '</tr><tr>'+
+      '<th class="lv-g-annual lv-g-start">Used</th><th class="lv-g-annual">Remaining</th>'+
+      '<th class="lv-g-sick lv-g-start">Used</th><th class="lv-g-sick">Remaining</th>'+
+      '<th class="lv-g-co lv-g-start hide-mobile">Earned</th><th class="lv-g-co hide-mobile">Used</th><th class="lv-g-co">Balance</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Annual: '+fmtDays(LEAVE_ALLOWANCE)+'/yr &nbsp;|&nbsp; Sick: '+fmtDays(SICK_ALLOWANCE)+'/yr &nbsp;|&nbsp; Comp off: earned from approved OT (8 credited hours = 1 day), no yearly cap</div>'+
     '<div style="margin-top:4px;font-size:12px;color:var(--muted)">Annual and sick leave start again on 1 January and unused days do not carry over. Comp Off is a running balance, so those three columns are the same whichever year is selected.</div>'+
