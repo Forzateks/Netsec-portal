@@ -474,6 +474,12 @@ under weekend rules.
   6 Oct 2026: holiday OT applies from then on, not to work already done that day).
 - Data fix shipped with it: `leave_requests` id 9 (Ahmed Ali, 05-Aug to 03-Sep-2026)
   `working_days` 22 -> 21.
+- **2026-11-27 (company notice, no DDL):** the UAE office is closed Wed 2 - Fri 4 Dec 2026
+  for National Day. Inserted ids 2-4: 2026-12-02 "National Day", 2026-12-03 "National Day - Day 2",
+  2026-12-04 "National Day - Day 3" - all `region = 'UAE'`, `counts_for_ot = true`,
+  `created_by = 'System (company notice 2026-11-27)'`. Re-counted the live leave they touch:
+  `leave_requests` id 45 (Prasanth, 25-Nov to 09-Dec-2026) `working_days` 11 -> 8. KSA staff
+  are unaffected (UAE-only holiday). To undo: delete those three rows and set id 45 back to 11.
 
 ### 12. `inventory_models` (v199)
 Companies and models offered in the Inventory Add/Edit Device form. Anyone
