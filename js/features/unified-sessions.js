@@ -157,7 +157,12 @@ function splitSessionHours(dateStr, startStr, endStr, employee) {
   // v172: a day of approved leave follows weekend rules (all hours count).
   // dateStr is now passed to isWeekend too, so the preview honours dated
   // WEEKEND_OVERRIDES the same way calcOT does — they disagreed before.
-  var isWknd = isWeekend(wd, employee, dateStr) || !!isOnLeave(employee, dateStr);
+  // v215: annual leave earns no OT, so a leave day returns no OT hours at all;
+  // a public holiday that counts for OT still follows weekend rules.
+  if (leaveBlocksOT(employee, dateStr)) {
+    return { total: r2(rawDur), office: r2(rawDur), ot: 0, otCalc: null };
+  }
+  var isWknd = isWeekend(wd, employee, dateStr) || isOTHoliday(employee, dateStr);
 
   var otHours = 0;
   if (isWknd) {
@@ -751,9 +756,10 @@ function updateUSPreview() {
 }
 
 // v172: tell the logger, before they save, that somebody on this session is
-// on approved leave that day — their hours are credited under weekend rules
-// (1:1, every hour, no block window). Reads the ticked team boxes so it
-// updates as members are added or removed, and always includes the logger.
+// off that day. v215: annual leave earns NO OT (the session itself is still
+// saved); a public holiday that counts for OT is still credited like a
+// weekend. Reads the ticked team boxes so it updates as members are added or
+// removed, and always includes the logger.
 function _renderLeaveOTNote(date) {
   var el = document.getElementById('us-leave-note');
   if (!el) return;
@@ -767,21 +773,28 @@ function _renderLeaveOTNote(date) {
 
   var hits = [];
   names.forEach(function(n){
-    var t = isOnLeave(n, date);
-    if (t) hits.push({ name: n, type: t });
+    if (leaveBlocksOT(n, date)) hits.push({ name: n, type: 'annual' });
+    else if (isOTHoliday(n, date)) hits.push({ name: n, type: 'holiday' });
   });
   if (!hits.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
 
-  var lines = hits.map(function(h){
-    return '<li>' + esc2(h.name) + (h.type === 'holiday' ? ' - public holiday' : ' is on annual leave') + '</li>';
-  }).join('');
-  el.innerHTML =
-    '<div class="leave-ot-note-head">⚠️ Working on a day off</div>' +
-    '<ul class="leave-ot-note-list">' + lines + '</ul>' +
-    '<div class="leave-ot-note-sub">Every hour is credited at 1:1 with no regular-hours block, ' +
-    'the same as a weekend.' +
-    (hits.some(function(h){ return h.type !== 'holiday'; }) ? ' The leave day itself is still used \u2014 it is not given back.' : '') +
-    '</div>';
+  var leaveHits = hits.filter(function(h){ return h.type === 'annual'; });
+  var holHits   = hits.filter(function(h){ return h.type === 'holiday'; });
+  var html = '';
+  if (leaveHits.length) {
+    html +=
+      '<div class="leave-ot-note-head">\u26a0\ufe0f On annual leave - no OT credit</div>' +
+      '<ul class="leave-ot-note-list">' + leaveHits.map(function(h){ return '<li>' + esc2(h.name) + '</li>'; }).join('') + '</ul>' +
+      '<div class="leave-ot-note-sub">Work done during annual leave is not credited as overtime. ' +
+      'The session is still saved; the leave day itself is still used \u2014 it is not given back.</div>';
+  }
+  if (holHits.length) {
+    html +=
+      '<div class="leave-ot-note-head"' + (leaveHits.length ? ' style="margin-top:8px"' : '') + '>\u26a0\ufe0f Working on a public holiday</div>' +
+      '<ul class="leave-ot-note-list">' + holHits.map(function(h){ return '<li>' + esc2(h.name) + ' - public holiday</li>'; }).join('') + '</ul>' +
+      '<div class="leave-ot-note-sub">Every hour is credited at 1:1 with no regular-hours block, the same as a weekend.</div>';
+  }
+  el.innerHTML = html;
   el.style.display = '';
 }
 
@@ -1051,10 +1064,11 @@ async function saveUnifiedSession() {
     var team = _buildTeamList(currentUser, teamMembers);
     var rowsToInsert = [];
     var createdParts = [];
+    var leaveSkipped = [];   // v215: members on annual leave that day - no OT row
     team.forEach(function(name){
       var row = _buildMemberOTRow(name, currentUser, date, start, end, isEng || isCustomerTest, customer, engagement_name, actType, info);
       if (row && row.unknown) { unknownMembers.push(row.name); return; }
-      if (!row) return; // member's region yielded zero credit
+      if (!row) { if (leaveBlocksOT(name, date)) leaveSkipped.push(name); return; } // member's region yielded zero credit
       var calc = row._calc; delete row._calc;
       row.status            = 'pending';
       row.source            = 'unified';
@@ -1072,6 +1086,7 @@ async function saveUnifiedSession() {
         otSummary = ' · OT pending: ' + createdParts.join(', ');
       }
     }
+    if (leaveSkipped.length) otSummary += ' · No OT for ' + leaveSkipped.join(', ') + ' (annual leave)';
   } else if (split.ot > 0 && split.otCalc) {
     // Internal session (no team field): generate OT for the logger only.
     var ic = split.otCalc;

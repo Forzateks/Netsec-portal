@@ -146,14 +146,16 @@ function _isoDayAfter(iso) {
 
 // == LEAVE-DAY LOOKUP FOR THE OT ENGINE (v172) ====================
 // Builds LEAVE_DAYS = { 'Employee': { 'YYYY-MM-DD': 'annual' } } from
-// approved ANNUAL leave, so calcOT() can credit a session logged on a
-// holiday under weekend rules. Covers ALL employees, not just the current
-// user — any of them can be a team member on someone else's session.
+// approved ANNUAL leave, so calcOT() can REFUSE overtime on those days
+// (v215 - before v215 it credited them like a weekend). Covers ALL employees,
+// not just the current user — any of them can be a team member on someone
+// else's session.
 //
-// Annual leave ONLY, by policy decision: sick leave is for recovery and
-// comp-off is itself time already paid back out of the OT pool, so neither
-// earns overtime. A row whose leave_type is blank counts as annual — the
-// column defaults to 'annual' and blanks are a data artefact, not a type.
+// Annual leave ONLY: sick leave and comp-off days are not in the map. A
+// HALF-day leave is not in the map either - the person works the other half,
+// so that day follows the normal weekday rules. A row whose leave_type is
+// blank counts as annual — the column defaults to 'annual' and blanks are a
+// data artefact, not a type.
 //
 // Cancelled leave is included only for the stretch it actually covered,
 // via leaveEffectiveRange(), so cancelling a holiday also withdraws the
@@ -175,13 +177,14 @@ async function loadLeaveDays() {
 
   var lr = await fetchAllRows(function(){
     return sb.from('leave_requests')
-      .select('employee,start_date,end_date,leave_type,status,effective_end_date,cancelled_at,reviewed_at')
+      .select('employee,start_date,end_date,working_days,leave_type,status,effective_end_date,cancelled_at,reviewed_at')
       .in('status', ['approved', 'cancelled']);
   });
   if (lr.error) return false;
 
   (lr.data || []).forEach(function(row){
     if (row.leave_type === 'sick') return;      // annual leave only
+    if (parseFloat(row.working_days) === 0.5 && row.start_date === row.end_date) return; // half day: works the rest
     var range = leaveEffectiveRange(row);
     if (!range) return;
     var day = range.start, guard = 0;
@@ -1387,6 +1390,8 @@ async function saveEditLeave() {
   if (error) { errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
   closeEditLeaveModal();
   showToast('Leave request updated ✓');
+  // v215: new dates change which days are leave days - re-check the OT rollback.
+  if (typeof syncLeaveDayOTAndTell === 'function') syncLeaveDayOTAndTell();
   renderLeaveApprovals();
 }
 
@@ -1667,9 +1672,11 @@ async function processRequest(decision) {
               : decision === 'needs_review' ? 'Marked for re-review ✓'
               : 'Updated ✓';
   showToast(toastMsg);
-  // v172: the OT engine credits sessions logged on days off, so the
-  // leave-day map has to follow every approval decision immediately.
-  if (typeof loadLeaveDays === 'function') loadLeaveDays();
+  // v172: the OT engine reads the leave-day map, so it has to follow every
+  // approval decision immediately. v215: and an approved leave takes back the
+  // OT already logged on its days (a rejected / re-opened one gives it back).
+  if (type === 'leave' && typeof syncLeaveDayOTAndTell === 'function') syncLeaveDayOTAndTell(employee);
+  else if (typeof loadLeaveDays === 'function') loadLeaveDays();
   renderLeaveApprovals();
 }
 
@@ -1690,6 +1697,7 @@ async function resetLeaveToPending(id) {
   }).eq('id', id);
   if (res.error) { showError('Error: '+res.error.message); return; }
   showToast('Moved back to Pending ✓');
+  if (typeof syncLeaveDayOTAndTell === 'function') syncLeaveDayOTAndTell(); // v215: a pending leave blocks nothing
   updateNotifBadge();
   renderLeaveApprovals();
 }
@@ -1738,9 +1746,10 @@ async function cancelLeaveRequest(id) {
   var up = await sb.from('leave_requests').update(payload).eq('id', id);
   if (up.error) { showError('Error: '+up.error.message); return; }
   showToast('Leave cancelled ✓');
-  // v172: cancelling withdraws the leave-day OT treatment for the days
-  // that never happened.
-  if (typeof loadLeaveDays === 'function') loadLeaveDays();
+  // v172: cancelling frees the days that never happened. v215: OT that was
+  // rolled back for those days comes back.
+  if (typeof syncLeaveDayOTAndTell === 'function') syncLeaveDayOTAndTell(r.employee);
+  else if (typeof loadLeaveDays === 'function') loadLeaveDays();
   updateNotifBadge();
   // Re-render whichever list the user is looking at.
   if (typeof renderLeaveApprovals === 'function' && document.getElementById('lv-approvals-content')) {
@@ -1920,7 +1929,9 @@ function phSetYear(y) {
 
 function _phAfterChange() {
   // Everything that reads holidays: the OT map, and whichever leave view is open.
-  if (typeof loadLeaveDays === 'function') loadLeaveDays();
+  // v215: a holiday that counts for OT is credited even inside a leave period.
+  if (typeof syncLeaveDayOTAndTell === 'function') syncLeaveDayOTAndTell();
+  else if (typeof loadLeaveDays === 'function') loadLeaveDays();
   renderPublicHolidays();
 }
 

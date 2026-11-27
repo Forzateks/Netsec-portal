@@ -145,11 +145,20 @@ Stores individual overtime session logs.
 > ```sql
 > ALTER TABLE ot_sessions ADD COLUMN IF NOT EXISTS on_leave BOOLEAN NOT NULL DEFAULT false;
 > ```
-> Set by `calcOT()` via `isOnLeave()`. A session logged on a day of approved
-> ANNUAL leave is credited under WEEKEND rules (band `Wknd`, 1:1, every hour,
-> no block window) and flagged here. Sick leave and comp-off days are
-> excluded by policy. The flag survives
-> Policy Recompute because the recompute reloads `LEAVE_DAYS` first.
+> **v215 (2026-11-27) reversed this:** work done during approved ANNUAL leave now earns
+> **no** OT. `calcOT()` returns band `Day`, rate `1:1`, credited 0 for such a day
+> (`leaveBlocksOT()`), so no OT row is created for it, and `on_leave` is now true only
+> on rows archived by the leave rule plus public-holiday rows. A weekend or a public
+> holiday that counts for OT inside the leave period keeps its normal credit; a
+> half-day leave is not a leave day for OT. Existing OT is rolled back by
+> `syncLeaveDayOT()` (archives with `credited_hours = 0` and a comment starting
+> `Auto-archived: worked during approved annual leave`; restores them if the leave is
+> cancelled/rejected/edited). **Data rollback run 2026-11-27 (no DDL):** the 6 approved
+> sessions that had been credited on leave days (ids 422, 424, 425, 426, 429, 486 -
+> 11.5 credited hours) were archived with credit 0. To undo, see the comment on each
+> row (it records the old credit) and re-set status/credit by hand.
+> Originally (v172): "A session logged on a day of approved ANNUAL leave is credited
+> under WEEKEND rules" - superseded.
 >
 > **SQL already run** (2026-04-17):
 > ```sql

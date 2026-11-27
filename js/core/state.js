@@ -23,10 +23,9 @@ const WEEKEND_OVERRIDES = [
 // v172: dates each employee is on approved leave, as
 //   { 'Employee Name': { 'YYYY-MM-DD': 'annual' | 'sick' | 'comp-off' } }
 // Populated by loadLeaveDays() at login and refreshed whenever leave is
-// approved, cancelled or deleted. calcOT() consults it through isOnLeave()
-// so a session logged on a leave day is credited under WEEKEND rules
-// (1:1, every hour, no cap, no block window) — you should not be working
-// at all that day, so every hour counts.
+// approved, cancelled or deleted. calcOT() consults it through
+// leaveBlocksOT(): since v215 a session logged on a day of approved ANNUAL
+// leave earns NO overtime (v172-v214 credited it like a weekend).
 //
 // Deliberately NOT plumbed through isWeekend(): that helper also drives
 // calcWorkingDays() in leave.js, and making leave days "weekend" there

@@ -422,6 +422,15 @@
       "link_text": "Open My Sessions"
     },
     {
+      "id": "v215-no-ot-on-annual-leave",
+      "version": "v215",
+      "released_at": "2026-11-27T10:31:26Z",
+      "category": "policy",
+      "title": "No overtime for work done during annual leave",
+      "body": "Work done on a day of approved annual leave is no longer credited as overtime. OT already logged on such days has been taken back (archived, credit removed) and the same happens automatically whenever a leave is approved. Weekends and public holidays inside a leave period keep their normal rules, and a half-day leave only affects the half you are off.",
+      "link": null
+    },
+    {
       "id": "v214-team-leave-overview-tidy",
       "version": "v214",
       "released_at": "2026-11-25T05:51:20Z",

@@ -196,6 +196,19 @@ Contact the manager (Venkatesan) or **Mohammed Nasif** (`nasif@gulfitd.com`) for
 
 ---
 
+## Annual leave (from v215, 27-Nov-2026)
+
+- **Work done during approved annual leave earns no overtime.** If you log a session on a
+  day your annual leave covers, the session is saved but no OT is created for you.
+- OT that was already logged on a leave day is taken back: the session is archived, its
+  credit becomes 0 and the comment says so. When a manager approves a leave, OT already
+  logged on those days is taken back at once. If the leave is later cancelled, rejected or
+  its dates change, the session comes back with its normal credit.
+- A **weekend** that falls inside your leave period is still a weekend (leave is not
+  charged for it), and a **public holiday** that counts for OT keeps its credit.
+- On a **half-day** leave, the half you work follows the normal weekday rules.
+- Sick leave and comp-off days were never credited and are unchanged.
+
 ## Public holidays
 
 - A public holiday is **not charged as annual leave**. If your leave covers a public

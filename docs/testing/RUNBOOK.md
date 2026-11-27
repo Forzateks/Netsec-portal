@@ -129,6 +129,17 @@ For KSA accounts (Salman, Afsal), confirm boundaries shift to 8:00 AM and 7:00 P
 
 ---
 
+## H2. Annual leave earns no OT (v215)
+- [ ] Employee on approved annual leave logs a Mon-Fri session at any time → session saved, toast says "No OT for <name> (annual leave)", NO ot_sessions row created
+- [ ] Log Session form shows "On annual leave - no OT credit" when the date is the logger's (or a ticked member's) leave day
+- [ ] OT edit modal on a leave day → preview credit 0.00h, Save is refused with the annual-leave message
+- [ ] A Saturday/Sunday (or the region's weekend) inside the leave period still credits as Wknd
+- [ ] A public holiday counted for OT inside the leave period still credits
+- [ ] Half-day leave: an evening session that day follows the normal weekday rules (partial credit), not zero
+- [ ] Manager approves a leave over days that already have OT → toast "N OT sessions ... no longer count"; those rows show Archived, credit 0; CO balance drops by credited/8
+- [ ] Cancel that leave → the rows come back as Approved with their normal credit
+- [ ] Sick leave / comp-off day: OT behaves as on any normal day
+
 ## I. Manager OT View — Admin Tools
 
 | # | Tool | Expected | ✓ |

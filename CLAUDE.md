@@ -222,9 +222,18 @@ Full employee-facing rules: `docs/features/OT_Policy_Guide.md`.
 **Public holidays (v193):** the `public_holidays` table lists holidays per region
 (`UAE` / `KSA` / `ALL` — KSA does not observe every UAE holiday). A holiday is not a
 working day: `calcWorkingDays()` skips it, so it is never charged as leave. When the
-row's `counts_for_ot` is true, `isOnLeave()` returns `'holiday'` and `calcOT()` credits
-work on it under weekend rules, exactly like an approved leave day. Always read holidays
-through `getPublicHoliday(employee, iso)` in `leave.js` — never inline the region rule.
+row's `counts_for_ot` is true, `isOTHoliday()` is true and `calcOT()` credits work on it
+under weekend rules. Always read holidays through `getPublicHoliday(employee, iso)` in
+`leave.js` — never inline the region rule.
+
+**Annual leave earns NO OT (v215):** work on a day of approved annual leave is not
+credited. `calcOT()` asks `leaveBlocksOT()` (overtime.js) and returns credited 0, so no OT
+row is created; `validateOTStart()` refuses it; `splitSessionHours()` and the log-session
+note agree. A weekend or a counts-for-OT public holiday inside the leave period keeps its
+normal credit, and a half-day leave is not in `LEAVE_DAYS`. After any leave decision
+(approve / reject / cancel / edit / holiday change) `syncLeaveDayOT()` archives OT already
+logged on leave days (credit set to 0) and restores it if the leave goes away. Sick leave
+and comp-off days never affected OT.
 
 ### Manager admin tools (Settings → Admin Tools)
 - **Policy Recompute** — re-runs `calcOT` on all sessions

@@ -15,9 +15,11 @@ function isWeekend(wd, employee, dateStr) {
 }
 
 // v172: was this employee on approved leave on this calendar day?
-// Reads the LEAVE_DAYS map built by loadLeaveDays() (annual, sick and
-// comp-off). Returns the leave type string, or '' when not on leave —
-// truthy/falsy either way, so callers can use it as a plain boolean.
+// Reads the LEAVE_DAYS map built by loadLeaveDays() (annual leave only, full
+// days). Returns the leave type string, or '' when not on leave. NOTE (v215):
+// being on leave no longer earns OT - use leaveBlocksOT() to ask "is OT
+// refused on this day?" and isOTHoliday() to ask "is this a credited
+// holiday?". isOnLeave() stays as the plain "is this a leave day" lookup.
 //
 // dateStr is the employee's OWN local date. _buildMemberOTRow() shifts the
 // date across regions before calling calcOT, so a KSA member on leave is
@@ -32,6 +34,29 @@ function isOnLeave(employee, dateStr) {
   var h = (typeof getPublicHoliday === 'function') ? getPublicHoliday(employee, dateStr) : null;
   return (h && h.counts_for_ot) ? 'holiday' : '';
 }
+
+// v215: POLICY - work done during approved ANNUAL leave earns NO overtime.
+// (Before v215 a leave day was credited like a weekend.)
+//
+// A leave day only blocks OT when it is a day the leave actually uses up:
+//  - a weekend inside the leave period is still a weekend (leave is not
+//    charged for it), so weekend OT rules stand;
+//  - a public holiday that counts for OT (counts_for_ot) stays credited;
+//  - a half-day leave never reaches LEAVE_DAYS (the person works the other
+//    half), so that day follows the normal weekday rules.
+function isOTHoliday(employee, dateStr) {
+  if (!employee || !dateStr) return false;
+  var h = (typeof getPublicHoliday === 'function') ? getPublicHoliday(employee, dateStr) : null;
+  return !!(h && h.counts_for_ot);
+}
+function leaveBlocksOT(employee, dateStr) {
+  if (!employee || !dateStr) return false;
+  if (isOnLeave(employee, dateStr) !== 'annual') return false;
+  if (isWeekend(new Date(dateStr).getDay(), employee, dateStr)) return false;
+  if (isOTHoliday(employee, dateStr)) return false;
+  return true;
+}
+var LEAVE_OT_BLOCK_MSG = 'This day is approved annual leave. Work done during annual leave is not credited as overtime.';
 
 // Per-region OT thresholds. KSA office hours run later, so block window
 // and Eve band start are pushed 30-60 min later for KSA employees.
@@ -52,7 +77,8 @@ function validateOTStart(dateStr, startStr, employee, endStr) {
   if (!dateStr || !startStr) return null;
   var d = new Date(dateStr); var wd = d.getDay();
   if (isWeekend(wd, employee, dateStr)) return null;
-  if (isOnLeave(employee, dateStr)) return null; // v172: leave days follow weekend rules
+  if (isOTHoliday(employee, dateStr)) return null;      // v193: credited public holiday
+  if (leaveBlocksOT(employee, dateStr)) return LEAVE_OT_BLOCK_MSG; // v215: annual leave earns no OT
   var t = getOTThresholds(employee);
 
   // If we have the end time, check whether ANY portion is OT.
@@ -75,11 +101,13 @@ function calcOT(dateStr, startStr, endStr, employee) {
   employee = employee || '';
   if (!dateStr||!startStr||!endStr) return null;
   const d = new Date(dateStr); const wd = d.getDay();
-  // v172: a day of approved leave is credited exactly like a weekend —
-  // 1:1, every hour, no cap and no block window. You should not be working
-  // at all, so the regular-hours window must not swallow the session.
-  const leaveType = isOnLeave(employee, dateStr);
-  const isWknd = isWeekend(wd, employee, dateStr) || !!leaveType;
+  // v215: a day of approved ANNUAL leave earns no OT at all (v172-v214
+  // credited it like a weekend). A public holiday that counts for OT is
+  // still credited like a weekend. See leaveBlocksOT() for what counts.
+  const holidayDay = isOTHoliday(employee, dateStr);
+  const leaveBlocked = leaveBlocksOT(employee, dateStr);
+  const leaveType = leaveBlocked ? 'annual' : (holidayDay ? 'holiday' : '');
+  const isWknd = isWeekend(wd, employee, dateStr) || holidayDay;
   const sp=startStr.split(':').map(Number); const sh=sp[0],sm=sp[1];
   const ep=endStr.split(':').map(Number);   const eh=ep[0],em=ep[1];
   const sf=sh+sm/60, ef=eh+em/60;
@@ -89,7 +117,12 @@ function calcOT(dateStr, startStr, endStr, employee) {
   const morningBlock = t.morningBlock;
   let band,rate,cred;
 
-  if (isWknd) {
+  if (leaveBlocked) {
+    // On approved annual leave - nothing is credited. Shaped like the
+    // "entirely inside regular hours" result so every caller treats it as a
+    // zero-credit session.
+    band='Day'; rate='1:1'; cred=0;
+  } else if (isWknd) {
     // Weekend - all hours count, no block window applies
     band='Wknd'; rate='1:1';
     cred=rawDur;
@@ -152,11 +185,10 @@ function explainOT(session) {
   var region = KSA_EMP.includes(emp) ? 'KSA' : 'UAE';
   var d = new Date(session.ot_date);
   var wd = d.getDay();
-  var leaveType = (typeof isOnLeave === 'function') ? isOnLeave(emp, session.ot_date) : '';
-  // v172: fall back to the stored flag so an old row still explains itself
-  // even after the leave record is gone.
-  var onLeave = !!leaveType || !!session.on_leave;
-  var isWknd = isWeekend(wd, emp, session.ot_date) || onLeave;
+  // v215: explained from the live calendar, the same way calcOT() decides.
+  var leaveBlocked = leaveBlocksOT(emp, session.ot_date);
+  var holidayDay = isOTHoliday(emp, session.ot_date);
+  var isWknd = isWeekend(wd, emp, session.ot_date) || holidayDay;
   var sp = session.start_time.split(':').map(Number);
   var ep = session.end_time.split(':').map(Number);
   var sf = sp[0] + sp[1]/60;
@@ -168,15 +200,16 @@ function explainOT(session) {
   lines.push('--- How this was calculated ---');
   lines.push('Region: ' + region + (region==='KSA' ? ' (block 8:00 AM - 7:00 PM, Eve from 7:00 PM)' : ' (block 7:30 AM - 6:30 PM, Eve from 6:30 PM)'));
   lines.push('Day: ' + (session.day_name || '') +
-    (leaveType === 'holiday' ? ' (public holiday - no block)' : onLeave ? ' (on leave - no block)' : isWknd ? ' (weekend - no block)' : ' (weekday)'));
+    (leaveBlocked ? ' (annual leave)' : holidayDay ? ' (public holiday - no block)' : isWknd ? ' (weekend - no block)' : ' (weekday)'));
   lines.push('Time: ' + fmtTime(session.start_time) + ' to ' + fmtTime(session.end_time) + '  (raw: ' + rawDur.toFixed(2) + 'h)');
   lines.push('');
 
-  if (isWknd) {
-    if (onLeave) {
-      lines.push(leaveType === 'holiday'
-        ? 'Public holiday: this day was a public holiday, so weekend rules apply.'
-        : 'On leave: this day was approved annual leave, so weekend rules apply.');
+  if (leaveBlocked) {
+    lines.push('Annual leave: this day was approved annual leave. Work done during annual leave is not credited as overtime.');
+    lines.push('Credited: 0.00h');
+  } else if (isWknd) {
+    if (holidayDay) {
+      lines.push('Public holiday: this day was a public holiday, so weekend rules apply.');
     }
     lines.push('Weekend rule: 1:1 rate, no cap. All hours count.');
     lines.push('Credited: ' + rawDur.toFixed(2) + 'h');
@@ -604,6 +637,70 @@ async function recomputeAllOT(mode) {
   applyBtn.disabled = true;
 }
 
+// == ANNUAL-LEAVE OT ROLLBACK (v215) ==============================
+// Policy: work done during approved annual leave earns no overtime. Two jobs:
+//  1. ARCHIVE any live (approved / pending) OT session that sits on such a day
+//     and take its credit back to 0, remembering the old credit in the comment;
+//  2. RESTORE a session that this rule archived earlier, if the leave no longer
+//     covers that day (leave cancelled / rejected / dates edited) - provided it
+//     would earn credit again.
+// It runs after every leave decision, so the OT list never disagrees with the
+// leave calendar. Only rows whose comment starts with LEAVE_OT_MARK are ever
+// restored - a session a manager archived for another reason stays archived.
+var LEAVE_OT_MARK = 'Auto-archived: worked during approved annual leave';
+function _leaveRollbackPatch(s) {
+  var was = parseFloat(s.credited_hours || 0);
+  return {
+    status: 'archived',
+    band: 'Day', rate: '1:1', credited_hours: 0, on_leave: true,
+    manager_comment: LEAVE_OT_MARK + ' - no OT credit (' + fmtHours(was) + ' credited before the rule).',
+    reviewed_by: currentUser || 'System',
+    reviewed_at: new Date().toISOString()
+  };
+}
+
+// employee: limit to one person, or omit for everyone. Returns
+// { archived, restored, failed } or null when the leave data could not be read.
+async function syncLeaveDayOT(employee) {
+  if (typeof loadLeaveDays === 'function' && !(await loadLeaveDays())) return null;
+  var res = await fetchAllRows(function(){
+    var q = sb.from('ot_sessions').select('*').in('status', ['approved', 'pending', 'archived']);
+    return employee ? q.eq('employee', employee) : q;
+  });
+  if (res.error) return null;
+  var out = { archived: 0, restored: 0, failed: 0 };
+  var rows = res.data || [];
+  for (var i = 0; i < rows.length; i++) {
+    var s = rows[i];
+    var live = (s.status === 'approved' || s.status === 'pending');
+    var mine = (s.status === 'archived' && String(s.manager_comment || '').indexOf(LEAVE_OT_MARK) === 0);
+    if (live && leaveBlocksOT(s.employee, s.ot_date)) {
+      var up = await sb.from('ot_sessions').update(_leaveRollbackPatch(s)).eq('id', s.id);
+      if (up.error) out.failed++; else out.archived++;
+    } else if (mine && !leaveBlocksOT(s.employee, s.ot_date)) {
+      var c = calcOT(s.ot_date, s.start_time, s.end_time, s.employee);
+      if (!c || !(c.credited > 0)) continue;
+      var rs = await sb.from('ot_sessions').update({
+        status: 'approved', band: c.band, rate: c.rate, duration_hours: c.duration,
+        credited_hours: c.credited, day_name: c.dayName, on_leave: !!c.onLeave,
+        manager_comment: 'Restored: the leave no longer covers this day, so the session counts again.',
+        reviewed_by: currentUser || 'System', reviewed_at: new Date().toISOString()
+      }).eq('id', s.id);
+      if (rs.error) out.failed++; else out.restored++;
+    }
+  }
+  return out;
+}
+
+// The one call the leave screens make after any leave decision.
+async function syncLeaveDayOTAndTell(employee) {
+  var r = await syncLeaveDayOT(employee);
+  if (!r) return;
+  if (r.archived) showToast(r.archived + ' OT session' + (r.archived === 1 ? '' : 's') + ' on annual-leave days no longer count (credit removed).');
+  if (r.restored) showToast(r.restored + ' OT session' + (r.restored === 1 ? '' : 's') + ' restored - the leave no longer covers ' + (r.restored === 1 ? 'that day' : 'those days') + '.');
+  if (r.failed) showError(r.failed + ' OT session' + (r.failed === 1 ? '' : 's') + ' could not be updated. A manager can run Settings > Admin Tools > Archive Policy Violators.');
+}
+
 // ══ POLICY VIOLATION CLEANUP (one-time) ═══════════════════════════════════
 // Hard-delete OT sessions whose start time falls in the now-blocked weekday
 // window (UAE 7:30-18:30 / KSA 8:00-19:00). To avoid making any employee's
@@ -631,7 +728,9 @@ async function findPolicyViolators(fromDate) {
     var vErr = validateOTStart(s.ot_date, s.start_time, s.employee);
     var isApproved = (s.status === 'approved' || s.status == null);
     var inScope = !fromDate || (s.ot_date && s.ot_date >= fromDate);
-    if (vErr && inScope) {
+    // v215: a row that is already archived/rejected needs no further action.
+    var settled = (s.status === 'archived' || s.status === 'rejected');
+    if (vErr && inScope && !settled) {
       // Eligible for cleanup
       emp.violators.push(s);
     } else if (isApproved) {
@@ -654,7 +753,8 @@ async function findPolicyViolators(fromDate) {
     d.violators.forEach(function(v){
       var ch = parseFloat(v.credited_hours||0);
       var isApproved = (v.status === 'approved' || v.status == null);
-      if (isApproved && deficit > 0 && keptHours < deficit) {
+      // v215: work done on annual leave is never kept, whatever the CO balance.
+      if (isApproved && deficit > 0 && keptHours < deficit && !leaveBlocksOT(v.employee, v.ot_date)) {
         keep.push(v);
         keptHours += ch;
       } else {
@@ -758,7 +858,10 @@ async function applyViolationCleanup() {
   var nowIso = new Date().toISOString();
   var ok = 0, fail = 0;
   for (var i = 0; i < allDel.length; i++) {
-    var {error} = await sb.from('ot_sessions').update({
+    // v215: a leave-day session is archived through the same path as the
+    // automatic rollback, so its credit is zeroed and it can be restored.
+    var onLeaveRow = leaveBlocksOT(allDel[i].employee, allDel[i].ot_date);
+    var {error} = await sb.from('ot_sessions').update(onLeaveRow ? _leaveRollbackPatch(allDel[i]) : {
       status: 'archived',
       manager_comment: reason,
       reviewed_by: currentUser,
